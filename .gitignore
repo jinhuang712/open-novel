@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js build
+.next/
+out/
+dist/
+build/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Tests
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.turbo/
+.eslintcache
+
+# User data 永远不应进仓库 (实际位置在 ~/.open-novel/)
+# 兜底防误提交:
+/workspaces/
+*.db
+*.sqlite
+*.sqlite3
