@@ -26,7 +26,7 @@ export const modeMachine = setup({
     }
     events:
       | { type: 'USER_INPUT'; text: string }
-      | { type: 'SWITCH_MODE'; mode: 'discuss' | 'plan' | 'write' }
+      | { type: 'SWITCH_MODE'; mode: 'discuss' | 'plan' | 'write'; source: 'click' | 'tab' | 'shift-tab' | 'shortcut' }
       | { type: 'AGENT_DONE'; result: unknown }
       | { type: 'TOOL_NEEDS_APPROVAL'; callId: string }
       | { type: 'APPROVAL_RESOLVED'; callId: string; decision: 'approved' | 'rejected' }
@@ -135,9 +135,25 @@ export const modeMachine = setup({
 机器保证:
 
 1. **Approval 必须 resolve 才能离开 awaitingApproval** — 防止"流式漏写"
-2. **awaitingApproval 中切换 mode 被禁止** — 否则会丢失上下文
+2. **awaitingApproval 中切换 mode 被禁止** — 否则会丢失上下文。无论 SWITCH_MODE 的 source 是 `click` 还是 `tab` 都被同等阻止;Tab 触发时 UI 显示 toast: "完成审批后才能切模式"
 3. **discussing 不会进入 awaitingApproval** — discuss 模式 Agent 不持有 write 工具
 4. **errored 是 sink,只能通过用户输入或切 mode 离开**
+
+## SWITCH_MODE 的 source 字段语义
+
+`SWITCH_MODE.source` 用于 UI 反馈与遥测,**不影响**状态机迁移逻辑:
+
+- `click`: 用户点 ChatBox 顶部 toggle (按 mode 名直选,不循环)
+- `tab`: 用户在 ChatBox textarea 内按 Tab (循环正向: discuss → plan → write → discuss)
+- `shift-tab`: 反向循环
+- `shortcut`: 命令面板 (`Cmd+Shift+P`) 调起的"切到 plan 模式"等命令
+
+UI 层根据 source 决定动效:
+- `click`: 静默切换
+- `tab` / `shift-tab`: toast 短暂显示新模式名 + toggle 高亮飞过
+- `shortcut`: 同 click
+
+ShortcutListener 把 Tab 事件翻译成 SWITCH_MODE 时,先调用 `cycleMode(currentMode, reverse=...)` 算出 next mode,再 send `{ type: 'SWITCH_MODE', mode: next, source: 'tab' }`。详见 spec/12 §模式循环逻辑。
 
 ## React 集成
 

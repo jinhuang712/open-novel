@@ -10,7 +10,15 @@
 | **Plan** | 改设定 | 设定 + 章节 (参考) | 设定 (审批后) | + writeSetting (gated) |
 | **Write** | 写章节 | 设定 + 章节 + 历史 | 章节 (审批后) | + writeChapter (gated) |
 
-**模式间不可通过 LLM 自行切换**;必须用户在 UI 上显式点击 mode toggle。
+**模式间不可通过 LLM 自行切换**;必须用户显式触发。
+
+切换路径有两种,效果完全一致:
+1. **点击** ChatBox 顶部的 `[Discuss] [Plan] [Write]` toggle
+2. **键盘** 在 ChatBox textarea 焦点内按 `Tab` (循环正向) 或 `Shift+Tab` (反向)
+
+Tab 切模式是与主流 LLM chat 工具 (ChatGPT / Claude.ai / Cursor) 一致的预期心智 — Tab 不再插入字面 tab 字符。详见 [spec/12-shortcuts.md](../spec/12-shortcuts.md) §ChatBox 上下文。
+
+模式切换在 `await_approval` 状态下被状态机阻止 — 此时 Tab 与点击都不生效,UI 显示 toast: "完成审批后才能切模式"。
 
 ## 状态机 (XState)
 

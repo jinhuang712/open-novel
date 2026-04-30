@@ -15,10 +15,12 @@
 
 ## 核心特性
 
-- **多 Agent 协作**: Router / Writer / Checker / Validator / Reflector / Humanizer 6 个 Agent 各司其职
+- **多 Agent 协作**: Router / Writer / Checker / Validator / Reflector / Humanizer / **ReaderPanel** 7 个 Agent 各司其职
 - **三种工作模式**: Discuss (检索/对话) / Plan (设定编辑) / Write (正文编辑),Agent 行为严格区分
 - **审批必须**: 任何写入设定/正文的操作都必须先 diff 后落盘,用户点头才生效
 - **一致性守门**: 改了角色性别?Validator 自动扫所有章节列出受影响段落,逐项审批后才落盘
+- **叙事力学诊断**: BeatAnalyzer 输出节奏 / 情绪曲线 / 钩子强度;ArcTracker 检测角色弧光偏离;可调用三幕 / 英雄之旅 / 番茄黄金三章等结构模板
+- **发布前留存预演**: ReaderPanel 5 persona (追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬) 并行模拟读者反应,生成章节风险报告
 - **React 式反馈学习**: 每次审批闭环后 Reflector 提炼经验,后续生成自动注入,越用越懂你
 - **流式透明化**: Agent 推理过程、工具调用、子 Agent 切换在右侧 ThinkingPanel 实时滚动
 - **可定制风格/性格**: Agent 性格、文风、断句节奏全部可调
@@ -67,12 +69,15 @@ pnpm dev
 
 ### 设计 (plan/)
 - [01-overview.md](./plan/01-overview.md) — 系统概览与关键决策
-- [02-multi-agent.md](./plan/02-multi-agent.md) — 6 Agent 拓扑与职责
+- [02-multi-agent.md](./plan/02-multi-agent.md) — 7 Agent 拓扑与职责
 - [03-editor-layer.md](./plan/03-editor-layer.md) — 编辑器分层与 EditorAdapter
 - [04-storage-model.md](./plan/04-storage-model.md) — md+sql 混合存储模型
 - [05-modes-and-approval.md](./plan/05-modes-and-approval.md) — 三模式与审批流
 - [06-cascade-and-reflection.md](./plan/06-cascade-and-reflection.md) — Cascade 一致性与反馈学习
 - [07-ui-layout.md](./plan/07-ui-layout.md) — 五区 UI 布局
+- [08-tech-stack.md](./plan/08-tech-stack.md) — 技术栈锁定与版本策略
+- [09-narrative-engine.md](./plan/09-narrative-engine.md) — 叙事引擎 (BeatAnalyzer + ArcTracker + 模板库)
+- [10-reader-simulator.md](./plan/10-reader-simulator.md) — 读者仿真器 (5 persona ReaderPanel)
 
 ### 实现 (spec/)
 - [01-storage-schema.md](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范
@@ -83,10 +88,18 @@ pnpm dev
 - [06-approval-flow.md](./spec/06-approval-flow.md) — 审批流接入 needsApproval
 - [07-mode-state-machine.md](./spec/07-mode-state-machine.md) — XState 状态机
 - [08-de-ai-pipeline.md](./spec/08-de-ai-pipeline.md) — 去 AI 化 pipeline
+- [09-build-and-tooling.md](./spec/09-build-and-tooling.md) — 构建与工具链
+- [10-narrative-engine.md](./spec/10-narrative-engine.md) — 叙事引擎实现 (BeatAnalyzer / ArcTracker / 模板格式)
+- [11-reader-personas.md](./spec/11-reader-personas.md) — 读者 Persona 与 ReaderPanel 实现
+- [12-shortcuts.md](./spec/12-shortcuts.md) — 快捷键 Registry 与上下文化绑定 (Tab 切模式 / 重绑 / 冲突检测)
+- [13-settings.md](./spec/13-settings.md) — SettingsDialog 8 section 设计 (全局/项目级分层)
 
 ### 进度 (progress/)
 - [README.md](./progress/README.md) — 日志索引规则
 - [000-init.md](./progress/000-init.md) — 项目启动记录
+- [001-scaffolding.md](./progress/001-scaffolding.md) — W2 期 (起始计划 / 收尾 retro)
+- [002-narrative-reader.md](./progress/002-narrative-reader.md) — 战略升级: 纳入叙事引擎 + 读者仿真器
+- [003-shortcuts-and-settings.md](./progress/003-shortcuts-and-settings.md) — UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计
 
 ## 开发约定
 

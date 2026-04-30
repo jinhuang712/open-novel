@@ -110,10 +110,14 @@
 ## ChatBox
 
 - 顶部 mode 切换 toggle: `[Discuss] [Plan] [Write]` (互斥单选)
+- **键盘切换**: 焦点在 textarea 内按 `Tab` 循环 / `Shift+Tab` 反向 (覆盖 textarea 默认插入 tab 字符行为,与 ChatGPT/Claude/Cursor 一致)
+- 切换瞬间 toast 反馈 "已切到 plan 模式" + 三键 toggle UI 高亮飞过
 - 输入框: 多行,支持 `@文件名` 引用 (类似 Cursor)
-- 发送按钮 + 取消按钮 (流式时变取消)
-- 历史 (Cmd+↑ / Cmd+↓ 翻历史输入)
+- 发送按钮 (`Cmd+Enter`) + 取消按钮 (流式时变取消,`Esc`)
+- 历史 (`Cmd+↑` / `Cmd+↓` 翻历史输入,仅文本框为空时)
 - "重新生成" / "重新生成上一段"
+
+完整快捷键映射详见 [spec/12-shortcuts.md](../spec/12-shortcuts.md)。
 
 ## DebugConsole (Bottom Panel)
 
@@ -127,14 +131,20 @@
 
 ## Settings Dialog (⚙)
 
-模态弹窗,左侧分类:
+模态弹窗,8 个 section,**全局 (🌐) 与项目级 (📂) 严格分层**:
 
-- **API Keys**: DeepSeek key (加密存到 `~/.open-novel/settings.json`)
-- **模型选择**: 每个 Agent 单独选 Pro/Flash
-- **风格**: 当前项目的风格描述、性格设定、范文
-- **联网**: 启用/禁用 (POC 阶段灰显,标 "二期开放")
-- **快捷键**
-- **数据管理**: workspace 路径 / 导入导出 / 清空学习经验
+1. 🔑 **API Keys** (🌐)
+2. 🤖 **模型分配** (🔄 全局默认 + 项目覆盖)
+3. ⌨️ **快捷键** (🌐)
+4. 🎨 **风格定制** (📂)
+5. 👥 **读者仿真器** (📂) ← 战略升级 002 引入
+6. 🌐 **联网** (🌐,POC 灰显)
+7. 💾 **数据管理** (🌐 + 📂)
+8. ℹ️ **关于**
+
+每个 section 顶部明确标徽标 (🌐/📂/🔄),独立 dirty state,顶部 banner 提示哪些未保存。导入导出整体设置 json,跨设备迁移友好。
+
+完整字段、UI mock、API 路由设计详见 [spec/13-settings.md](../spec/13-settings.md)。
 
 ## 主题
 
@@ -145,17 +155,24 @@
 
 ## 快捷键
 
-| 快捷键 | 功能 |
-|---|---|
-| `Cmd+P` | 快速打开文件 |
-| `Cmd+Shift+P` | 命令面板 |
-| `Cmd+Shift+F` | 全项目搜索 |
-| `Cmd+B` | 折叠 FileTree |
-| `Cmd+J` | 折叠右侧 Panel |
-| ` Cmd+\` ` | 折叠 Console |
-| `Cmd+Enter` (in ChatBox) | 发送 |
-| `Cmd+/` (in Editor) | 切换批注 |
-| `F12` (on entity) | Goto Definition |
+完整 Registry (40+ 条快捷键 + 5 个上下文 + 用户重绑 + 冲突检测) 详见 [spec/12-shortcuts.md](../spec/12-shortcuts.md)。
+
+最常用速览:
+
+| 快捷键 | 上下文 | 功能 |
+|---|---|---|
+| `Tab` | ChatBox | **切换 Agent 模式 (discuss/plan/write 循环)** |
+| `Shift+Tab` | ChatBox | 反向切换 |
+| `Cmd+Enter` | ChatBox | 发送 |
+| `Cmd+Shift+P` / `F1` | 全局 | 命令面板 (fuzzy 搜所有命令) |
+| `Cmd+P` | 全局 | 快速打开文件 |
+| `Cmd+,` | 全局 | 打开 Settings |
+| `Cmd+B` / `Cmd+J` / `Cmd+\`` | 全局 | 折叠 FileTree / 右侧 Panel / Console |
+| `Cmd+1`~`5` | 全局 | 切 ActivityBar 项 |
+| `F12` | Editor | Goto Definition |
+| `Cmd+K` | Editor | 框选时唤起 AI inline 改写 |
+| `Y` / `N` / `E` | Approval | 同意 / 拒绝 / 编辑后同意 |
+| `Esc` | 全局 | 关闭最顶层浮层 (硬约束,不可改) |
 
 ## 初次启动流程
 
