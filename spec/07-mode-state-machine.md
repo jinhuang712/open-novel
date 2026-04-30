@@ -135,9 +135,92 @@ export const modeMachine = setup({
 机器保证:
 
 1. **Approval 必须 resolve 才能离开 awaitingApproval** — 防止"流式漏写"
-2. **awaitingApproval 中切换 mode 被禁止** — 否则会丢失上下文。无论 SWITCH_MODE 的 source 是 `click` 还是 `tab` 都被同等阻止;Tab 触发时 UI 显示 toast: "完成审批后才能切模式"
-3. **discussing 不会进入 awaitingApproval** — discuss 模式 Agent 不持有 write 工具
-4. **errored 是 sink,只能通过用户输入或切 mode 离开**
+2. **awaitingApproval 中切换 mode 被禁止** — 无论 SWITCH_MODE.source 是 `click` / `tab` / `shortcut` 都被同等阻止;Tab 触发时 UI 显示 toast: "完成审批后才能切模式"
+3. **awaitingApproval 中接受新 USER_INPUT 被禁止** — ChatBox textarea disabled 灰显 + tooltip "请先审批或取消上方提案";`send` 调用直接 reject 不进 stream
+4. **discussing 不会进入 awaitingApproval** — discuss 模式 Agent 不持有 write 工具
+5. **errored 是 sink,只能通过用户输入或切 mode 离开**
+6. **cascade 链路串行** — 主 approval 决议后,cascade queue 依次进入 awaitingApproval,不并发
+
+## USER_INPUT 处理 (新增)
+
+> audit 发现:awaitingApproval 中接受新 USER_INPUT 没建模 — 用户能不能同时回到 ChatBox 发新指令?如果 push 进 currentTask,与 await 残余状态如何 LIFO?
+
+机器在所有非 idle/errored 状态下接收 USER_INPUT 时**默认 reject + emit toast**:
+
+```ts
+states: {
+  classifying: {
+    on: {
+      USER_INPUT: {
+        actions: 'showBusyToast',     // toast: "正在分析,请稍候"
+        // 不 transition
+      },
+      // ...
+    },
+  },
+  // similarly for discussing/planning.*/writing.*
+}
+```
+
+**例外**: 用户主动按 `Esc` 触发 CANCEL → 走到 idle 才能接受新 USER_INPUT。这给用户兜底逃生通道,避免被卡死在 await。
+
+`Esc` 在 awaitingApproval 状态有特殊语义: **不**关闭 ApprovalCard (那是审批 dialog 的"无操作关闭"),而是 emit CANCEL → 落到 idle + 把当前 approval 标 'cancelled' (区别于 expired/rejected)。
+
+## Cascade Queue 建模 (新增)
+
+> audit 发现:Validator cascade 链路连续 awaitingApproval 用单一 `pendingApprovals: string[]` 不够 — 需要显式 cascade 队列建模。
+
+context 扩展:
+
+```ts
+context: {
+  mode: 'discuss' | 'plan' | 'write'
+  currentTask: string | null
+  pendingApprovals: string[]            // 当前正展示的 approvalId (栈顶)
+  cascadeQueue: string[]                // 后续待审 approvalId 队列 (FIFO)
+  lastError: string | null
+}
+```
+
+`APPROVAL_RESOLVED` 后,如 cascadeQueue 非空,自动从中取下一项 push 到 pendingApprovals,继续 awaitingApproval;空才回 idle。
+
+```ts
+APPROVAL_RESOLVED: [
+  {
+    guard: ({ context }) => context.cascadeQueue.length > 0,
+    target: 'awaitingApproval',
+    actions: assign({
+      pendingApprovals: ({ context }) => [context.cascadeQueue[0]],
+      cascadeQueue: ({ context }) => context.cascadeQueue.slice(1),
+    }),
+  },
+  { target: '#mode.idle' },
+],
+```
+
+**初始化**: writeSettingProposal 后,服务端把 cascade 各项 also expand 成 approvals 行 (但 `parent_approval_id` 链回主 approval),客户端 `useApprovals.hydrate()` 时把 children 推入 cascadeQueue。
+
+## session.json 与 approvals 表的 source-of-truth (新增)
+
+> audit 发现:spec/01 有 approvals 表 (status=pending),spec/07 又有 runtime/session.json 中的 pendingApprovals 数组。两边写入时机若不同步,reload 后会出现表里 pending 但 session 里没的不一致。
+
+**契约**: `approvals` 表是唯一 source of truth。session.json 仅缓存机器 context,启动时:
+
+```ts
+async function rehydrateMachine(projectId: string): Promise<MachineState> {
+  const pendingFromDb = await db.approvals.findPending(projectId, { since: now() - 24h })
+  // 丢弃 24h 前的 pending (按 spec/06 §审批超时与悬挂时长)
+  // session.json 仅用于恢复 mode 与 currentTask;pending 数组永远以 db 为准
+  const session = await fs.readFile('runtime/session.json').catch(() => null)
+  return {
+    mode: session?.mode ?? 'discuss',
+    currentTask: session?.currentTask ?? null,
+    pendingApprovals: pendingFromDb.length > 0 ? [pendingFromDb[0].id] : [],
+    cascadeQueue: pendingFromDb.slice(1).map(a => a.id),
+    lastError: null,
+  }
+}
+```
 
 ## SWITCH_MODE 的 source 字段语义
 

@@ -54,5 +54,6 @@ NNN-{slug}.md
 | 001 | W2: VSCode-Like Shell + EditorAdapter 骨架 | 2026-04-29 起 | W2 | (待) | (W2 收尾) |
 | 002 | 战略升级: 纳入叙事引擎 + 读者仿真器 | 2026-04-30 | 跨期 (W9-W10) | (本期 docs commit) | (W9/W10 收尾各自) |
 | 003 | UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计 | 2026-04-30 | 跨期 (W2-W3) | (本期 docs commit) | (W2/W3 收尾各自) |
+| 004 | 文档审计加固 (9 严重 + 23 中等 + 3 新 spec + drift 修正) | 2026-04-30 | 跨期 (W2 末尾,W3 启动前必清) | (本期 docs commit) | (W3 day-1 跑 spec/00 后追加) |
 
 (后续每条 entry 自动追加到此表)

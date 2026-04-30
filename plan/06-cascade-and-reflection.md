@@ -49,11 +49,33 @@ Router 把 cascadeChanges 包进当前 ApprovalCard
 
 用户希望系统**越用越懂自己**。直接微调模型代价过高 (DeepSeek 暂未开放微调),但我们可以把"经验"持久化为结构化数据,**自动注入到后续生成的 system prompt**,实现廉价但实用的"learning"。
 
-### Reflector 触发时机
+### Reflector 触发时机 + 频率上限 (审计修正)
+
+> audit 发现:每次审批闭环都 enqueue Reflector → 用户连点 20 个 cascade approve 就跑 20 次 LLM。Flash 模型也是钱。
 
 每次以下事件后入队:
 1. **审批闭环完成** (approve / reject + feedback)
 2. **用户手动编辑了 Agent 生成的内容** (检测到 saved content 与 generated content 的 diff)
+
+**频率上限**:
+- **同一 cascade 链路内的 N 项审批合并为 1 次 reflect** — 整批数据丢给 Reflector 一次性提炼
+- **每会话 (sessionId) Reflector 最多 5 次** — 超过则改用"批量"模式: 累积到下次 session 再跑
+- **Reflector 调用本身有最小间隔** = 30s,防止快速连续审批导致并发 LLM
+- 这些参数在 SettingsDialog → §模型分配中可调整 (advanced section)
+
+入队伪码:
+
+```ts
+async function enqueueReflector(projectId: string, sessionId: string, items: ApprovalContext[]) {
+  const recent = await db.reflectorJobs.findRecent(sessionId)
+  if (recent.length >= 5) {
+    // 改累积模式
+    await db.reflectorJobs.appendDeferred(projectId, items)
+    return
+  }
+  await reflectorQueue.add({ projectId, sessionId, items })
+}
+```
 
 ### Reflector 输入/输出
 
@@ -131,10 +153,18 @@ Reflector 输出经过用户审视:
 - 每周自动汇总: "本周新学到 N 条经验,请检查"
 - 经验冲突时 (insight 互斥),Reflector 自我合并或弹给用户决定
 
-### 全局 vs 项目级
+### 全局 vs 项目级 + Promote UI (审计补)
 
 - `scope = 'project'`: 仅当前项目用 (默认)
 - `scope = 'global'`: 跨项目,需要用户在面板上手动 promote
+
+详细 promote UI 见 [spec/13-settings.md](../spec/13-settings.md) §学习偏好面板。要点:
+
+- 项目级 → global 用 [⬆️ promote 全局] 按钮
+- 同 insight 已有 global 时弹合并 dialog (新文本 / 旧文本 / merge / 取消)
+- 全局 → 项目级用 [⬇️ 限定到当前项目]
+- 删除是软删 (移到 `learnings_archive`,30 天可恢复)
+- 每周新增 ≥ 5 条时自动弹"审视新偏好"提示
 
 避免一个项目的特殊偏好污染其他风格不同的项目。
 

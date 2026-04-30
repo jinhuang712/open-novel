@@ -104,9 +104,21 @@ export const analyzeNarrative = tool({
 - 仅输出结构化指标 + 简短自然语言提示
 ```
 
-### 调用方式
+### 调用方式 (审计修正)
 
-Checker 在分析章节时**自动**调 `analyzeNarrative`。Writer 也可主动调。
+> audit 发现:plan/02 / plan/09 / 本文档对自动 vs 手动触发表述不一致 + 没回答"作者只想写不想分析时怎么关"。
+
+触发时机由 SettingsDialog → Section 5 §narrative.beatAnalyzer 控制:
+
+| 设置 | 行为 |
+|---|---|
+| `runOnSave: true` (默认) | 章节落盘后自动跑 BeatAnalyzer |
+| `runOnSave: false` | 仅手动触发 (Editor 顶部 [📊 跑节奏分析] 按钮 / 命令面板) |
+| `manualOnly: true` | 完全禁止自动,所有触发必须用户点按钮 |
+
+**实现**: writeChapterProposal approve 后,落盘 → reindex Worker → 检查 `narrative.beatAnalyzer.runOnSave` → 入队 BeatAnalyzer (异步,不阻塞 UI)。结果挂在章节 metadata,UI 显示提示 "已分析 (查看)"。
+
+**结构化输出失败**: 用 `callStructured()` (spec/02 §结构化输出失败的修复路径) 包装,失败时 fallback 到 defaults `{ rhythmScore: 50, flagsForAuthor: ['(分析失败,请重试)'], emotionCurve: [], hooks: [], conflictDensity: 0, ... }`,UI 显示淡灰色 + [重新分析] 按钮。
 
 ## ArcTracker
 
@@ -297,8 +309,38 @@ ThinkingPanel 渲染 Checker 输出时,识别 `beats` 与 `arcs` 字段:
 
 UI 实现在 `components/panels/NarrativeReport.tsx` (W9 落地)。
 
+## ArcTracker 触发频率 (审计补)
+
+> audit 发现:ArcTracker 跨章扫描 — 章节多了怎么办?
+
+`narrative.arcTracker` 设置:
+
+| 字段 | 默认 | 说明 |
+|---|---|---|
+| `runOnSave` | false | 章节落盘后**不**自动跑 (跨章扫成本高) |
+| `runOnNewChapter` | true | 新建章节时跑一次,作为该章的 baseline |
+| `triggerEveryNChapters` | 5 | 每 5 章主动跑一次,生成全局轨迹快照 |
+
+手动触发: 在角色页面 (`characters/X.md` 打开后) 顶部 [追踪角色弧光] 按钮调 `trackArc({ characterId })`。
+
+**性能**: ArcTracker 每次跑 1 个角色 + N 章节;并发限制 = 1 (避免同时多个角色扫导致 LibSQL 写锁竞争)。runOnNewChapter 时只跑当前章节涉及的角色,不全扫。
+
+## 用户不接受 BeatReport 的反馈环 (审计补)
+
+> audit 发现:用户不接受 BeatReport 时的反馈环 — 怎么修正模板/参数?
+
+UI 在 NarrativeReport 卡片底部加:
+
+```
+[👍 准确]  [🤔 部分准确]  [👎 不准]    [我自己来标]
+```
+
+点击 [我自己来标] 弹一个简化标注 UI,用户标 "这段才是真正的爽点"、"这段其实没我标的那么紧张"。落到 `narrative_feedback` 新表 (spec/01 待补)。**当前 POC 阶段**: 仅记录,不实时调整 prompt。**二期**: Reflector 读这些反馈,推断"对该用户来说,什么算冲突点 / 钩子",写回 learnings 表注入 BeatAnalyzer prompt。
+
+POC 不做 prompt 自适应,但**记录**留好,二期接入闭环。
+
 ## 不做什么
 
-- **不做实时分析**: 编辑器输入时不调用 BeatAnalyzer。**只在章节完成 + 显式触发**时跑
+- **不做实时分析**: 编辑器输入时不调用 BeatAnalyzer。**只在章节完成 + 自动触发或显式触发**时跑
 - **不做跨章节因果推理**: 那是因果图谱的事 (已砍)
 - **不做"AI 改写"建议**: BeatAnalyzer 报告纯诊断,不主动改稿。改稿仍由 Writer 在用户授权下进行

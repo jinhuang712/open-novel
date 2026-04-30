@@ -2,7 +2,9 @@
 
 > 本文档在 W2 期前置,作为后续所有代码 commit 的依据。每次升级主版本时必须先更新此文档再升级。
 
-## 锁定的库版本 (2026-04 基线)
+> ⚠ **W3 启动前必跑版本审计**: 下表的版本号是基于训练数据 + 调研文章的"应然"假设,**未实查 npm 真实最新**。任何 W3+ 代码 commit 之前,必须先按 [spec/00-version-audit.md](../spec/00-version-audit.md) 跑一遍实查,把表格替换为真实可装版本。否则可能整个 stack 第一次 `pnpm add` 就失败 (尤其 `mastra 1.x` `@ai-sdk/deepseek 2.x` `deepseek/deepseek-v4-pro` 这三处最高风险)。
+
+## 锁定的库版本 (2026-04 基线 — **待 audit 实查替换**)
 
 通过 Plan agent 并行调研 (Vercel/AI SDK/Mastra/Tailwind/TipTap/shadcn 官方文档 + 各项目 GitHub release notes + 2025-2026 比较文章) 得出。
 
@@ -17,9 +19,9 @@
 | `mastra` / `@mastra/core` | `1.4.x` | 锁主线 | 1.0 在 2026-01 发布,1.x 仍在演进,需密切跟踪 |
 | `@mastra/libsql` | `0.16.x` | 锁主线 | 仍是 0.x;**注意 issue #4507 — 必须显式给 `file:` URL,绝不用默认路径** |
 | `@mastra/memory` | `1.4.x` | 锁主线 | thread+resource 隔离的实现 |
-| `ai` (Vercel AI SDK) | `^6.0` | caret | v6 已稳,minor 增量;`needsApproval` 在核心包 |
+| `ai` (Vercel AI SDK) | `^6.0` | caret | v6 已稳,minor 增量。**审计待确认**: HITL 走 `needsApproval` 一等字段还是 cookbook 模式 (`onToolCall` + `addToolResult`) — 见 spec/00 §B |
 | `@ai-sdk/react` | `^6.0` | caret | `useChat` / `addToolResult` / `onToolCall` |
-| `@ai-sdk/deepseek` | `2.0.x` | 锁主线 | 周更频繁;DeepSeek V4 Pro/Flash 一等公民 |
+| `@ai-sdk/deepseek` | `2.0.x` | 锁主线 | 周更频繁。**审计待确认**: 真实 model id (Pro/Flash 命名假设) — 见 spec/00 §C |
 | `xstate` / `@xstate/react` | `^5.0` | caret | 三模式状态机用 |
 | `zustand` | `^5.0` | caret | 客户端 store |
 | `react-resizable-panels` | `4.10.x` | 锁主线 | 五区可拖拽布局 |

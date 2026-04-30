@@ -109,8 +109,36 @@ type Entity = {
 ### 性能策略
 
 - **增量扫描**: plugin `apply()` 中只对 dirty range 重跑 AC,全文扫描只发生在初次加载与 Codex 变更
-- **Worker 兜底**: 章节 >50K 字时 AC 扔到 Web Worker,主线程只 apply Decorations
+- **Worker 兜底**: 章节 >30K 字时 AC 扔到 Web Worker,主线程只 apply Decorations
 - **debounce**: 用户连续输入时 100ms 防抖
+- **Codex 变更 debounce 1s**: 一次连续创建 5 个角色,trie 仅重建一次 (而不是 5 次);详见 spec/05 §AC trie 重建策略
+- **trie 版本号**: entitySetHash 不变就跳过重建
+
+### IME (中文输入法) 安全
+
+- TipTap Decoration 重算在 `view.composing === true` 期间**跳过** (仅 mapping 位置,不重新计算 AC) — 避免 composition pending 区间被装饰器穿透导致光标跳/字丢
+- ChatBox textarea 与 TipTap 同样要求 — 详见 spec/12 §IME 闸门
+
+### 富文本粘贴策略
+
+用户从 Word / 微信 / 网页粘贴带格式段落 → TipTap 默认会保留 HTML 格式,污染纯文本流。
+策略: TipTap `editor.setOptions({ enablePasteRules: false })` + 自定义 paste handler:
+
+```ts
+editorView.props.handleDOMEvents = {
+  paste(view, event) {
+    const text = event.clipboardData?.getData('text/plain') ?? ''
+    if (text) {
+      event.preventDefault()
+      view.dispatch(view.state.tr.insertText(text))   // 仅插纯文本
+      return true
+    }
+    return false
+  },
+}
+```
+
+例外: 粘贴自身 (TipTap → TipTap 的内部 paste,如 reorder 段落) 走默认 schema-aware 路径,不剥格式。
 
 ## Goto Definition UX
 

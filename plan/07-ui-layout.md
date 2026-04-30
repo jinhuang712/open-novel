@@ -110,14 +110,30 @@
 ## ChatBox
 
 - 顶部 mode 切换 toggle: `[Discuss] [Plan] [Write]` (互斥单选)
-- **键盘切换**: 焦点在 textarea 内按 `Tab` 循环 / `Shift+Tab` 反向 (覆盖 textarea 默认插入 tab 字符行为,与 ChatGPT/Claude/Cursor 一致)
+- **键盘切换**: 焦点在 textarea 内按 `Tab` 循环 / `Shift+Tab` 反向 (覆盖 textarea 默认插入 tab 字符行为,与 ChatGPT/Claude/Cursor 一致;**IME composition 活跃时不抢键**,详见 spec/12 §IME 闸门)
 - 切换瞬间 toast 反馈 "已切到 plan 模式" + 三键 toggle UI 高亮飞过
-- 输入框: 多行,支持 `@文件名` 引用 (类似 Cursor)
+- 输入框: 多行,支持 `@文件名` 引用 (详见 spec/12 §@文件名引用)
 - 发送按钮 (`Cmd+Enter`) + 取消按钮 (流式时变取消,`Esc`)
 - 历史 (`Cmd+↑` / `Cmd+↓` 翻历史输入,仅文本框为空时)
 - "重新生成" / "重新生成上一段"
+- **`await_approval` 状态下 disabled** (灰显 + tooltip),用户必须先审批或取消才能继续
 
-完整快捷键映射详见 [spec/12-shortcuts.md](../spec/12-shortcuts.md)。
+### 长任务进度条 (审计补)
+
+ChatBox 顶部 mode toggle 下方,**当 server 推 progress 事件时**显示一条进度条:
+
+```
+┌─────────────────────────────────────┐
+│ [Discuss] [Plan] [Write]   ⏸ 取消    │
+│ ▰▰▰▰▱▱▱▱▱▱  3/5  毒舌读者           │
+│ ReaderPanel · 4.5 秒                  │
+└─────────────────────────────────────┘
+```
+
+- 取消按钮直接 stop() — 已完成的 persona 反应保留 (按 spec/11 §聚合算法的 ≥3 成功才出 recommendation)
+- progress 事件协议见 spec/04 §长任务进度协议
+
+完整快捷键映射详见 [spec/12-shortcuts.md](../spec/12-shortcuts.md)。命令面板详见 spec/12 §命令面板与 CommandRegistry。
 
 ## DebugConsole (Bottom Panel)
 
@@ -177,6 +193,9 @@
 ## 初次启动流程
 
 1. 检测 `~/.open-novel/` 是否存在 → 不存在则创建
-2. 检测 `settings.json` 是否有 DeepSeek key → 没有就弹 SettingsDialog
-3. 检测 workspaces 是否为空 → 是则弹"创建第一个项目"对话框
-4. 进入主界面,默认 Discuss 模式
+2. 检测 `settings.json` 是否存在 → 不存在则进入 OnboardingWizard (4 步,详见 [spec/15-onboarding.md](../spec/15-onboarding.md))
+3. 已有 settings 但无 key → 弹 SettingsDialog Section 1
+4. 已有 key 但 workspaces 空 → 弹"创建第一个项目"对话框 (含[加载样例项目]选项)
+5. 进入主界面,默认 Discuss 模式
+6. 首次出现某些状态时弹一次性 tooltip (Tab 切模式 / 审批卡 / cascade 警告 / ReaderPanel 报告)
+7. ActivityBar [📚] 入口可重看新手指引

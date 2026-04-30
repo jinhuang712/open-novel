@@ -33,7 +33,7 @@
 | 前后端 | Next.js 15 (App Router) + React 19 + TypeScript 5 | 单仓单应用 |
 | Agent 框架 | Mastra 1.x on Vercel AI SDK 6 | `AgentNetwork` + `needsApproval` |
 | LLM | DeepSeek V4 Pro / Flash (via Vercel AI Gateway) | Pro 跑核心创作,Flash 跑路由/检查 |
-| 编辑器 | TipTap 2.x + ProseMirror Decorations + Aho-Corasick | 不用 `Mention` 节点 |
+| 编辑器 | TipTap 3.x + ProseMirror Decorations + Aho-Corasick | 不用 `Mention` 节点 |
 | 状态机 | XState | 三模式闸门 |
 | 存储 | `.md` (内容) + LibSQL `index.db` (索引/历史/学习) | 用户不可见 sql |
 | 包管理 | pnpm | |
@@ -80,19 +80,22 @@ pnpm dev
 - [10-reader-simulator.md](./plan/10-reader-simulator.md) — 读者仿真器 (5 persona ReaderPanel)
 
 ### 实现 (spec/)
-- [01-storage-schema.md](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范
-- [02-agent-tools.md](./spec/02-agent-tools.md) — Agent 工具签名与契约
+- [00-version-audit.md](./spec/00-version-audit.md) — **W3 启动前版本审计闸门** (npm 实查 / DeepSeek model id / AI SDK API 形态)
+- [01-storage-schema.md](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范 (含 zod 强校验 / 编码归一化 / WAL / 连接池)
+- [02-agent-tools.md](./spec/02-agent-tools.md) — Agent 工具签名与契约 (含路径越权防御 / 不可信围栏 / 续写协议 / 结构化输出修复)
 - [03-prompts.md](./spec/03-prompts.md) — Agent prompt 模板
-- [04-streaming-protocol.md](./spec/04-streaming-protocol.md) — SSE 事件协议
-- [05-entity-highlight.md](./spec/05-entity-highlight.md) — 实体高亮与跳转
-- [06-approval-flow.md](./spec/06-approval-flow.md) — 审批流接入 needsApproval
-- [07-mode-state-machine.md](./spec/07-mode-state-machine.md) — XState 状态机
+- [04-streaming-protocol.md](./spec/04-streaming-protocol.md) — SSE 事件协议 (含取消/刷新/重连 + 错误 UX 表 + 长任务进度)
+- [05-entity-highlight.md](./spec/05-entity-highlight.md) — 实体高亮与跳转 (含中文边界 / IME 安全 / trie 重建)
+- [06-approval-flow.md](./spec/06-approval-flow.md) — 审批流 (proposal + 独立 endpoint 模式)
+- [07-mode-state-machine.md](./spec/07-mode-state-machine.md) — XState 状态机 (含 USER_INPUT 处理 + cascade queue)
 - [08-de-ai-pipeline.md](./spec/08-de-ai-pipeline.md) — 去 AI 化 pipeline
 - [09-build-and-tooling.md](./spec/09-build-and-tooling.md) — 构建与工具链
 - [10-narrative-engine.md](./spec/10-narrative-engine.md) — 叙事引擎实现 (BeatAnalyzer / ArcTracker / 模板格式)
-- [11-reader-personas.md](./spec/11-reader-personas.md) — 读者 Persona 与 ReaderPanel 实现
-- [12-shortcuts.md](./spec/12-shortcuts.md) — 快捷键 Registry 与上下文化绑定 (Tab 切模式 / 重绑 / 冲突检测)
-- [13-settings.md](./spec/13-settings.md) — SettingsDialog 8 section 设计 (全局/项目级分层)
+- [11-reader-personas.md](./spec/11-reader-personas.md) — 读者 Persona 与 ReaderPanel 实现 (含失败聚合 + persona 安全围栏)
+- [12-shortcuts.md](./spec/12-shortcuts.md) — 快捷键 Registry + CommandRegistry + IME 闸门 + @file 引用 + 撤销栈语义
+- [13-settings.md](./spec/13-settings.md) — SettingsDialog 8 section + 月度预算 + 项目生命周期 + 学习偏好面板
+- [14-testing.md](./spec/14-testing.md) — 测试策略 (vitest / playwright / LLM golden / CI)
+- [15-onboarding.md](./spec/15-onboarding.md) — 首启引导 (4 步 wizard + 渐进 tooltip + 样例项目)
 
 ### 进度 (progress/)
 - [README.md](./progress/README.md) — 日志索引规则
@@ -100,6 +103,7 @@ pnpm dev
 - [001-scaffolding.md](./progress/001-scaffolding.md) — W2 期 (起始计划 / 收尾 retro)
 - [002-narrative-reader.md](./progress/002-narrative-reader.md) — 战略升级: 纳入叙事引擎 + 读者仿真器
 - [003-shortcuts-and-settings.md](./progress/003-shortcuts-and-settings.md) — UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计
+- [004-docs-hardening.md](./progress/004-docs-hardening.md) — 文档审计加固 (W3 启动前的 day-1 blocker 排查 + 32 个补丁)
 
 ## 开发约定
 
@@ -114,5 +118,6 @@ pnpm dev
 - 真实联网搜索 (二期接入)
 - 多用户 / 账号系统
 - 番茄小说自动发布 (导出 .md/.txt 让用户手动发)
-- 实时协作 (Yjs 接口已留)
+- 实时协作 (二期专项设计;POC 不预留 Yjs 接口)
 - 移动端
+- Windows 原生支持 (POC macOS/Linux only;Windows 用户可走 WSL)

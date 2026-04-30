@@ -91,11 +91,14 @@ Router 路由 (识别 mode = discuss | plan | write)
 
 为保证质量,系统强制以下不变性:
 
-1. **写入必须经审批** — 所有 `writeSetting` / `writeChapter` 工具调用都带 `needsApproval: true`,前端拦截渲染 ApprovalCard
+1. **写入必须经审批** — 所有 writeSetting / writeChapter 走 proposal 模式,落 `approvals` 表 status=pending,通过独立 endpoint resolve (见 spec/06,审计后从 SDK 一等字段改为 cookbook 模式)
 2. **设定不可被 Agent 静默修改** — Validator 发现矛盾时只能"提议"修改,不能直接改;最终决定权在用户
-3. **多项目数据零串扰** — Memory 用 `resource = projectId`,文件用独立目录,数据库用 `WHERE project_id = ?` 强约束
+3. **多项目数据零串扰** — Memory 用 `resource = projectId`,文件用独立目录,数据库用 `WHERE project_id = ?` 强约束;LibSQL 连接池 LRU(3)
 4. **三模式严格分离** — Router 在每次输入时强校验当前 mode 与可调用工具集
-5. **每次审批必反思** — Reflector 自动跑,经验落盘到 `learnings` 表,无静默丢失
+5. **每次审批必反思** (有频率上限) — Reflector 自动跑,但同 cascade 合 1 次 + 每会话 ≤5 次 (见 plan/06 §Reflector 触发时机 + 频率上限)
+6. **路径越权零信任** — 所有读写工具 execute 第一行强制 `safeFromProjectRoot()`,不依赖前端校验 (见 spec/02)
+7. **不可信内容围栏** — 所有外部内容 (web / 用户拷贝 .md / 自定义 persona) 拼进 prompt 时用 `<<<UNTRUSTED:...>>>` 包裹,Agent system prompt 显式声明忽略其中"指令"
+8. **docs-before-code** — 任何代码 commit 之前对应 plan/spec 必须先有,且需用户 approve docs 后才动代码 (项目级 workflow 不变性)
 
 ## 与同类产品的差异
 

@@ -76,4 +76,10 @@
 
 ## 关联 commit
 
-- `<待生成>` init: scaffolding & docs
+- `cdc626d` init: scaffolding & docs (W1)
+
+## Retro 注 (2026-04-30 追加)
+
+- **Agent 数量**: 本日志记的 "6 Agent 拓扑" 在 progress/002-narrative-reader (战略升级) 后扩到 7 (新增 ReaderPanel)。最新拓扑见 plan/01 §7 Agent 拓扑
+- **时间表**: 原计划 ~12 周;002 升级后 ~14 周;004 docs 加固未变更代码工作量,仍按 14 周
+- **W1 spec 集**: 当时仅 8 个 spec,后续 W2 docs 期扩到 13;004 docs 加固再扩到 16 (新增 spec/00 spec/14 spec/15)

@@ -73,14 +73,36 @@ function postProcess(text: string, rawMatches: AcMatch[], index: EntityIndex): M
 }
 
 function isCleanBoundary(text: string, from: number, to: number, str: string): boolean {
-  const before = text[from - 1]
-  const after = text[to]
-  // 名字前接动作词 (如 "见到刘备说") 通常 ok
-  // 名字后接修饰 (如 "刘备的") 也 ok
-  // 但若 name="刘" 单字而上下文是 "刘氏" 则要排除 — 由 isViableMatch 上游过滤
-  return true  // 当前实现宽松,后续按需收紧
+  const before = text[from - 1] ?? '\n'
+  const after = text[to] ?? '\n'
+
+  // 中文场景 — Aho-Corasick 默认输出全部子串匹配。需要白名单边界判定避免误命中:
+  // 例: 角色 "李白" 不应命中 "我家的李白菜很好吃"
+
+  // 黑名单: 后接修饰名词扩展 (e.g. "李白菜")
+  const SUFFIX_BLOCK = ['菜', '鸟', '花', '草', '酒', '杯', '种']
+  if (SUFFIX_BLOCK.includes(after)) return false
+
+  // 黑名单: 前接修饰使其变成另一词 (e.g. "小刘备" 中 "刘备" 仍命中,但若是别名 "备",前接"小"应过滤)
+  if (str.length === 1) {
+    const PREFIX_BLOCK = ['小', '大', '老', '阿']
+    if (PREFIX_BLOCK.includes(before)) return false
+  }
+
+  // 白名单: 前接动作 / 标点 / 句首 (强证据是命名实体)
+  const PREFIX_OK = ['\n', ' ', '。', ',', '!', '?', ':', '"', '"', '\'',
+                     '见', '看', '听', '说', '问', '答', '叫', '是', '与', '和']
+  const SUFFIX_OK = ['\n', ' ', '。', ',', '!', '?', ':', '"', '"', '\'',
+                     '说', '道', '答', '问', '笑', '想', '的', '在', '又', '却', '是']
+  if (PREFIX_OK.includes(before) || SUFFIX_OK.includes(after)) return true
+
+  // 中间情况: 默认放行,但置信度降低 (UI 可显示淡色)
+  // 真要严控可改为默认 false。POC 先放行,实测 false-positive 后再调
+  return true
 }
 ```
+
+**调优策略**: 上述 PREFIX/SUFFIX 列表是种子。POC W6 期间在 dev console 落一个 `falsePositiveLog` — 用户 hover 标"误识别"按钮,记录 entity + context 入 SQLite (新表 `entity_match_feedback`)。每周回看,迭代列表。
 
 ## ProseMirror Plugin 集成
 
@@ -155,14 +177,71 @@ function computeDecorations(doc, entities) {
 
 ## 性能数据
 
-参考目标 (实测后填充):
+参考目标 (W2/W6 期间用 vitest bench 实测填充,见 spec/14-testing.md):
 
-| 章节大小 | 实体数 | AC 全扫耗时 | 增量扫描耗时 |
-|---|---|---|---|
-| 5K 字 | 50 | < 2ms | < 1ms |
-| 20K 字 | 200 | < 8ms | < 2ms |
-| 50K 字 | 500 | < 25ms | < 3ms (单段变更) |
-| 50K 字 | 500 | (Worker 兜底) | < 5ms 主线程 |
+| 章节大小 | 实体数 | AC trie 构建 | AC 全扫耗时 | 增量扫描耗时 |
+|---|---|---|---|---|
+| 5K 字 | 50 | < 1ms | < 2ms | < 1ms |
+| 20K 字 | 200 | < 5ms | < 8ms | < 2ms |
+| 50K 字 | 500 | < 15ms | < 25ms | < 3ms (单段变更) |
+| 50K 字 | 500 | — | (Worker 兜底) | < 5ms 主线程 |
+
+**W2 末尾必须跑** 一次基准 (`tests/unit/ahocorasick.bench.ts`),把数据填回此表。文档不允许长期留"待实测"。
+
+## AC trie 重建策略 (新增)
+
+> audit 发现:`BrunoRB/ahocorasick` 不支持增量插入。每改一个角色都要全量重建 trie + 全文重扫,**写设定模式下 Validator cascade 的 reindex 会触发数十次重建**。
+
+**降损策略**:
+
+1. **Codex 变更 debounce 1s**: 用户连续创建/编辑实体时,1s 内的多次"Codex 变了"事件合并为一次重建
+2. **trie 版本号**: `entityHighlightPlugin` 缓存当前 trie 与对应 entitySetHash;Codex 事件携带新 hash,plugin 比对 hash 不变就不重建
+3. **per-章节 trie 缓存** (W6 优化): 当前章节正文 hash + entity set hash → 计算结果 cache;打开历史章节直接复用
+4. **Worker 兜底**: 章节 >30K 字时 trie 构建 + 全扫扔到 Web Worker (主线程仅 apply Decorations);<30K 主线程同步跑 (避免 Worker 通讯开销)
+
+如果 W6 实测发现重建仍是瓶颈,**升级路径**: fork BrunoRB/ahocorasick 加入 `addPattern(pattern)` 增量插入 (Aho-Corasick 算法本身支持增量,只是该库 API 没暴露;扩展约 50 行代码)。
+
+## IME (中文输入法) 安全 (新增)
+
+> audit 发现两个 IME 相关坑,都对中文用户致命:
+>
+> 1. ChatBox textarea 中 IME 候选窗口活跃时按 Tab — 直接 preventDefault 切模式会破坏 IME 翻页
+> 2. TipTap Decoration 重算与 IME composition 重叠时,Decoration 的 from/to 可能落在 composition pending 区间,导致光标跳或字丢
+
+### ChatBox Tab 处理
+
+ShortcutListener 在每次 `keydown` 中先检查:
+
+```ts
+function onKeyDown(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229) return    // ← IME composing,放行原生行为
+  // 后续走 normal shortcut 解析
+}
+```
+
+`isComposing` 是 W3C 标准属性,所有现代浏览器支持。`keyCode === 229` 是 Chrome/Edge 在某些情况的兜底。
+
+### TipTap Decoration 重算
+
+`entityHighlightPlugin.apply(tr, old)` 中:
+
+```ts
+apply(tr, old, _oldState, newState) {
+  // 跳过 IME composition 中的中间状态 — Decoration 重算等到 composition 结束再做
+  // ProseMirror EditorView 提供 view.composing 属性
+  const view = (newState as any).editorViewRef?.current   // 通过 EditorAdapter 注入
+  if (view?.composing) return old.map(tr.mapping, tr.doc)  // 仅 map 位置,不重新计算
+
+  // 后续走 normal increment / rebuild 路径
+}
+```
+
+`compositionend` 事件触发时 plugin 会自动收到一个新 transaction,届时再做完整 update。
+
+### 单测覆盖 (spec/14)
+
+- `shortcuts.test.ts`: composing=true 时 Tab 不切模式
+- `entity-highlight.test.ts`: composing 期间 Decoration 不重算 + composition 结束后重算正确
 
 ## Hover 卡片
 

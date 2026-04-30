@@ -42,23 +42,34 @@
 | 📂 项目级 | 仅当前项目 | `~/.open-novel/workspaces/{projectId}/project.json` |
 | 🔄 混合 | 全局默认 + 项目可覆盖 | 两处都有,项目覆盖全局 |
 
-## Section 1: API Keys (🌐 全局)
+## Section 1: API Keys + 预算 (🌐 全局)
 
 ```yaml
 deepseekApiKey: "sk-..."         # 必填
 bochaApiKey: ""                   # 可选,二期
 tavilyApiKey: ""                  # 可选,二期
+
+# ★ 审计补: 成本天花板 (硬约束)
+budget:
+  monthlyUsd: 50                   # 月度预算 (USD)
+  warnAtUsd: 40                    # 触发警告阈值
+  hardCapBehavior: "block"         # "block" | "warn-only"
+  approvalTimeoutHours: 24         # 审批悬挂超时 (与 spec/06 §审批超时联动)
 ```
 
 UI 字段:
 - DeepSeek API Key (必填,masked input,旁有 `测试连接` button)
 - Bocha (二期,灰显 + 提示 "Phase 2 enable")
 - Tavily (二期,同上)
+- **月度预算 (USD)**: 输入框 + 历史用量条形图 (基于 traces 表统计)
+- **触顶行为**: radio "阻断 (block,推荐)" / "仅提示 (warn-only)"
+- **审批悬挂超时**: 输入框 (小时),默认 24
 
 行为:
-- `测试连接`: 服务端调一次低成本 endpoint (`/v1/models`) 验证 key 有效;成功显示 `✓ 已验证 (model: deepseek-v4-pro)`,失败显示具体错误
+- `测试连接`: 服务端调一次低成本 endpoint (`/v1/models`) 验证 key 有效;成功显示 `✓ 已验证 (model: <实查后的 id>)`,失败显示具体错误
 - 输入框失焦时自动校验格式 (sk-xxx 长度 ≥ 32)
-- 保存写入 `~/.open-novel/settings.json` `mode: 0o600` (见 spec/06)
+- 保存写入 `~/.open-novel/settings.json` `mode: 0o600` (见 spec/09)
+- **预算实时检查**: 每次发起 LLM 调用前,server 估算 tokens × 单价,累加月内已用 ≥ monthlyUsd 时 `hardCapBehavior` 决定 reject ('BUDGET_CAP_HIT' 错误,见 spec/04 错误表) 还是仅 toast warning
 
 ## Section 2: 模型分配 (🔄 混合)
 
@@ -153,11 +164,12 @@ UI:
 
 注意: **修改这些会让 Reflector 重置该项目的部分 learnings** — 因为风格变了,旧经验可能不再适用。UI 在保存前提示。
 
-## Section 5: 读者仿真器 (📂 项目级)
+## Section 5: 读者仿真器 + 叙事引擎触发 (📂 项目级)
 
 ```yaml
 # project.json.readerPanel
 enabled: true
+runOnSave: true                   # 每次 chapter 落盘后自动跑;关闭后仅手动触发
 personas:
   - id: chase-update
     enabled: true
@@ -178,6 +190,16 @@ custom:
   - file: "./personas/my-target.yaml"
     enabled: true
     weight: 1.5
+
+# ★ 审计补: 叙事引擎自动/手动触发
+narrative:
+  beatAnalyzer:
+    runOnSave: true               # 章节落盘后自动跑
+    manualOnly: false              # true 时仅手动按钮触发
+  arcTracker:
+    runOnSave: false               # 默认关 (跨章扫描成本高)
+    runOnNewChapter: true          # 仅在新建章节时跑一次
+    triggerEveryNChapters: 5       # 每 5 章主动跑一次
 ```
 
 UI:
@@ -227,32 +249,61 @@ UI: 整体灰显,顶部一条横幅 "🚧 二期开放,POC 阶段所有联网工
 ## Section 7: 数据管理 (🌐 全局 + 📂 项目级)
 
 ```
-┌─ 数据管理 ───────────────────────────────────────┐
-│  🌐 全局                                          │
-│                                                  │
-│  Workspace 路径: ~/.open-novel/workspaces/        │
-│  [打开 Finder]  [迁移到其他路径]                  │
-│                                                  │
-│  ──────────────────────────────────────────────  │
-│  📂 当前项目                                      │
-│                                                  │
-│  项目 ID:        proj_zhongsheng_a3f2            │
-│  创建时间:       2026-04-29                       │
-│  字数:           42,531                          │
-│  章节数:         3                               │
-│  实体数:         12                              │
-│  审批历史:       18 条 [清空]                     │
-│  反馈学习:       7 条 [查看] [清空]               │
-│                                                  │
-│  [导出项目 (zip)]  [删除项目]                     │
-│                                                  │
-│  ──────────────────────────────────────────────  │
-│  ⚠ 危险区域                                       │
-│  [清空所有项目数据] [出厂重置]                    │
-└──────────────────────────────────────────────────┘
+┌─ 数据管理 ──────────────────────────────────────────────┐
+│  🌐 全局                                                 │
+│                                                         │
+│  Workspace 路径: ~/.open-novel/workspaces/               │
+│  [打开 Finder]  [迁移到其他路径]                         │
+│  Trace 总大小: 23 MB  [清理 7 天前 trace]                 │
+│  本月 LLM 用量: $12.4 / $50  [详细按 Agent 拆分]          │
+│                                                         │
+│  ──────────────────────────────────────────────────────  │
+│  📂 当前项目                                             │
+│                                                         │
+│  项目 ID:        proj_zhongsheng_a3f2                   │
+│  名称:          [重生互联网]              [改名]         │
+│  创建时间:       2026-04-29                              │
+│  字数:           42,531                                 │
+│  章节数:         3                                      │
+│  实体数:         12                                     │
+│  审批历史:       18 条 [查看] [清空]                     │
+│  反馈学习:       7 条 [查看] [清空]                      │
+│  Pending 审批:   0 条                                   │
+│                                                         │
+│  [导出项目 (zip)]  [归档 (软删)]  [删除项目]             │
+│                                                         │
+│  ──────────────────────────────────────────────────────  │
+│  归档区 (软删项目,30 天后自动清)                         │
+│   - [样例] 末世修仙          删除 2026-04-15  [恢复]     │
+│                                                         │
+│  ──────────────────────────────────────────────────────  │
+│  ⚠ 危险区域                                              │
+│  [清空所有项目数据] [出厂重置] [重置首启提示]             │
+└─────────────────────────────────────────────────────────┘
 ```
 
-危险操作 (清空 / 重置 / 删除项目): 二次确认 + 输入 `confirm` 字样才生效。
+### 项目生命周期 UI flow (审计补)
+
+每个动作的具体行为:
+
+| 动作 | 行为 |
+|---|---|
+| **改名** | 仅改 project.json.name,**目录名不变** (避免破坏所有引用路径)。UI 显示真实名 + 真实 id |
+| **归档 (软删)** | 移到 `~/.open-novel/_archive/{projectId}/`,UI 隐藏 (但归档区可见);保留 30 天后启动 Worker 自动彻底删 |
+| **导出 zip** | 打包 `proj_xxx.zip`,**含 .md + project.json + index.db** (审计修正:不再丢 narrative_metrics / reader_reports / approvals 这些花了 LLM 钱跑的数据);entity_refs / backlinks 这种纯派生表可在导入时重建 |
+| **删除 (硬删)** | 二次确认 + 输入项目名字样;先 `pool.delete(projectId)` close LibSQL,再 fs.rm 项目目录;删 runtime.db 中对应 thread |
+| **导入 zip** | 解压到 `~/.open-novel/workspaces/{newId}/`;若 projectId 冲突生成新 id;导入后 Worker reindex |
+| **恢复归档** | 移回 workspaces/,UI 重新可见 |
+| **迁移 Workspace 路径** | 整体 `~/.open-novel/` move,settings.json `workspaceRoot` 字段更新;过程中所有项目 LibSQL 必须先 close |
+
+### 危险操作的安全闸
+
+危险操作 (清空 / 重置 / 删除项目): **二次确认 + 输入项目名 (或 `confirm`) 字样才生效**。
+- "清空所有项目数据": 输入字样 `delete-all-my-novels`
+- "出厂重置": 输入字样 `reset-factory`
+- "重置首启提示": 一次确认即可 (只清 onboarding.seenTips,不删数据)
+
+执行前 server 端再校验一次 (防止 client UI 被绕)。
 
 ## Section 8: 关于 (🌐 全局)
 
@@ -342,8 +393,42 @@ merge effectiveSettings = global ∪ project (project override)
 注入到 Mastra agents 实例化
 ```
 
+## 学习偏好面板 (审计补)
+
+ActivityBar [💡] 入口 → 打开 LearningsPanel,展示 `learnings` 表:
+
+```
+┌─ 已学到的偏好 ──────────────────────────────────────────┐
+│  [项目 / 全局] [全部 ▼ category]  搜索...                │
+│                                                         │
+│  📂 项目级 (7 条)                                        │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │ ▸ 用户偏好 ≤25 字短句,优先用句号断句            │ │
+│  │   命中: 12 次  weight: 12.5  最近: 3 小时前       │ │
+│  │   [编辑] [⬆️ promote 全局] [删除]                │ │
+│  └──────────────────────────────────────────────────┘ │
+│  ...                                                    │
+│                                                         │
+│  🌐 全局 (3 条)                                          │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │ ▸ 对话场景中尽量少用'XX 地说'                    │ │
+│  │   适用: writer / humanizer  [⬇️ 限定到当前项目]   │ │
+│  └──────────────────────────────────────────────────┘ │
+│                                                         │
+│  📊 本周新增 5 条 [审视]                                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+操作:
+- **promote 全局**: 项目级 → scope='global',跨项目生效。冲突时 (同 insight 已有 global) → 弹合并对话框
+- **demote 项目**: 全局 → 项目级
+- **编辑**: 改 insight 文字 + applicable_agents
+- **删除**: 移到 `learnings_archive` 表 (软删,可恢复 30 天)
+- **审视 (本周新增)**: 引导用户走一遍新增的 learnings,确认每条
+
 ## 不做什么
 
 - **不做云同步**: POC 单设备 localhost,所有设置本地文件即可
 - **不做 settings profiles**: 不存"工作模式 / 出版模式"两套预设,简化模型
 - **不做 settings audit log**: 改了什么时候改的不重要,可从文件 mtime 看
+- **不做 i18n UI 文案**: POC 仅中文界面;UI 文案集中在 `lib/i18n/zh.ts` 用 key 组织,二期再加其他语言;**不再硬编码到组件**

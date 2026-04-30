@@ -111,7 +111,7 @@ updated_at: ...
 详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md),核心表:
 
 - `entities`: 实体登记 (id, canonical_name, aliases JSON, category, file_path)
-- `references`: 实体在哪个文件哪段被提及
+- `entity_refs`: 实体在哪个文件哪段被提及 (早期叫 `references` — SQL 保留字,已重命名)
 - `backlinks`: 反向索引 (打开角色页时显示 "被 X 章引用")
 - `history`: 变更历史 (谁、何时、改了什么、为什么)
 - `learnings`: Reflector 提炼的经验
@@ -138,5 +138,82 @@ updated_at: ...
 ## 备份策略
 
 - 用户数据完全在 `~/.open-novel/`,iCloud / Time Machine 自然备份
-- 提供"Export Project"按钮: 打包成 zip (`projectId.zip`),含所有 .md + 不含 index.db (可重建)
-- 提供"Import Project"按钮: 解压后扫描 markdown 重建 index.db
+- 提供"Export Project"按钮: 打包成 zip (`projectId.zip`),**含所有 .md + index.db** (审计修正:早期版本说"不含 index.db,可重建",但 narrative_metrics / reader_reports / approvals / learnings 这些是花了 LLM 钱跑出来的,丢了等于丢钱;`entity_refs` `backlinks` 这种纯派生表在导入后由 Worker 重建)
+- 提供"Import Project"按钮: 解压后,若 projectId 冲突自动生成新 id;Worker 后台重建 entity_refs / backlinks
+- 详细 UI flow 见 [spec/13-settings.md](../spec/13-settings.md) §项目生命周期 UI flow
+
+## 多 Tab 同项目并发 (新增 — 审计补)
+
+> audit 发现:用户开两个浏览器 tab 同一 localhost — 同时改 worldview.md,谁覆盖谁?Mastra Memory 同 thread 双方收 deltas。POC 单用户但**多 tab 是常见使用方式**。
+
+策略: **Web Locks API** 软锁 + 后到的 tab 进只读模式。
+
+```ts
+// lib/storage/tab-lock.ts
+export async function acquireProjectLock(projectId: string, onLost: () => void) {
+  const ac = new AbortController()
+  navigator.locks.request(`open-novel:project:${projectId}`, { signal: ac.signal },
+    async (lock) => {
+      if (!lock) return    // 没拿到 (其他 tab 持有)
+      // 拿到了 — 维持 lock 直到 tab 关闭或显式释放
+      await new Promise<void>((resolve) => { ac.signal.addEventListener('abort', () => resolve()) })
+    },
+  ).catch(onLost)
+  return ac
+}
+```
+
+UI 在第二 tab:
+- 顶部 banner "另一个标签页正在编辑此项目,本标签页只读";
+- 编辑动作 disabled,Esc 切到只读浏览模式
+- "强制接管" 按钮: 用户主动释放上一 tab 的锁 (`postMessage` 协议),接管编辑
+
+## 外部编辑器同步 (新增 — 审计补)
+
+> audit 发现:用户在 VSCode/iA Writer 直接改了 `characters/lin.md`,我们不知道;TipTap 仍显示旧内容,审批的 before-state 错位 → diff 出错。
+
+策略: **chokidar 文件 watcher** (Node 端,在 `/api/watch` Route Handler 内挂) + SSE push 到前端。
+
+```ts
+// app/api/watch/route.ts (long-lived SSE)
+export const runtime = 'nodejs'
+
+export async function GET(req: Request) {
+  const projectId = new URL(req.url).searchParams.get('projectId')!
+  const watcher = chokidar.watch(getProjectDir(projectId) + '/**/*.md', {
+    ignoreInitial: true, atomic: true,
+  })
+  const stream = new ReadableStream({
+    start(controller) {
+      watcher.on('change', (path) => {
+        controller.enqueue(`event: fs:changed\ndata: ${JSON.stringify({ path })}\n\n`)
+      })
+    },
+  })
+  req.signal.addEventListener('abort', () => watcher.close())
+  return new Response(stream, { headers: { 'content-type': 'text/event-stream' } })
+}
+```
+
+前端:
+- 收到 fs:changed 后,如果该文件在某个 Tab 打开 + 用户没有未保存编辑 → 静默 reload
+- 用户有未保存编辑 → 弹冲突 dialog: "[文件名] 被外部修改。要 [使用磁盘版本] / [保留我的修改] / [手动 merge]"
+- 如果该文件在审批流的 before-state 中 → 该审批 invalidate (status='stale'),提示用户重做
+
+## LibSQL 连接池 (新增 — 审计补)
+
+> audit 发现:每项目独立 `index.db`,Node FD ulimit 256,同时打开 5 个项目就贴边。
+
+详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md) §LibSQL 连接池。要点:
+
+- LRU cache (`max: 3`) 维持最多 3 个项目并发活跃
+- 切项目时显式 `pool.delete(oldId)` close 连接
+- 删项目前必须先 close,再 fs.rm
+
+## 索引刷新策略 (审计加固)
+
+每次 writeSetting / writeChapter 落盘后,**reindex 走单例 Worker 串行**:
+
+- 防止 5 个 cascade 并发 reindex 触发 SQLite 写锁竞争
+- Worker 内部 queue + LRU dedupe (同 source_file 1s 内只处理一次)
+- 详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md) §SQLite WAL Mode + 并发写

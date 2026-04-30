@@ -63,18 +63,21 @@ Writer → 流式生成正文 (逐段 emit)
 Checker → 并行审风格 (轻量 prompt,只看最近 1000 字)
 Validator → 并行扫一致性 (重点查角色行为、地点、时间是否冲突)
         ↓ (writer 完成后)
-Checker → 跑 BeatAnalyzer + ArcTracker → BeatReport + ArcReport
-若 Checker / Validator 提出修改建议 → Writer 自我重写一次
+若 narrative.beatAnalyzer.runOnSave (默认 true) → 跑 BeatAnalyzer
+若 narrative.arcTracker.runOnNewChapter (默认 true) → 跑 ArcTracker
+若 Checker / Validator 提出修改建议 → Writer 自我重写一次 (≤1 次,避免循环)
         ↓
-**ReaderPanel → 5 persona 并行 → ChapterRiskReport**
+若 readerPanel.runOnSave (默认 true) → 5 persona 并行 → ChapterRiskReport
         ↓
-最终 → writeChapter tool (needsApproval=true)
+最终 → writeChapterProposal (落 approvals 表,见 spec/06)
         ↓
-ApprovalCard (展示完整章节 + 叙事报告 + 风险报告 + Validator 高亮)
-        ↓ 用户同意 → 落盘
+ApprovalCard (展示完整章节 + 叙事报告 + 风险报告 + Validator cascade)
+        ↓ 用户同意 → POST /api/approvals/{id}/resolve → 落盘 + reindex
         ↓
-Reflector → 提炼经验 (含本次风险报告与最终决定的差异)
+Reflector 入队 (本批 cascade 合一次,≤5/会话,见 plan/06)
 ```
+
+各自动触发的开关均在 SettingsDialog → Section 5 (读者仿真器 + 叙事引擎),用户可关闭节省成本。
 
 注意 ReaderPanel 是**非闸门**输出 — 信号挂在 ApprovalCard 内,作者可参考可忽略。
 
