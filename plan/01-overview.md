@@ -14,7 +14,7 @@
 5. 同时维护多个项目,互不污染
 ```
 
-## 6 Agent 拓扑 (Mastra `AgentNetwork`)
+## 7 Agent 拓扑 (Mastra `AgentNetwork`)
 
 ```
                   ┌─────────────────┐
@@ -27,18 +27,24 @@
                   └────────┬────────┘
             ┌──────────────┼──────────────┐
             ▼              ▼              ▼
-       ┌────────┐   ┌────────┐    ┌────────────┐
-       │ Writer │   │Checker │    │  Validator │
-       │ (Pro)  │   │(Flash) │    │   (Pro)    │
-       └────┬───┘   └───┬────┘    └──────┬─────┘
-            │           │                │
-            └─────┬─────┴────────┬───────┘
-                  ▼              ▼
-             ┌─────────┐   ┌──────────────┐
-             │Reflector│   │  Humanizer   │
-             │ (Flash) │   │    (Pro)     │
-             └─────────┘   └──────────────┘
+       ┌────────┐   ┌──────────────┐    ┌────────────┐
+       │ Writer │   │   Checker    │    │  Validator │
+       │ (Pro)  │   │   (Flash)    │    │   (Pro)    │
+       │  吐字  │   │ +叙事引擎子能力│    │   一致性   │
+       └────┬───┘   └──────┬───────┘    └──────┬─────┘
+            │              │ (BeatAnalyzer /          │
+            │              │  ArcTracker / 模板库)     │
+            │              │                          │
+            └─────┬────────┴──────────┬───────┬───────┘
+                  ▼                   ▼       ▼
+       ┌─────────────────┐    ┌──────────┐ ┌──────────────┐
+       │  ReaderPanel    │    │Reflector │ │  Humanizer   │
+       │  (Flash, NEW)   │    │ (Flash)  │ │    (Pro)     │
+       │  5 persona 仿真 │    │  反思    │ │   去 AI 化   │
+       └─────────────────┘    └──────────┘ └──────────────┘
 ```
+
+详见: [02-multi-agent.md](./02-multi-agent.md) (Agent 详解) / [09-narrative-engine.md](./09-narrative-engine.md) (叙事引擎) / [10-reader-simulator.md](./10-reader-simulator.md) (读者仿真器)。
 
 ## 数据流概览
 
@@ -62,9 +68,11 @@ Router 路由 (识别 mode = discuss | plan | write)
    │
    └─ write → Writer 生成章节
               ↓
-         Checker 风格审 + Validator 一致性审
+         Checker 风格审 (含 BeatAnalyzer/ArcTracker) + Validator 一致性审
               ↓
-         diff → ApprovalCard → 落盘 → Reflector
+         ReaderPanel 5 persona 模拟读者反应 → ChapterRiskReport
+              ↓
+         diff + 风险报告 → ApprovalCard → 落盘 → Reflector
 ```
 
 ## 关键技术决策汇总
@@ -96,6 +104,11 @@ Router 路由 (识别 mode = discuss | plan | write)
 | 联网研究 | 无 (闭合 Story Bible) | 接口预留,二期开放 |
 | 一致性守护 | 手动 Codex | 自动 cascade + Validator |
 | 反馈学习 | 无 | Reflector 自动持久化经验 |
-| 多 Agent | 单 Agent + 模板 | 6 Agent 协作 |
+| 多 Agent | 单 Agent + 模板 | **7 Agent 协作** |
 | 透明度 | 黑盒 | 全流式可见 |
 | 中文 | 弱 | 一等公民 |
+| **叙事力学诊断** | 无 | **BeatAnalyzer + ArcTracker** (节奏 / 情绪曲线 / 角色弧光偏离) |
+| **发布前留存预演** | 无 | **ReaderPanel** (5 persona 模拟读者反应,生成章节风险报告) |
+| **结构模板可调用** | 无 / 强模板套用 | 三幕 / 英雄之旅 / 起承转合 / 番茄黄金三章,可调用不强制 |
+
+后三条 (叙事力学 + 留存预演 + 结构模板) 是与"AI 代笔工具"赛道的核心区分点 — 我们不是写得更好的 AI,是**懂叙事的合伙人 + 懂读者的预演场**。
