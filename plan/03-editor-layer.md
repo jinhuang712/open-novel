@@ -9,7 +9,9 @@
 
 ## 选型
 
-**TipTap 2.x (基于 ProseMirror)** + 自定义 ProseMirror 装饰器 + Aho-Corasick 自动机。
+**TipTap 3.x (基于 ProseMirror)** + 自定义 ProseMirror 装饰器 + Aho-Corasick 自动机。
+
+> 历史注: 早期文档草稿写的是 "TipTap 2.x",但 W2 调研发现 2026-04 现状下稳定版已是 3.16.x。我们使用的 API (`useEditor` / `EditorContent` / `addProseMirrorPlugins` / Decorations) 在 v2/v3 间二进制兼容,本节描述对两版均适用。在 v3 下需要额外注意 SSR: 必须 `useEditor({ ..., immediatelyRender: false })`。
 
 为什么不用 TipTap 的 `Mention` 节点:
 - Mention 是 atomic node,会插入显式标记节点,破坏纯文本流
