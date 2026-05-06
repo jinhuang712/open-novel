@@ -166,9 +166,11 @@ states: {
 
 `Esc` 在 awaitingApproval 状态有特殊语义: **不**关闭 ApprovalCard (那是审批 dialog 的"无操作关闭"),而是 emit CANCEL → 落到 idle + 把当前 approval 标 'cancelled' (区别于 expired/rejected)。
 
-## Cascade Queue 建模 (新增)
+## Approval Queue 建模 (W9 整批审之后简化)
 
-> audit 发现:Validator cascade 链路连续 awaitingApproval 用单一 `pendingApprovals: string[]` 不够 — 需要显式 cascade 队列建模。
+> ⚠ **W9 升级 (见 spec/06 / spec/19)**: cascade 改为审批前内部递归 + 整批审,**单个 ChangeSet 一个 approval 行**,内部 1-3 级 cascade 全在同一 ApprovalCard 勾选 — 不再需要"cascade 各项独立 approval 行"的子项排队建模。
+>
+> 但**用户跨多次修改**仍可能产生多个 pending ChangeSet (例如 plan 模式连续发起两次修改还没审),需要 FIFO 排队。
 
 context 扩展:
 
@@ -176,29 +178,29 @@ context 扩展:
 context: {
   mode: 'discuss' | 'plan' | 'write'
   currentTask: string | null
-  pendingApprovals: string[]            // 当前正展示的 approvalId (栈顶)
-  cascadeQueue: string[]                // 后续待审 approvalId 队列 (FIFO)
+  pendingApprovals: string[]            // 当前正展示的 approvalId (栈顶,通常长度=1)
+  approvalQueue: string[]               // 后续待审 ChangeSet approvalId 队列 (FIFO)
   lastError: string | null
 }
 ```
 
-`APPROVAL_RESOLVED` 后,如 cascadeQueue 非空,自动从中取下一项 push 到 pendingApprovals,继续 awaitingApproval;空才回 idle。
+每个 approvalId 对应一个完整 ChangeSet(主修改 + 1-3 级 cascade)。`APPROVAL_RESOLVED` 后,如 approvalQueue 非空,自动从中取下一项 push 到 pendingApprovals,继续 awaitingApproval;空才回 idle。
 
 ```ts
 APPROVAL_RESOLVED: [
   {
-    guard: ({ context }) => context.cascadeQueue.length > 0,
+    guard: ({ context }) => context.approvalQueue.length > 0,
     target: 'awaitingApproval',
     actions: assign({
-      pendingApprovals: ({ context }) => [context.cascadeQueue[0]],
-      cascadeQueue: ({ context }) => context.cascadeQueue.slice(1),
+      pendingApprovals: ({ context }) => [context.approvalQueue[0]],
+      approvalQueue: ({ context }) => context.approvalQueue.slice(1),
     }),
   },
   { target: '#mode.idle' },
 ],
 ```
 
-**初始化**: writeSettingProposal 后,服务端把 cascade 各项 also expand 成 approvals 行 (但 `parent_approval_id` 链回主 approval),客户端 `useApprovals.hydrate()` 时把 children 推入 cascadeQueue。
+**初始化**: writeSettingProposal 后,服务端 **不**再把 cascade 各项展开成独立 approval 行 — 整个 ChangeSet 进**一行**,客户端 `useApprovals.hydrate()` 时按时间排序的多个 ChangeSet ApprovalCard 推入 `approvalQueue`(队首进 pendingApprovals,其余排队)。
 
 ## session.json 与 approvals 表的 source-of-truth (新增)
 
@@ -216,7 +218,7 @@ async function rehydrateMachine(projectId: string): Promise<MachineState> {
     mode: session?.mode ?? 'discuss',
     currentTask: session?.currentTask ?? null,
     pendingApprovals: pendingFromDb.length > 0 ? [pendingFromDb[0].id] : [],
-    cascadeQueue: pendingFromDb.slice(1).map(a => a.id),
+    approvalQueue: pendingFromDb.slice(1).map(a => a.id),
     lastError: null,
   }
 }

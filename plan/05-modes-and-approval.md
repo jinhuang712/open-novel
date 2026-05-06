@@ -64,14 +64,14 @@ export const writeSettingProposal = tool({
 ```
 
 流程:
-1. Writer 调 writeSettingProposal → execute 落 proposal 到 approvals 表 → 返回 `{ kind: 'proposal', approvalId }`
+1. Writer 调 writeSettingProposal → execute **内部跑 cascade 递归 ≤3 轮 (spec/19)** → 落整批 ChangeSet 到 approvals 表 (一行) → 返回 `{ kind: 'proposal', approvalId, changeSet }`
 2. Agent loop 看到 proposal 立刻 stop (Writer prompt 约定),stream 自然结束
-3. 客户端 `onToolCall` 拦截 result,push 到 `useApprovals` store,UI 渲染 `<ApprovalCard>`
-4. 用户点"同意" → `POST /api/approvals/{id}/resolve { decision: 'approved' }`,后端原子写盘 + 落 history + 启动 reindex
-5. 用户点"拒绝+反馈" → `POST /api/approvals/{id}/resolve { decision: 'rejected', feedback }` → 自动发一条 ChatBox 消息让 Agent 重做
+3. 客户端 `onToolCall` 拦截 result,push 到 `useApprovals` store,UI 渲染 `<ApprovalCard>` (整批 ChangeSet,含影响图谱 + 1-3 级 cascade 勾选)
+4. 用户点"同意勾选项" → `POST /api/approvals/{id}/resolve { decision: 'approved', accepted_items: [...], edits: {...} }`,后端 transaction 一次写所有 accepted + 落 history group + 入队 reindex
+5. 用户点"拒绝全部+反馈" → `POST /api/approvals/{id}/resolve { decision: 'rejected', feedback }` → 自动发一条 ChatBox 消息让 Agent 重做
 6. **悬挂超时** = 24 小时 (SettingsDialog 可改);超时后 status='expired',不自动拒绝避免 Reflector 学错经验
 
-**Cascade 中断恢复**: 浏览器关闭时若有 pending 审批,启动时 `useApprovals.hydrate()` 拉回所有 status='pending' 的 approval 继续审。每个 approval 行幂等 (status 检查) — 重复点同意不重复落盘。
+**Cascade 中断恢复 (整批审之后简化)**: 浏览器关闭时若有 pending 审批,启动时 `useApprovals.hydrate()` 拉回所有 status='pending' 的 approval (每个一个完整 ChangeSet) 继续审。每个 approval 行幂等 (status 检查 + transaction 原子性) — 重复点同意不重复落盘,中途崩溃也不会出现"半落地"。
 
 ## ApprovalCard UI 形态
 
@@ -85,27 +85,56 @@ export const writeSettingProposal = tool({
 │   + gender: female                                 │
 │   - 名字叫"林川",北漂程序员                        │
 │   + 名字叫"林溪",北漂程序员                        │
-│                                                    │
-│ ⚠ Validator 提示: 此变更将影响:                     │
-│   • outline.md (3 处性别引用)                      │
-│   • characters/wang.md (称谓 "兄弟" 需改)         │
-│   • chapters/001-XX/draft.md (5 处)                │
+│ ────────────────────────────────────────────────── │
+│ ⚠ 影响图谱: 8 段 cascade (3 轮内部分析)            │
+│ ☑ 一级 cascade (5 项)  [展开]                      │
+│   ☑ outline.md § 3 (高置信)                        │
+│   ☑ wang.md § "称谓" (高置信)                      │
+│   ☑ ch_001 § 5 (高置信)                            │
+│   ☑ ch_001 § 12 (中置信)                           │
+│   ☐ ch_001 § 18 (低置信 — 默认不勾)                 │
+│ ☑ 二级 cascade (3 项)  [展开]                      │
+│   ☑ ch_003 § 7 (中置信)                            │
+│   ...                                               │
 ├────────────────────────────────────────────────────┤
-│ [拒绝]  [手动编辑]  [同意]  [同意并 cascade 全部]   │
+│ [全选] [全不选] [拒绝全部] [同意勾选 7/8 项 (Y)]    │
 └────────────────────────────────────────────────────┘
 ```
 
-## Cascade 审批
+## Cascade 审批 (W9 升级 — 整批审)
 
-当 Validator 检测到一个变更影响多处时:
+> ⚠ **关键交互模型**: cascade 递归在审批**前**的内部循环里完成,用户只看一次最终汇总的 ChangeSet。落盘是后端 transaction 一次写所有勾选项 — 不再"主变更落盘 + cascade 各项再 ApprovalCard"。
 
-1. Writer 完成主变更并请求审批
-2. Validator 并行扫,产出 `cascadeChanges: ChangeProposal[]`
-3. 主 ApprovalCard 多一个按钮 "同意并 cascade 全部"
-4. 用户点 "同意并 cascade":
-   - 主变更落盘
-   - 每个 cascadeChange **依次** 渲染 ApprovalCard (用户可逐项审或一键全过)
-5. 用户点普通"同意":只落盘主变更,不 cascade (用户自己负责处理副作用)
+```
+Writer 出主修改 (in-memory)
+   ↓
+[内部递归 ≤3 轮 (见 plan/06 + spec/19)]
+   - 第 1 轮 analyzeImpact → ChangeProposal[1]
+   - Writer 内部短调用生成 afterText
+   - 第 2 轮 → ChangeProposal[2]
+   - 第 3 轮 → ChangeProposal[3]
+   - 终止 (候选空 / 半径不收缩 / 深度=3)
+   ↓
+汇总 ChangeSet (主修改 + 1-3 级 cascade,含影响图谱)
+   ↓
+**一次** ApprovalCard:
+   - 顶部: 影响图谱 (节点 + 边,按 cascadeLevel 着色)
+   - 主修改一行 (默认勾)
+   - 一级 cascade 折叠组 (高/中置信默认勾,低置信默认不勾)
+   - 二级 cascade 折叠组 (同上)
+   - 三级 cascade 折叠组 (同上)
+   - 每条可手动编辑 / toggle 勾选
+   - 操作: [全选] [全不选] [拒绝全部] [同意勾选 K/N 项]
+   ↓
+用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items[], edits{} }
+   ↓
+后端 transaction 一次落盘所有 accepted (主 + 勾选的 cascade)
+   ↓
+副作用 (差量 reindex / snapshot / history group / Reflector,见 plan/04 §审批通过后的副作用)
+```
+
+**不勾选某条 cascade 的语义**: 该 proposal 被显式**搁置**,系统记录但不落盘。后续如果作者写到那段,Validator 会在再下一次 cascade 中重新发现并提议。
+**全部勾不勾选 + reject 全部**: 拒绝整个 ChangeSet,主修改也不落,等于这次修改没发生过。
 
 ## 拒绝反馈环
 

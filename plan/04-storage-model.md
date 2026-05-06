@@ -225,13 +225,43 @@ updated_at: ...
 3. **Memory 层**: Mastra `Memory({ resource: projectId })` 自动隔离会话历史
 4. **校验**: 所有 storage 函数签名第一个参数是 `projectId`,内部 assert 路径前缀
 
-## 保存触发的副作用
+## 修改提交的全链路 (含审批前内部 cascade 递归)
 
-每次 `writeSetting` / `writeChapter` 落盘后:
+> ⚠ **关键交互模型**: `writeSetting` / `writeChapter` 是 **proposal-only** 工具 (见 spec/06),**不直接落盘**。从用户输入到磁盘改变,中间隔着完整的 cascade 内部递归 + 用户审批两道闸:
 
-1. 更新对应 markdown 文件 (含 frontmatter `updated_at`)
-2. 重新解析 frontmatter,upsert 到 `entities` 表
-3. 触发 Worker 异步**差量** reindex (见 spec/17 §差量 reindex):
+```
+用户在 plan 模式发起意图
+   ↓
+Writer 出主修改 (in-memory)
+   ↓
+[内部递归循环 — 用户不可见,无任何落盘]
+   ├ 第 1 轮 analyzeImpact (基于 main delta) → ChangeProposal[1]
+   ├ Writer 内部对 needsChange=true 项生成 afterText (内存)
+   ├ 第 2 轮 analyzeImpact (基于第 1 轮 afterText) → ChangeProposal[2]
+   └ ... ≤3 轮,半径单调下降 + weight 阈值递增 (见 spec/19)
+   ↓ 递归终止
+汇总 ChangeSet (主修改 + 所有 cascade proposal,含二级)
+   ↓
+**一次** ApprovalCard 呈现整批:
+  - 顶部影响图谱 (节点 = entity / file,边 = 影响传播)
+  - 每条 proposal 一行 diff (默认全展开,可折叠)
+  - 每条 proposal 有勾选框 (默认勾)
+  - [全选] [全不选] [一键同意勾选项] [手动编辑某条] [拒绝全部]
+   ↓
+用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items: [...] }
+   ↓
+**↓ 此处才开始落盘 ↓**
+```
+
+下一节列的"副作用"只在 approve 通过后触发,不是 cascade 的源头。
+
+## 审批通过后的副作用
+
+每次 ApprovalCard 整批 approve 通过后,后端 `POST /api/approvals/{id}/resolve` 在一个 SQLite transaction 内:
+
+1. 按 transaction 一次写所有 `accepted_items` 文件 (主修改 + 勾选的 cascade proposal)
+2. 重新解析每个文件 frontmatter,upsert 到 `entities` 表
+3. 触发 Worker 异步**差量** reindex (见 spec/17 §差量 reindex,按文件批量入队):
    - 段级 anchor diff (unchanged / modified / rewritten / deleted / added)
    - 仅 dirty 段重扫 entity_refs / concept_refs
    - 仅 dirty 段重算 paragraph_embeddings (见 spec/18 §增量计算)
@@ -239,10 +269,11 @@ updated_at: ...
    - `relations` 字段变化 → upsert 到 `entity_relations` (source='frontmatter')
    - `initial_state` 变化 → upsert 到 `entity_timeline`
    - 派生文件 (`_matrix.md` / `character-ages.md`) 重生成
-5. **若属于 P0 设定文件 (worldview/* / characters/* / outline/master.md)**: 自动 setting snapshot (见 spec/16 §Snapshot)
-6. 写一条 `history` 记录 (含 before/after diff)
-7. 若是 plan 模式:Validator agent 入队 → 调 `analyzeImpact` (见 spec/19) 算影响半径 → cascade ChangeProposal[] 给用户
-8. 调用 Reflector 入队反思 (审批闭环后,见 plan/06)
+5. **若主修改属于 P0 设定文件 (worldview/* / characters/* / outline/master.md)**: 自动 setting snapshot (见 spec/16 §Snapshot)
+6. 写一组 `history` 记录 (整批用同一个 `cascade_group_id`,便于"回退某次审批"还原整批)
+7. Reflector 按 cascade 链路批次合并入队 (见 plan/06 §Reflector 触发时机)
+
+**事务原子性**: 步骤 1 在一个 transaction 内,任一文件写盘失败 → 全部 rollback;reindex 副作用入队但 Worker 是异步串行,不影响主 transaction。
 
 ## 备份策略
 

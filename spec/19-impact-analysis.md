@@ -11,35 +11,63 @@
 
 ## 工作链路 (取代 plan/06 §解决方案)
 
+> ⚠ **关键交互模型**: 整个 cascade 递归在 **审批之前** 的内部循环里完成。Writer 生成主修改 (in-memory),`analyzeImpact` 内部递归 ≤3 层把所有 cascade proposal 算清楚,**汇总成一个 ChangeSet 一次审**。用户审完后才落盘。任何"先落盘 → 再触发 cascade"或"逐项 ApprovalCard"的设计都是错的。
+
 ```
-writeSetting / writeChapter 的 ApprovalCard 通过 → 落盘
+Writer agent 出主修改 (in-memory)
    ↓
-Validator agent execute → 调 analyzeImpact 工具
+Validator agent execute → 调 analyzeImpact 工具,传入 main delta
    ↓
-analyzeImpact step 1: LLM Flash 抽 semantic delta
-   "把 before / after 文本 diff 翻译为结构化 delta:
-    什么属性 / 关系 / 概念 / timeline 项 被改了"
+[analyzeImpact 内部递归循环]
+   │
+   ├ 第 1 轮 (轮次记 round=1, weightFloor=30):
+   │   step 1: extractSemanticDelta(main delta) — LLM Flash 抽结构化 delta
+   │            (entity-attribute / relation-add / concept-add / paragraph-rewrite ...)
+   │   step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)
+   │            - entity_refs / concept_refs (weight=100)
+   │            - 关系上下游 1 跳 (weight=50-90)
+   │            - dependencies 锚点上下游 (weight=70)
+   │            - timeline 区间内引用 (weight=80)
+   │            - embeddings 语义相关 topK (weight=cos×100)
+   │   step 3: filterByLLM — Pro 批 5 段 → ChangeProposal[round=1]
+   │
+   ├ Writer 内部短调用: 对每条 needsChange=true 的 proposal 生成 afterText (in-memory)
+   │
+   ├ 第 2 轮 (round=2, weightFloor=60):
+   │   step 1: extractSemanticDelta(round=1 的 afterText 集合) — 把这些当作新 delta
+   │   step 2: computeImpactRadius — 必须严格收缩 (候选 ⊆ 第 1 轮剩余)
+   │   step 3: filterByLLM → ChangeProposal[round=2]
+   │
+   ├ Writer 内部短调用 (round=2 afterText)
+   │
+   ├ 第 3 轮 (round=3, weightFloor=90)... 同上
+   │
+   └ 终止 — 任一条件成立即停:
+        a. 候选段集为空
+        b. 半径未严格收缩 (currSet 不是 prevSet 子集 / |currSet| ≥ |prevSet|)
+        c. round = 3
+   │
    ↓
-analyzeImpact step 2: SQL 查影响半径
-   按 delta 类型分发到不同 SQL 查询,合并结果
-   ↓ (候选段集)
-analyzeImpact step 3: LLM Pro 逐段过滤
-   对每段询问:"原 X (delta), 这段是否真的需要改?"
-   "若需要,给出 proposedText / reason / confidence"
-   ↓ (ChangeProposal[])
-analyzeImpact step 4: 输出 + 影响图谱
-   ChangeProposal[] 进 ApprovalCard
-   影响图谱 (节点 = entity / file,边 = 影响传播) 供 UI 可视化
+汇总 ChangeSet:
+   - 主修改 (cascadeLevel=0,Writer 原始输出)
+   - 第 1 轮 ChangeProposal[] (cascadeLevel=1)
+   - 第 2 轮 ChangeProposal[] (cascadeLevel=2)
+   - 第 3 轮 ChangeProposal[] (cascadeLevel=3)
+   - 影响图谱 (节点 = entity / file / concept,边 = 影响传播,标 cascadeLevel)
    ↓
-用户审 → 接受 ChangeProposal[] → Writer 重写
+analyzeImpact 工具返回 → Validator agent 把 ChangeSet 提交给 ApprovalCard
    ↓
-Writer 重写后,新内容再次落 ApprovalCard
+**一次** ApprovalCard 呈现整批 (见 spec/06):
+   用户勾选 + 一键同意 / 部分同意 / 拒绝
    ↓
-若新内容产生新的 setting delta (e.g. cascade 修改顺带改了世界观)
-   → 再触发 analyzeImpact (递归)
-   → 但终止条件: 半径必须严格单调下降
-   → 第二次 cascade 候选段集 ⊆ 第一次的剩余;若违反或重叠,停止递归
+用户 approve → POST /api/approvals/{id}/resolve
+   ↓
+后端 transaction 一次落盘所有 accepted 文件
+   ↓
+落盘副作用 (差量 reindex / snapshot / history group / Reflector;见 plan/04)
 ```
+
+**Writer 内部短调用** 是新加的概念 — 它不走完整的 chat / streaming,直接调 Writer agent 的 generate 模式 (无审批,因为产物只在内存),输入 `(原 anchor 文本, proposal.proposedText 或 LLM 第 3 步给的修改建议)`,输出 `afterText`。这次调用本身**不**触发任何工具(包括嵌套 analyzeImpact),纯文本生成,~1-3s。
 
 ## Step 1 — Semantic Delta 抽取
 
@@ -392,26 +420,28 @@ JSON:
 - 不要超出 deltas 描述的改动范围 (e.g. 改 lin.gender 时不要顺带改其他无关属性)
 ```
 
-## Step 4 — 输出 + 影响图谱
+## Step 4 — 输出最终 ChangeSet + 影响图谱
 
-`analyzeImpact` 工具返回:
+`analyzeImpact` 工具的最终返回 (内部 ≤3 轮递归后汇总):
 
 ```ts
 type AnalyzeImpactResult = {
-  proposals: ChangeProposal[]            // 进 ApprovalCard 给用户
+  proposals: ChangeProposal[]            // 全 cascade 层级合并 (cascadeLevel: 1 / 2 / 3)
   graph: {
-    nodes: { id: string; kind: 'entity' | 'file' | 'concept'; label: string }[]
-    edges: { from: string; to: string; kind: 'ref' | 'relation' | 'concept' | 'dep'; weight: number }[]
+    nodes: { id: string; kind: 'entity' | 'file' | 'concept'; label: string; cascadeLevel: number }[]
+    edges: { from: string; to: string; kind: 'ref' | 'relation' | 'concept' | 'dep'; weight: number; cascadeLevel: number }[]
   }
   metadata: {
-    totalCandidates: number              // SQL 出的总数
-    filteredByLLM: number                // LLM 判 needsChange=false 的数
-    droppedByWeight: number              // weight < 30 未送 LLM
+    rounds: number                       // 实际跑了几轮 (1-3)
+    totalCandidatesPerRound: number[]    // 每轮候选段数,递减序
+    filteredByLLM: number                // 累计 needsChange=false
+    droppedByWeight: number              // 累计 weight < weightFloor 未送 LLM
+    terminationReason: 'depth-limit' | 'no-candidates' | 'no-shrink' | 'no-needs-change'
   }
 }
 ```
 
-UI 在 ApprovalCard 顶部展示影响图(Mermaid graph 或 reactflow),让作者一眼看到"这次改动辐射到哪些 entity / 文件"。
+UI 在 ApprovalCard 顶部展示影响图 (Mermaid graph / reactflow),用 cascadeLevel 着色 (主修改红 / 一级橙 / 二级黄 / 三级浅黄),作者一眼看到"这次改动逐层辐射到哪些 entity / 文件"。
 
 ## 工具签名 (注册到 spec/02 工具集)
 
@@ -428,21 +458,15 @@ export const analyzeImpact = tool({
   execute: async ({ filePath, before, after }, { projectId }) => {
     // 路径 safePath
     const safe = safeFromProjectRoot(projectId, filePath)
-    // step 1
-    const deltas = await extractSemanticDelta(projectId, filePath, before, after)
-    // step 2
-    const radius = await computeImpactRadius(projectId, deltas)
-    // step 3
-    const proposals = await filterByLLM(projectId, deltas, radius.candidateAnchors)
-    // step 4
+    // step 1: extract initial semantic delta
+    const initialDelta = await extractSemanticDelta(projectId, filePath, before, after)
+    // step 2-4: 内部递归 (≤3 轮) 出全部 cascade level 的 proposals
+    const allProposals = await runCascadeRecursion(projectId, initialDelta)
+    const graph = buildImpactGraph(initialDelta, allProposals)
     return {
-      proposals,
-      graph: radius.graph,
-      metadata: {
-        totalCandidates: radius.candidateAnchors.length,
-        filteredByLLM: proposals.length,
-        droppedByWeight: ...,
-      },
+      proposals: allProposals,
+      graph,
+      metadata: { /* rounds / totalCandidatesPerRound / ... */ },
     }
   },
 })
@@ -450,47 +474,94 @@ export const analyzeImpact = tool({
 
 工具分配 (附录 spec/02 §工具分配):**Validator**。其他 agent 不得调用。
 
-## 递归 Cascade 终止条件
+## 递归 Cascade 终止条件 (在 analyzeImpact 内部循环中)
+
+> 注: 递归发生在 analyzeImpact 工具的**单次调用**内部,不是用户跨多个 ApprovalCard 的多次审批。用户只看到一次 ApprovalCard,内部已经迭代到稳态。
 
 ```
-第一次 analyzeImpact 出 N 段 ChangeProposal
+analyzeImpact 工具入口 (传入 main delta)
    ↓
-用户接受 K (K ≤ N) 段 → Writer 重写
+round = 1, weightFloor = 30
    ↓
-Writer 重写后,落 K 段新 anchor (paragraph-rewrite delta × K)
-   ↓
-为防止"第一次改主角性别 → 第二次发现性别相关段还有更深一层"无限递归:
+loop:
+   computeImpactRadius(weightFloor) → 出候选
+   if 候选空: break
+   filterByLLM(候选) → ChangeProposal[round]
+   if needsChange=true 的 proposal 数 = 0: break (LLM 判全部不需要改)
+   Writer 内部短调用 → 各 proposal 生成 afterText (in-memory)
+   round += 1
+   if round > 3: break
+   weightFloor += 30                              # 30 → 60 → 90
+   nextDelta = 把 afterText 集合算成 paragraph-rewrite + concept-* delta
+   if 半径不严格收缩 (currSet 不是 prevSet 子集 / |currSet| ≥ |prevSet|): break
+   delta = nextDelta; continue
 ```
 
-**终止条件**:
+**实现伪码**:
 
 ```ts
-async function shouldRecurse(
-  prevRadius: ImpactRadius,
-  currentRadius: ImpactRadius,
-): Promise<boolean> {
-  // 规则 1: 候选段集严格收缩
-  const prevSet = new Set(prevRadius.candidateAnchors.map(c => c.anchorId))
-  const currSet = new Set(currentRadius.candidateAnchors.map(c => c.anchorId))
-  if (currSet.size >= prevSet.size) return false  // 没收缩,可能是循环
+async function runCascadeRecursion(
+  projectId: string,
+  initialDelta: SemanticDelta[],
+): Promise<ChangeProposal[]> {
+  let allProposals: ChangeProposal[] = []
+  let currentDelta = initialDelta
+  let prevCandidateSet: Set<string> | null = null
+  let weightFloor = 30
 
-  // 规则 2: 当前候选必须是上一次未处理的子集
-  for (const id of currSet) {
-    if (!prevSet.has(id)) return false  // 出现了上次没有的新段 — 系统在生成新影响,停
+  for (let round = 1; round <= 3; round++) {
+    const radius = await computeImpactRadius(projectId, currentDelta, { weightFloor })
+    if (radius.candidateAnchors.length === 0) break
+
+    // 半径单调收缩检查 (round ≥ 2)
+    const currSet = new Set(radius.candidateAnchors.map(c => c.anchorId))
+    if (prevCandidateSet) {
+      if (currSet.size >= prevCandidateSet.size) break       // 没收缩
+      for (const id of currSet) {
+        if (!prevCandidateSet.has(id)) {                     // 出现新段
+          // 半径破坏单调性 — 停 (不能让系统不停发散)
+          return allProposals
+        }
+      }
+    }
+    prevCandidateSet = currSet
+
+    const proposals = await filterByLLM(projectId, currentDelta, radius.candidateAnchors)
+    const toRewrite = proposals.filter(p => p.needsChange)
+    if (toRewrite.length === 0) break                        // 全判不需要改
+
+    proposals.forEach(p => p.cascadeLevel = round)
+    allProposals.push(...proposals)
+
+    // Writer 内部短调用 (生成 afterText) — 这次调用不带任何 tool
+    const afterTexts = await Promise.all(toRewrite.map(p =>
+      writerInternalRewrite(projectId, p.anchorId, p.proposedText)
+    ))
+
+    // 把这些 afterText 转为下一轮 delta
+    currentDelta = afterTexts.map((text, i) => ({
+      kind: 'paragraph-rewrite',
+      anchorId: toRewrite[i].anchorId,
+      beforeText: '...',  // 已存在内容
+      afterText: text,
+    }))
+
+    weightFloor += 30
   }
 
-  // 规则 3: 总递归深度 ≤ 3
-  if (depthCounter > 3) return false
-
-  // 规则 4: weight 阈值递增
-  // 第 1 次: weight ≥ 30 都送 LLM
-  // 第 2 次: weight ≥ 60
-  // 第 3 次: weight ≥ 90
-  return true
+  return allProposals
 }
 ```
 
-UI: 用户在 cascade 流中始终看到"第 X 轮影响分析(共 ≤3 轮)";第 3 轮还有未决时弹"已达递归上限,剩余候选请手动处理"。
+**Writer 内部短调用 `writerInternalRewrite`**: 调用 Writer agent 的 generate 模式 (无 tool,无审批),输入 `(原 anchor 文本 + proposedText 提示)`,输出最终 afterText。~1-3s 单段。
+
+**UI 显示进度**: ApprovalCard 出现前的"分析中"页面显示"正在分析影响范围...
+- 第 1 轮: 找到 N 段候选,LLM 过滤中...
+- 第 2 轮: N 段二级 cascade,LLM 过滤中...
+- 第 3 轮: N 段三级 cascade
+- 完成: 整批 K 段 ChangeSet 准备就绪 [查看]"
+
+用户**不能干预内部循环**(无法"在第 2 轮就提前 approve"),只能等汇总完整批审。如果用户耐心不足,可在 SettingsDialog 调"递归深度上限"= 1 / 2 / 3 (默认 3)。
 
 ## 取代 plan/06 §性能考虑
 

@@ -55,34 +55,43 @@ ChatBox 输入
 Router 路由 (识别 mode = discuss | plan | write)
    │
    ├─ discuss → 优先 queryFacts (spec/21) 直查 SQL → 命中即答
-   │             (未命中 fallback 自由 LLM,RAG 设定 read-only)
+   │             (未命中 fallback 自由 LLM,RAG 设定 read-only;无落盘)
    │
-   ├─ plan → Writer 生成设定草稿
+   ├─ plan → Writer 生成主修改 (in-memory,proposal-only,不落盘)
    │           ↓
-   │      Validator 校验一致性 (调 analyzeImpact, spec/19):
-   │        step 1 抽 semantic delta
-   │        step 2 SQL 查影响半径 (entity_refs ∪ relations ∪ concept_refs ∪ deps ∪ timeline)
-   │        step 3 LLM 二次过滤每段是否真受影响
+   │      Validator 调 analyzeImpact (spec/19):
+   │        [内部递归 ≤3 轮,用户不可见,纯内存]
+   │          - 第 1 轮: extractSemanticDelta + SQL 影响半径 + LLM filter → ChangeProposal[1]
+   │          - Writer 内部短调用生成 afterText
+   │          - 第 2 轮: 同上,基于第 1 轮 afterText,半径严格收缩
+   │          - 第 3 轮: 同上
+   │          - 终止: 候选空 / 半径不收缩 / 深度=3
    │           ↓
-   │      diff + 影响图谱 → ApprovalCard
-   │           ↓ (用户同意)
-   │      落盘 (.md + 差量 anchor reindex + 知识图谱表 upsert)
+   │      汇总 ChangeSet (主修改 + 1-3 级 cascade + 影响图谱)
    │           ↓
-   │      若产生新 cascade: Writer 重写 → 递归 ≤3 层 (半径单调下降)
+   │      **一次** ApprovalCard:用户勾选 + 编辑 + 一键同意/部分同意/拒绝
+   │           ↓ (用户 approve)
+   │      后端 transaction 一次写所有 accepted 文件
    │           ↓
-   │      Reflector 提炼经验
+   │      副作用: 差量 anchor reindex + 知识图谱表 upsert + snapshot + history group
+   │           ↓
+   │      Reflector 按 cascade 链路批次合并入队
    │
    └─ write → Writer 调 assembleContext (spec/20) 自动 retrieve:
    │            entity 状态 + 活跃关系 + 待处理伏笔 + 最近章节 + 语义相关 + 世界观 + 概念约束
    │           ↓
-   │       生成章节
+   │       生成章节 (in-memory,proposal-only)
    │           ↓
-   │      Checker 风格审 (含 BeatAnalyzer) + Validator 一致性审 (含 ArcTracker)
+   │      Checker 风格审 (含 BeatAnalyzer) + Validator 一致性审 (含 ArcTracker + analyzeImpact)
    │           ↓
    │      ReaderPanel 5 persona 模拟读者反应 → ChapterRiskReport
    │           ↓
-   │      diff + 风险报告 → ApprovalCard → 落盘 (差量 reindex) → Reflector
+   │      汇总 ChangeSet (章节正文 + cascade 修改) + 风险报告
+   │           ↓
+   │      **一次** ApprovalCard → 用户审 → 后端 transaction 一次写 → 副作用
 ```
+
+**关键交互不变性**: 所有写盘动作必须经过 ApprovalCard 整批审。"内部 cascade 递归"和"用户审批"是两个分离的阶段:递归全在内存,审批在 UI;落盘只在 approve 后,事务原子。
 
 ## 关键技术决策汇总
 

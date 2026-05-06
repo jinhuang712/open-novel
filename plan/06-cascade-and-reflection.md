@@ -6,60 +6,77 @@
 
 用户的核心痛点之一:**"改了一个角色资料,后面写出来的章节自相矛盾"**。例如把主角性别从男改女后,后续章节里仍然用"兄弟"、"小子"等男性化称谓。
 
-### 解决方案: Validator 调 analyzeImpact + 用户审批 cascade (W9 升级)
+### 解决方案: 内部递归 cascade + 整批审批 (W9 升级)
 
-> **W9 重大升级 (见 plan/11-knowledge-graph.md)**: 旧版 cascade 是"现场 LLM 推理影响范围",已被证实对概念级 / 关系级 / 时间级 / 伏笔级改动全部漏检。新链路改为"先 SQL 出影响半径,再 LLM 二次过滤"。
-
-每次设定写入 (writeSetting 落盘后) 触发 Validator 反查:
+> **W9 重大升级 (见 plan/11-knowledge-graph.md)**: 旧版 cascade 是"现场 LLM 推理影响范围",已被证实对概念级 / 关系级 / 时间级 / 伏笔级改动全部漏检。新链路改为"先 SQL 出影响半径,再 LLM 二次过滤,递归在审批前内部跑完,整批一次审"。
+>
+> ⚠ **关键交互模型**: writeSetting / writeChapter **不直接落盘** (proposal-only,见 spec/06)。Cascade 递归全部在审批前的内部循环里完成,用户只看到一次最终汇总的 ChangeSet。
 
 ```
-writeSetting 完成 → Validator agent 入场
+用户发起修改意图 (e.g. "把林川性别改成女性")
    │
    ▼
-调 analyzeImpact 工具 (见 spec/19)
-   │
-   step 1: extractSemanticDelta — frontmatter / 正文 diff 翻译为结构化 delta
-           (entity-attribute / entity-relation-add / concept-add / paragraph-rewrite ...)
-   │
-   step 2: computeImpactRadius — 纯 SQL 出候选段集
-           - 直接 entity_refs / concept_refs 命中 (weight=100)
-           - 关系上下游 1 跳 (weight=50-90)
-           - dependencies 锚点上下游 (weight=70)
-           - timeline 区间内的引用 (weight=80)
-           - 语义相关 (embeddings.search topK,weight=cos×100)
-   │
-   step 3: filterByLLM — Pro 模型批量逐段过滤 (5 段一批)
-           "原 X 改动,这段是否真需要改?给出 proposedText / reason / confidence"
-   │
-   step 4: 输出 ChangeProposal[] + 影响图谱 (UI 可视化)
+Writer 生成主修改 (in-memory,未落盘)
    │
    ▼
-Router 把 ChangeProposal[] + 影响图谱包进当前 ApprovalCard
+[内部递归循环 — 用户不可见]
+   │
+   ├ 第 1 轮 analyzeImpact (基于 main delta,见 spec/19):
+   │   step 1: extractSemanticDelta — frontmatter / 正文 diff → 结构化 delta
+   │   step 2: computeImpactRadius — 纯 SQL 出候选段集
+   │             - entity_refs / concept_refs 命中 (weight=100)
+   │             - 关系上下游 1 跳 (weight=50-90)
+   │             - dependencies 锚点上下游 (weight=70)
+   │             - timeline 区间内引用 (weight=80)
+   │             - 语义相关 (embeddings topK,weight=cos×100)
+   │   step 3: filterByLLM — Pro 批 5 段过滤 → ChangeProposal[1]
+   │
+   ├ Writer 内部短调用: 对每条 needsChange=true 项生成 afterText (内存,未落盘)
+   │
+   ├ 第 2 轮 analyzeImpact (基于第 1 轮 afterText 为新 delta):
+   │   再算 SQL 影响半径 (必须严格收缩,weight 阈值 30→60)
+   │   再 LLM filter → ChangeProposal[2]
+   │
+   ├ 第 3 轮 (若仍有候选,weight 阈值 60→90)
+   │
+   └ 终止条件: 候选空 / 半径不严格收缩 / 深度 = 3 (见 spec/19 §递归终止)
    │
    ▼
-用户决定:
-   - 一键全过 → Writer 依次重写每段 → 各自走 needsApproval (可 batch approve)
-   - 逐项审 → 一个一个看 (可看影响图谱定位"为什么这段被列出")
-   - 跳过 → 落盘的变更已生效,但下游不动 (UI 提示"X 段未处理,Validator 已记录")
+汇总 ChangeSet (主修改 + 所有 cascade proposal,含二级)
    │
    ▼
-Writer 重写 → 触发递归 analyzeImpact (≤3 层,半径单调下降终止;见 spec/19 §递归终止)
+**一次** ApprovalCard 呈现整批:
+   - 顶部影响图谱 (节点 = entity / file / concept,边 = 影响传播)
+   - 每条 proposal 一行 diff (默认展开,可折叠)
+   - 每条 proposal 勾选框 (默认勾)
+   - [全选] [全不选] [一键同意勾选项] [手动编辑某条] [拒绝全部]
+   │
+   ▼
+用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items: [...] }
+   │
+   ▼
+后端 transaction 一次写所有 accepted 文件 (主 + cascade)
+   │
+   ▼
+触发副作用 (见 plan/04 §审批通过后的副作用): 差量 reindex / snapshot / history group / Reflector 入队
 ```
 
-### Validator prompt 的关键约束 (升级后)
+### Validator + analyzeImpact 的关键约束 (升级后)
 
-- **不再现场 LLM 推影响范围** — analyzeImpact step 2 的 SQL 已覆盖,LLM 只做二次判断
-- **绝不静默修改文件** — 只输出 `ChangeProposal[]`,落 ApprovalCard 待用户审
-- 每条 proposal 必须包含: `anchorId`, `targetFile`, `needsChange`, `proposedText`(needsChange=true 时), `reason`, `confidence`
-- 不确定时 confidence='low',UI 用黄色警告提醒
-- `needsChange=false` 也必须给 reason (审计需要)
+- **不现场 LLM 推影响范围** — analyzeImpact step 2 的 SQL 已覆盖,LLM 只做二次判断
+- **递归全部在审批前完成** — 用户审之前所有"二级 / 三级 cascade"已被算出并合入同一 ChangeSet
+- **绝不静默修改文件** — 任何文件变更必须经过整批 ApprovalCard 用户勾选
+- **每条 proposal 必须含**: `anchorId`, `targetFile`, `needsChange`, `proposedText` (needsChange=true 时), `reason`, `confidence`, `cascadeLevel` (1=主 / 2=一级 / 3=二级)
+- **不确定时 confidence='low'**,UI 用黄色警告 + 默认不勾选
+- **needsChange=false 也必须给 reason** (审计需要,展示在影响图谱中作为"已分析但无需改动")
 
 ### 性能策略 (升级后,治标策略已撤)
 
 - ~~按章节范围 ±5 章~~ — 已撤,改为 SQL 出完整候选 + weight 排序 + LLM 顶部 50 个分批过滤
 - ~~entity hash 已审过标记~~ — 已无意义 (LLM 二次过滤本就只对未审段调用)
 - ~~章节级 word_count + entity_count short-circuit~~ — 改为 anchor diff 短路 (无段变化即跳过)
-- 新性能保证: SQL 影响半径 < 100ms (5K 段规模),LLM 二次过滤每批 5 段 ~3-5s,典型 cascade 总耗时 5-15s
+- 新性能保证: SQL 影响半径 < 100ms (5K 段规模),LLM 二次过滤每批 5 段 ~3-5s
+- **内部递归 ≤ 3 轮典型耗时 15-45s** — UI 在 Writer 出主修改后立刻显示进度 ("正在分析影响范围... 第 1 轮 / 第 2 轮 / 第 3 轮"),作者可看到内部进度但不能干预,直到 ChangeSet 出来
 
 ## React 式反馈学习
 
