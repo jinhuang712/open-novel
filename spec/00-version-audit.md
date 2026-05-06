@@ -59,25 +59,48 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 
 如果 SDK 真有 `needsApproval` 一等字段,就走那条路;否则按 cookbook 模式重写 spec/02 + spec/06 + plan/05 三处。
 
-### C. DeepSeek 模型 ID 与定价
+### C. DeepSeek 模型 ID 与定价 ✅ **2026-05-06 实查完成**
 
-**问题**: spec/03 / plan/02 / README 都写 `deepseek/deepseek-v4-pro` `deepseek/deepseek-v4-flash`。这两个具体型号名是基于"DeepSeek 类比 OpenAI Pro/Flash 命名"的猜测,**真实 model id 必须实查**。
+**问题**: spec/03 / plan/02 / README 都写 `deepseek/deepseek-v4-pro` `deepseek/deepseek-v4-flash`。这两个具体型号名是基于"DeepSeek 类比 OpenAI Pro/Flash 命名"的猜测,真实 model id 必须实查。
 
-需要实查 (任一来源即可):
+**实查结果** (来源: https://api-docs.deepseek.com/zh-cn/quick_start/pricing/):
 
-1. DeepSeek 官方 API 文档 (platform.deepseek.com/api-docs)
-2. Vercel AI Gateway 的 DeepSeek 模型清单 (sdk.vercel.ai/gateway-docs)
-3. `@ai-sdk/deepseek` 包的 README / 类型定义 (`pnpm view @ai-sdk/deepseek` 后看 supported models 字段)
+| Agent 用途 | 训练数据假设 | 真实 model id | ctx 上限 | max output | 备注 |
+|---|---|---|---|---|---|
+| Pro 系 (Writer/Validator/Humanizer) | `deepseek/deepseek-v4-pro` | **`deepseek-v4-pro`** | **1M tokens** | **384K tokens** | 单价见官方;Pro/Flash 分级确认存在 |
+| Flash 系 (Router/Checker/Reflector/ReaderPanel) | `deepseek/deepseek-v4-flash` | **`deepseek-v4-flash`** | **1M tokens** | **384K tokens** | Flash 含 thinking / non-thinking 两档 |
+| 旧名 | `deepseek-chat` / `deepseek-reasoner` | (即将弃用) | — | — | 官方说明: 旧名将被映射到 V4-Flash 的 non-thinking / thinking 模式后弃用,新代码不要用 |
 
-实查产出一张表:
+**关键修正** (与之前训练数据假设的偏差):
 
-| Agent 用途 | 训练数据假设的 ID | 实查后的真实 ID | 单价 (input / output) | 备注 |
-|---|---|---|---|---|
-| Pro 系 (Writer/Validator/Humanizer) | `deepseek/deepseek-v4-pro` | (待填) | (待填) | |
-| Flash 系 (Router/Checker/Reflector/ReaderPanel) | `deepseek/deepseek-v4-flash` | (待填) | (待填) | |
-| Reasoning 系 (可选,若 V4 有 reasoning 模型) | (假设 `deepseek-reasoner`) | (待填) | (待填) | 适合 ArcTracker / Validator 复杂推理 |
+- **ctx 上限**: 训练数据假设 128K → 实查 **1M tokens**(8 倍差异)。这意味着 spec/23 / plan/12 的 token 预算控制设计完全无必要,改为 per-agent 上下文契约 + 一致性优先 (T4 commit)
+- **max output**: 之前没考虑 → **384K tokens**(对 Writer 单次写超长章节非常友好,但 JSON mode 必须配套设 `max_tokens` 防截断,见 §G)
+- **模型命名**: 实查证实 `deepseek-v4-pro` / `deepseek-v4-flash` 是真实 ID(无 `deepseek/` 前缀,纯 model 名)
+- **reasoning**: 没有独立 reasoning model;V4-Flash 自带 thinking 模式,通过参数切换;不需要再为 ArcTracker / Validator 单独选 reasoner
 
-如果 V4 没有 Pro/Flash 分级,只有单一 chat + reasoner 两档,需要回写整个 plan/02 §模型选择策略 — 全用同一档 + 是否引入 reasoner 区分。
+### G. DeepSeek JSON 输出模式 ✅ **2026-05-06 实查完成**
+
+**问题**: 我们大量 Agent (Router / Validator / Checker / ArcTracker / ReaderPanel / Reflector / concept extractor / extractSemanticDelta / filterByLLM) 输出本质结构化,过去用"prompt 嘱咐 + zod 解析自然语言"会反复出现"模型回了一段话和 JSON 混在一起"的解析失败。需要确认 DeepSeek 是否原生支持 JSON 输出模式。
+
+**实查结果** (来源: https://api-docs.deepseek.com/zh-cn/guides/json_mode):
+
+| 维度 | 实查结论 |
+|---|---|
+| 启用方式 | `response_format: { type: 'json_object' }` |
+| Prompt 要求 | system 或 user 必须含 "json" 字样 + 提供示例 JSON |
+| Schema enforcement | ❌ **不强制 schema** (不像 OpenAI structured outputs);只保证返回**合法 JSON**,字段语义要应用层 zod 校验 |
+| Streaming 支持 | 文档未明说,但官方示例为 streaming 形式,可用;客户端要拼完整 chunks 后再 parse |
+| Tool calling 关系 | 是分开的两个独立 feature |
+| 模型支持 | 文档示例用 V4-Pro,V4-Flash 应该也支持(W3 实测) |
+| 失败行为 | 偶尔返回**空 content** (官方明说);**`max_tokens` 没设好会中途截断 JSON**(大坑) |
+
+**集成约束** (后续 spec/24 详写):
+
+- DeepSeek 不强 schema → 我们端 zod 校验失败必须 retry 1 次,2 次仍败 escalate
+- `max_tokens` 必须基于 zod schema 字段大小估算(防截断),不允许"塞个大数完事"
+- system prompt 强制含示例 JSON,不允许"模型自由发挥结构"
+- streaming 模式下中间 chunks 不展示给用户(除 Writer / Humanizer 自然语言流外)
+- 空 content 检测 → retry + 加 "请确保返回非空 JSON" 后缀
 
 ### D. Vercel AI Gateway 路由策略
 

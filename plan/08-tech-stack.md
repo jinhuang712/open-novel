@@ -2,7 +2,9 @@
 
 > 本文档在 W2 期前置,作为后续所有代码 commit 的依据。每次升级主版本时必须先更新此文档再升级。
 
-> ⚠ **W3 启动前必跑版本审计**: 下表的版本号是基于训练数据 + 调研文章的"应然"假设,**未实查 npm 真实最新**。任何 W3+ 代码 commit 之前,必须先按 [spec/00-version-audit.md](../spec/00-version-audit.md) 跑一遍实查,把表格替换为真实可装版本。否则可能整个 stack 第一次 `pnpm add` 就失败 (尤其 `mastra 1.x` `@ai-sdk/deepseek 2.x` `deepseek/deepseek-v4-pro` 这三处最高风险)。
+> ⚠ **W3 启动前必跑版本审计**: 下表的版本号是基于训练数据 + 调研文章的"应然"假设,**未实查 npm 真实最新**。任何 W3+ 代码 commit 之前,必须先按 [spec/00-version-audit.md](../spec/00-version-audit.md) 跑一遍实查,把表格替换为真实可装版本。否则可能整个 stack 第一次 `pnpm add` 就失败 (尤其 `mastra 1.x` `@ai-sdk/deepseek 2.x` 这两处最高风险)。
+>
+> ✅ **DeepSeek 模型部分已于 2026-05-06 实查完成** (见 spec/00 §C + §G):model ID 为 `deepseek-v4-pro` / `deepseek-v4-flash`,ctx **1M tokens**,max output **384K tokens**,原生支持 JSON mode (`response_format: { type: 'json_object' }`)。下表 `@ai-sdk/deepseek` 行的"待实查"已撤。
 
 ## 锁定的库版本 (2026-04 基线 — **待 audit 实查替换**)
 
@@ -21,7 +23,7 @@
 | `@mastra/memory` | `1.4.x` | 锁主线 | thread+resource 隔离的实现 |
 | `ai` (Vercel AI SDK) | `^6.0` | caret | v6 已稳,minor 增量。**审计待确认**: HITL 走 `needsApproval` 一等字段还是 cookbook 模式 (`onToolCall` + `addToolResult`) — 见 spec/00 §B |
 | `@ai-sdk/react` | `^6.0` | caret | `useChat` / `addToolResult` / `onToolCall` |
-| `@ai-sdk/deepseek` | `2.0.x` | 锁主线 | 周更频繁。**审计待确认**: 真实 model id (Pro/Flash 命名假设) — 见 spec/00 §C |
+| `@ai-sdk/deepseek` | `2.0.x` | 锁主线 | 周更频繁。✅ 已实查 (spec/00 §C): model ID `deepseek-v4-pro` / `deepseek-v4-flash`,ctx 1M,max output 384K,原生 JSON mode |
 | `xstate` / `@xstate/react` | `^5.0` | caret | 三模式状态机用 |
 | `zustand` | `^5.0` | caret | 客户端 store |
 | `react-resizable-panels` | `4.10.x` | 锁主线 | 五区可拖拽布局 |
@@ -72,6 +74,68 @@
 - **绝不**用 `~` 字面量 (Node fs 不展开),始终用 `os.homedir()`
 - **始终**给 LibSQL `file:${absPath}` 形式 URL,绝不让它走默认 `.mastra/mastra.db` (有删档 bug)
 - 写 `lib/storage/paths.ts` 集中所有路径解析,W3 直接 import,不重新计算
+
+### DeepSeek V4 配置 (实查后)
+
+**模型 ID 与能力**:
+
+| 模型 | ID | ctx | max output | 用途 |
+|---|---|---|---|---|
+| Pro | `deepseek-v4-pro` | 1M | 384K | Writer / Validator / Humanizer (核心创作 + 一致性审 + 改写) |
+| Flash | `deepseek-v4-flash` | 1M | 384K | Router / Checker / Reflector / ReaderPanel / 工具内 LLM 短调用 |
+
+**1M ctx 的设计含义**: 普通章节场景下不需要 token 预算控制,把"一致性所需的全部上下文"装齐是头等优先级 — 见 plan/12 §一致性优先 + spec/23 §per-agent 上下文契约。
+
+**JSON 输出模式**(详见 [spec/24-json-output.md](../spec/24-json-output.md)):
+
+```ts
+import { deepseek } from '@ai-sdk/deepseek'
+import { generateText } from 'ai'
+
+await generateText({
+  model: deepseek('deepseek-v4-flash'),
+  messages: [
+    { role: 'system', content: 'You are a router. Output valid JSON in the format: { "intent": "...", "mode": "..." }' },
+    { role: 'user', content: '...' },
+  ],
+  providerOptions: {
+    deepseek: {
+      response_format: { type: 'json_object' },
+    },
+  },
+  maxTokens: 512,        // 必须基于 zod schema 估算; 不能默认 4096 (会被截断风险/浪费)
+})
+```
+
+**JSON mode 关键约束**:
+
+- system 或 user prompt 必须含 "json" 字样 + 提供示例
+- DeepSeek 不强制 schema → 应用层 zod 校验 + 失败 retry 1 次,2 次仍败 escalate
+- `max_tokens` 必须基于 schema 估算(防 JSON 中途截断 — 大坑)
+- 偶尔返回空 content → retry + 加 "请确保返回非空 JSON" 后缀
+- streaming 时拼完整 chunks 再 parse,中间 chunks 不展示给用户
+
+### Mastra Memory 配置 (POC 默认值)
+
+详见 [spec/22 §配置决策](../spec/22-mastra-memory.md) + [plan/12 §四层记忆模型](./12-memory-and-context.md):
+
+```ts
+new Memory({
+  storage: new LibSQLStore({ url: 'file:' + path.join(os.homedir(), '.open-novel', 'runtime.db') }),
+  options: {
+    lastMessages: 30,        // 1M ctx 下放宽; 30 条原文不会挤压一致性 retrieve
+    semanticRecall: false,   // POC 关; W11 等 spec/18 embedding 选型确定后评估
+    workingMemory: false,    // 与"L3 仅 Reflector 写"原则冲突 — 不让 LLM 在 stream 中 upsert 记忆
+  },
+})
+```
+
+**关键决策汇总**:
+
+- runtime.db = Mastra Memory 全部 thread + messages (跨项目共享单文件,逻辑用 thread/resource 隔离)
+- workspace.db = 每项目一文件,项目数据 (chapters / settings / learnings / approvals / paragraph_anchors / ...) — 与 runtime.db 严格不混
+- 所有 Agent stream 必经 `streamWithGuard` (memory-guard) 验证 thread/resource projectId 一致 — 直接调 `streamVNext` lint 报错
+- 所有 prompt 装配必经 per-agent context builder (spec/23) — Agent 自拼 prompt 是反模式
 
 ## 版本升级流程 (未来)
 
