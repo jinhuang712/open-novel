@@ -127,14 +127,30 @@ proj_sample_zhongsheng_xxxx/
 │     "_isSample": true                ← 标记,UI 显示 [样例] 徽标
 │   }
 ├── settings/
-│   ├── worldview.md (~1500 字,详尽)
-│   ├── outline.md (~800 字,前 10 章规划)
+│   ├── worldview/
+│   │   ├── _index.md
+│   │   ├── geography.md
+│   │   ├── history.md
+│   │   ├── technology.md (~500 字)
+│   │   └── rules.md (~400 字,世界硬规则)
+│   ├── outline/
+│   │   ├── _index.md
+│   │   ├── master.md (~800 字,前 10 章规划)
+│   │   └── volumes/01-rebirth.md
 │   ├── beats.md (~500 字,关键节拍)
 │   ├── characters/
-│   │   ├── lin.md (主角)
+│   │   ├── lin.md (主角,frontmatter 含 initial_state + relations + reader_promises)
 │   │   ├── wang.md (合伙人)
 │   │   └── xiaomei.md (女主)
-│   └── places/beijing-2010.md
+│   ├── locations/
+│   │   └── cities/beijing-2010.md
+│   ├── factions/
+│   │   └── donghai-group.md
+│   ├── foreshadowing/
+│   │   └── 001-pocket-watch.md (展示 dependencies 锚定示例)
+│   ├── timeline/
+│   │   └── era.md
+│   └── relationships/notes/lin-wang.md (展示自定义关系注解)
 ├── chapters/
 │   └── 001-重生那一夜/
 │       ├── outline.md

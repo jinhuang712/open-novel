@@ -6,42 +6,60 @@
 
 用户的核心痛点之一:**"改了一个角色资料,后面写出来的章节自相矛盾"**。例如把主角性别从男改女后,后续章节里仍然用"兄弟"、"小子"等男性化称谓。
 
-### 解决方案: Validator 主动扫描 + 用户审批 cascade
+### 解决方案: Validator 调 analyzeImpact + 用户审批 cascade (W9 升级)
+
+> **W9 重大升级 (见 plan/11-knowledge-graph.md)**: 旧版 cascade 是"现场 LLM 推理影响范围",已被证实对概念级 / 关系级 / 时间级 / 伏笔级改动全部漏检。新链路改为"先 SQL 出影响半径,再 LLM 二次过滤"。
 
 每次设定写入 (writeSetting 落盘后) 触发 Validator 反查:
 
 ```
-writeSetting 完成 → Validator 入场
-   │
-   1. 读取本次变更的实体 (linId, fields_changed=['gender'])
-   2. 用 entities 表查所有引用 → references 表的 source_file 列表
-   3. 对每个 source_file 抽取相关段落,prompt Validator:
-      "这段文字现在是否与 lin.gender=female 矛盾?
-       若矛盾,提出修改建议 (snippet + suggested_replacement)"
-   4. 收集所有 suggestion → cascadeChanges
+writeSetting 完成 → Validator agent 入场
    │
    ▼
-Router 把 cascadeChanges 包进当前 ApprovalCard
+调 analyzeImpact 工具 (见 spec/19)
+   │
+   step 1: extractSemanticDelta — frontmatter / 正文 diff 翻译为结构化 delta
+           (entity-attribute / entity-relation-add / concept-add / paragraph-rewrite ...)
+   │
+   step 2: computeImpactRadius — 纯 SQL 出候选段集
+           - 直接 entity_refs / concept_refs 命中 (weight=100)
+           - 关系上下游 1 跳 (weight=50-90)
+           - dependencies 锚点上下游 (weight=70)
+           - timeline 区间内的引用 (weight=80)
+           - 语义相关 (embeddings.search topK,weight=cos×100)
+   │
+   step 3: filterByLLM — Pro 模型批量逐段过滤 (5 段一批)
+           "原 X 改动,这段是否真需要改?给出 proposedText / reason / confidence"
+   │
+   step 4: 输出 ChangeProposal[] + 影响图谱 (UI 可视化)
+   │
+   ▼
+Router 把 ChangeProposal[] + 影响图谱包进当前 ApprovalCard
    │
    ▼
 用户决定:
-   - 一键全过 → Writer 依次重写每段 → 各自走 needsApproval (但可以 batch approve)
-   - 逐项审 → 一个一个看
-   - 跳过 → 落盘的变更已生效,但下游不动
+   - 一键全过 → Writer 依次重写每段 → 各自走 needsApproval (可 batch approve)
+   - 逐项审 → 一个一个看 (可看影响图谱定位"为什么这段被列出")
+   - 跳过 → 落盘的变更已生效,但下游不动 (UI 提示"X 段未处理,Validator 已记录")
+   │
+   ▼
+Writer 重写 → 触发递归 analyzeImpact (≤3 层,半径单调下降终止;见 spec/19 §递归终止)
 ```
 
-### Validator prompt 的关键约束
+### Validator prompt 的关键约束 (升级后)
 
-- **绝不静默修改文件**;只输出 `ChangeProposal[]`
-- 每条 proposal 必须包含: `targetFile`, `from`, `to`, `currentText`, `proposedText`, `reason`
-- 不确定时 (置信度低) 标记 `confidence: 'low'`,UI 用黄色警告提醒
+- **不再现场 LLM 推影响范围** — analyzeImpact step 2 的 SQL 已覆盖,LLM 只做二次判断
+- **绝不静默修改文件** — 只输出 `ChangeProposal[]`,落 ApprovalCard 待用户审
+- 每条 proposal 必须包含: `anchorId`, `targetFile`, `needsChange`, `proposedText`(needsChange=true 时), `reason`, `confidence`
+- 不确定时 confidence='low',UI 用黄色警告提醒
+- `needsChange=false` 也必须给 reason (审计需要)
 
-### 性能考虑
+### 性能策略 (升级后,治标策略已撤)
 
-- Validator 一次跑完整项目代价高,引入两层缓存:
-  1. 基于 entity hash 的"已审过"标记 — 同样的实体未变就不重审
-  2. 章节级 word_count + entity_count diff — 快速 short-circuit
-- 重型项目 (>50 章) 提供"按章节范围审"开关,默认 ±5 章范围内
+- ~~按章节范围 ±5 章~~ — 已撤,改为 SQL 出完整候选 + weight 排序 + LLM 顶部 50 个分批过滤
+- ~~entity hash 已审过标记~~ — 已无意义 (LLM 二次过滤本就只对未审段调用)
+- ~~章节级 word_count + entity_count short-circuit~~ — 改为 anchor diff 短路 (无段变化即跳过)
+- 新性能保证: SQL 影响半径 < 100ms (5K 段规模),LLM 二次过滤每批 5 段 ~3-5s,典型 cascade 总耗时 5-15s
 
 ## React 式反馈学习
 
@@ -49,31 +67,35 @@ Router 把 cascadeChanges 包进当前 ApprovalCard
 
 用户希望系统**越用越懂自己**。直接微调模型代价过高 (DeepSeek 暂未开放微调),但我们可以把"经验"持久化为结构化数据,**自动注入到后续生成的 system prompt**,实现廉价但实用的"learning"。
 
-### Reflector 触发时机 + 频率上限 (审计修正)
-
-> audit 发现:每次审批闭环都 enqueue Reflector → 用户连点 20 个 cascade approve 就跑 20 次 LLM。Flash 模型也是钱。
+### Reflector 触发时机
 
 每次以下事件后入队:
 1. **审批闭环完成** (approve / reject + feedback)
 2. **用户手动编辑了 Agent 生成的内容** (检测到 saved content 与 generated content 的 diff)
 
-**频率上限**:
-- **同一 cascade 链路内的 N 项审批合并为 1 次 reflect** — 整批数据丢给 Reflector 一次性提炼
-- **每会话 (sessionId) Reflector 最多 5 次** — 超过则改用"批量"模式: 累积到下次 session 再跑
-- **Reflector 调用本身有最小间隔** = 30s,防止快速连续审批导致并发 LLM
-- 这些参数在 SettingsDialog → §模型分配中可调整 (advanced section)
+**唯一合并规则 — 不是频率上限,而是批次语义**:
+- **同一 cascade 链路内的 N 项审批合并为 1 次 reflect** — 整批数据丢给 Reflector 一次性提炼,得到的 learnings 质量更高 (上下文完整),不是为省 token
+- 决定一组审批是否同链路: 它们共享同一个 root `approval_id` (cascade 提议时的根审批),Worker 端按 root 聚合
+- 批次窗口: cascade 链全部 resolve (approve/reject/dismiss 全决) 后立即跑;单次审批无 cascade 时直接跑
+
+**不再设**:
+- ~~每会话 ≤ 5 次~~ — 用户不在意 Flash 模型 token,合理就该跑
+- ~~30s 最小间隔~~ — Reflector 入队是异步,本来就不阻塞
+- ~~累积到下次 session~~ — 阻碍即时学习
 
 入队伪码:
 
 ```ts
 async function enqueueReflector(projectId: string, sessionId: string, items: ApprovalContext[]) {
-  const recent = await db.reflectorJobs.findRecent(sessionId)
-  if (recent.length >= 5) {
-    // 改累积模式
-    await db.reflectorJobs.appendDeferred(projectId, items)
-    return
+  const rootApprovalId = items[0].cascadeRootApprovalId ?? items[0].approvalId
+  // 同 root 的等齐: 等链路上所有 approval 都 resolved 才入队
+  const allResolved = await db.approvals.allResolved(rootApprovalId)
+  if (!allResolved) {
+    await db.reflectorPending.upsert({ rootApprovalId, projectId, sessionId, items })
+    return  // 等下次 resolve 事件来再 check
   }
-  await reflectorQueue.add({ projectId, sessionId, items })
+  const fullBatch = await db.reflectorPending.drain(rootApprovalId)
+  await reflectorQueue.add({ projectId, sessionId, items: fullBatch })
 }
 ```
 

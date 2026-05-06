@@ -1,47 +1,72 @@
-# Spec 05 — 实体高亮与跳转
+# Spec 05 — 实体 / 概念高亮与跳转
+
+> **W7 升级**: 高亮范围从仅 entity 扩展为 **entity + concept** 双索引。concept 是 worldview 硬规则被抽出来的 pseudo-entity (见 spec/16 §表 3),其 `surface_forms` 也被注入 AC trie,在正文里高亮以提醒作者"这里命中了某概念,可能是 violation 候选"。
 
 ## 数据流
 
 ```
 project.{ /settings, /chapters/* } 改动
    ↓
-Worker 重扫 frontmatter & 正文
+Worker 差量 reindex (spec/17 §差量 reindex):
+  - 段级 anchor diff
+  - dirty 段重扫 entity_refs / concept_refs
+  - dirty 段重算 paragraph_embeddings (异步)
    ↓
-upsert entities + references (index.db)
+upsert entities + concepts (index.db)
    ↓
-广播 'entities:changed' 事件
+广播 'entities:changed' / 'concepts:changed' 事件
    ↓
-Editor 重新构建 AC trie + 触发 plugin update
+Editor 重新构建 AC trie (entity 名 + concept surface_forms 合一) + 触发 plugin update
    ↓
-Decorations 增量刷新
+Decorations 增量刷新 (按命中类型用不同 class)
 ```
 
-## AC trie 构建
+## AC trie 构建 (entity + concept 双索引)
 
 ```ts
 // lib/editor/aho-corasick.ts
 import AhoCorasick from 'ahocorasick'
 
-type EntityIndex = Map<string, Entity>  // canonical+alias → Entity
+type Highlightable =
+  | { kind: 'entity'; id: string; canonicalName: string; category: string; aliases: string[] }
+  | { kind: 'concept'; id: string; title: string; category: string; semantic: string; surfaceForms: string[] }
 
-export function buildAC(entities: Entity[]): { ac: AhoCorasick; index: EntityIndex } {
+type HighlightIndex = Map<string, Highlightable>  // 命中字符串 → 来源
+
+export function buildAC(items: Highlightable[]): { ac: AhoCorasick; index: HighlightIndex } {
   const patterns: string[] = []
-  const index: EntityIndex = new Map()
-  for (const e of entities) {
-    for (const name of [e.canonicalName, ...e.aliases]) {
-      if (!isViableMatch(name)) continue  // 过滤单字别名等高风险 pattern
+  const index: HighlightIndex = new Map()
+  for (const item of items) {
+    const names = item.kind === 'entity'
+      ? [item.canonicalName, ...item.aliases]
+      : item.surfaceForms
+    for (const name of names) {
+      if (!isViableMatch(name)) continue
       patterns.push(name)
-      index.set(name, e)
+      // 注: 同一字符串可能既是 entity 别名又是 concept 表面词 (e.g. "怀表" 既是 item entity 又被某概念引用)
+      // 这种情况优先 entity (语义更具体);concept 仅在 entity 未命中时使用
+      const exist = index.get(name)
+      if (!exist || (exist.kind === 'concept' && item.kind === 'entity')) {
+        index.set(name, item)
+      }
     }
   }
   return { ac: new AhoCorasick(patterns), index }
 }
 
 function isViableMatch(name: string): boolean {
-  // 过滤单字 (除非用户在 entity 上勾选 forceMatch)
   if (name.length < 2) return false
   return true
 }
+
+// 调用方:
+//   const entities = await db.entities.list(projectId)
+//   const concepts = await db.concepts.where(status='active')
+//   const items: Highlightable[] = [
+//     ...entities.map(e => ({ kind: 'entity', ...e })),
+//     ...concepts.map(c => ({ kind: 'concept', ...c })),
+//   ]
+//   const { ac, index } = buildAC(items)
 ```
 
 ## 边界裁剪 (中文场景)
@@ -156,19 +181,31 @@ export function entityHighlightPlugin(getEntities: () => Entity[]) {
   })
 }
 
-function computeDecorations(doc, entities) {
+function computeDecorations(doc, items) {
   const text = doc.textContent
-  const { ac, index } = buildAC(entities)
+  const { ac, index } = buildAC(items)
   const matches = postProcess(text, ac.search(text), index)
   
-  // 把字符 offset 转成 ProseMirror position
-  // (TipTap 默认每段都是 paragraph,每段开头 +1 偏移)
   const decos = matches.map(m => {
     const { from, to } = textToPmPos(doc, m.from, m.to)
-    return Decoration.inline(from, to, {
-      class: `entity-mention entity-${index.get(m.str)?.category}`,
-      'data-entity-id': m.entityId,
-    })
+    const item = index.get(m.matchedText)!
+    if (item.kind === 'entity') {
+      return Decoration.inline(from, to, {
+        class: `entity-mention entity-${item.category}`,
+        'data-entity-id': item.id,
+        'data-kind': 'entity',
+      })
+    } else {
+      // concept: 视觉区分 (虚线下划线 + 半透明色)
+      // 若 concept.semantic = 'absent' 且本段命中 → 这是 violation,用红色虚线
+      const violationClass = item.semantic === 'absent' ? 'concept-violation' : ''
+      return Decoration.inline(from, to, {
+        class: `concept-mention concept-${item.category} ${violationClass}`,
+        'data-concept-id': item.id,
+        'data-kind': 'concept',
+        'data-semantic': item.semantic,
+      })
+    }
   })
   
   return DecorationSet.create(doc, decos)
@@ -245,10 +282,12 @@ apply(tr, old, _oldState, newState) {
 
 ## Hover 卡片
 
+### Entity Hover
+
 ```tsx
-// components/editor/HoverCard.tsx
+// components/editor/EntityHoverCard.tsx
 export function EntityHoverCard({ entityId, anchorPos }) {
-  const entity = useEntity(entityId)  // SWR/react-query
+  const entity = useEntity(entityId)
   if (!entity) return null
   return (
     <Floating anchor={anchorPos}>
@@ -266,7 +305,40 @@ export function EntityHoverCard({ entityId, anchorPos }) {
 }
 ```
 
-延迟 100ms 出现,移开 200ms 消失。
+### Concept Hover
+
+```tsx
+// components/editor/ConceptHoverCard.tsx
+export function ConceptHoverCard({ conceptId, anchorPos }) {
+  const concept = useConcept(conceptId)
+  if (!concept) return null
+  const semanticLabel = {
+    absent: '⛔ 此世界不存在',
+    restricted: '⚠️ 受限',
+    mandatory: '★ 强制要求',
+    unique: '◆ 独一无二',
+    present: '· 普通',
+  }[concept.semantic]
+  return (
+    <Floating anchor={anchorPos}>
+      <div className={`concept-hover-card concept-${concept.semantic}`}>
+        <div className="header">
+          <span className="category-badge">{concept.category}</span>
+          <span className="name">{concept.title}</span>
+          <span className="semantic">{semanticLabel}</span>
+        </div>
+        <p className="description">{concept.description}</p>
+        {concept.semantic === 'absent' && (
+          <div className="warning">⚠ 本段命中此概念表面词,可能违反设定 — 建议改写</div>
+        )}
+        <button onClick={() => gotoFile(concept.definedIn)}>打开定义 →</button>
+      </div>
+    </Floating>
+  )
+}
+```
+
+入口分发:`mouseover` event 拿到 `data-kind` 判 entity / concept,渲染对应 hover card。延迟 100ms 出现,移开 200ms 消失。
 
 ## Goto Definition 行为
 
@@ -314,3 +386,15 @@ export function BacklinksPanel({ filePath }) {
 打开方式: 右键正文 → "标记为角色" → 弹角色创建对话框,自动填充类型/canonical name/category。
 
 更激进版本 (二期): NER 自动检测正文中"未登记"的人名,在状态栏提示"发现 3 个未登记角色,是否登记?"。
+
+## Concept Violation 实时提示 (W7-W9 落地)
+
+> 与 entity highlight 不同的是,concept 高亮带语义判断:concept.semantic = 'absent' 时,任何命中即 violation。
+
+UI:
+- violation concept 用红色虚线下划线 + 段落左侧 ⚠ icon
+- ChatBox 顶部状态栏:"本章命中 N 个 violation 概念,见 [X 段]"
+- 命令面板 `Cmd+Shift+P` 提供"修复 violation"快捷动作 → 调 `analyzeImpact` (spec/19) 把 concept-add delta 当作 trigger,跑一次 cascade
+
+数据落 `concept_refs.is_violation` 列(spec/16 §表 4),Validator cascade 直接 SQL 查 violation 行作为候选。
+

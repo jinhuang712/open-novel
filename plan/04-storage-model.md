@@ -13,29 +13,116 @@
 ~/.open-novel/
 ├── runtime.db                       # Mastra Memory 全局会话 (跨项目)
 ├── settings.json                    # API keys / 用户偏好 (UI 修改)
+├── .snapshots/                      # 设定快照 (见 spec/16 §Snapshot)
+│   └── {projectId}/{timestamp}/
 └── workspaces/
     ├── proj_重生互联网_a3f2/
     │   ├── project.json
     │   ├── settings/
-    │   │   ├── worldview.md
-    │   │   ├── outline.md
-    │   │   ├── beats.md
+    │   │   ├── worldview/                       # ← 拆目录
+    │   │   │   ├── _index.md                    # 摘要 + 子文件列表 (供 LLM 快读)
+    │   │   │   ├── geography.md                 # 地理总论
+    │   │   │   ├── history.md                   # 历史脉络
+    │   │   │   ├── politics.md                  # 政治格局
+    │   │   │   ├── economy.md                   # 经济体系
+    │   │   │   ├── technology.md                # 科技 / 工业 (现代 / 科幻必备)
+    │   │   │   ├── culture.md                   # 风俗 / 民族 / 语言
+    │   │   │   ├── religion.md                  # 信仰 / 神系
+    │   │   │   └── rules.md                     # 世界硬规则 (e.g. "此世界没有手机")
+    │   │   ├── outline/                         # ← 拆目录
+    │   │   │   ├── _index.md                    # 总纲 + 卷列表
+    │   │   │   ├── master.md                    # 全书一句话 / 三幕结构 / 总爽点节奏
+    │   │   │   ├── volumes/                     # 卷大纲
+    │   │   │   │   ├── 01-rebirth.md            # 第一卷
+    │   │   │   │   └── 02-startup.md            # 第二卷
+    │   │   │   └── chapter-outlines/            # 章节大纲索引 (内容仍在 chapters/{id}/outline.md)
+    │   │   │       └── _registry.md             # 章节-卷映射
+    │   │   ├── beats.md                         # 节拍设计 (兼容,不拆)
     │   │   ├── characters/
     │   │   │   ├── lin.md
     │   │   │   └── wang.md
-    │   │   └── places/
-    │   │       └── beijing-2010.md
+    │   │   ├── factions/                        # ← 新 (阵营)
+    │   │   │   ├── _index.md
+    │   │   │   ├── donghai-group.md
+    │   │   │   └── chaoting.md
+    │   │   ├── organizations/                   # ← 新 (公司 / 门派 / 公会 / 政府,与 faction 不同维)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md
+    │   │   ├── locations/                       # ← 新 (替代 places)
+    │   │   │   ├── _index.md
+    │   │   │   ├── regions/                     # 大区
+    │   │   │   ├── cities/                      # 城市
+    │   │   │   ├── buildings/                   # 建筑
+    │   │   │   └── landmarks/                   # 地标
+    │   │   ├── items/                           # ← 新 (重要物品 / 法宝 / 信物)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md
+    │   │   ├── events/                          # ← 新 (历史事件 + 故事内关键事件)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md
+    │   │   ├── timeline/                        # ← 新
+    │   │   │   ├── _index.md
+    │   │   │   ├── era.md                       # 纪年体系 (大宇宙背景)
+    │   │   │   ├── story-clock.md               # 故事内时间推进 (绑章节)
+    │   │   │   └── character-ages.md            # 派生 — 由 entity_timeline 表生成
+    │   │   ├── relationships/                   # ← 新
+    │   │   │   ├── _index.md
+    │   │   │   ├── _matrix.md                   # 派生 — 由 entity_relations 表生成
+    │   │   │   └── notes/                       # 用户对某关系的注解
+    │   │   │       └── {id}.md
+    │   │   ├── story-lines/                     # ← 新
+    │   │   │   ├── _index.md
+    │   │   │   ├── main.md                      # 主线
+    │   │   │   └── subplots/                    # 支线
+    │   │   │       └── {id}.md
+    │   │   ├── foreshadowing/                   # ← 新 (预埋伏笔)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md                      # 单条伏笔: 埋点 / 收割点 / 状态
+    │   │   ├── chapter-arcs/                    # ← 新 (按弧划分章节段落)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md                      # e.g. 前世篇 ch_001-040
+    │   │   ├── power-system/                    # ← 新 (流派相关,仅玄幻 / 修仙 / 系统流用)
+    │   │   │   ├── _index.md
+    │   │   │   ├── overview.md
+    │   │   │   ├── tiers.md                     # 等阶
+    │   │   │   ├── techniques.md                # 功法 / 招式
+    │   │   │   └── artifacts.md                 # 法宝体系
+    │   │   ├── glossary/                        # ← 新 (术语 / 黑话 / 设定专有名词)
+    │   │   │   └── _index.md                    # 单文件即可,术语 ≤ 几百条
+    │   │   ├── taboos.md                        # ← 新 (作者明确"绝对不能写")
+    │   │   ├── themes.md                        # ← 新 (主题 / 核心矛盾 / 价值观)
+    │   │   └── reader-promises.md               # ← 新 (已对读者立的旗 / 承诺)
     │   ├── chapters/
     │   │   └── 001-重生那一夜/
     │   │       ├── outline.md
     │   │       ├── draft.md
     │   │       └── meta.json
-    │   ├── index.db                 # SQLite per-project
+    │   ├── index.db                 # SQLite per-project (含 7 张新表,见 spec/16-18)
     │   └── trace/
     │       └── 2026-04-29-session-abc.jsonl
     └── proj_末世修仙_b7c1/
         └── ...
 ```
+
+### 目录设计要点
+
+1. **每个目录有 `_index.md`** — 给 LLM 快速读"这个目录里有什么 + 一句话摘要",不必扫整个目录。结构:
+   ```yaml
+   ---
+   id: index_worldview_a3f2
+   type: index
+   for_directory: worldview
+   ---
+   # 世界观索引
+
+   ## 子文件 (8 个)
+   - geography.md — 地理总论 (200 字摘要)
+   - history.md — 历史脉络 (200 字摘要)
+   - ...
+   ```
+2. **派生文件** (`relationships/_matrix.md` / `timeline/character-ages.md`) — 这些是 SQLite 表的 markdown 投影,frontmatter 标 `derived: true`,UI 锁写 (见 spec/16 §派生文件守卫)。reindex 时自动重生成。
+3. **空目录的处理** — 若用户项目流派不需要某目录(都市流不需要 power-system/),目录仍创建,`_index.md` 写一行"此目录适用于玄幻 / 修仙 / 系统流,本项目暂未使用"。空目录不影响 reindex,不影响 token (assembleContext 不会把空目录塞 prompt)。
+4. **非派生 `_matrix.md` 用户能扩展** — 用户在 `relationships/notes/{id}.md` 写"林川和王老板的私人恩怨详情",这些 notes 不参与 entity_relations 表派生,只供 Writer assembleContext 时取用。
 
 ## Markdown frontmatter 规范
 
@@ -108,8 +195,9 @@ updated_at: ...
 
 ## SQLite Schema (`index.db` per-project)
 
-详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md),核心表:
+详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md) 与 [spec/16-knowledge-schema.md](../spec/16-knowledge-schema.md),核心表:
 
+**基础表 (spec/01)**:
 - `entities`: 实体登记 (id, canonical_name, aliases JSON, category, file_path)
 - `entity_refs`: 实体在哪个文件哪段被提及 (早期叫 `references` — SQL 保留字,已重命名)
 - `backlinks`: 反向索引 (打开角色页时显示 "被 X 章引用")
@@ -117,6 +205,18 @@ updated_at: ...
 - `learnings`: Reflector 提炼的经验
 - `approvals`: 审批记录 (含 diff 与决定)
 - `traces`: Agent 流式日志归档 (JSONL 形态太重时按需 ingest)
+- `narrative_metrics`: BeatAnalyzer / ArcTracker 输出 (spec/10)
+
+**知识图谱表 (spec/16-18)**:
+- `entity_relations`: 双向语义关系 (师徒 / 敌友 / 上下级 / ...)
+- `entity_timeline`: 角色随章节变化的属性 (age / location / mood / power_level / ...)
+- `concepts` + `concept_refs`: worldview 硬规则当作 pseudo-entity 索引
+- `dependencies`: 跨文件 / 跨设定显式锚定 (foreshadowing / payoff / callback / ...)
+- `paragraph_anchors`: 段级稳定 ID + 邻接双链
+- `paragraph_embeddings`: 段级向量索引
+- `setting_snapshots`: 重大设定改动自动备份
+- `cascade_audits`: cascade 影响半径分析的审计日志
+- `reindex_failures`: reindex 失败队列 (供手动重试)
 
 ## 数据隔离保证
 
@@ -131,9 +231,18 @@ updated_at: ...
 
 1. 更新对应 markdown 文件 (含 frontmatter `updated_at`)
 2. 重新解析 frontmatter,upsert 到 `entities` 表
-3. 触发 Worker 异步扫描所有正文文件,刷新 `references` + `backlinks`
-4. 写一条 `history` 记录 (含 before/after diff)
-5. 调用 Reflector 入队反思 (无需阻塞)
+3. 触发 Worker 异步**差量** reindex (见 spec/17 §差量 reindex):
+   - 段级 anchor diff (unchanged / modified / rewritten / deleted / added)
+   - 仅 dirty 段重扫 entity_refs / concept_refs
+   - 仅 dirty 段重算 paragraph_embeddings (见 spec/18 §增量计算)
+4. **frontmatter delta 同步知识图谱表**:
+   - `relations` 字段变化 → upsert 到 `entity_relations` (source='frontmatter')
+   - `initial_state` 变化 → upsert 到 `entity_timeline`
+   - 派生文件 (`_matrix.md` / `character-ages.md`) 重生成
+5. **若属于 P0 设定文件 (worldview/* / characters/* / outline/master.md)**: 自动 setting snapshot (见 spec/16 §Snapshot)
+6. 写一条 `history` 记录 (含 before/after diff)
+7. 若是 plan 模式:Validator agent 入队 → 调 `analyzeImpact` (见 spec/19) 算影响半径 → cascade ChangeProposal[] 给用户
+8. 调用 Reflector 入队反思 (审批闭环后,见 plan/06)
 
 ## 备份策略
 
@@ -210,10 +319,13 @@ export async function GET(req: Request) {
 - 切项目时显式 `pool.delete(oldId)` close 连接
 - 删项目前必须先 close,再 fs.rm
 
-## 索引刷新策略 (审计加固)
+## 索引刷新策略 (审计加固 + W7 差量升级)
 
-每次 writeSetting / writeChapter 落盘后,**reindex 走单例 Worker 串行**:
+每次 writeSetting / writeChapter 落盘后,**reindex 走单例 Worker 串行 + 差量 anchor diff**:
 
 - 防止 5 个 cascade 并发 reindex 触发 SQLite 写锁竞争
-- Worker 内部 queue + LRU dedupe (同 source_file 1s 内只处理一次)
-- 详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md) §SQLite WAL Mode + 并发写
+- Worker 内部 queue + LRU dedupe (同 anchor 1s 内只处理一次)
+- **差量 anchor diff** (spec/17): 改一段不重扫全文件,只算该段 entity_refs / concept_refs / paragraph_embeddings
+- **embedding 增量** (spec/18): 段未变 → embedding 不动;段重写 → 该段 embedding 异步重算
+- **失败队列** (spec/17 §reindex Worker §失败回滚): 中途 throw 进 `reindex_failures` 表,UI 可手动重试
+- 详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md) §SQLite WAL Mode + 并发写 + [spec/17-paragraph-anchors.md](../spec/17-paragraph-anchors.md) §reindex Worker 升级

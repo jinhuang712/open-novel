@@ -6,15 +6,15 @@
 |---|---|---|---|---|
 | **Router** | Flash | 模式分流 + 意图识别 + 子 Agent 编排 | (调用其他 Agent 的子工具) | 否 |
 | **Writer** (吐字) | Pro | 生成正文 / 章节概要 / 设定文档 | readSetting, readChapter, listSettings, writeSetting✓, writeChapter✓, webSearch (mock), applyTemplate | 是 (写操作) |
-| **Checker** (检查 + **叙事引擎**) | Flash | 风格、流畅度、节奏审阅 + **BeatAnalyzer** (节奏/情绪曲线/钩子) + **ArcTracker** (角色弧光偏离) | readChapter, listSettings, analyzeNarrative, trackArc | 否 (只读) |
-| **Validator** (校验) | Pro | 一致性矛盾检测 + cascade 影响范围分析 | readSetting, listSettings, readChapter, searchEntities | 否 (只读,提议变更经 Writer 落盘) |
+| **Checker** (章内审阅) | Flash | 风格、流畅度、章内节奏审阅 + **BeatAnalyzer** (节奏 / 情绪曲线 / 钩子) | readChapter, listSettings, analyzeNarrative | 否 (只读) |
+| **Validator** (跨章一致性) | Pro | 事实矛盾检测 + cascade 影响范围分析 + **ArcTracker** (角色弧光偏离) | readSetting, listSettings, readChapter, searchEntities, trackArc | 否 (只读,提议变更经 Writer 落盘) |
 | **Reflector** (反思) | Flash | 从用户审批/拒绝中提炼经验 | readApprovalHistory, recordLearning | 否 |
 | **Humanizer** (去 AI 化) | Pro | 长句拆 + 口语化 + 节奏调整 | readChapter, writeChapter✓ | 是 |
 | **ReaderPanel** (读者仿真) | Flash | 5 persona 并行模拟读者反应,生成章节风险报告 | readChapter, simulateReaders | 否 (非闸门信号) |
 
 ✓ 标记的工具带 `needsApproval: true`。
 
-**Checker 子能力详见** [09-narrative-engine.md](./09-narrative-engine.md);**ReaderPanel 详见** [10-reader-simulator.md](./10-reader-simulator.md)。
+**叙事引擎拆给两个 Agent**: BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章性格偏离 → 归 Validator (与"事实一致性"语义同源,且 Pro 模型可承载更深推理)。两者实现共置于 [09-narrative-engine.md](./09-narrative-engine.md);**ReaderPanel 详见** [10-reader-simulator.md](./10-reader-simulator.md)。
 
 ## 路由策略 (Router 行为)
 
@@ -63,8 +63,8 @@ Writer → 流式生成正文 (逐段 emit)
 Checker → 并行审风格 (轻量 prompt,只看最近 1000 字)
 Validator → 并行扫一致性 (重点查角色行为、地点、时间是否冲突)
         ↓ (writer 完成后)
-若 narrative.beatAnalyzer.runOnSave (默认 true) → 跑 BeatAnalyzer
-若 narrative.arcTracker.runOnNewChapter (默认 true) → 跑 ArcTracker
+若 narrative.beatAnalyzer.runOnSave (默认 true) → Checker 跑 BeatAnalyzer
+若 narrative.arcTracker.runOnNewChapter (默认 true) → Validator 跑 ArcTracker (本章涉及角色)
 若 Checker / Validator 提出修改建议 → Writer 自我重写一次 (≤1 次,避免循环)
         ↓
 若 readerPanel.runOnSave (默认 true) → 5 persona 并行 → ChapterRiskReport
@@ -124,8 +124,8 @@ Router 在每次调用前把这些字段拼进所有下游 Agent 的 system prom
 
 ## 模型选择策略
 
-- **Pro 模型**: 创作输出质量第一 → Writer (写正文/设定)、Validator (深度推理一致性)、Humanizer (重写需要风格把控)
-- **Flash 模型**: 速度+成本第一 → Router (调度)、Checker (含叙事引擎子能力)、Reflector (短摘要)、**ReaderPanel** (5 persona 并行,Flash 控成本)
+- **Pro 模型**: 创作输出质量第一 → Writer (写正文/设定)、Validator (深度推理一致性 + ArcTracker 跨章弧光)、Humanizer (重写需要风格把控)
+- **Flash 模型**: 速度+成本第一 → Router (调度)、Checker (章内文笔 + BeatAnalyzer)、Reflector (短摘要)、**ReaderPanel** (5 persona 并行,Flash 控成本)
 
 通过 `process.env.DEEPSEEK_API_KEY` + Vercel AI Gateway 的 `model: 'deepseek/deepseek-v4-pro'` 选择,**用户在 Settings UI 里可单独覆盖每个 Agent 的模型**。
 

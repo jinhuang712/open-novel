@@ -1,6 +1,13 @@
 # Spec 10 — 叙事引擎实现
 
-> 实现 plan/09-narrative-engine.md 描述的三个能力模块: BeatAnalyzer / ArcTracker / 结构模板库。
+> 实现 plan/09-narrative-engine.md 描述的三个能力模块。
+>
+> **Agent 归属**:
+> - `analyzeNarrative` (BeatAnalyzer) → **Checker** 工具集 (Flash,章内)
+> - `trackArc` (ArcTracker) → **Validator** 工具集 (Pro,跨章 + character.md)
+> - `applyTemplate` (结构模板库) → **Writer** 工具集 (大纲生成时显式调用)
+>
+> 拆分理由 (为什么 ArcTracker 不归 Checker) 见 plan/09 §归属与边界。
 
 ## 文件分布
 
@@ -302,10 +309,12 @@ CREATE INDEX idx_narrative_target ON narrative_metrics(kind, target_id);
 
 ## UI 集成
 
-ThinkingPanel 渲染 Checker 输出时,识别 `beats` 与 `arcs` 字段:
+ThinkingPanel 同时渲染 Checker 与 Validator 的叙事输出:
 
-- **beats**: 渲染为 sparkline 情绪曲线 + 节奏热度色块 + flagsForAuthor 列表
-- **arcs**: 每个 ArcReport 一个折叠卡,顶部显示 deviation.score (用警告色彩),展开看 examples
+- **Checker.beats** (BeatReport): 渲染为 sparkline 情绪曲线 + 节奏热度色块 + flagsForAuthor 列表
+- **Validator.arcs** (ArcReport[]): 每个 ArcReport 一个折叠卡,顶部显示 deviation.score (用警告色彩),展开看 examples
+
+两段视觉上同区呈现 (一个"叙事报告"卡),但数据来源是两个 Agent 的独立输出 (`CheckerReport.beats` / `ValidatorReport.arcs`,见 plan/09 §Agent 集成)。
 
 UI 实现在 `components/panels/NarrativeReport.tsx` (W9 落地)。
 

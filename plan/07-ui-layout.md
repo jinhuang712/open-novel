@@ -47,15 +47,21 @@
 ## ActivityBar 项目
 
 ```
-[📋] 大纲          → settings/outline.md, beats.md
-[👥] 角色设定       → settings/characters/*.md
-[🌍] 世界观/地点    → settings/worldview.md, places/*
-[📖] 章节           → chapters/*
-[🔍] 搜索           → 跨文件搜索
-[⏱] 时间线         → 章节顺序 + 大事件
-[💡] 已学到的偏好    → learnings 表展示与编辑
-[⚙️] 设置          → API keys, 模型选择, 风格等
+[📋] 大纲              → settings/outline/*, beats.md
+[👥] 角色设定           → settings/characters/*.md
+[🌍] 世界观             → settings/worldview/* (geography / history / politics / rules / ...)
+[🏛] 阵营/组织           → settings/factions/*, organizations/*
+[📍] 地点              → settings/locations/{regions,cities,buildings,landmarks}/*
+[📦] 道具/事件          → settings/items/*, events/*
+[🕒] 时间线/弧线         → settings/timeline/*, chapter-arcs/*
+[🔗] 关系/伏笔          → settings/relationships/*, foreshadowing/*, story-lines/*
+[📖] 章节              → chapters/*
+[🔍] 查询面板           → queryFacts (entity-at / relations / mentions / semantic)
+[💡] 已学到的偏好        → learnings 表展示与编辑
+[⚙️] 设置              → API keys, 模型选择, 风格等
 ```
+
+> 实际 UI 不必每个目录一个 ActivityBar 项 — 高频项 (角色 / 世界观 / 章节) 优先,其他可折叠到 "更多设定" 二级菜单。具体取舍 W6 实测后调。
 
 切换 ActivityBar 时,FileTree 内容随之切换。
 

@@ -2,25 +2,42 @@
 
 ## 文件系统约定
 
+> **W7 升级**: settings/ 目录大幅拆分,详见 plan/04 §存储位置 + plan/11-knowledge-graph.md。本节只列顶层结构,详细子目录看 plan/04。
+
 ```
 ~/.open-novel/
 ├── runtime.db                        # Mastra Memory 跨项目会话
 ├── settings.json                     # 全局设置 (API key 等)
+├── .snapshots/{projectId}/{ts}/      # 设定快照 (见 spec/16 §Snapshot)
 └── workspaces/
     └── {projectId}/                  # projectId = `proj_{slug}_{shortId}` (e.g. proj_zhongsheng_a3f2)
         ├── project.json
-        ├── settings/
-        │   ├── worldview.md
-        │   ├── outline.md
-        │   ├── beats.md
+        ├── settings/                 # 详细子目录见 plan/04 §存储位置
+        │   ├── worldview/            # 拆目录 (geography/history/politics/economy/technology/culture/religion/rules)
+        │   ├── outline/              # 拆目录 (master + volumes/* + chapter-outlines/_registry)
         │   ├── characters/{id}.md
-        │   └── places/{id}.md
+        │   ├── factions/{id}.md
+        │   ├── organizations/{id}.md
+        │   ├── locations/{regions,cities,buildings,landmarks}/{id}.md
+        │   ├── items/{id}.md
+        │   ├── events/{id}.md
+        │   ├── timeline/{era,story-clock,character-ages}.md
+        │   ├── relationships/{_matrix.md, notes/{id}.md}    # _matrix.md 为派生
+        │   ├── story-lines/{main.md, subplots/{id}.md}
+        │   ├── foreshadowing/{id}.md
+        │   ├── chapter-arcs/{id}.md
+        │   ├── power-system/{overview,tiers,techniques,artifacts}.md
+        │   ├── glossary/_index.md
+        │   ├── beats.md
+        │   ├── taboos.md
+        │   ├── themes.md
+        │   └── reader-promises.md
         ├── chapters/
         │   └── {NNN-{slug}}/
         │       ├── outline.md
         │       ├── draft.md
         │       └── meta.json
-        ├── index.db                  # SQLite per-project
+        ├── index.db                  # SQLite per-project (基础 + 知识图谱表,见下)
         └── trace/
             └── {YYYY-MM-DD}-{sessionId}.jsonl
 ```
@@ -75,6 +92,8 @@ type Project = {
 
 ### Character (`settings/characters/{id}.md`)
 
+> **W7 升级 (\_schemaVersion 1 → 2)**: 加 initial_state / relations / reader_promises / taboos 字段,age 移入 initial_state。完整 zod 见 spec/16 §character.md frontmatter 升级。
+
 ```yaml
 ---
 id: char_lin_a3f2
@@ -82,11 +101,37 @@ type: character
 canonical_name: 林川
 aliases: ["川哥", "林总"]
 gender: male | female | other | unknown
-age: 28
 role: protagonist | support | antagonist | extra
 appearance: 短文字描述
 personality: 短文字描述
 background: 短文字描述
+expected_arc: 短文字描述
+
+# === 新增字段 (W7) ===
+initial_state:                          # 故事开头的 snapshot,作为 entity_timeline 第一行
+  age: 28
+  location: place_beijing_2010
+  status: alive
+  affiliation: org_xxx
+  power_level: null
+  wealth: middle
+  social_rank: commoner
+relations:                              # 静态/初始关系,reindex → entity_relations 表 (source='frontmatter')
+  - kind: mentor
+    target: char_zhang_b1c4
+    since: ch_005
+    strength: 80
+  - kind: enemy
+    target: char_wang_c2d3
+    strength: 80
+reader_promises:                        # 已对读者立的旗 (与 reader-promises.md 双锚)
+  - "最终打败王老板"
+  - "和林雪有情人终成眷属"
+taboos:                                 # 角色级禁区 (Validator lint 用)
+  - "绝不主动伤害无辜"
+derived: false                          # 派生文件标 true,UI 锁写
+_schemaVersion: 2
+
 created_at: 2026-04-29T10:00:00+08:00
 updated_at: 2026-04-29T11:30:00+08:00
 source: writer-agent
@@ -407,3 +452,60 @@ export async function closeAll() {
 ```
 
 **项目切换时**: 显式调 `pool.delete(oldProjectId)` + `pool.get(newProjectId)`。**项目删除时**: `pool.delete()` 后再删目录。
+
+## 知识图谱表 (W7 新增,完整 schema 见 spec/16-18)
+
+> 实现 plan/11-knowledge-graph.md L1 数据层。本节仅占位列出表名 + 用途,完整 SQL / index / FK / 迁移见对应 spec。
+
+| 表名 | 定义 spec | 用途 |
+|---|---|---|
+| `entity_relations` | spec/16 §表 1 | 双向语义关系 (师徒 / 敌友 / 上下级 / ...) |
+| `entity_timeline` | spec/16 §表 2 | 角色随章节变化的属性 (age / location / mood / ...) |
+| `concepts` | spec/16 §表 3 | worldview 硬规则当作 pseudo-entity |
+| `concept_refs` | spec/16 §表 4 | 概念表面词在文中的提及索引 (与 entity_refs 对称) |
+| `dependencies` | spec/16 §表 5 | 跨文件 / 跨设定显式锚定 (foreshadowing / payoff / callback / ...) |
+| `paragraph_anchors` | spec/16 §表 6 + spec/17 | 段级稳定 ID + 邻接双链 |
+| `paragraph_embeddings` | spec/16 §表 7 + spec/18 | 段级向量索引 |
+| `setting_snapshots` | spec/16 §Snapshot | 重大设定改动自动备份 |
+| `cascade_audits` | spec/19 §L4 治理 | cascade 影响半径分析的审计日志 (递归 / 用户接受率) |
+| `reindex_failures` | spec/17 §reindex Worker §失败回滚 | reindex 失败队列 (供手动重试) |
+| `narrative_feedback` | spec/10 §用户不接受 BeatReport (待补) | 用户对 BeatReport 的反馈 (二期 Reflector 用) |
+| `entity_match_feedback` | spec/05 §调优策略 (待补) | entity highlight false-positive 反馈 (W6 起记录) |
+
+迁移脚本 (`002-knowledge-graph.ts`) 在 spec/16 §迁移段定义。`PRAGMA user_version = 2` 后所有项目自动启用。
+
+## entity_refs / concept_refs 段锚化 (W7 升级)
+
+> spec/17 §entity_refs / concept_refs 改造 详细说明。简言之:在原 entity_refs 之上新增两列:
+
+```sql
+ALTER TABLE entity_refs ADD COLUMN anchor_id TEXT REFERENCES paragraph_anchors(anchor_id);
+ALTER TABLE entity_refs ADD COLUMN intra_paragraph_offset INTEGER;  -- 段内字符 offset
+
+CREATE INDEX idx_refs_anchor ON entity_refs(anchor_id);
+```
+
+迁移脚本 (`004-paragraph-anchors.ts`) 重扫所有现有 entity_refs,按 file_path + position_from 反查所属 anchor,populate 新两列。`concept_refs` 在 spec/16 表创建时已含此结构,无需 ALTER。
+
+## 索引刷新流程 (W7 升级 — 差量)
+
+> 取代旧"全文件 DELETE+INSERT" 模式,详见 spec/17 §差量 reindex 流程。
+
+每次 `writeSetting` / `writeChapter` 落盘后,Worker 入队:
+
+```
+读取旧 paragraph_anchors → splitParagraphs(新内容) → diffAnchors
+   ↓
+按 (unchanged / modified / rewritten / deleted / added) 分支处理:
+   unchanged  → 不动
+   modified   → UPDATE anchor + entity_refs 该 anchor 重扫 + embedding 重算
+   rewritten  → 软删旧 anchor + 新 anchor + dependencies / entity_relations / entity_timeline 锚点迁移
+   deleted    → 软删 anchor + dependencies 标 broken (lint 报警)
+   added      → 新 anchor + 全套下游
+   ↓
+重新编织 prev_anchor / next_anchor 双链
+   ↓
+broadcast 'anchors:changed' → 下游订阅者刷新
+```
+
+**事务原子性**: 单文件 reindex 在一个 SQLite transaction 内提交;失败 rollback + 落 `reindex_failures` 表(spec/17 §失败回滚)。

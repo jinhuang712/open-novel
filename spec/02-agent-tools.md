@@ -283,6 +283,20 @@ export const readApprovalHistory = tool({
 | Reflector | | | | | | | | | | ✓ | ✓ |
 | Humanizer | ✓ | | ✓ | | | ✓ | | | | | |
 
+> **叙事引擎工具** (定义在 spec/10) 的归属:
+> - `analyzeNarrative` (BeatAnalyzer,章内,Flash) → **Checker**
+> - `trackArc` (ArcTracker,跨章 + character.md,Pro) → **Validator**
+> - `applyTemplate` (结构模板库) → **Writer** (大纲生成时显式调用)
+>
+> 拆分理由见 plan/09 §归属与边界。
+
+> **知识图谱工具** (W7-W10 落地,定义在 spec/19-21) 的归属:
+> - `assembleContext` (Writer 写章节前自动 retrieve 相关上下文,见 spec/20) → **Writer**
+> - `analyzeImpact` (Validator 分析 setting 改动影响半径,见 spec/19) → **Validator**
+> - `queryFacts` (实体 / 关系 / 提及 / 语义事实查询,见 spec/21) → **Router** (discuss 模式优先) + **Writer** (写章节时偶用)
+>
+> 设计理由 (为什么不让 Validator 现场推理影响范围) 见 plan/11 §核心数据流改造。
+
 ## 模式约束
 
 Router 在每次调用前 assert `(agent, mode, tool)` 三元组合法:

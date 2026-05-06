@@ -1,6 +1,19 @@
 # 09 — 叙事引擎
 
-> 让 Checker 从"看文笔"进化为"看叙事力学"。本文档描述与 Checker 协同的三个能力模块: **BeatAnalyzer / ArcTracker / 结构模板库**。
+> 把"看叙事力学"的能力下沉到两个 Agent: **BeatAnalyzer 章内分析 → Checker**、**ArcTracker 跨章弧光 → Validator**;再加一个供 Writer 取用的**结构模板库**。本文档定义这三个模块的边界、数据契约与触发策略。
+
+## 归属与边界
+
+| 能力 | 归属 Agent | 模型 | 触发面 | 输入规模 |
+|---|---|---|---|---|
+| **BeatAnalyzer** | Checker | Flash | 章节落盘后 (runOnSave) | 单章 |
+| **ArcTracker** | Validator | Pro | 新章节落盘 (runOnNewChapter) + 周期性 (triggerEveryNChapters) | 跨章 + character.md |
+| **结构模板库** | Writer (调用方) | — (静态文件) | Writer 在大纲生成时显式 applyTemplate | — |
+
+ArcTracker 划归 Validator 的原因:
+1. **抽象层次对齐** — Validator 主职是"跨章 / 跨设定的一致性",ArcTracker 的"性格偏离"是软一致性,与事实矛盾同源
+2. **模型对齐** — Validator 用 Pro,ArcTracker 的跨章深度推理也需 Pro
+3. **非闸门语义对齐** — Validator 不直接落盘,所有变更经 Writer + needsApproval;ArcTracker 也只产报告供作者参考
 
 ## 为什么要有它
 
@@ -72,7 +85,7 @@ type ArcReport = {
 }
 ```
 
-ArcTracker 不直接闸门 (不是 Validator 的事实矛盾),它只**提示**作者:你的隐忍主角在第 12 章给同事顶嘴,与第 1 章设定的"逆来顺受"性格存在偏离。是否合理?这要交回作者判断。
+ArcTracker 由 Validator 持有 (与 Validator 的事实矛盾检测同属"跨章一致性"语义),但它输出的是**软偏离**而非**硬矛盾** — 不闸门、不进 cascade,只**提示**作者:你的隐忍主角在第 12 章给同事顶嘴,与第 1 章设定的"逆来顺受"性格存在偏离。是否合理?交回作者判断。
 
 ### 模块 C: 结构模板库
 
@@ -91,26 +104,37 @@ lib/narrative/templates/
 
 **强制度**: 模板**完全可选**。用户没指定时 Writer 按其自由风格 + project.style 生成。模板是工具不是镣铐。
 
-## 与 Checker 的集成
+## Agent 集成
 
-Checker 升级为结构化输出:
+### Checker → CheckerReport
 
 ```ts
 type CheckerReport = {
-  critique: string                  // 原有的自然语言点评
-  beats: BeatReport                 // 新增: BeatAnalyzer 输出
-  arcs: ArcReport[]                 // 新增: 涉及角色的 ArcTracker 输出
+  critique: string                  // 自然语言点评 (风格 / 流畅度 / 章内节奏)
+  beats: BeatReport                 // BeatAnalyzer 输出
 }
 ```
 
-UI 渲染: ThinkingPanel 把 `critique` 文字段、`beats` 用图表 (情绪曲线 sparkline + 节奏热度), `arcs` 用列表分别渲染。作者一眼看清"哪一段拖、哪一段崩"。
+Checker 全部输出**非闸门** — 不挂载 needsApproval,只供作者参考。
 
-**非闸门**: Checker 全部输出**不挂载 needsApproval**。它只提供信号,最终决定权仍在作者。
+### Validator → ValidatorReport
+
+```ts
+type ValidatorReport = {
+  contradictions: ContradictionItem[]  // 事实矛盾 (原有,详见 spec/02 proposeChanges)
+  cascadeProposals: CascadeChange[]    // cascade 修改提议
+  arcs: ArcReport[]                    // ArcTracker 跨章输出 (新)
+}
+```
+
+Validator 的 `contradictions` / `cascadeProposals` 走 `proposeChanges` 工具进 ApprovalCard;**arcs 是非闸门信号** — 与 Checker 一样只提示作者,不进审批流。
+
+UI 渲染: ThinkingPanel 把 `Checker.critique` 文字段、`Checker.beats` 用图表 (情绪曲线 sparkline + 节奏热度)、`Validator.arcs` 用列表分别渲染。作者一眼看清"哪一段拖、哪一个角色崩"。
 
 ## 使用场景
 
 1. **大纲阶段**: 作者要求"用三幕结构生成大纲" → Writer 调 `applyTemplate('three-act')` → 出大纲 → Checker (BeatAnalyzer 简化版) 检查大纲层节奏分布
-2. **章节生成后**: 自动调 Checker 跑 BeatAnalyzer + ArcTracker → 报告挂在章节 metadata,UI 显示"风险点"
+2. **章节生成后**: Checker 跑 BeatAnalyzer + Validator 跑 ArcTracker (并行) → 两份报告挂在章节 metadata,UI 显示"风险点"
 3. **审阅旧章节**: 作者主动点"分析此章" → 同上,但允许用户配置只跑某个模块
 4. **跨章节趋势**: 在"全书概览"面板,聚合所有章节的 BeatReport,画出全书的节奏曲线 / 冲突密度趋势 — 作者可看出"卡文区"或"水章区"
 
@@ -128,8 +152,8 @@ UI 渲染: ThinkingPanel 把 `critique` 文字段、`beats` 用图表 (情绪曲
 
 ## 与现有架构的衔接
 
-- **plan/02-multi-agent.md**: Checker 项升级,描述加上 BeatAnalyzer/ArcTracker
-- **spec/02-agent-tools.md**: Checker 调用面增加 `analyzeNarrative` / `trackArc` / `applyTemplate` 三个工具
+- **plan/02-multi-agent.md**: Checker 收缩为章内审阅 + BeatAnalyzer;Validator 接 ArcTracker
+- **spec/02-agent-tools.md**: 工具分配 — Checker → `analyzeNarrative`;Validator → `trackArc`;Writer → `applyTemplate`
 - **spec/10-narrative-engine.md**: 三个工具的具体 prompt + zod schema + 模板格式
 - **spec/01-storage-schema.md**: 增加 `narrative_metrics` 表 schema (在 spec/01 末尾追加)
 

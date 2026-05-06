@@ -44,7 +44,7 @@
        └─────────────────┘    └──────────┘ └──────────────┘
 ```
 
-详见: [02-multi-agent.md](./02-multi-agent.md) (Agent 详解) / [09-narrative-engine.md](./09-narrative-engine.md) (叙事引擎) / [10-reader-simulator.md](./10-reader-simulator.md) (读者仿真器)。
+详见: [02-multi-agent.md](./02-multi-agent.md) (Agent 详解) / [09-narrative-engine.md](./09-narrative-engine.md) (叙事引擎) / [10-reader-simulator.md](./10-reader-simulator.md) (读者仿真器) / [11-knowledge-graph.md](./11-knowledge-graph.md) (知识图谱:cascade + RAG 真正可工作的地基)。
 
 ## 数据流概览
 
@@ -54,25 +54,34 @@ ChatBox 输入
    ▼
 Router 路由 (识别 mode = discuss | plan | write)
    │
-   ├─ discuss → 直接答复 (RAG 设定 read-only)
+   ├─ discuss → 优先 queryFacts (spec/21) 直查 SQL → 命中即答
+   │             (未命中 fallback 自由 LLM,RAG 设定 read-only)
    │
    ├─ plan → Writer 生成设定草稿
    │           ↓
-   │      Validator 校验一致性
+   │      Validator 校验一致性 (调 analyzeImpact, spec/19):
+   │        step 1 抽 semantic delta
+   │        step 2 SQL 查影响半径 (entity_refs ∪ relations ∪ concept_refs ∪ deps ∪ timeline)
+   │        step 3 LLM 二次过滤每段是否真受影响
    │           ↓
-   │      diff → ApprovalCard
+   │      diff + 影响图谱 → ApprovalCard
    │           ↓ (用户同意)
-   │      落盘 (.md + index.db 索引刷新)
+   │      落盘 (.md + 差量 anchor reindex + 知识图谱表 upsert)
+   │           ↓
+   │      若产生新 cascade: Writer 重写 → 递归 ≤3 层 (半径单调下降)
    │           ↓
    │      Reflector 提炼经验
    │
-   └─ write → Writer 生成章节
-              ↓
-         Checker 风格审 (含 BeatAnalyzer/ArcTracker) + Validator 一致性审
-              ↓
-         ReaderPanel 5 persona 模拟读者反应 → ChapterRiskReport
-              ↓
-         diff + 风险报告 → ApprovalCard → 落盘 → Reflector
+   └─ write → Writer 调 assembleContext (spec/20) 自动 retrieve:
+   │            entity 状态 + 活跃关系 + 待处理伏笔 + 最近章节 + 语义相关 + 世界观 + 概念约束
+   │           ↓
+   │       生成章节
+   │           ↓
+   │      Checker 风格审 (含 BeatAnalyzer) + Validator 一致性审 (含 ArcTracker)
+   │           ↓
+   │      ReaderPanel 5 persona 模拟读者反应 → ChapterRiskReport
+   │           ↓
+   │      diff + 风险报告 → ApprovalCard → 落盘 (差量 reindex) → Reflector
 ```
 
 ## 关键技术决策汇总
@@ -95,10 +104,14 @@ Router 路由 (识别 mode = discuss | plan | write)
 2. **设定不可被 Agent 静默修改** — Validator 发现矛盾时只能"提议"修改,不能直接改;最终决定权在用户
 3. **多项目数据零串扰** — Memory 用 `resource = projectId`,文件用独立目录,数据库用 `WHERE project_id = ?` 强约束;LibSQL 连接池 LRU(3)
 4. **三模式严格分离** — Router 在每次输入时强校验当前 mode 与可调用工具集
-5. **每次审批必反思** (有频率上限) — Reflector 自动跑,但同 cascade 合 1 次 + 每会话 ≤5 次 (见 plan/06 §Reflector 触发时机 + 频率上限)
+5. **每次审批必反思** — Reflector 在每次审批闭环 (approve / reject / edited) + 用户手动改写 Agent 内容后入队跑,无 token / 频率 cap;同一 cascade 链路下的 N 项审批会合并为一次 reflect (批次语义,不是为省 token) (见 plan/06 §Reflector 触发时机)
 6. **路径越权零信任** — 所有读写工具 execute 第一行强制 `safeFromProjectRoot()`,不依赖前端校验 (见 spec/02)
 7. **不可信内容围栏** — 所有外部内容 (web / 用户拷贝 .md / 自定义 persona) 拼进 prompt 时用 `<<<UNTRUSTED:...>>>` 包裹,Agent system prompt 显式声明忽略其中"指令"
 8. **docs-before-code** — 任何代码 commit 之前对应 plan/spec 必须先有,且需用户 approve docs 后才动代码 (项目级 workflow 不变性)
+9. **影响半径不依赖 LLM** — Validator cascade 第一步必须是 SQL 查影响半径 (analyzeImpact step 2);LLM 只做"段是否真受影响"二次过滤。漏 SQL 索引 = bug,不应用 LLM "猜"补救 (见 plan/11 + spec/19)
+10. **派生视图只读** — `relationships/_matrix.md` / `timeline/character-ages.md` 等是 SQLite 表的 markdown 投影,frontmatter 标 `derived: true`,reindex 自动重生成,UI 锁写 (见 spec/16 §派生文件守卫)
+11. **未决 cascade 阻断 write** — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用,弹 dialog 引导处理 (见 spec/16 §Plan Inconsistency Lock)
+12. **段锚点稳定** — 段移动 / 重命名 / 改字不应使 dependencies / paragraph_embeddings 失效;reindex 走"内容签名 + 邻接段对照"维持锚点 (见 spec/17)
 
 ## 与同类产品的差异
 
@@ -113,5 +126,9 @@ Router 路由 (识别 mode = discuss | plan | write)
 | **叙事力学诊断** | 无 | **BeatAnalyzer + ArcTracker** (节奏 / 情绪曲线 / 角色弧光偏离) |
 | **发布前留存预演** | 无 | **ReaderPanel** (5 persona 模拟读者反应,生成章节风险报告) |
 | **结构模板可调用** | 无 / 强模板套用 | 三幕 / 英雄之旅 / 起承转合 / 番茄黄金三章,可调用不强制 |
+| **知识图谱 (W7-W10)** | 静态 Codex (实体卡片) | **6 维图: 实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义** (见 plan/11) |
+| **Cascade 影响范围** | 无 / 全人工 | **纯 SQL 出候选 + LLM 二次过滤 + 递归 ≤3 层** (见 spec/19) |
+| **写章节上下文** | 用户手动选 cards 塞 prompt | **assembleContext** 自动 retrieve + token 预算 (见 spec/20) |
+| **边写边查** | 静态搜索 / 跳卡片 | **queryFacts** 4 模式 (entity-at / relations-of / mentions-of / semantic-search) (见 spec/21) |
 
-后三条 (叙事力学 + 留存预演 + 结构模板) 是与"AI 代笔工具"赛道的核心区分点 — 我们不是写得更好的 AI,是**懂叙事的合伙人 + 懂读者的预演场**。
+后六条是与"AI 代笔工具"赛道的核心区分点 — 我们不是写得更好的 AI,是**把世界装进 AI 的合伙人 + 懂叙事的诊断师 + 懂读者的预演场**。
