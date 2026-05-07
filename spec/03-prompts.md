@@ -14,7 +14,36 @@
 [5. Agent 专用指令]
 [6. 工具调用约束]
 [7. 不可信内容围栏 (强制 — 审计补)]
+[8. 输出形态声明 (JSON mode 或 自然语言, T5 新增)]
 ```
+
+### 公共片段 8: 输出形态 (T5 新增)
+
+> 详见 [spec/24-json-output.md](./24-json-output.md)。
+
+| Agent | 输出形态 | system prompt 必含 |
+|---|---|---|
+| Writer | 自然语言 (流式) | (无特殊约束;直接输出章节正文) |
+| Humanizer | 自然语言 (流式) | (同上) |
+| Router | **JSON mode** | "请只输出 JSON 对象,不要 markdown 代码块,不要前后说明" + 示例 JSON |
+| Checker / BeatAnalyzer | **JSON mode** | 同上 + 示例 JSON |
+| Validator (含 ArcTracker / 守则检测) | **JSON mode** | 同上 + 示例 JSON |
+| ReaderPanel (5 persona) | **JSON mode** | 同上 + 示例 JSON |
+| Reflector | **JSON mode** | 同上 + 示例 JSON |
+
+JSON mode 模板 (各 agent prompt 末尾追加):
+
+```
+# 输出形态
+你的输出必须是合法的 JSON 对象,严格符合以下示例字段结构。不要在 JSON 之外输出任何文字,不要 markdown 代码块,不要前后说明。
+
+示例 (字段结构必须严格一致):
+{{json_example}}
+
+输出由应用层 zod 校验 (spec/24 §各场景 zod schema);校验失败 retry 1 次,2 次仍败 escalate 给用户。
+```
+
+`{{json_example}}` 来自 spec/24 各场景 zod schema 的 example;运行时由 prompt loader 按 agentName 取对应 example 注入。
 
 ### 公共片段 7: 不可信内容围栏
 
@@ -102,10 +131,43 @@ source 字段会标明来源类型 (web / setting / chapter / persona),
 6. **不要"AI 化"**:避免"无论是...还是...都..."、"在某种程度上"等典型 AI 标记句
 7. **写完先自检**:写完一段后用一句话总结自己写了什么,自检是否符合 prompt
 
+# 五大网文绝对守则 (spec/25, 违反 = 进 ApprovalCard 红警, critical 必须用户勾"明知违反仍通过")
+1. **黄金三章不反复横跳**: 1-3 章 主角 1000 字内出场, POV ≥ 60%, 设定描写 ≤ 25%, 命名角色 ≤ 5, 必有 hook (悬念/冲突/爽点/钩子/谜团)
+2. **人设不崩**: 角色行为不违反 reader_promises / taboos / value_axes baseline (允许偏离 ≤ 0.4); 主角策略成功时对手 IQ ≥ baseline*0.7 (假智谋检测); 不双标圣母
+3. **节奏不崩**: 距上次 milestone ≤ 5 章, 主角连续缺席 ≤ 2 章, 滚动 10 章主角 POV ≥ 70%, 主线/支线 ≥ 7:3
+4. **承诺必兑现**: 接近 deadline 的 critical promise 必须推进; 已过 deadline 未 resolved 的 critical promise → blocking (拒不让发)
+5. **金手指是佐料**: 主动决策段 ≥ 30%, 系统奖励段 ≤ 30%, 金手指文本密度 < 0.5%
+
+{{#isGoldenChapter}}
+**当前章节是黄金三章 (chapter_index = {{chapterIndex}})** — 阈值收紧:
+- 主角 (是 {{protagonistName}}) 必须在第 1 章前 1000 字之内出场
+- 主角 POV 段 ≥ 60% 是硬约束
+- 不要"开局开会":出场命名角色 ≤ 5 个
+
+反例 (绝对不要):
+- "天气阴沉,街上行人匆匆。城市的钢铁森林..."(设定铺垫开局, 守则 1)
+- "李、王、张、刘四人聚在一起..."(开局开会, 守则 1)
+- "{{protagonistName}}是个软弱的人..."(主角出场就窝囊, 守则 2)
+{{/isGoldenChapter}}
+
+# 项目级守则配置
+{{cardinalRulesConfig}}
+
+# 当前章节守则上下文 (来自 assembleContext, spec/20)
+- 当前章节序号: 第 {{chapterIndex}} 章 / 黄金三章 = {{isGoldenChapter}}
+- 涉及角色 value_axes / intelligence_axis: {{characterValueAxes}}
+- active critical promises (必须按时兑现): {{activeCriticalPromises}}
+- 距上次 milestone: {{chaptersSinceLastMilestone}} 章 (阈值 ≤ {{maxChaptersBetweenMilestones}})
+- 滚动 10 章主角 POV: {{rollingProtagonistPOVRatio}} (阈值 ≥ 0.7)
+- 滚动 10 章系统奖励段: {{rollingSystemRewardRatio}} (阈值 ≤ 0.3)
+
 # 工具使用
 - 写入文件用 writeSetting / writeChapter (会触发审批)
 - 不确定相关角色信息时先 readSetting / searchEntities,绝不臆造
 - 写章节前先 readChapter 上一章 + readSetting 大纲与角色
+
+# 输出形态
+**自然语言流式** (不走 JSON mode) — 章节正文逐字给用户阅读。
 
 # 模式约束
 {{mode_constraints}}

@@ -44,7 +44,7 @@ export async function POST(req: Request) {
 
 | Part Type | 含义 | UI 渲染 |
 |---|---|---|
-| `text-delta` | 增量文本 token | 主消息体 |
+| `text-delta` | 增量文本 token (Writer / Humanizer 自然语言流) | 主消息体逐字渲染 |
 | `reasoning-delta` | 推理链增量 (Thinking) | ThinkingPanel 折叠"推理"段 |
 | `tool-call` | 调用某工具 (含参数) | ThinkingPanel 工具节点 |
 | `tool-result` | 工具返回值 | 工具节点下方折叠 |
@@ -54,6 +54,43 @@ export async function POST(req: Request) {
 | `agent-handoff-end` | 子 Agent 结束 | 嵌套关闭 |
 | `finish-step` | 一个 step 结束 | 分隔线 |
 | `error` | 错误 | 红色错误卡 |
+| `analyzing` (T5 新增) | JSON mode 流式中: 当前 chunk 是 JSON 片段, 不展示给用户 | ThinkingPanel 显示 spinner + "正在分析..." 文字 |
+| `json-result` (T5 新增) | JSON mode 流完整体, 已 zod 校验通过 | 按 Agent 类型渲染对应 view (Validator → ChangeProposal 列表; ReaderPanel → 5 persona 评论卡; 等等) |
+| `json-retry` (T5 新增) | JSON 校验失败, 自动 retry | ThinkingPanel 显示 "重试 N/2" 提示 |
+| `json-failed` (T5 新增) | 2 次 retry 仍败 (spec/24 §失败处理) | toast + 折叠区显示原文 + 重试按钮 |
+
+### JSON mode 与 streaming 的衔接 (T5, spec/24)
+
+**关键约束**: Writer / Humanizer 走自然语言流式 (`text-delta` 逐字渲染);其他 agent 走 JSON mode,中间 `analyzing` chunks 不渲染,流完整体后:
+
+```ts
+// 服务端
+const stream = streamText({
+  model,
+  messages,
+  providerOptions: ctx.metadata.jsonMode ? { deepseek: { response_format: { type: 'json_object' } } } : undefined,
+  maxTokens,
+})
+
+if (ctx.metadata.jsonMode) {
+  // 流式中只 emit 'analyzing' (不 emit text-delta)
+  let buffer = ''
+  for await (const chunk of stream.textStream) {
+    buffer += chunk
+    emit({ type: 'analyzing', label: agentName })
+  }
+  // 流完后整体 parse + zod 校验
+  const validated = await parseAndValidate(buffer, agentSchema)
+  emit({ type: 'json-result', agent: agentName, data: validated })
+} else {
+  // 自然语言流: 正常逐字 emit text-delta
+  for await (const chunk of stream.textStream) {
+    emit({ type: 'text-delta', value: chunk })
+  }
+}
+```
+
+ReaderPanel 5 persona 因 JSON 体较大(8K tokens),POC 阶段全部流完再 parse;W11 评估是否引入 incremental JSON parser (e.g. `partial-json`) 让 5 persona 一个一个出现。
 
 ## 客户端 useChat 钩子
 

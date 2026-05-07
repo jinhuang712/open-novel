@@ -57,11 +57,20 @@ export const assembleContext = tool({
       'semantic-relevant',
       'worldview',
       'concepts',
+      // === 五大守则相关 (spec/25, T5 落地) ===
+      'cardinal-rules-config',                  // 项目级 cardinal-rules.json 配置
+      'active-critical-promises',               // 当前 active 的 critical promise (deadline 接近警报)
+      'character-value-axes',                   // 涉及角色的 value_axes / intelligence_axis
+      'milestone-cadence',                       // 距上次 milestone 章数 + 滚动窗口数据
+      'rolling-pacing-metrics',                  // 滚动 main/side / POV 比例
     ])).default([
       'entity-states', 'relations', 'dependencies',
       'recent-chapters', 'semantic-relevant', 'worldview', 'concepts',
+      'cardinal-rules-config', 'active-critical-promises', 'character-value-axes',
+      'milestone-cadence', 'rolling-pacing-metrics',
     ]),
-    tokenBudget: z.number().int().min(2000).max(80_000).default(32_000),
+    // tokenBudget 字段保留, 但 1M ctx 下不主动裁剪 — 见 spec/23 §per-agent 上下文契约
+    tokenBudget: z.number().int().min(2000).max(800_000).default(200_000),
   }),
   outputSchema: contextBundleSchema,
   execute: async (input, { projectId }) => {
@@ -112,8 +121,54 @@ const contextBundleSchema = z.object({
     description: z.string(),
     sourcePath: z.string(),
   })),
-  tokensUsed: z.number(),                          // 实际消耗,Writer 据此判断是否需要再裁
-  truncated: z.array(z.string()),                  // 哪些 kind 被裁剪了
+  // === 五大守则相关 (spec/25) ===
+  cardinalRulesConfig: z.object({                  // 项目级配置 (cardinal-rules.json 内容)
+    goldenChapters: z.unknown(),
+    characterIntegrity: z.unknown(),
+    pacing: z.unknown(),
+    promiseAccountability: z.unknown(),
+    protagonistAgency: z.unknown(),
+  }).optional(),
+  activeCriticalPromises: z.array(z.object({
+    promiseId: z.string(),
+    text: z.string(),
+    weight: z.enum(['critical', 'major', 'minor']),
+    deadlineChapter: z.number().nullable(),
+    chaptersUntilDeadline: z.number(),
+    recentlyTouched: z.boolean(),
+    expectedResolutionPattern: z.string().optional(),
+  })).optional(),
+  characterValueAxes: z.array(z.object({
+    characterId: z.string(),
+    canonicalName: z.string(),
+    valueAxes: z.record(z.string(), z.object({
+      baseline: z.number(),
+      range: z.tuple([z.number(), z.number()]),
+    })),
+    intelligenceAxis: z.object({
+      baseline: z.number(),
+      iqRange: z.tuple([z.number(), z.number()]),
+    }).optional(),
+    readerPromises: z.array(z.string()),
+    taboos: z.array(z.string()),
+  })).optional(),
+  milestoneCadence: z.object({
+    chaptersSinceLastMilestone: z.number(),
+    lastMilestoneChapter: z.number().nullable(),
+    lastMilestoneType: z.string().nullable(),
+    expectedMaxGap: z.number(),                    // 来自 cardinalRulesConfig.pacing.maxChaptersBetweenMilestones
+  }).optional(),
+  rollingPacingMetrics: z.object({
+    window: z.number(),                            // 通常 10
+    protagonistPOVRatio: z.number(),
+    mainLineRatio: z.number(),
+    consecutiveAbsence: z.number(),
+    rollingSystemRewardRatio: z.number(),          // 守则 5
+  }).optional(),
+  isGoldenChapter: z.boolean(),                    // chapter_index 1-3
+  // ===
+  tokensUsed: z.number(),
+  truncated: z.array(z.string()),                  // 1M ctx 下应总为空; 若非空说明项目数据真超大, 警报让用户分卷
 })
 ```
 

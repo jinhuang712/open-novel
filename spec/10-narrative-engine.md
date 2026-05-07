@@ -39,6 +39,7 @@ lib/narrative/
 import { tool } from 'ai'
 import { z } from 'zod'
 
+// 走 JSON mode (spec/24), Flash
 const beatReportSchema = z.object({
   emotionCurve: z.array(z.object({
     from: z.number().int().min(0),    // 字符 offset
@@ -66,20 +67,57 @@ const beatReportSchema = z.object({
     strength: z.number().min(0).max(100),
   })),
   rhythmScore: z.number().min(0).max(100),
+  hookStrength: z.number().min(0).max(100),                     // 黄金三章 hook 综合分 (T5, spec/25 守则 1)
+  // === 五大守则 1/3/5 检测贡献 (T5, spec/25) ===
+  cardinalRulesContribution: z.object({
+    goldenChapters: z.object({                                  // 守则 1: 仅 1-3 章填
+      hookPresent: z.boolean(),
+      settingDescriptionRatio: z.number().min(0).max(1),
+      namedCharactersCount: z.number().int().min(0),
+      issues: z.array(z.string()),
+    }).nullable(),
+    pacing: z.object({                                          // 守则 3
+      pacingScore: z.number().min(0).max(100),
+      stallSegments: z.array(z.object({ from: z.number(), to: z.number() })),
+      sideLineSegmentsCount: z.number().int().min(0),
+    }),
+    protagonistAgency: z.object({                               // 守则 5
+      activeRatio: z.number().min(0).max(1),
+      passiveRatio: z.number().min(0).max(1),
+      systemRewardRatio: z.number().min(0).max(1),
+      goldenFingerTextDensity: z.number().min(0),               // 匹配字符串数 / 总字数
+    }),
+  }),
   flagsForAuthor: z.array(z.string()),
 })
 
 export const analyzeNarrative = tool({
-  description: '分析章节的叙事力学指标 (情绪曲线 / 冲突密度 / 节奏 / 钩子 / 节奏分)',
+  description: '分析章节的叙事力学指标 (情绪曲线 / 冲突密度 / 节奏 / 钩子 / 节奏分 / 守则 1+3+5 检测贡献)',
   inputSchema: z.object({
     chapterId: z.string(),
   }),
   outputSchema: beatReportSchema,
   execute: async ({ chapterId }, { projectId }) => {
     const chapter = await readChapterDraft(projectId, chapterId)
-    const report = await callDeepSeekFlash(beatAnalyzerPrompt, { content: chapter })
+    const isGoldenChapter = chapter.chapter_index >= 1 && chapter.chapter_index <= 3
+    const cardinalConfig = await readCardinalRulesConfig(projectId)
+    // 走 callJsonAgent (spec/24, JSON mode + zod + retry)
+    const report = await callJsonAgent({
+      label: 'beat-analyzer',
+      model: deepseekFlash,
+      schema: beatReportSchema,
+      maxTokens: 4_000,
+      messages: [
+        { role: 'system', content: BEAT_ANALYZER_SYSTEM_PROMPT },
+        { role: 'user', content: renderPrompt('lib/narrative/prompts/beat-analyzer.md', {
+          chapter_content: chapter.content,
+          isGoldenChapter,
+          cardinalConfig,
+        }) },
+      ],
+    })
     await db.narrative_metrics.upsert(projectId, {
-      chapterId, kind: 'beat', report, version: 'v1', generatedAt: now(),
+      chapterId, kind: 'beat', report, version: 'v2', generatedAt: now(),
     })
     return report
   },
@@ -149,10 +187,44 @@ const arcReportSchema = z.object({
       snippet: z.string().max(200),
     })),
   }),
+  // === 五大守则 2/4/5 检测贡献 (T5, spec/25) ===
+  cardinalRulesContribution: z.object({
+    characterIntegrity: z.object({                              // 守则 2
+      promiseViolations: z.array(z.object({                     // 违反 reader_promises
+        chapter: z.string(),
+        anchor: z.string(),
+        promise: z.string(),
+        violatingBehavior: z.string(),
+        severity: z.enum(['critical', 'major']),
+      })),
+      tabooViolations: z.array(z.object({
+        chapter: z.string(),
+        anchor: z.string(),
+        taboo: z.string(),
+        violatingBehavior: z.string(),
+      })),
+      valueAxisDeviations: z.array(z.object({
+        chapter: z.string(),
+        axis: z.string(),
+        baseline: z.number(),
+        observed: z.number(),
+        deviation: z.number(),
+      })),
+      fakeStrategyDetected: z.boolean(),                        // 假智谋真降智
+      dualStandardDetected: z.boolean(),                         // 双标圣母
+    }),
+    promiseAccountability: z.object({                            // 守则 4 — Validator 主审, ArcTracker 提供 character 维度信号
+      promisesNotRecentlyTouched: z.array(z.string()),           // 应该推进但近期没触及的
+    }),
+    protagonistAgency: z.object({                                // 守则 5 — character 视角
+      passivityScore: z.number().min(0).max(1),                  // 该角色被动接受比例
+      systemDependencyScore: z.number().min(0).max(1),
+    }).nullable(),                                                // 仅主角填
+  }),
 })
 
 export const trackArc = tool({
-  description: '追踪一个角色的成长轨迹与 expected arc 偏离度',
+  description: '追踪一个角色的成长轨迹与 expected arc 偏离度 + 守则 2/4/5 检测贡献',
   inputSchema: z.object({
     characterId: z.string(),
     upToChapter: z.string().optional(),    // 截止章节,默认全部
@@ -161,13 +233,28 @@ export const trackArc = tool({
   execute: async ({ characterId, upToChapter }, { projectId }) => {
     const character = await readSettingByEntityId(projectId, characterId)
     const expectedArc = character.frontmatter.expected_arc ?? '(未指定 expected_arc)'
+    const readerPromises = character.frontmatter.reader_promises ?? []
+    const taboos = character.frontmatter.taboos ?? []
+    const valueAxes = character.frontmatter.value_axes ?? {}
+    const intelligenceAxis = character.frontmatter.intelligence_axis
     const chapters = await listChaptersUpTo(projectId, upToChapter)
     const mentions = await db.references.findByEntity(projectId, characterId)
-    const report = await callDeepSeekPro(arcTrackerPrompt, {
-      character, expectedArc, chapters, mentions,
+    // 走 callJsonAgent (spec/24, JSON mode + zod + retry, Pro 模型)
+    const report = await callJsonAgent({
+      label: 'arc-tracker',
+      model: deepseekPro,
+      schema: arcReportSchema,
+      maxTokens: 4_000,
+      messages: [
+        { role: 'system', content: ARC_TRACKER_SYSTEM_PROMPT },
+        { role: 'user', content: renderPrompt('lib/narrative/prompts/arc-tracker.md', {
+          character, expectedArc, chapters, mentions,
+          readerPromises, taboos, valueAxes, intelligenceAxis,
+        }) },
+      ],
     })
     await db.narrative_metrics.upsert(projectId, {
-      characterId, kind: 'arc', report, version: 'v1', generatedAt: now(),
+      characterId, kind: 'arc', report, version: 'v2', generatedAt: now(),
     })
     return report
   },

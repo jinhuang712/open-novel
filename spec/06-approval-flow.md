@@ -302,13 +302,27 @@ export function ApprovalCard({ proposal }: { proposal: ApprovalProposal }) {
         )
       })}
 
+      {/* 五大守则风险报告 (T5 新增, spec/25) */}
+      {proposal.cardinalRulesReport && (
+        <CardinalRulesReportPanel
+          report={proposal.cardinalRulesReport}
+          onAcknowledge={(acked) => setAcknowledgedRisks(acked)}
+        />
+      )}
+
       <Actions>
         <Button onClick={() => setAcceptedItems(allItemIds(changeSet))}>全选</Button>
         <Button onClick={() => setAcceptedItems(new Set())}>全不选</Button>
         <Button onClick={() => reject(proposal.approvalId)}>拒绝全部 (N)</Button>
         <Button
           variant="primary"
-          disabled={acceptedItems.size === 0}
+          disabled={
+            acceptedItems.size === 0 ||
+            // 守则 4 blocking violation (deadline 已过的 critical promise) → 完全禁用 approve
+            proposal.cardinalRulesReport?.blockingViolations?.length > 0 ||
+            // critical 级风险存在但用户未勾"明知违反仍通过" → 禁用
+            (hasCriticalRisks(proposal.cardinalRulesReport) && !acknowledgedRisks)
+          }
           onClick={() => approve(proposal.approvalId, acceptedItems, edits)}
         >
           同意勾选项 ({acceptedItems.size}/{1 + changeSet.cascade.length}) (Y)
@@ -316,6 +330,60 @@ export function ApprovalCard({ proposal }: { proposal: ApprovalProposal }) {
       </Actions>
     </Card>
   )
+}
+
+/**
+ * 五大守则风险报告面板 (spec/25).
+ *
+ * 渲染规则:
+ * - critical 数 ≥ 1 → 红色块,展示 "{N} 项严重违反守则,可能让读者直接弃书"
+ *                     强制 user 必须勾 "我已阅读上述风险, 明知违反仍通过" checkbox
+ * - blockingViolations 数 ≥ 1 → 红色块,显示 "{已过 deadline 的 critical promise 数} 项 blocking 违反"
+ *                                同意按钮完全禁用,只能拒绝 (用户先去解决 promise 或调 deadline)
+ * - major 数 ≥ 1 → 黄色块,展示具体问题与建议
+ * - warn 数 ≥ 1 → 橙色块,提示性
+ * - 各条可点击跳转到对应章节段 (spec/05 entity-highlight 同款 anchor 跳转)
+ */
+function CardinalRulesReportPanel({ report, onAcknowledge }: {
+  report: CardinalRulesReport
+  onAcknowledge: (acked: boolean) => void
+}) {
+  const sections = ['goldenChapters', 'characterIntegrity', 'pacing', 'promiseAccountability', 'protagonistAgency'] as const
+  const criticalCount = sections.reduce((n, s) => n + report[s].details.filter(d => d.severity === 'critical').length, 0)
+  const blockingCount = report.blockingViolations.length
+
+  return (
+    <div className="cardinal-rules-report">
+      {blockingCount > 0 && (
+        <Alert variant="critical-blocking">
+          ⛔ {blockingCount} 项 blocking 违反 — 必须先解决才能通过审批 (e.g. 已过 deadline 的 critical promise)
+        </Alert>
+      )}
+      {criticalCount > 0 && (
+        <Alert variant="critical">
+          🔴 {criticalCount} 项严重违反守则 — 可能让读者直接弃书
+        </Alert>
+      )}
+      {/* 各 section 详情列表 */}
+      {sections.map(s => (
+        <RuleSection key={s} title={ruleSectionTitle(s)} report={report[s]} />
+      ))}
+
+      {/* critical (非 blocking) 必勾 checkbox */}
+      {criticalCount > 0 && blockingCount === 0 && (
+        <label>
+          <Checkbox onChange={(e) => onAcknowledge(e.target.checked)} />
+          我已阅读上述 critical 风险,明知违反仍通过
+        </label>
+      )}
+    </div>
+  )
+}
+
+function hasCriticalRisks(report?: CardinalRulesReport) {
+  if (!report) return false
+  return ['goldenChapters', 'characterIntegrity', 'pacing', 'promiseAccountability', 'protagonistAgency']
+    .some((s) => (report as any)[s]?.details?.some((d: any) => d.severity === 'critical'))
 }
 
 async function approve(approvalId: string, acceptedItems: Set<string>, edits: Record<string, string>) {

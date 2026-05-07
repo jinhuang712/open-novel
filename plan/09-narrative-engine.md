@@ -108,26 +108,41 @@ lib/narrative/templates/
 
 ### Checker → CheckerReport
 
+> 走 [JSON mode (spec/24)](../spec/24-json-output.md), zod schema 见 spec/24 §Checker / BeatAnalyzer 输出。
+
 ```ts
 type CheckerReport = {
   critique: string                  // 自然语言点评 (风格 / 流畅度 / 章内节奏)
-  beats: BeatReport                 // BeatAnalyzer 输出
+  beats: BeatReport                 // BeatAnalyzer 输出 (含 pacingScore / hookStrength / issues)
+  cardinalRulesContribution: {       // 守则 1/3/5 检测贡献 (见 spec/25)
+    goldenChapters: GoldenChaptersFinding | null    // 守则 1 (1-3 章 hook / setting ratio / opening meeting)
+    pacing: PacingFinding | null                    // 守则 3 (节奏 stall / 主线/支线比例)
+    protagonistAgency: AgencyFinding | null         // 守则 5 (主动决策 / 系统奖励比例 / 金手指文本密度)
+  }
 }
 ```
 
-Checker 全部输出**非闸门** — 不挂载 needsApproval,只供作者参考。
+Checker 全部输出**非闸门** — 不挂载 needsApproval,只供作者参考。但其守则相关 findings 会被 Validator 汇成 `CardinalRulesReport` 进 ApprovalCard 风险区。
 
 ### Validator → ValidatorReport
 
+> 走 [JSON mode (spec/24)](../spec/24-json-output.md), zod schema 见 spec/24 §Validator 一致性审 输出。
+
 ```ts
 type ValidatorReport = {
-  contradictions: ContradictionItem[]  // 事实矛盾 (原有,详见 spec/02 proposeChanges)
-  cascadeProposals: CascadeChange[]    // cascade 修改提议
-  arcs: ArcReport[]                    // ArcTracker 跨章输出 (新)
+  contradictions: ContradictionItem[]              // 事实矛盾 (原有, 详见 spec/02 proposeChanges)
+  cascadeProposals: CascadeChange[]                // cascade 修改提议
+  arcs: ArcReport[]                                 // ArcTracker 跨章输出
+  cardinalRulesContribution: {                      // 守则 1/2/4 检测贡献 (见 spec/25)
+    goldenChapters: GoldenChaptersFinding | null   // 守则 1 (主角出场 / POV ratio)
+    characterIntegrity: CharacterIntegrityFinding[] // 守则 2 (reader_promises / taboos / value_axes 违反)
+    promiseAccountability: PromiseFinding[]         // 守则 4 (deadline / overdue critical promise)
+  }
+  cardinalRulesReport: CardinalRulesReport          // 汇总: Validator + Checker + ReaderPanel + ArcTracker 各自贡献的最终风险报告 (spec/25)
 }
 ```
 
-Validator 的 `contradictions` / `cascadeProposals` 走 `proposeChanges` 工具进 ApprovalCard;**arcs 是非闸门信号** — 与 Checker 一样只提示作者,不进审批流。
+Validator 的 `contradictions` / `cascadeProposals` 走 `proposeChanges` 工具进 ApprovalCard;`arcs` 是非闸门信号;`cardinalRulesReport` 进 ApprovalCard **风险区** (critical 级强制用户勾"明知违反仍通过", blocking 禁用 approve)。详见 [spec/06 §ApprovalCard](../spec/06-approval-flow.md) + [spec/25 §ApprovalCard 集成](../spec/25-cardinal-rules.md)。
 
 UI 渲染: ThinkingPanel 把 `Checker.critique` 文字段、`Checker.beats` 用图表 (情绪曲线 sparkline + 节奏热度)、`Validator.arcs` 用列表分别渲染。作者一眼看清"哪一段拖、哪一个角色崩"。
 

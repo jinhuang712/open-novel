@@ -2,19 +2,36 @@
 
 ## Agent 总览
 
-| Agent | 模型 | 主职 | 可调用工具 | 是否需审批 |
-|---|---|---|---|---|
-| **Router** | Flash | 模式分流 + 意图识别 + 子 Agent 编排 | (调用其他 Agent 的子工具) | 否 |
-| **Writer** (吐字) | Pro | 生成正文 / 章节概要 / 设定文档 | readSetting, readChapter, listSettings, writeSetting✓, writeChapter✓, webSearch (mock), applyTemplate | 是 (写操作) |
-| **Checker** (章内审阅) | Flash | 风格、流畅度、章内节奏审阅 + **BeatAnalyzer** (节奏 / 情绪曲线 / 钩子) | readChapter, listSettings, analyzeNarrative | 否 (只读) |
-| **Validator** (跨章一致性) | Pro | 事实矛盾检测 + cascade 影响范围分析 + **ArcTracker** (角色弧光偏离) | readSetting, listSettings, readChapter, searchEntities, trackArc | 否 (只读,提议变更经 Writer 落盘) |
-| **Reflector** (反思) | Flash | 从用户审批/拒绝中提炼经验 | readApprovalHistory, recordLearning | 否 |
-| **Humanizer** (去 AI 化) | Pro | 长句拆 + 口语化 + 节奏调整 | readChapter, writeChapter✓ | 是 |
-| **ReaderPanel** (读者仿真) | Flash | 5 persona 并行模拟读者反应,生成章节风险报告 | readChapter, simulateReaders | 否 (非闸门信号) |
+| Agent | 模型 | 主职 | 输出形态 | 可调用工具 | 是否需审批 |
+|---|---|---|---|---|---|
+| **Router** | Flash | 模式分流 + 意图识别 + 子 Agent 编排 | **JSON** (spec/24) | (调用其他 Agent 的子工具) | 否 |
+| **Writer** (吐字) | Pro | 生成正文 / 章节概要 / 设定文档 | NL 流式 | readSetting, readChapter, listSettings, writeSetting✓, writeChapter✓, webSearch (mock), applyTemplate | 是 (写操作) |
+| **Checker** (章内审阅) | Flash | 风格 / 流畅 / 章内节奏 + **BeatAnalyzer** + **守则 1/3/5 检测** | **JSON** | readChapter, listSettings, analyzeNarrative, checkPacing | 否 (只读) |
+| **Validator** (跨章一致性) | Pro | 事实矛盾 + cascade 影响 + **ArcTracker** + **守则 2/4 检测** | **JSON** | readSetting, listSettings, readChapter, searchEntities, trackArc, analyzeImpact, checkPromise | 否 (只读,提议变更经 Writer 落盘) |
+| **Reflector** (反思) | Flash | 从用户审批/拒绝中提炼经验 | **JSON** | readApprovalHistory, recordLearning | 否 |
+| **Humanizer** (去 AI 化) | Pro | 长句拆 + 口语化 + 节奏调整 | NL 流式 | readChapter, writeChapter✓ | 是 |
+| **ReaderPanel** (读者仿真) | Flash | 5 persona 并行模拟 + **守则 1/2/3/4/5 综合评分** | **JSON** | readChapter, simulateReaders | 否 (非闸门信号) |
 
 ✓ 标记的工具带 `needsApproval: true`。
 
-**叙事引擎拆给两个 Agent**: BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章性格偏离 → 归 Validator (与"事实一致性"语义同源,且 Pro 模型可承载更深推理)。两者实现共置于 [09-narrative-engine.md](./09-narrative-engine.md);**ReaderPanel 详见** [10-reader-simulator.md](./10-reader-simulator.md)。
+**输出形态 (spec/24)**:
+
+- **JSON** 输出走 DeepSeek 原生 JSON mode (`response_format: { type: 'json_object' }`),应用层 zod 校验 + retry,失败 escalate 用户(详见 [spec/24-json-output.md](../spec/24-json-output.md))
+- **NL 流式** 输出自然语言流,用户阅读;Writer / Humanizer 走这条
+
+**叙事引擎拆给两个 Agent**: BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章性格偏离 → 归 Validator。两者实现共置于 [09-narrative-engine.md](./09-narrative-engine.md);**ReaderPanel 详见** [10-reader-simulator.md](./10-reader-simulator.md)。
+
+**五大守则检测分工 (spec/25)**:
+
+| 守则 | 主检测 | 二审 |
+|---|---|---|
+| 1. 黄金三章 | ArcTracker (在 Validator) | ReaderPanel |
+| 2. 人设崩坏 | Validator (characterIntegrityCheck) | ReaderPanel |
+| 3. 节奏崩盘 | BeatAnalyzer + ArcTracker | — |
+| 4. 期待感兑现 | Validator (promiseAccountabilityCheck) | ReaderPanel |
+| 5. 金手指依赖 | BeatAnalyzer + ArcTracker | ReaderPanel |
+
+各检测器输出汇成 `CardinalRulesReport` (spec/25 §风险报告输出) 进 ApprovalCard。
 
 ## 路由策略 (Router 行为)
 
@@ -87,23 +104,38 @@ Reflector 入队 (本批 cascade 合一次,≤5/会话,见 plan/06)
 
 ## 多项目隔离 (Memory)
 
-Mastra Memory 配置:
+> 详细的记忆四层模型 (L1 工作记忆 / L2 会话记忆 / L3 项目记忆 / L4 知识图谱) 与 per-agent 上下文契约见 [plan/12](./12-memory-and-context.md);Mastra Memory 落地细节见 [spec/22](../spec/22-mastra-memory.md);per-agent context builder 实现见 [spec/23](../spec/23-context-contracts.md)。本节只列 Memory 多项目隔离要点。
 
 ```ts
-const memory = new Memory({
-  storage: new LibSQLStore({ url: 'file:~/.open-novel/runtime.db' }),
+// lib/agents/memory.ts
+import { Memory } from '@mastra/memory'
+import { LibSQLStore } from '@mastra/libsql'
+
+export const memory = new Memory({
+  storage: new LibSQLStore({ url: 'file:' + path.join(os.homedir(), '.open-novel', 'runtime.db') }),
+  options: {
+    lastMessages: 30,        // 1M ctx 下放宽; 与 spec/22 对齐
+    semanticRecall: false,   // POC 关; W11 评估
+    workingMemory: false,    // 与"L3 仅 Reflector 写"原则冲突
+  },
 })
 ```
 
-每次调用 Agent 时:
+调用约束 — 所有 Agent 必经 `streamWithGuard` (而非直接 `streamVNext`):
 
 ```ts
-await routerAgent.streamVNext(messages, {
+await streamWithGuard(routerAgent, ctx.messages, {
   memory: { thread: `proj:${projectId}:session:${sessionId}`, resource: projectId },
+  providerOptions: ctx.metadata.jsonMode
+    ? { deepseek: { response_format: { type: 'json_object' } } }       // spec/24
+    : undefined,
 })
+// 缺 thread/resource 或 thread 中的 projectId 与 resource 不一致直接报错
 ```
 
-`resource = projectId` 确保跨项目零串扰。`thread` 切会话,旧对话可恢复。
+`resource = projectId` 确保跨项目零串扰;`thread` 切会话,旧对话可恢复;guard 函数防御性二次校验。
+
+每次 Agent stream 启动前先调对应 [per-agent context builder (spec/23)](../spec/23-context-contracts.md) — 由它装配 system / learnings / L4 retrieve / messages,并标记 `jsonMode`。**不允许 Agent 自拼 prompt**(plan/01 不变性 L14)。
 
 ## 风格 / 性格定制
 

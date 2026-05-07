@@ -297,6 +297,19 @@ export const readApprovalHistory = tool({
 >
 > 设计理由 (为什么不让 Validator 现场推理影响范围) 见 plan/11 §核心数据流改造。
 
+## 工具内部 LLM 调用规约 (T5 新增)
+
+工具 `execute` 内部若需调 LLM (`extractSemanticDelta` / `filterByLLM` / `concept extractor` 等),**必须经 [`callJsonAgent` (spec/24)](./24-json-output.md)** — 走 DeepSeek 原生 JSON mode + zod 校验 + 自动 retry,不允许"自由发挥再 zod parse"。
+
+| 工具内 LLM 子调用 | 模型 | maxTokens | zod schema |
+|---|---|---|---|
+| `extractSemanticDelta` (spec/19 step 1) | flash | 1K | `SemanticDeltaOutputSchema` (spec/24) |
+| `filterByLLM` (spec/19 step 3) | flash | 2K | `ImpactFilterBatchOutputSchema` (spec/24) |
+| `concept extractor` (spec/16) | flash | 4K | `ConceptExtractorOutputSchema` (spec/24) |
+| `compressOldMessages summarize` (spec/22) | flash | 600 | `CompressionSummarySchema` (spec/22) |
+
+**不允许 silent fallback**: 2 次 retry 仍败 → 抛 `JsonOutputError` escalate 给用户 (toast + 折叠区显示原文 + 重试按钮)。silent fallback 会导致 cascade 漏审、概念抽取漏 entity,直接破坏一致性。
+
 ## 模式约束
 
 Router 在每次调用前 assert `(agent, mode, tool)` 三元组合法:

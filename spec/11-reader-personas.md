@@ -57,10 +57,12 @@ export const readerPanelAgent = new Agent({
 import { tool } from 'ai'
 import { z } from 'zod'
 
+// 走 JSON mode (spec/24), Flash 5 并行
 const personaReactionSchema = z.object({
-  personaId: z.string(),
+  personaId: z.enum(['veteran_reader', 'casual_reader', 'rational_reader', 'genre_fan', 'new_reader']),
   overallSentiment: z.number().min(-100).max(100),
   retentionPrediction: z.number().min(0).max(100),
+  dropoffRisk: z.number().min(0).max(1),                       // 0-1, 1 = 立刻弃书 (T5 加, spec/25)
   highlights: z.array(z.object({
     position: z.number().int().min(0),
     kind: z.enum(['爽点', '钩子', '亮点']),
@@ -72,6 +74,14 @@ const personaReactionSchema = z.object({
     severity: z.enum(['low', 'mid', 'high']),
     reason: z.string(),
   })),
+  // 五大守则违反信号 (spec/25 守则 1-5 二审)
+  cardinalRulesFlags: z.array(z.enum([
+    'golden_chapters_drift',       // 守则 1: 黄金三章反复横跳
+    'character_collapse',          // 守则 2: 人设崩坏
+    'pacing_stall',                // 守则 3: 节奏崩盘
+    'promise_betrayal',            // 守则 4: 承诺荒诞化 / 失约
+    'system_dependency_overflow',  // 守则 5: 金手指过度依赖
+  ])).default([]),
   naturalLanguageReaction: z.string(),
 })
 
@@ -79,6 +89,7 @@ const chapterRiskReportSchema = z.object({
   chapterId: z.string(),
   reactions: z.array(personaReactionSchema),
   aggregateRetention: z.number().min(0).max(100),
+  averageDropoffRisk: z.number().min(0).max(1),                // T5 (spec/25)
   topRisks: z.array(z.object({
     warning: z.object({ kind: z.string(), reason: z.string() }),
     count: z.number().int().min(0),
@@ -87,6 +98,14 @@ const chapterRiskReportSchema = z.object({
     highlight: z.object({ kind: z.string(), reason: z.string() }),
     count: z.number().int().min(0),
   })),
+  // 五大守则二审聚合 (spec/25 §ApprovalCard 集成)
+  cardinalRulesFindings: z.object({
+    goldenChapters: z.object({ flagCount: z.number(), personas: z.array(z.string()) }),
+    characterIntegrity: z.object({ flagCount: z.number(), personas: z.array(z.string()) }),
+    pacing: z.object({ flagCount: z.number(), personas: z.array(z.string()) }),
+    promiseAccountability: z.object({ flagCount: z.number(), personas: z.array(z.string()) }),
+    protagonistAgency: z.object({ flagCount: z.number(), personas: z.array(z.string()) }),
+  }),
   recommendation: z.enum(['ship', 'minor-tweak', 'major-rework']),
 })
 

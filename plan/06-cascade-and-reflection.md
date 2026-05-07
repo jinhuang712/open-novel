@@ -133,25 +133,31 @@ async function enqueueReflector(projectId: string, sessionId: string, items: App
 }
 ```
 
-输出 (Zod 严格 schema):
+输出 — 走 [DeepSeek JSON mode (spec/24)](../spec/24-json-output.md), zod schema 见 spec/24 §Reflector 经验提炼:
+
 ```json
 {
   "learnings": [
     {
-      "scope": "project",
       "insight": "用户偏好≤25字短句,生成时多用句号少用逗号",
       "evidence": "本次将12处长句拆成短句",
-      "applicable_agents": ["writer", "humanizer"]
+      "scope": "style",
+      "applicableAgents": ["writer", "humanizer"],
+      "suggestedWeight": 1.5
     },
     {
-      "scope": "project",
       "insight": "对话场景中尽量少用'地'字补语",
       "evidence": "用户删除了7处'XX地说'结构",
-      "applicable_agents": ["writer"]
+      "scope": "style",
+      "applicableAgents": ["writer"],
+      "suggestedWeight": 1.0
     }
-  ]
+  ],
+  "rootApprovalId": "ap_xyz"
 }
 ```
+
+scope 枚举值 (与 spec/24 一致): `style`, `narrative`, `pacing`, `voice`, `worldview`, `character`, `consistency`, `relations`, `cardinal_rule`, `intent`, `mode`。
 
 ### `learnings` 表 schema
 
@@ -173,17 +179,37 @@ CREATE INDEX idx_learnings_scope ON learnings(project_id, scope);
 
 ### 注入策略
 
-每次 Router 调用下游 Agent 前:
-1. 取该 Agent applicable 的 learnings
-2. 按 weight desc + recency 排序,取 top-K (默认 K=10)
-3. 拼接为 system prompt section:
+> 注入由 [spec/23 §learnings 注入到 system prompt](../spec/23-context-contracts.md) 的 per-agent context builder 统一做,所有 Agent 共享同一逻辑。本节给出 weight 调整与 scope 决策协议。
+
+每次 Agent stream 启动前 (经 context builder):
+
+1. 按当前 Agent 的 scope 集合查 (见 [spec/23 §agentScopes](../spec/23-context-contracts.md))
+2. `WHERE weight >= 0.2` (低于 0.2 视为已失效)
+3. 按 `weight desc` 排序,取 **top-8** (与 plan/12 §关键参数一致 — **不是为省 token,是为模型注意力**:注入 30 条经验反而稀释主任务,top-8 是"用户最强偏好集中,模型注意力不分散"的平衡点)
+4. **`scope='cardinal_rule'` top-1 永远保留** (无论 weight 排序如何;spec/25 五大守则学习不可被一般经验挤掉)
+5. 拼接为 system prompt section:
    ```
-   ## 用户偏好 (从过往交互中学到的经验,请遵守)
-   1. 用户偏好≤25字短句,生成时多用句号少用逗号 (命中12次)
-   2. 对话场景中尽量少用'地'字补语 (命中7次)
+   ## 用户偏好与项目经验 (Reflector 沉淀)
+   以下经验来自历次审批反馈,优先级由高到低。**遇到冲突时这些经验优先于通用风格**。
+
+   - 用户偏好≤25字短句,生成时多用句号少用逗号  (置信度 1.50)
+   - 对话场景中尽量少用'地'字补语                 (置信度 1.20, 守则)
    ...
    ```
-4. 命中一次 weight += 0.5,长期不命中按周衰减 0.9
+
+### weight 调整协议
+
+| 触发 | 调整 | 说明 |
+|---|---|---|
+| 初始入库 | weight = 1.0 (或 Reflector suggestedWeight) | Reflector 写入时 |
+| 该 learning 命中 + 用户 approve 不修改 | +0.5 | 经验有效 |
+| 该 learning 命中 + 用户 reject 或大幅 edit | -0.3 | 经验失效信号 |
+| 30 天没命中 | × 0.95 | 自然衰减 |
+| weight < 0.2 | 自动归档 → `learnings_archive` | 软删 (30 天可恢复) |
+
+**`scope='cardinal_rule'` 例外**: 用户 reject 不降低 weight (那是用户拒绝的"违反守则的写法",不是拒绝"守则本身");只有用户在 SettingsDialog 显式调整阈值才生效 (spec/25)。
+
+"命中"判定:Reflector 在审批闭环里写 `last_hit_at` 时,把当时 context builder 装载的 learnings ids 列表关联到该 approval 的 metadata,审批落定后回写 hit_count + weight (见 spec/23 prompt_traces 表)。
 
 ### 防止学坏
 

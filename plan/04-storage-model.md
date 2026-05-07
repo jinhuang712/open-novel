@@ -130,6 +130,8 @@
 
 ### 角色 (`characters/X.md`)
 
+> ⚠ frontmatter v3 — W2 末新增 `value_axes` / `intelligence_axis` 字段供五大守则人设崩坏检测 (spec/25);v2 字段 `reader_promises` / `taboos` / `arc` 在 W7 加入 (见 spec/16)。
+
 ```yaml
 ---
 id: char_lin_a3f2
@@ -141,6 +143,31 @@ aliases:
 gender: male
 age: 28
 role: protagonist
+# v2 (W7+):
+reader_promises:                          # 读者承诺,违反 = critical (spec/25 守则 2)
+  - "杀伐果断,不会对队友下手"
+  - "重情义,会为队友报仇"
+taboos:                                   # 角色禁忌,违反 = critical
+  - "不会对老人下手"
+  - "不会出卖兄弟"
+arc:                                      # 角色弧光 (ArcTracker 跟踪)
+  start: 软弱
+  end: 杀伐果断
+  trajectory: ['受辱', '觉醒', '复仇', '掌权']
+# v3 (W7+, spec/25):
+value_axes:                               # 行为价值观基线,偏离 > 0.4 = critical
+  对敌:                                   # 0=最仁慈, 1=最狠辣
+    baseline: 0.85
+    range: [0.7, 1.0]
+  对友:                                   # 0=最绝情, 1=最重情
+    baseline: 0.90
+    range: [0.75, 1.0]
+  对女:
+    baseline: 0.6
+    range: [0.4, 0.8]
+intelligence_axis:                        # 智力基线 (假智谋检测用)
+  baseline: 0.85                          # 0=笨, 1=极聪明
+  iq_range: [0.7, 1.0]
 created_at: 2026-04-29T10:00:00+08:00
 updated_at: 2026-04-29T11:30:00+08:00
 source: writer-agent
@@ -173,14 +200,38 @@ created_at: ...
 
 ### 章节 (`chapters/001-XX/draft.md`)
 
+> ⚠ frontmatter v2 — W2 末新增 `pov` / `pov_breakdown` / `hook_type` (1-3 章必填) / `main_line` / `progress_milestone` / `agency_breakdown` (派生) 字段供五大守则节奏 / 黄金三章 / 金手指检测 (spec/25)。
+
 ```yaml
 ---
 id: ch_001
 type: chapter
+chapter_index: 1                          # 派生 (从 order 字段)
 order: 1
 title: 重生那一夜
 word_count: 3247
-status: draft  # draft | reviewed | published
+status: draft                             # draft | reviewed | published
+# v2 字段 (spec/25):
+pov:                                      # POV 角色 list (按出场顺序)
+  - 林溪
+pov_breakdown:                            # 派生 (Validator 扫段后填,主角段比例)
+  林溪: 0.78
+  王伟: 0.22
+hook_type: 冲突                           # 1-3 章必填: 悬念 / 冲突 / 爽点 / 钩子 / 谜团
+named_characters:                         # 派生 (本章命名角色出场名单)
+  - 林溪
+  - 王伟
+  - 老板
+setting_description_ratio: 0.18           # 派生 (设定/环境描写占比)
+main_line: true                           # true=主线 / false=支线
+progress_milestone: null                  # null 或: 突破 / 夺宝 / 打脸 / 复仇 / 升级 / 觉醒 / 解谜
+pov_protagonist_ratio: 1.0                # 派生 (主角 POV 段比例)
+agency_breakdown:                         # 派生 (主角能动性占比, BeatAnalyzer 标段后聚合)
+  active_decision: 0.45                   # 主动决策
+  passive_receive: 0.20                   # 被动接收
+  system_reward: 0.10                     # 系统奖励
+  wisdom_choice: 0.15                     # 智慧抉择
+  struggle: 0.10                          # 挣扎抗争
 referenced_entities:
   - char_lin_a3f2
   - place_beijing_2010
@@ -191,6 +242,52 @@ updated_at: ...
 # 第一章 重生那一夜
 
 林川猛地从床上坐起来...
+```
+
+### 五大守则项目级配置 (`cardinal-rules.json`)
+
+> 项目级硬约束配置;`enabled: true` 锁死,只能微调阈值。详见 [spec/25-cardinal-rules.md](../spec/25-cardinal-rules.md)。
+
+```jsonc
+// ~/.open-novel/workspaces/{projectId}/cardinal-rules.json
+{
+  "version": 1,
+  "goldenChapters": {
+    "enabled": true,
+    "indexRange": [1, 3],
+    "minProtagonistPOVRatio": 0.6,
+    "maxSettingDescriptionRatio": 0.25,
+    "protagonistFirstAppearByWordCount": 1000,
+    "maxNamedCharactersInFirst3Chapters": 5,
+    "requireHookTypes": ["悬念", "冲突", "爽点", "钩子", "谜团"]
+  },
+  "characterIntegrity": {
+    "enabled": true,
+    "promiseViolationThreshold": "any",
+    "tabooViolationThreshold": "any",
+    "valueAxisDeviationMax": 0.4,
+    "minOpponentIntelligenceRatio": 0.7
+  },
+  "pacing": {
+    "enabled": true,
+    "maxChaptersBetweenMilestones": 5,
+    "minProtagonistPOVRatio": 0.7,
+    "maxSideLineRatio": 0.3,
+    "maxConsecutiveAbsenceChapters": 2,
+    "rollingWindow": 10
+  },
+  "promiseAccountability": {
+    "enabled": true,
+    "warnBeforeDeadlineChapters": 3,
+    "blockOnOverdueCritical": true
+  },
+  "protagonistAgency": {
+    "enabled": true,
+    "systemDependencyAxis": 0.3,
+    "minActiveDecisionRatio": 0.3,
+    "maxSystemRewardRatio": 0.3
+  }
+}
 ```
 
 ## SQLite Schema (`index.db` per-project)

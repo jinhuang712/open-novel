@@ -285,6 +285,31 @@ reindex 后扫一遍 dependencies:
 - `pending` 但 metadata.expected_payoff_by < current_chapter → 改 `pending` + UI 黄色警告"伏笔超期未收割"
 - `paid-off` 但 source_anchor 找不到 → 改 `broken`(收割点没了埋点)
 
+### metadata 字段 (kind='foreshadowing' / 'promise' 专用,五大守则期待感兑现 spec/25)
+
+```ts
+type ForeshadowingMetadata = {
+  expected_payoff_by?: string             // 期望收割章节 ID (e.g. 'ch_030')
+  // === v3 新增 (spec/25 守则 4: 期待感兑现) ===
+  deadline_chapter?: number                // 硬 deadline 章节序号 (>= 0)
+  deadline_word_count?: number             // 或者按字数 deadline (alternative)
+  weight: 'critical' | 'major' | 'minor'   // critical = 弃书级承诺 (e.g. "三年之约 / 战神归来 / 复仇")
+  expected_resolution_pattern?: string     // e.g. "战神回归后 ≤ 5 章必须展现实力"
+  recently_touched_in?: string[]           // 最近 N 章触及该承诺的章节 IDs (派生)
+}
+```
+
+**`weight` 语义** (spec/25 守则 4):
+
+- `critical`: 三年之约 / 战神归来 / 复仇这种核心承诺,违反 = 弃书级,deadline 已过未 resolved → ApprovalCard `blocking` 不让通过
+- `major`: 主线相关承诺,deadline 接近无推进 → warn
+- `minor`: 一般伏笔,deadline 不强约束
+
+**lint 增强** (POC 阶段实现):
+
+- `kind='foreshadowing'/'promise'` 且 `weight='critical'` 且 `deadline_chapter < current_chapter` 且 `status='pending'` → 写章节时 promiseAccountabilityCheck (spec/25) 标 `blocking=true`
+- 距 deadline ≤ 3 章无 `recently_touched_in` 命中 → warn level (`warn` 守则的 majorpromise / `critical` 守则的 critical promise)
+
 ## 表 6 — paragraph_anchors (实现详见 spec/17)
 
 ```sql
@@ -369,14 +394,32 @@ export const characterFrontmatter = z.object({
   // 角色级禁区 (Validator lint 用)
   taboos: z.array(z.string().max(100)).default([]),
 
+  // === v3 新增 (W7 + spec/25 五大守则人设崩坏检测) ===
+
+  // 行为价值观基线 (守则 2: 角色行为偏离 baseline > 0.4 = critical)
+  // 各 axis 0-1 浮点, 0=最负向, 1=最正向; baseline 是平时表现, range 是允许波动
+  value_axes: z.record(
+    z.string().max(20),                                       // axis name: '对敌' / '对友' / '对女' / '对长辈' 等
+    z.object({
+      baseline: z.number().min(0).max(1),
+      range: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),  // [min, max]
+    })
+  ).default({}),
+
+  // 智力基线 (守则 2: 假智谋真降智检测; 主角策略成功时对手 IQ 不应低于 baseline*0.7)
+  intelligence_axis: z.object({
+    baseline: z.number().min(0).max(1),
+    iq_range: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+  }).optional(),
+
   // 派生标记 (relationships/_matrix.md 等派生文件标 true,UI 锁写)
   derived: z.boolean().default(false),
 
-  _schemaVersion: z.literal(2).default(2),                  // ← bump
+  _schemaVersion: z.literal(3).default(3),                  // ← bump v3
 })
 ```
 
-`_schemaVersion: 1 → 2` 触发迁移脚本(详见 spec/16 §迁移)。
+`_schemaVersion: 1 → 2 → 3` 触发迁移脚本(详见 spec/16 §迁移)。**v3 迁移**只补 `value_axes: {}` + `intelligence_axis: undefined` 默认值 — 不破坏既有 character.md。用户需要时在 SettingsDialog "角色基线"面板填入,或 Reflector 从历次审批反馈逐步学习填充。
 
 ### 其他 frontmatter 也升级
 

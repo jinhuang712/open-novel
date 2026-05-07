@@ -22,37 +22,53 @@
 | **毒舌读者** | AI 味、老套、文字硬伤 | 长句过密 / "在某种程度上" / 二次元梗烂大街 | 自然口语 / 新鲜表达 |
 | **潜水大佬** | 长期吸引力、世界观深度、人物层次 | 世界观薄 / 人物扁平 | 多层次冲突 / 设定彩蛋 |
 
-每个 persona 都有详细 prompt (见 spec/11),输出统一 schema:
+每个 persona 都有详细 prompt (见 spec/11),输出走 [JSON mode (spec/24)](../spec/24-json-output.md) 统一 schema:
 
 ```ts
 type PersonaReaction = {
-  personaId: string
-  
+  personaId: 'veteran_reader' | 'casual_reader' | 'rational_reader' | 'genre_fan' | 'new_reader'
+
   // 整体反应
   overallSentiment: -100 ~ 100      // -100 = 极度排斥, +100 = 强烈追更
   retentionPrediction: 0 ~ 100      // 看完此章后继续追书的概率
-  
+  dropoffRisk: 0 ~ 1                // 弃书风险 (1 = 立刻点右上角)
+
   // 关键标记
   highlights: { position: number; kind: '爽点' | '钩子' | '亮点'; reason: string }[]
   warnings: { position: number; kind: '毒点' | '坑' | '突兀' | 'AI 味'; severity: 'low'|'mid'|'high'; reason: string }[]
-  
+
+  // 五大守则违反信号 (与 spec/25 对齐)
+  cardinalRulesFlags: ('golden_chapters_drift' | 'character_collapse' | 'pacing_stall' | 'promise_betrayal' | 'system_dependency_overflow')[]
+
   // 自由文字反馈 (像真实读者评论)
   naturalLanguageReaction: string
 }
 ```
 
-5 个 persona 跑完后聚合成 **章节风险报告**:
+5 个 persona 跑完后聚合成 **章节风险报告** (输出 JSON):
 
 ```ts
 type ChapterRiskReport = {
   chapterId: string
   reactions: PersonaReaction[]
   aggregateRetention: number        // 加权平均
-  topRisks: { warning; count: number }[]    // 多 persona 都标的高风险点
-  topWins: { highlight; count: number }[]   // 多 persona 都赞的亮点
+  averageDropoffRisk: number         // 平均弃书风险
+  topRisks: { warning; count: number }[]
+  topWins: { highlight; count: number }[]
   recommendation: 'ship' | 'minor-tweak' | 'major-rework'
+
+  // 五大守则贡献 (各 persona 的 cardinalRulesFlags 聚合)
+  cardinalRulesFindings: {
+    goldenChapters: { flagCount: number; personas: string[] }   // 守则 1
+    characterIntegrity: { flagCount: number; personas: string[] } // 守则 2
+    pacing: { flagCount: number; personas: string[] }            // 守则 3
+    promiseAccountability: { flagCount: number; personas: string[] }  // 守则 4
+    protagonistAgency: { flagCount: number; personas: string[] }      // 守则 5
+  }
 }
 ```
+
+ReaderPanel 是守则 1/2/3/4/5 的**二审 agent**(主检测在 Validator + Checker + ArcTracker 的算法层;ReaderPanel 是从读者主观感受角度看"这章会不会让人弃书")。两层都报警 = 这章风险极大;只一层报警 = 警惕但不阻断。聚合规则在 [spec/25 §ApprovalCard 集成](../spec/25-cardinal-rules.md)。
 
 ## 触发时机
 
