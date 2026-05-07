@@ -78,6 +78,10 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 - **模型命名**: 实查证实 `deepseek-v4-pro` / `deepseek-v4-flash` 是真实 ID(无 `deepseek/` 前缀,纯 model 名)
 - **reasoning**: 没有独立 reasoning model;V4-Flash 自带 thinking 模式,通过参数切换;不需要再为 ArcTracker / Validator 单独选 reasoner
 
+**模型选型守约** (借鉴 opencode `provider/transform.ts:549-561` 的模型差异化处理):
+
+> ❌ **禁止 fallback 到 `deepseek-chat` / `deepseek-reasoner` / `deepseek-r1` / `deepseek-v3`** — 这些旧模型没有 reasoning effort 控制,也没有 V4 的 `max` variant,与 plan/02 的 `reasoningEffort=max` 设计 (T2) 冲突。一旦 V4 临时不可用,直接 escalate 到用户而非静默回退到 V3/旧版,因为旧模型行为差异会让 cardinal-rules 检测精度劣化。
+
 ### G. DeepSeek JSON 输出模式 ✅ **2026-05-06 实查完成**
 
 **问题**: 我们大量 Agent (Router / Validator / Checker / ArcTracker / ReaderPanel / Reflector / concept extractor / extractSemanticDelta / filterByLLM) 输出本质结构化,过去用"prompt 嘱咐 + zod 解析自然语言"会反复出现"模型回了一段话和 JSON 混在一起"的解析失败。需要确认 DeepSeek 是否原生支持 JSON 输出模式。
@@ -128,6 +132,44 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 
 1. shadcn/ui 当前模板 (`pnpm dlx shadcn@latest init`) 是否已支持 Tailwind v4
 2. (我们手写组件,但仍要确认 `tw-animate-css` 等周边包能用)
+
+### H. DeepSeek prompt cache 真实支持情况 ⏳ **W3 实施 spec/22 前必查**
+
+**问题**: opencode 在 `provider/transform.ts:328-377` 给 DeepSeek (走 `@ai-sdk/openai-compatible`) 标了 `providerOptions.openaiCompatible.cache_control: { type: "ephemeral" }`,但**这只是 opencode 的假设, 不一定 DeepSeek 服务端真支持这个字段**。我们 spec/22 (T3) 设计了"system 前 2 段 + 末尾 2 条消息打 cache_control"的策略以省 prompt token, 必须先验证字段真被 DeepSeek 端识别。
+
+实查:
+
+1. 看 DeepSeek 官方文档 (https://api-docs.deepseek.com/zh-cn) 是否有 prompt cache / context cache 章节
+2. 如有,字段名是 `cache_control` (OpenAI-compatible) 还是 DeepSeek 自定义?是否需要额外 header / endpoint 切换?
+3. 如无,确认是否走自动缓存(部分 provider 如 Anthropic 是 opt-in,部分如 Gemini context cache 是显式 API 创建)
+4. 若真不支持,**spec/22 的 cache_control 策略要降级为"prompt 头部稳定排布"** — 仅靠头部稳定争取后续可能的客户端缓存,不依赖服务端。
+
+**结果回写**: spec/22 §DeepSeek prompt cache 标记策略 + plan/08 §DeepSeek V4 配置。
+
+### I. Mastra `wrapLanguageModel` + middleware 暴露情况 ⏳ **W3 实施 spec/22 / spec/24 前必查**
+
+**问题**: opencode 用 `wrapLanguageModel + transformParams middleware` (`session/llm.ts:391-405`) 注入 DeepSeek 特殊 round-trip (强制 `reasoning_content` 占位 + 历史消息透传). 我们 spec/22 (T3) 和 spec/24 (T5) 都假设可以在 Mastra agent 之上加同样的 middleware. **Mastra 实际是否暴露这个口子未确认**.
+
+实查:
+
+1. 看 Mastra 文档 / 源码,`mastra.Agent` / `Mastra.create()` 是否接受 Vercel AI SDK 的 `wrapLanguageModel` 包装后的 model 实例
+2. 或: Mastra 是否有自己的 middleware/hook 机制等价 (例如 `onBeforeStream` / `transformMessages`)
+3. 或: Mastra 的 `agent.stream()` 是否 expose `experimental_transform` / `prepareStep` 等 AI SDK 5+ 钩子
+
+**fallback 路径**: 如果 Mastra 不暴露任何 middleware 口子,**绕过 Mastra 直接用 Vercel AI SDK 的 `streamText` / `generateObject`**,在外层包一层我们自己的 callJsonAgent 实现 (Mastra 只用作 Memory / Workflow 编排,不参与 LLM 调用)。**spec/22 + spec/24 必须在 fallback 章节里写明这条退路**.
+
+### J. embedding provider 选型与 vector 索引 ⏳ **W8 之前必查 (spec/18 闸门)**
+
+**问题**: spec/18 列了 BGE-M3 / DeepSeek embedding / OpenAI text-embedding-3-small 三选一的对比表,作者推荐 BGE-M3 本地。**已与用户确认默认锁 BGE-M3 (见 T8 commit), 但需在 spec/00 audit 里加 W8 启动前的 verify 项**.
+
+实查 (W8 day-1):
+
+1. Ollama 当前最新版是否仍稳定提供 `bge-m3` 模型 (`ollama pull bge-m3`)
+2. transformers.js (Web 端 fallback) 是否支持 BGE-M3 ONNX 导出版本
+3. `paragraph_embeddings_vss` 走 LibSQL native vector (`libsql-server > 0.24`) 还是 sqlite-vss extension — 实查当前 `@mastra/libsql` 是否带 vector_search 虚拟表
+4. DeepSeek embedding API 是否已开放 (备用 fallback;开放则单独标 endpoint + dim)
+
+**结果回写**: spec/18 §3 vector 索引升级路径 + spec/18 §选型对比表删 "(待 audit 实查)" 字样。
 
 ## 实查产出格式
 
@@ -183,6 +225,9 @@ W3 启动第一日,**先开 `progress/00X-version-audit.md`**,按以下结构填
 - [ ] spec/06 §服务端实现 — 重写
 - [ ] spec/03 §模型偏好注入 — 修正 model id
 - [ ] README.md §技术栈表 — 同步
+- [ ] spec/22 §DeepSeek prompt cache — 按 §H 实查结果调整 cache_control 字段或降级
+- [ ] spec/22 + spec/24 §middleware 注入 — 按 §I 结果决定 (Mastra 内 / 绕开 Mastra)
+- [ ] spec/18 §选型对比 + §vector 索引 — 按 §J 结果定稿,删"待 audit"字样
 
 ## 改写后单独一个 docs commit
 
