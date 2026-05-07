@@ -2,19 +2,54 @@
 
 所有 Prompt 存放在 `lib/prompts/{agent}.md`,启动时载入。Prompt 中用 `{{var}}` 表示变量替换 (运行时由 prompt loader 注入)。
 
-## 公共片段
+## 两段式拼装: stable header + dynamic body (T7 — 借鉴 opencode prompt cache)
 
-每个 Agent 的 system prompt 由以下片段拼接:
+> opencode 主动让 system prompt 头部不变以命中 anthropic / openai cache (`session/llm.ts:124-128`)。我们借同一思路: 每个 agent prompt **拆为两段**, 配合 spec/22 §DeepSeek 适配 middleware §3 cache_control 标记策略, 让 stable 段稳定命中 prompt cache (依赖 spec/00 §H verify)。
 
 ```
-[1. Agent 角色与目标]
-[2. 项目上下文 (来自 project.json)]
-[3. 当前模式约束]
-[4. 用户偏好经验注入 (来自 learnings 表)]
-[5. Agent 专用指令]
-[6. 工具调用约束]
-[7. 不可信内容围栏 (强制 — 审计补)]
-[8. 输出形态声明 (JSON mode 或 自然语言, T5 新增)]
+system message[0] = stable header (永不变, 标 cache_control)
+  ├─ Agent 角色与目标 (片段 1)
+  ├─ 五大网文绝对守则文本 (spec/25, 全 agent 共享, 几 KB)
+  ├─ 不可信内容围栏 (片段 7)
+  └─ 输出形态声明 + JSON 示例 (片段 8)
+
+system message[1] = dynamic body (本次调用拼装, 不标 cache_control)
+  ├─ 项目上下文 (片段 2, project.json 字段)
+  ├─ 当前模式约束 (片段 3)
+  ├─ 用户偏好经验注入 (片段 4, learnings 表)
+  ├─ Agent 专用指令 (片段 5)
+  ├─ 工具调用约束 (片段 6)
+  └─ 当前章节 / cascade / approval 上下文 (来自 spec/23 per-agent context builder)
+```
+
+**标记规则** (spec/22 §3 cache_control):
+- system[0] 标 `cache_control: { type: "ephemeral" }` (前 2 段中的第 1 段)
+- system[1] **不标** (中段动态)
+- messages 末尾 2 条 (最近一次 user + assistant) 标 `cache_control` (借 opencode pattern)
+
+**为什么 system[1] 也算"前段中的第 2 段不标"**: opencode 标前 2 段 system, 因为 anthropic / openrouter / kimi 等的 cache 在大多数场景下两段头部都能稳定。我们的 system[1] 是 **per-call dynamic**, 标了反而每次都 cache miss + 浪费配额。**选择只标 system[0]**, 配合 messages 末尾 2 条, 总共 3 段而非 4 段。
+
+**stable header 不变量** (动态内容禁止进入 system[0]):
+- ❌ 不放当前 chapterId / sessionId / 时间戳
+- ❌ 不放 learnings (per-project 动态)
+- ❌ 不放本次 retrieve 出的 entity / foreshadowings (per-call 动态)
+- ✅ 放 agent 角色描述 (从训练数据级别就稳定)
+- ✅ 放五大守则文本 (内容由 cardinal-rules.json 配置, 但项目内一旦定下就 stable; 改了 cardinal-rules.json 主动 invalidate cache 是正确成本)
+- ✅ 放 JSON mode 示例 (per-agent 静态, 不含项目数据)
+
+## 公共片段
+
+每个 Agent 的 system prompt 由以下片段拼接 (片段 1, 7, 8 进 stable header; 片段 2-6 进 dynamic body):
+
+```
+[1. Agent 角色与目标]                        — stable
+[2. 项目上下文 (来自 project.json)]            — dynamic
+[3. 当前模式约束]                            — dynamic
+[4. 用户偏好经验注入 (来自 learnings 表)]      — dynamic
+[5. Agent 专用指令]                          — dynamic
+[6. 工具调用约束]                            — dynamic
+[7. 不可信内容围栏 (强制 — 审计补)]            — stable
+[8. 输出形态声明 (JSON mode 或 自然语言)]      — stable
 ```
 
 ### 公共片段 8: 输出形态 (T5 新增)

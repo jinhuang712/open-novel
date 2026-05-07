@@ -6,6 +6,7 @@
 - **索引/历史/学习独立**: 用 SQLite (LibSQL) 管引用图、变更历史、反馈经验,**用户不感知**
 - **多项目无串扰**: 每个项目一个目录,一个独立 `index.db`
 - **存放在用户目录**: 不污染代码仓库,iCloud/Time Machine 友好
+- **关注点分离 — 产物 vs 过程** (T7 — 借鉴 opencode `session/session.sql.ts`): **用户产物**走 Markdown (chapter.md / character.md / outline.md / cardinal-rules.json 等, file tree view 可见可编辑可 git 跟踪); **运行时过程数据**走 SQLite (LLM 调用日志 / tool retry 记录 / token 用量 / JSON parse 失败 / cascade 路径 / etc, 给开发者调试用)。两者数据库分开 (`index.db` for 产物索引, `session_history.db` for 过程数据), 避免写入并发冲突且语义清晰。
 
 ## 存储位置
 
@@ -314,6 +315,116 @@ updated_at: ...
 - `setting_snapshots`: 重大设定改动自动备份
 - `cascade_audits`: cascade 影响半径分析的审计日志
 - `reindex_failures`: reindex 失败队列 (供手动重试)
+- `narrative_feedback`: BeatReport 用户反馈 (二期 Reflector 用, schema 详见 spec/01 §narrative_feedback / entity_match_feedback)
+- `entity_match_feedback`: entity highlight false-positive 反馈 (W6 起记录, schema 详见 spec/01)
+- `volume_summaries`: 卷级锚定摘要 (T3, schema 详见 spec/22 §卷级锚定摘要)
+
+## SQLite 过程数据库 (`session_history.db` per-project, T7)
+
+> 借鉴 opencode `session/session.sql.ts` + drizzle 的 SQLite 单文件持久化模式。**与 `index.db` 严格分库**, 因为产物索引和过程数据语义截然不同(前者面向 LLM 检索 + 用户文件浏览, 后者面向开发者调试 + 性能监控), 混在一起会让备份策略 / 写入并发 / schema migration 都更难。
+
+### 路径
+
+```
+~/.open-novel/workspaces/{projectId}/
+├── index.db                    # 产物索引 (上文)
+└── session_history.db          # 运行时过程 (本节)
+```
+
+### Schema (drizzle migration `006-session-history.ts`)
+
+```sql
+-- LLM 调用日志 (每次 callJsonAgent / streamText 一行)
+CREATE TABLE llm_calls (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT,                                       -- 对应 mastra_threads.id (跨库引用, 不强 FK)
+  agent TEXT NOT NULL,                                  -- 'writer' / 'validator' / 'hidden:chapter-summary' / ...
+  model TEXT NOT NULL,                                  -- 'deepseek-v4-pro' / 'deepseek-v4-flash'
+  reasoning_effort TEXT NOT NULL,                       -- 'max' / 'default'
+  json_mode INTEGER NOT NULL,                           -- 0 / 1
+  prompt_tokens INTEGER NOT NULL,
+  completion_tokens INTEGER NOT NULL,
+  reasoning_tokens INTEGER,                             -- DeepSeek reasoning_content 计费
+  cache_read_tokens INTEGER,                            -- 命中 cache 的 token 数 (依赖 spec/00 §H verify)
+  cache_write_tokens INTEGER,
+  cost_cny REAL,                                        -- 估算成本 (按当前定价)
+  finish_reason TEXT,                                   -- 'stop' / 'length' / 'tool_calls' / 'error'
+  duration_ms INTEGER NOT NULL,
+  started_at INTEGER NOT NULL,                          -- unix ms
+  ended_at INTEGER NOT NULL
+);
+CREATE INDEX idx_llm_calls_thread ON llm_calls(thread_id);
+CREATE INDEX idx_llm_calls_agent_time ON llm_calls(agent, started_at DESC);
+
+-- callJsonAgent retry 记录 (每次 retry / 失败一行, 关联 llm_call_id)
+CREATE TABLE json_retries (
+  id TEXT PRIMARY KEY,
+  llm_call_id TEXT NOT NULL REFERENCES llm_calls(id),
+  attempt INTEGER NOT NULL,                             -- 1, 2 (callJsonAgent 最多 2 次)
+  failure_kind TEXT NOT NULL,                           -- 'empty_content' / 'truncated' / 'invalid_json' / 'schema_violation'
+  raw_text TEXT,                                        -- 失败原文 (可能很长, > 2K 时走 _tool_cache)
+  zod_issues TEXT,                                      -- JSON: zod errors
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_json_retries_call ON json_retries(llm_call_id);
+
+-- cascade tool 执行记录 (T3 §prune 老章节 tool 输出 关联表)
+CREATE TABLE chapter_tool_runs (
+  id TEXT PRIMARY KEY,
+  chapter_id TEXT NOT NULL,                             -- 关联 chapters.id
+  tool_name TEXT NOT NULL,                              -- 'beat-analyzer' / 'arc-tracker' / 'reader-panel' / ...
+  agent TEXT NOT NULL,                                  -- 'checker' / 'validator' / 'reader-panel'
+  llm_call_id TEXT REFERENCES llm_calls(id),
+  raw_output_path TEXT,                                 -- 若 truncated: _tool_cache/{toolCallId}.json (spec/02 T4)
+  raw_output_size INTEGER NOT NULL,                     -- bytes
+  pruned_at INTEGER,                                    -- spec/22 T3 prune 时间戳, NULL = 未 prune
+  pruned_summary TEXT,                                  -- prune 后保留的摘要
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_tool_runs_chapter ON chapter_tool_runs(chapter_id, created_at DESC);
+CREATE INDEX idx_tool_runs_pruned ON chapter_tool_runs(chapter_id, pruned_at);
+
+-- doom-loop 检测记录 (spec/06 T6)
+CREATE TABLE doom_loop_events (
+  id TEXT PRIMARY KEY,
+  chapter_id TEXT NOT NULL,
+  detected_at INTEGER NOT NULL,
+  recent_outputs_summary TEXT NOT NULL,                 -- JSON: 3 次 Writer 输出的相似度 + 拒绝原因
+  user_action TEXT,                                     -- 'manual_edit' / 'force_approve' / 'discard' / null (待决)
+  resolved_at INTEGER
+);
+CREATE INDEX idx_doom_loop_chapter ON doom_loop_events(chapter_id);
+
+-- prompt cache 命中统计 (T7 + spec/22 T3, 用于评估 cache 策略效果)
+CREATE TABLE prompt_cache_stats (
+  id TEXT PRIMARY KEY,
+  llm_call_id TEXT NOT NULL REFERENCES llm_calls(id),
+  cache_segments_marked INTEGER NOT NULL,               -- 本次 mark 了几段 cache_control
+  cache_hit_segments INTEGER,                           -- 服务端返回命中几段 (若 spec/00 §H verify 后能拿到)
+  cache_savings_tokens INTEGER,
+  recorded_at INTEGER NOT NULL
+);
+```
+
+### 不进 SQLite 的内容(继续走 Markdown / 文件)
+
+| 数据 | 存储 | 理由 |
+|---|---|---|
+| chapter.md / character.md / outline.md / worldview.md / cardinal-rules.json | Markdown 文件 | 用户产物, file tree 可见, git 跟踪 |
+| settings/* 全树 | Markdown 文件 | 同上 |
+| volume_summaries (卷级摘要内容) | `index.db` (产物索引一侧) | 是给 LLM 检索用的"产物" 不是过程; 长期生命周期 |
+| Mastra Memory threads / messages | `~/.open-novel/runtime.db` | Mastra 自动管理, 跨项目共享但 resource 隔离 |
+| `_tool_cache/{toolCallId}.json` truncated 原始输出 | 散文件 | 体积大 + 短期 (prune 时清理), 不进数据库 |
+
+### 写入约束
+
+- **session_history.db 只写不查 (90% 场景)**: 主要由 callJsonAgent / cascade 控制器异步写; 查询走 SettingsDialog "调试 / 监控" 页或 W11 prompt_traces 面板, 不在主流程
+- **写失败不阻塞主流程**: 例如 prompt_cache_stats 写失败仅 log warn, 不影响 LLM 调用结果
+- **30 天滚动归档**: 默认保留最近 30 天数据, 更早行 batch 删除 (volume_summaries 例外, 永久保留, 但它在 index.db 不在这里)
+
+### Mastra 与 LibSQL 的连接关系
+
+`runtime.db` (Mastra Memory) 和 `session_history.db` (本节) 都是 LibSQL, 同一份连接池 (plan/04 §LibSQL 连接池) 即可服务两者。索引 `index.db` 是第三个连接, LRU(3) 容纳: index.db × 1 + session_history.db × 1 + runtime.db × 1 = 3 个项目并发上限。
 
 ## 数据隔离保证
 
