@@ -106,6 +106,85 @@ export async function streamWithGuard(agent, messages, opts) {
 
 所有 Agent 调用必须经 `streamWithGuard`,直接调 `streamVNext` 在 lint 中报错 (见 spec/14 §测试规约)。
 
+## DeepSeek 适配 middleware (T3 — 借鉴 opencode `provider/transform.ts`)
+
+DeepSeek 走 `@ai-sdk/openai-compatible`, 有两个**硬性 round-trip 要求**, 不处理直接 500 错误:
+
+### 1. 历史 assistant 消息必须含 `reasoning_content` 字段(即使空)
+
+opencode 实证 (`provider/transform.ts:273-289`): 任何 assistant 消息缺 `reasoning_content` 字段在下次回传时, DeepSeek API 报错。Mastra 把历史 messages 序列化回传给 DeepSeek 时, 默认未必保留这个字段。
+
+**对策**: 在 `streamWithGuard` 之上加 transform middleware, 自动注入 `{ type: "reasoning", text: "" }` 占位:
+
+```ts
+// lib/agents/deepseek-middleware.ts
+import { wrapLanguageModel, type LanguageModelV2Middleware } from 'ai'
+
+export const deepseekMiddleware: LanguageModelV2Middleware = {
+  transformParams: async ({ params }) => {
+    if (params.type !== 'stream' && params.type !== 'generate') return params
+
+    const prompt = params.prompt.map(msg => {
+      if (msg.role !== 'assistant') return msg
+      const content = Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: msg.content }]
+      const hasReasoning = content.some((p: any) => p.type === 'reasoning')
+      if (hasReasoning) return msg
+      return { ...msg, content: [...content, { type: 'reasoning', text: '' }] }
+    })
+
+    return { ...params, prompt }
+  },
+}
+
+// 在 lib/agents/llm.ts 包裹 model
+export const deepseekPro = wrapLanguageModel({
+  model: createDeepSeekProvider(...).languageModel('deepseek-v4-pro'),
+  middleware: [deepseekMiddleware],
+})
+```
+
+**验证依赖 spec/00 §I**: Mastra `Agent` 是否接受 `wrapLanguageModel` 包装后的 model 实例。如不接受, **fallback** = 绕过 Mastra Agent, 直接用 Vercel AI SDK `streamText` / `generateObject`, Mastra 仅保留 Memory + Workflow 编排职能。
+
+### 2. `reasoning_content` 字段透传
+
+DeepSeek 把推理过程返回到 `providerOptions.openaiCompatible.reasoning_content` 字段。`@ai-sdk/openai-compatible` provider 自动设 `interleaved: { field: "reasoning_content" }`, 但 Mastra 在 messages 持久化时默认丢这个字段, 历史回传时缺失会报错。
+
+**对策**: middleware 在 `transformParams` 入口把 `providerOptions.openaiCompatible.reasoning_content` 注入回 assistant 消息(若历史有保留)。具体实现见 callJsonAgent (spec/24 T5)。
+
+### 3. prompt cache_control 标记 (省 token)
+
+DeepSeek prompt cache 是否真的支持 `cache_control: { type: "ephemeral" }` **待 spec/00 §H 实查**。假设支持, 标记策略 (借鉴 opencode `provider/transform.ts:328-377`):
+
+```ts
+// 在 deepseekMiddleware 内 (transformParams 阶段)
+const system = prompt.filter(m => m.role === 'system').slice(0, 2)        // 前 2 段
+const tail = prompt.filter(m => m.role !== 'system').slice(-2)            // 末尾 2 条
+
+for (const msg of [...system, ...tail]) {
+  if (Array.isArray(msg.content)) {
+    const last = msg.content[msg.content.length - 1]
+    if (last && last.type !== 'tool-approval-request') {
+      last.providerOptions = {
+        ...(last.providerOptions ?? {}),
+        openaiCompatible: { cache_control: { type: 'ephemeral' } },
+      }
+    }
+  } else {
+    msg.providerOptions = {
+      ...(msg.providerOptions ?? {}),
+      openaiCompatible: { cache_control: { type: 'ephemeral' } },
+    }
+  }
+}
+```
+
+**为什么是 system 前 2 段 + 末尾 2 条**:
+- 前段: 五大守则文本 (spec/25, 几 KB) + agent stable header prompt (spec/03 T7), 这两段每次调用都不变, cache 命中率最高
+- 末尾: 最近一次用户消息 + assistant 回复, 多轮对话场景下后续调用复用率高
+- 中段不打: 中段是动态 retrieve (per-agent context contract spec/23 装配的产物), 每次调用都不一样, 打了也不命中, 浪费配额
+
+**fallback (spec/00 §H 验证不通过)**: 删除 cache_control 注入逻辑, 仅靠 prompt 头部稳定排布 (T7 spec/03 stable header) 争取客户端缓存或服务端可能的隐式缓存。**功能不阻塞**, 只是 token 成本更高。
+
 ## sessionId 的 lifecycle
 
 - **创建**: 用户首次进项目 / 点"新对话"按钮 / 启动 app 时无活动 session → 生成新 sessionId
@@ -269,6 +348,189 @@ const CompressionSummarySchema = z.object({
 请只输出 JSON 对象, 不要 markdown 代码块, 不要前后说明。
 ```
 
+## 卷级锚定摘要 (Volume-level Anchor Summary, T3 — 借鉴 opencode `compaction.ts:43-78`)
+
+> 当一本网文写到 50+ 章, 即便 1M ctx 也开始吃紧 (50 章 × 章均 8K + 历史 cascade tool 输出 ≈ 700K tokens 接近上限)。锚定摘要把"本卷已立的设定 / 已埋的伏笔 / 读者承诺 / 节奏当前阶段"等**长期不变量**冻结成一份固定结构 Markdown, 后续生成只读摘要 + 最近 N 章原文, 不再翻 ch_001 到 ch_049 的全部历史。
+
+### 与 compressed_messages 的区别
+
+| 维度 | compressed_messages | volume_summary (本节新增) |
+|---|---|---|
+| 粒度 | 单 thread 内的对话片段 (按 cascade 分组) | 整个项目 / 整卷 |
+| 内容 | 用户改了什么 + entity 名 + approvalId | 主线进度 + 人设状态 + 伏笔账本 + 守则状态 |
+| 触发 | 用户主动 enable + 单 session > 200 条 messages | 每 20-30 章末 / 接近 700K token / 用户手动 |
+| 写入方 | hidden `compaction` agent (复用 callJsonAgent) | hidden `volume-summarizer` agent |
+| 存储 | runtime.db `compressed_messages` 表 | workspace.db `volume_summaries` 表 (项目级) |
+| 注入位置 | mastra_messages 的滑窗替代 (替换原文) | spec/23 各 agent context builder 的"长期上下文"段 (与最近 N 章原文并列) |
+
+### `volume_summaries` 表 (workspace.db)
+
+```sql
+CREATE TABLE volume_summaries (
+  id TEXT PRIMARY KEY,
+  volume_index INTEGER NOT NULL,                    -- 第几卷 (与 chapter.volume 对齐)
+  chapter_range_start TEXT NOT NULL,                -- 例 ch_001
+  chapter_range_end TEXT NOT NULL,                  -- 例 ch_030
+  previous_summary_id TEXT,                         -- 上一份摘要 (锚点累积链)
+  -- 固定结构 Markdown 各段
+  main_line TEXT NOT NULL,                          -- ## 本卷主线进度
+  established_personas TEXT NOT NULL,               -- ## 已建立人设 (角色名 → value_axes 当前状态)
+  active_foreshadowings TEXT NOT NULL,              -- ## 待回收伏笔 (foreshadowing.id 列表 + deadline)
+  worldview_invariants TEXT NOT NULL,               -- ## 关键世界观规则
+  reader_promises TEXT NOT NULL,                    -- ## 待兑现读者承诺 (critical promise + deadline)
+  pacing_phase TEXT NOT NULL,                       -- ## 节奏当前阶段 (开局/小高潮/转折/卷末/...)
+  golden_chapter_set TEXT NOT NULL,                 -- ## 黄金三章已立设定 (前 3 章定下的不可违反基线, spec/25)
+  cardinal_rule_state TEXT NOT NULL,                -- ## 五大守则当前状态 (各守则累计 finding 数 + last violation)
+  raw_summary TEXT NOT NULL,                        -- 完整 Markdown (= 上述各段拼接, 用于直接注入 prompt)
+  generated_by TEXT NOT NULL,                       -- 'deepseek-v4-flash'
+  created_at INTEGER NOT NULL,
+  approved_at INTEGER                               -- 用户在 SettingsDialog 审过摘要后置时间戳, 未审默认仍生效
+);
+
+CREATE INDEX idx_vol_summary_range ON volume_summaries(volume_index, chapter_range_end);
+```
+
+### 锚点累积 (借鉴 opencode `compaction.ts:124-135` 的 anchored summary)
+
+新摘要生成时**读上一份摘要** (`previous_summary_id`), prompt 模板:
+
+```
+更新已锚定的摘要 (anchored summary) — 你需要把章节 ch_${range_start} 到 ch_${range_end} 这段时间的新事实合并进上一份摘要,
+保留仍然成立的细节, 删除已经过时的细节, 不要重复发挥。
+
+<previous-summary>
+${previous_volume_summary.raw_summary}
+</previous-summary>
+
+<new-chapters>
+${chapter_summaries_concat}    -- 不是原文, 是每章的 chapter_summary (chapter.md frontmatter)
+</new-chapters>
+
+输出格式 (固定 9 段 Markdown):
+## 本卷主线进度
+- ...
+
+## 已建立人设
+| 角色 | value_axes 当前状态 | 上次出场章节 |
+
+## 待回收伏笔
+| foreshadowing.id | 主题 | deadline | weight | 当前状态 |
+
+## 关键世界观规则
+- ...
+
+## 待兑现读者承诺
+| promise.id | 内容 | deadline | weight |
+
+## 节奏当前阶段
+[开局 | 小高潮 | 转折 | 卷末 | 完结前]
+
+## 黄金三章已立设定
+- 主角性格基线: ...
+- 主线方向: ...
+- 钩子类型: ...
+(这部分一旦写定不能在后续摘要里改, 与五大守则 1 锚定)
+
+## 五大守则当前状态
+| 守则 | 累计 finding | 上次 critical 违反章节 |
+
+## 关键决策与变更点
+- 章节 ${ch_id}: ${决策}
+```
+
+### 触发时机
+
+```ts
+// 在 ChapterApproval 落盘后跑 (spec/06 onApprovalResolved hook)
+async function maybeGenerateVolumeSummary(projectId: string, justApprovedChapter: ChapterId) {
+  const lastSummary = await db.workspace(projectId).volumeSummaries.findLast()
+  const chaptersAfter = lastSummary
+    ? await db.workspace(projectId).chapters.countAfter(lastSummary.chapter_range_end)
+    : await db.workspace(projectId).chapters.count()
+
+  // 触发条件 (任一)
+  const reachedChapterThreshold = chaptersAfter >= settings.volumeSummary.everyNChapters    // 默认 20
+  const reachedTokenThreshold = await estimateContextTokens(projectId) > 700_000
+  const userManualTrigger = false  // 由 SettingsDialog 按钮触发
+
+  if (!reachedChapterThreshold && !reachedTokenThreshold && !userManualTrigger) return
+
+  await runVolumeSummarizer(projectId, lastSummary?.chapter_range_end, justApprovedChapter)
+}
+```
+
+### checkpoint-aware rehydrate (借鉴 opencode `v2/session.ts:234-265` `context()` 用 compaction 当 checkpoint)
+
+opencode 的 `Session.context()` 取"最后一次 compaction 标记之后的所有消息" — 把 compaction 当成天然断点。我们对应版本: **rehydrate 时只读最后一份 volume_summary 之后的章节** + summary 本身, 不读更早的章节 / mastra_messages。
+
+```ts
+// lib/boot/rehydrate-session.ts (T3 增强 §跨进程恢复实操)
+export async function rehydrateProjectContext(projectId: string) {
+  const lastSummary = await db.workspace(projectId).volumeSummaries.findLast()
+  const checkpointChapter = lastSummary?.chapter_range_end
+  const recentChapters = checkpointChapter
+    ? await db.workspace(projectId).chapters.findAfter(checkpointChapter)
+    : await db.workspace(projectId).chapters.findAll()
+
+  return {
+    longTermContext: lastSummary?.raw_summary,                  // 注入 spec/23 各 agent 的"长期上下文"段
+    recentRawChapters: recentChapters,                          // 注入 spec/23 "最近 N 章原文"段
+    lastCheckpointChapter: checkpointChapter,
+  }
+}
+```
+
+**O(1) 恢复成本**: 不论项目写了多少章, rehydrate 只需读 1 份 summary + ≤ everyNChapters 章原文。
+
+## prune 老章节 tool 输出 (T3 — 借鉴 opencode `compaction.ts:300-344`)
+
+> 我们的 cascade 流每章会产出几十 KB 的 tool 输出 (Checker JSON + Validator JSON + ReaderPanel 5 persona JSON + ArcTracker JSON + 等)。当一本书写到 50+ 章, 这些 tool 输出累计若全部进上下文是浪费。learn opencode 的分层策略: **prune (廉价) 在 compact (昂贵) 之前**。
+
+### 策略
+
+| 章节区间 (相对最新章) | tool 输出保留范围 |
+|---|---|
+| 最近 10 章 | 全保留 (cascade 链路完整, 用户可能回头复盘) |
+| 11-30 章 | 仅保留 cardinalRulesReport.summary + dropoffRisk + Validator contradictions 摘要; 原始 candidate 列表 / persona naturalLanguageReaction 全文 prune |
+| 30 章以前 | 仅保留 cardinalRulesReport.summary 一句话 + dropoffRisk 数值; 其余原始 JSON 全删 (体现在 volume_summary 的"五大守则当前状态"段) |
+
+**与 PRUNE_PROTECTED_TOOLS 对应**: opencode 把 `["skill"]` tool 的输出永远不 prune (因为 skill 内容是上下文核心)。我们的对应永久保留集 = `["cardinalRulesReport"]` + `["volumeSummary"]` (这两个是后续生成的根锚)。
+
+### 表设计 (workspace.db)
+
+```sql
+ALTER TABLE chapter_tool_runs ADD COLUMN pruned_at INTEGER;        -- prune 时间戳, NULL = 未 prune
+ALTER TABLE chapter_tool_runs ADD COLUMN pruned_summary TEXT;       -- prune 后保留的摘要 (cardinalRulesReport.summary 等)
+
+CREATE INDEX idx_tool_runs_pruned ON chapter_tool_runs(chapter_id, pruned_at);
+```
+
+(`chapter_tool_runs` 表的完整定义见 plan/04 T7 — SQLite session_history 那一节)
+
+### 触发时机
+
+```ts
+async function maybePruneOldToolRuns(projectId: string) {
+  const settings = await readSettings(projectId)
+  if (!settings.toolOutputPrune.enabled) return    // 默认 true
+
+  const recent10 = await db.workspace(projectId).chapters.findRecent(10)
+  const next20 = await db.workspace(projectId).chapters.findRange(11, 30)
+  const olderThan30 = await db.workspace(projectId).chapters.findOlderThan(30)
+
+  await pruneToolRuns(next20, { keepFields: ['cardinalRulesReport.summary', 'dropoffRisk', 'contradictions[].kind+entityRef'] })
+  await pruneToolRuns(olderThan30, { keepFields: ['cardinalRulesReport.summary', 'dropoffRisk'] })
+}
+```
+
+每次 ApprovalCard resolve 后串行跑一次 (低优先级队列, 不阻塞主流程)。
+
+### prune 不可逆 ⚠
+
+prune 删原始 JSON 后, 仅保留 summary。**用户在 SettingsDialog "已修剪 Tool 输出"页面可以看摘要**, 但原 JSON 找不回。这与 chapter.md 是反的 (chapter.md 走 git, 永远可恢复)。
+
+理由: tool 输出本质是中间产物, 用户审阅闸门 (ApprovalCard) 已经保证了正确性, 留全文只是"未来可能要 debug" — POC 阶段不为这个保留几十倍存储。
+
 ## 跨进程恢复实操
 
 ```ts
@@ -380,3 +642,6 @@ describe('mastra memory', () => {
 - **compressed_messages 的搜索**: 现在 `LIKE '%林溪%'` naïve;若 entity 多可加 FTS5
 - **W11 时 semantic recall 与 paragraph_embeddings 的 embedding 复用边界**: 同 provider 但不同 namespace
 - **多用户共享 thread**: 不支持 (plan/12 §不解决)
+- **DeepSeek prompt cache 实查 (spec/00 §H)**: cache_control 字段未确认服务端识别, 本节 §3 cache_control 标记策略在 W3 实施前必须 verify; 若不支持降级为仅头部稳定排布
+- **Mastra middleware 暴露口子 (spec/00 §I)**: deepseekMiddleware 假设 Mastra 接受 wrapLanguageModel 包装; 若不接受 fallback = 绕过 Mastra Agent 直接用 streamText / generateObject, 这条决策定下来后再回写本节
+- **volume_summarizer 的"用户改设定后摘要过时"边界**: 若用户在 ch_050 时回头改 ch_010 的设定, 现存 volume_summary 中那段已锚的状态可能不准。当前策略: 检测到 setting cascade 跨过 summary 范围时自动 invalidate 该 summary 并重生成 (W11 评估精确策略)
