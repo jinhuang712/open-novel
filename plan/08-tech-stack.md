@@ -1,18 +1,12 @@
 # 08 — 技术栈锁定与版本策略
 
-> 本文档在 W2 期前置,作为后续所有代码 commit 的依据。每次升级主版本时必须先更新此文档再升级。
+> 后续代码 commit 以本文档为依据。版本号实查清单见 spec/00。
 
-> ⚠ **W3 启动前必跑版本审计**: 下表的版本号是基于训练数据 + 调研文章的"应然"假设,**未实查 npm 真实最新**。任何 W3+ 代码 commit 之前,必须先按 [spec/00-version-audit.md](../spec/00-version-audit.md) 跑一遍实查,把表格替换为真实可装版本。否则可能整个 stack 第一次 `pnpm add` 就失败 (尤其 `mastra 1.x` `@ai-sdk/deepseek 2.x` 这两处最高风险)。
->
-> ✅ **DeepSeek 模型部分已于 2026-05-06 实查完成** (见 spec/00 §C + §G):model ID 为 `deepseek-v4-pro` / `deepseek-v4-flash`,ctx **1M tokens**,max output **384K tokens**,原生支持 JSON mode (`response_format: { type: 'json_object' }`)。下表 `@ai-sdk/deepseek` 行的"待实查"已撤。
-
-## 锁定的库版本 (2026-04 基线 — **待 audit 实查替换**)
-
-通过 Plan agent 并行调研 (Vercel/AI SDK/Mastra/Tailwind/TipTap/shadcn 官方文档 + 各项目 GitHub release notes + 2025-2026 比较文章) 得出。
+## 锁定的库版本
 
 | Package | 版本 | 锁定策略 | 关键说明 |
 |---|---|---|---|
-| `next` | `15.5.x` | 锁主线 (LTS 到 2026-10) | 不切 v16,v15 LTS 覆盖整个 POC 周期 |
+| `next` | `15.5.x` | 锁主线 (LTS 到 2026-10) | 不切 v16,v15 LTS 覆盖整个项目周期 |
 | `react` / `react-dom` | `19.2.x` | 锁主线 | Next 15.5 + TipTap 3 + AI SDK 6 共同要求 |
 | `typescript` | `^5.9` | caret | XState v5 / AI SDK 6 ergonomics 在 5.6+ 最佳 |
 | `tailwindcss` | `4.2.x` | 锁主线 | Oxide 重写后 GA,与 v3 不兼容 |
@@ -21,7 +15,7 @@
 | `mastra` / `@mastra/core` | `1.4.x` | 锁主线 | 1.0 在 2026-01 发布,1.x 仍在演进,需密切跟踪 |
 | `@mastra/libsql` | `0.16.x` | 锁主线 | 仍是 0.x;**注意 issue #4507 — 必须显式给 `file:` URL,绝不用默认路径** |
 | `@mastra/memory` | `1.4.x` | 锁主线 | thread+resource 隔离的实现 |
-| `ai` (Vercel AI SDK) | `^6.0` | caret | v6 已稳,minor 增量。**审计待确认**: HITL 走 `needsApproval` 一等字段还是 cookbook 模式 (`onToolCall` + `addToolResult`) — 见 spec/00 §B |
+| `ai` (Vercel AI SDK) | `^6.0` | caret | v6 已稳,minor 增量。HITL 接入方案 (`needsApproval` 一等字段 vs cookbook `onToolCall` + `addToolResult`) 详见 spec/00 §B |
 | `@ai-sdk/react` | `^6.0` | caret | `useChat` / `addToolResult` / `onToolCall` |
 | `@ai-sdk/deepseek` | `2.0.x` | 锁主线 | 周更频繁。✅ 已实查 (spec/00 §C): model ID `deepseek-v4-pro` / `deepseek-v4-flash`,ctx 1M,max output 384K,原生 JSON mode |
 | `xstate` / `@xstate/react` | `^5.0` | caret | 三模式状态机用 |
@@ -115,7 +109,7 @@ await generateText({
 - 偶尔返回空 content → retry + 加 "请确保返回非空 JSON" 后缀
 - streaming 时拼完整 chunks 再 parse,中间 chunks 不展示给用户
 
-### Mastra Memory 配置 (POC 默认值)
+### Mastra Memory 配置
 
 详见 [spec/22 §配置决策](../spec/22-mastra-memory.md) + [plan/12 §四层记忆模型](./12-memory-and-context.md):
 
@@ -124,7 +118,7 @@ new Memory({
   storage: new LibSQLStore({ url: 'file:' + path.join(os.homedir(), '.open-novel', 'runtime.db') }),
   options: {
     lastMessages: 30,        // 1M ctx 下放宽; 30 条原文不会挤压一致性 retrieve
-    semanticRecall: false,   // POC 关; W11 等 spec/18 embedding 选型确定后评估
+    semanticRecall: false,   // 默认关
     workingMemory: false,    // 与"L3 仅 Reflector 写"原则冲突 — 不让 LLM 在 stream 中 upsert 记忆
   },
 })
@@ -145,6 +139,6 @@ new Memory({
 
 ## 不在本期范围
 
-- 私有包注册表 / npm proxy 配置 (POC localhost,直连 npmjs)
+- 私有包注册表 / npm proxy 配置 (localhost 直连 npmjs)
 - 多 lockfile 共存 (Yarn / npm) — 强制 pnpm
 - 跨平台兼容 (我们只测 macOS;Windows / Linux 留待二期)

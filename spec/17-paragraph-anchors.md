@@ -192,8 +192,8 @@ export function diffAnchors(oldRows: AnchorRow[], newParagraphs: Paragraph[]): D
 ```
 
 `textSimilarity`:
-- POC 用简化的 Jaccard 字符 trigram 集合 (中文 + 英文都 OK,无依赖)
-- 二期可上 cosine + embedding (但 embedding 本身就是要 reindex 出来的,鸡生蛋 → POC 不上)
+- 简化的 Jaccard 字符 trigram 集合 (中文 + 英文都 OK,无依赖)
+- 二期可上 cosine + embedding (但 embedding 本身就是要 reindex 出来的,鸡生蛋 → 当前不上)
 
 `isAdjacent` 比对 prev_anchor/next_anchor 的 heading_path 是否在新段的前后。
 
@@ -249,7 +249,7 @@ async function applyAnchorDiff(filePath: string, diff: DiffResult) {
 
 `prev_anchor` / `next_anchor` 不是必需(可由 paragraph_index 推),但用作:
 1. **rewritten 探测的快速判断** — 不必扫整个 file 找邻接,直接读双链
-2. **段移动检测** — 段从 ch_005 移到 ch_007:旧 anchor (file=ch_005, prev=A, next=B) 失效;新 anchor (file=ch_007) 内容相同 → 可触发跨文件 anchor 迁移(POC 不做,二期补)
+2. **段移动检测** — 段从 ch_005 移到 ch_007:旧 anchor (file=ch_005, prev=A, next=B) 失效;新 anchor (file=ch_007) 内容相同 → 可触发跨文件 anchor 迁移(当前不做,二期补)
 3. **UI 段间导航** — Editor "下一段" / "上一段"操作直接走双链
 
 ## 章节序与字典序 (anchor 排序)

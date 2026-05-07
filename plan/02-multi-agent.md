@@ -25,7 +25,7 @@
 - **Flash 系 (Router / Checker / Reflector / ReaderPanel) → `default`**: 这些 Agent 输出短 (路由 JSON / 章内分析 JSON / 短摘要 / 单 persona 反应), 关键诉求是低成本快反应。Flash 上 max 会抹平 Flash 的成本优势 — 同价位用 Pro 反而更划算
 - 仅 V4-Pro/Flash 支持 reasoningEffort 控制 (借鉴 opencode `provider/transform.ts:695-697`), **禁止 fallback 到旧型号** (见 spec/00 §C 模型选型守约), 因为旧型号 (deepseek-chat / -reasoner / -r1 / -v3) 没有 effort 参数, 行为差异会让 cardinal-rules 检测精度劣化
 
-**Writer 单一 Agent 同时写正文 / 设定的潜在风格混淆**: Writer 在 plan 模式写 worldview.md / character.md (说明文 + frontmatter), 在 write 模式写小说正文 (文学体), 两种文体差异大。**风险缓解**: per-agent context builder (spec/23) 在每次调用前明确注入"你现在是 plan 模式 / write 模式" + 对应文体范例, system prompt 头部 stable header 段 (T7) 含模式区分指令。POC 阶段保留单 Writer + 模式注入区分, **如果实测出现"用写设定的腔调写小说"或反之, W7+ 拆为 SettingsAuthor + ChapterWriter 两个 primary**。
+**Writer 单一 Agent 同时写正文 / 设定的潜在风格混淆**: Writer 在 plan 模式写 worldview.md / character.md (说明文 + frontmatter), 在 write 模式写小说正文 (文学体), 两种文体差异大。**风险缓解**: per-agent context builder (spec/23) 在每次调用前明确注入"你现在是 plan 模式 / write 模式" + 对应文体范例, system prompt 头部 stable header 段 (spec/03) 含模式区分指令。保留单 Writer + 模式注入区分, **若实测出现"用写设定的腔调写小说"或反之, 拆为 SettingsAuthor + ChapterWriter 两个 primary**。
 
 **输出形态 (spec/24)**:
 
@@ -128,7 +128,7 @@ export const memory = new Memory({
   storage: new LibSQLStore({ url: 'file:' + path.join(os.homedir(), '.open-novel', 'runtime.db') }),
   options: {
     lastMessages: 30,        // 1M ctx 下放宽; 与 spec/22 对齐
-    semanticRecall: false,   // POC 关; W11 评估
+    semanticRecall: false,   // 默认关
     workingMemory: false,    // 与"L3 仅 Reflector 写"原则冲突
   },
 })

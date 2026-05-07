@@ -1,11 +1,9 @@
 # Spec 14 — 测试策略
 
-> 文档 audit 发现:spec/07 / spec/08 / spec/12 三处提"写单测",但全栈无测试 framework / CI / golden test 选型。本文档补齐。
-
 ## 测试金字塔
 
 ```
-    ▲ E2E (Playwright)            少量 (核心 user flow,POC 阶段可选)
+    ▲ E2E (Playwright)            少量 (核心 user flow,可选)
     ─────────────────
     ▲ 集成 (vitest + msw)         中量 (Route Handlers + Mastra agent + 工具流)
     ─────────────────────
@@ -238,7 +236,7 @@ jobs:
 
 ## 不做什么
 
-- **不做 100% 覆盖率追求**: POC 阶段重点在状态机 / 路径越权 / 模式约束 / 数据完整性,UI 细节不强求覆盖
+- **不做 100% 覆盖率追求**: 重点在状态机 / 路径越权 / 模式约束 / 数据完整性,UI 细节不强求覆盖
 - **不做"快照即测试"**: snapshot 文件不入库 git (`.gitignore` 忽略 `__snapshots__/`),用结构化断言替代
 - **不做 mutation testing / fuzzing**: 二期再考虑
 - **不做 visual regression**: shadcn 组件已足够稳定,UI 视觉回归靠手测

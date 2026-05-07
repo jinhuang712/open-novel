@@ -4,7 +4,7 @@
 
 ## 用途
 
-POC 阶段段级 embedding 服务三个核心场景:
+段级 embedding 服务三个核心场景:
 
 1. **`assembleContext` 工具 (spec/20)**:Writer 写章节前,把章节 outline 做 query,从已写章节里 topK 检索"语义相关段",注入 prompt
 2. **`queryFacts` 工具 (spec/21) §semantic-search 模式**:作者主动查"林川以前对女上司说过什么类似台词"
@@ -28,16 +28,14 @@ CREATE INDEX idx_emb_model ON paragraph_embeddings(model_name);
 
 embedding BLOB 存储格式:F32 little-endian 数组,直接 buffer dump。读时 `new Float32Array(buffer)` 还原。
 
-## 选型对比 (T8 决议: BGE-M3 本地)
+## 选型对比 (锁 BGE-M3 本地)
 
-> **决议** (.claude/plans/reactive-hatching-flute.md §七 T8): POC 锁 **BGE-M3 本地**。理由 = 0 边际成本 (重算自由) + 隐私 (创作隐私是网文作者强诉求) + 中文质量第一 (BAAI 出品)。代价: 启动需 Ollama (~600MB 二进制依赖)。
->
-> spec/00 §J 仍在 W8 day-1 verify Ollama 当前版稳定性 + transformers.js fallback。如 verify 失败, fallback 顺序 = DeepSeek embedding (复用 API key) → OpenAI text-embedding-3-small。
+> **决议**: 锁 **BGE-M3 本地**。理由 = 0 边际成本 (重算自由) + 隐私 (创作隐私是网文作者强诉求) + 中文质量第一 (BAAI 出品)。代价: 启动需 Ollama (~600MB 二进制依赖)。Fallback 顺序: DeepSeek embedding (复用 API key) → OpenAI text-embedding-3-small。
 
 | 维度 | BGE-M3 (本地) **← 选定** | DeepSeek Embedding (fallback 1) | OpenAI text-embedding-3-small (fallback 2) |
 |---|---|---|---|
 | **托管方式** | 本地 (Ollama/llama.cpp/transformers.js) | 云 API | 云 API |
-| **维度** | 1024 | 1536 (W8 spec/00 §J verify) | 1536 (可 reduce) |
+| **维度** | 1024 | 1536 | 1536 (可 reduce) |
 | **中文质量** | ⭐⭐⭐⭐⭐ (北京智源 BAAI 出品,中英多语并优) | ⭐⭐⭐⭐ (DeepSeek 自家中文训练数据) | ⭐⭐⭐ (英文导向) |
 | **首字 token 时延** | < 100ms (本地 GPU) / ~500ms (CPU M1) | ~200ms (云) | ~150ms (云) |
 | **批量速度 (100 段)** | ~3s (M1 CPU) / 0.5s (GPU) | ~2s (依赖网) | ~1.5s |
@@ -45,11 +43,11 @@ embedding BLOB 存储格式:F32 little-endian 数组,直接 buffer dump。读时
 | **成本 (1000 章 × 平均 200 段)** | $0 (一次性下载 ~600MB 模型) | ~$0.5 (按 DeepSeek $0.0002 / 1K tokens) | ~$1 (OpenAI $0.02 / 1M tokens) |
 | **集成复杂度** | 中 (需 Ollama / Web 端 ONNX) | 低 (HTTP) | 低 (HTTP) |
 | **隐私** | ✅ 本地 | 中 (DeepSeek 服务器) | 中 (OpenAI 服务器) |
-| **跨模型一致性** | 自家维护,版本可锁 | DeepSeek 升级版本可能不兼容 (POC 已规划 v4 model 闸门) | OpenAI 历史不兼容 (text-embedding-ada → 3 已断 case) |
+| **跨模型一致性** | 自家维护,版本可锁 | DeepSeek 升级版本可能不兼容 (已规划 v4 model 闸门) | OpenAI 历史不兼容 (text-embedding-ada → 3 已断 case) |
 
-### 决议依据 (T8)
+### 决议依据
 
-POC 阶段锁 **BGE-M3 本地**, 理由:
+锁 **BGE-M3 本地**, 理由:
 1. 0 边际成本 (一次性下载) — 用户"不担心 token"对生成模型有效, 但 embedding 量级高得多 (5 万段 × 200 字 = 1000 万 tokens, 跑一次), 重算自由的价值远大于一次性 ~600MB 安装
 2. 隐私 + 离线 — 创作隐私是网文作者强诉求
 3. 中文质量第一 (BAAI 出品)
@@ -62,7 +60,7 @@ W8 spec/00 §J 实查 Ollama 稳定性, 如失败按 §选型对比 fallback 顺
 
 ### model 切换迁移
 
-如果中途换 model (e.g. POC 用 BGE-M3,二期换 OpenAI v4):
+如果中途换 model (e.g. BGE-M3 → 二期换 OpenAI v4):
 - `paragraph_embeddings.model_name` 字段使新旧并存可查询
 - 切换后入队全量 reindex,逐段重算,旧 model_name 行批量删除
 - UI 显示"重建索引中... 67/120 章"
@@ -176,9 +174,9 @@ async function reembedBatch(projectId: string, items: { anchorId: string; text: 
 
 ## 检索 API
 
-### 1. 朴素 SQL (POC 起步)
+### 1. 朴素 SQL (起步)
 
-POC 不上 sqlite-vss / LibSQL vector,直接读全部 embeddings 在 JS 层计算 cosine:
+未上 sqlite-vss / LibSQL vector 时,直接读全部 embeddings 在 JS 层计算 cosine:
 
 ```ts
 // lib/embeddings/search.ts
@@ -196,7 +194,7 @@ export async function semanticSearch(
   const [queryEmb] = await provider.embed([query])
   const queryNorm = Math.sqrt(queryEmb.reduce((s, v) => s + v * v, 0))
 
-  // SQL 取所有 embedding (POC 阶段简单)
+  // SQL 取所有 embedding (起步阶段简单)
   const rows = await db.execute(`
     SELECT pe.anchor_id, pe.embedding, pe.norm, pa.heading_path, pa.start_offset, pa.end_offset, pa.file_path
     FROM paragraph_embeddings pe
@@ -230,11 +228,11 @@ export async function semanticSearch(
 
 | 段数 | 朴素扫描耗时 (M1 CPU) | 是否升级 |
 |---|---|---|
-| < 5,000 | < 50ms | POC OK |
+| < 5,000 | < 50ms | OK |
 | 5,000 - 20,000 | 50-200ms | 仍可接受 |
 | > 20,000 | > 200ms | 升级到 sqlite-vss / LibSQL vector |
 
-POC 起步认朴素扫描;如 W8 实测 Demo 项目突破 20K 段,**升级路径**:
+起步用朴素扫描;若 Demo 项目突破 20K 段,**升级路径**:
 
 ```sql
 -- LibSQL native vector (libsql-server > 0.24)
@@ -246,7 +244,7 @@ CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vector_search(
 CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vss0(embedding(1024));
 ```
 
-具体接入哪个取决于 spec/00 §J 实查 LibSQL 与 sqlite-vss 的可用性。**T8 决议**: W8 day-1 优先尝试 LibSQL native vector (`libsql-server > 0.24` + `vector_search` 虚拟表), 兼容 LibSQL 单文件结构; 若当前 `@mastra/libsql` 不带, 降级到 sqlite-vss extension (sidecar load_extension)。两者都失败再降级到朴素 cosine (5K 段以下能跑)。
+**决议**: 优先 LibSQL native vector (`libsql-server > 0.24` + `vector_search` 虚拟表), 兼容 LibSQL 单文件结构; 若当前 `@mastra/libsql` 不带, 降级到 sqlite-vss extension (sidecar load_extension)。两者都失败再降级到朴素 cosine (5K 段以下能跑)。
 
 ### 3. 检索结果鲁棒性
 
@@ -275,7 +273,7 @@ anchor added     → reembedAnchor
 ```
 
 软删 anchor (deleted_at != NULL) 是否保留 embedding?
-- POC: 保留 (deleted_at != NULL 时不参与检索,但供"恢复"路径)
+- 保留 (deleted_at != NULL 时不参与检索,但供"恢复"路径)
 - 30 天硬删 anchor 时一并 CASCADE 删 embedding
 
 ## 离线 / 降级行为
@@ -298,10 +296,8 @@ anchor added     → reembedAnchor
 | `embedding-fallback.test.ts` | 集成 | provider 不可用时所有调用方降级,不抛 |
 | `embedding-bench.bench.ts` | bench | 5K / 20K 段规模朴素 cosine 耗时;W8 末填表 |
 
-## 已决策项 (T8 关闭)
+## 已决策项
 
 ✅ **embedding 模型选型**: 锁 **BGE-M3 本地**, fallback 1 = DeepSeek, fallback 2 = OpenAI (见 §选型对比 + §决议依据)
-✅ **vector 索引升级路径**: 优先 LibSQL native vector → sqlite-vss → 朴素 cosine (见 §决议条款 W8 day-1 实施顺序)
-✅ **embedding model 升级时的全量重算成本上限**: 默认阈值 **1000 段以上必弹 UI 提示**, 显示 "切换 model 将重算 N 段, 预计 X 分钟, 确认?"; 1000 段以下静默重算
-
-(对应 plan/11 落地里程碑 W8 day-1 verify 后立即按本表实施。)
+✅ **vector 索引路径**: 优先 LibSQL native vector → sqlite-vss → 朴素 cosine (见 §决议条款 实施顺序)
+✅ **embedding model 升级时的全量重算成本上限**: 阈值 **1000 段以上必弹 UI 提示**, 显示 "切换 model 将重算 N 段, 预计 X 分钟, 确认?"; 1000 段以下静默重算

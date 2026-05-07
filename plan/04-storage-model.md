@@ -6,7 +6,7 @@
 - **索引/历史/学习独立**: 用 SQLite (LibSQL) 管引用图、变更历史、反馈经验,**用户不感知**
 - **多项目无串扰**: 每个项目一个目录,一个独立 `index.db`
 - **存放在用户目录**: 不污染代码仓库,iCloud/Time Machine 友好
-- **关注点分离 — 产物 vs 过程** (T7 — 借鉴 opencode `session/session.sql.ts`): **用户产物**走 Markdown (chapter.md / character.md / outline.md / cardinal-rules.json 等, file tree view 可见可编辑可 git 跟踪); **运行时过程数据**走 SQLite (LLM 调用日志 / tool retry 记录 / token 用量 / JSON parse 失败 / cascade 路径 / etc, 给开发者调试用)。两者数据库分开 (`index.db` for 产物索引, `session_history.db` for 过程数据), 避免写入并发冲突且语义清晰。
+- **关注点分离 — 产物 vs 过程** (借鉴 opencode `session/session.sql.ts`): **用户产物**走 Markdown (chapter.md / character.md / outline.md / cardinal-rules.json 等, file tree view 可见可编辑可 git 跟踪); **运行时过程数据**走 SQLite (LLM 调用日志 / tool retry 记录 / token 用量 / JSON parse 失败 / cascade 路径 / etc, 给开发者调试用)。两者数据库分开 (`index.db` for 产物索引, `session_history.db` for 过程数据), 避免写入并发冲突且语义清晰。
 
 ## 存储位置
 
@@ -368,23 +368,23 @@ CREATE TABLE json_retries (
 );
 CREATE INDEX idx_json_retries_call ON json_retries(llm_call_id);
 
--- cascade tool 执行记录 (T3 §prune 老章节 tool 输出 关联表)
+-- cascade tool 执行记录 (与 spec/22 §prune 老章节 tool 输出 联动)
 CREATE TABLE chapter_tool_runs (
   id TEXT PRIMARY KEY,
   chapter_id TEXT NOT NULL,                             -- 关联 chapters.id
   tool_name TEXT NOT NULL,                              -- 'beat-analyzer' / 'arc-tracker' / 'reader-panel' / ...
   agent TEXT NOT NULL,                                  -- 'checker' / 'validator' / 'reader-panel'
   llm_call_id TEXT REFERENCES llm_calls(id),
-  raw_output_path TEXT,                                 -- 若 truncated: _tool_cache/{toolCallId}.json (spec/02 T4)
+  raw_output_path TEXT,                                 -- 若 truncated: _tool_cache/{toolCallId}.json (spec/02)
   raw_output_size INTEGER NOT NULL,                     -- bytes
-  pruned_at INTEGER,                                    -- spec/22 T3 prune 时间戳, NULL = 未 prune
+  pruned_at INTEGER,                                    -- spec/22 prune 时间戳, NULL = 未 prune
   pruned_summary TEXT,                                  -- prune 后保留的摘要
   created_at INTEGER NOT NULL
 );
 CREATE INDEX idx_tool_runs_chapter ON chapter_tool_runs(chapter_id, created_at DESC);
 CREATE INDEX idx_tool_runs_pruned ON chapter_tool_runs(chapter_id, pruned_at);
 
--- doom-loop 检测记录 (spec/06 T6)
+-- doom-loop 检测记录 (spec/06)
 CREATE TABLE doom_loop_events (
   id TEXT PRIMARY KEY,
   chapter_id TEXT NOT NULL,
@@ -395,7 +395,7 @@ CREATE TABLE doom_loop_events (
 );
 CREATE INDEX idx_doom_loop_chapter ON doom_loop_events(chapter_id);
 
--- prompt cache 命中统计 (T7 + spec/22 T3, 用于评估 cache 策略效果)
+-- prompt cache 命中统计 (用于评估 cache 策略效果)
 CREATE TABLE prompt_cache_stats (
   id TEXT PRIMARY KEY,
   llm_call_id TEXT NOT NULL REFERENCES llm_calls(id),
@@ -414,7 +414,7 @@ CREATE TABLE prompt_cache_stats (
 | settings/* 全树 | Markdown 文件 | 同上 |
 | volume_summaries (卷级摘要内容) | `index.db` (产物索引一侧) | 是给 LLM 检索用的"产物" 不是过程; 长期生命周期 |
 | Mastra Memory threads / messages | `~/.open-novel/runtime.db` | Mastra 自动管理, 跨项目共享但 resource 隔离 |
-| `_tool_cache/{toolCallId}.json` truncated 原始输出 | 散文件 | 体积大 + 短期 (prune 时清理), 不进数据库 |
+| `_tool_cache/{toolCallId}.json` truncated 原始输出 | 散文件 | 体积大,prune 时清理,不进数据库 |
 
 ### 写入约束
 
@@ -486,13 +486,13 @@ Writer 出主修改 (in-memory)
 ## 备份策略
 
 - 用户数据完全在 `~/.open-novel/`,iCloud / Time Machine 自然备份
-- 提供"Export Project"按钮: 打包成 zip (`projectId.zip`),**含所有 .md + index.db** (审计修正:早期版本说"不含 index.db,可重建",但 narrative_metrics / reader_reports / approvals / learnings 这些是花了 LLM 钱跑出来的,丢了等于丢钱;`entity_refs` `backlinks` 这种纯派生表在导入后由 Worker 重建)
+- 提供"Export Project"按钮: 打包成 zip (`projectId.zip`),**含所有 .md + index.db**。`narrative_metrics / reader_reports / approvals / learnings` 是花了 LLM 钱跑出来的数据,丢了等于丢钱;`entity_refs` `backlinks` 这种纯派生表在导入后由 Worker 重建。
 - 提供"Import Project"按钮: 解压后,若 projectId 冲突自动生成新 id;Worker 后台重建 entity_refs / backlinks
 - 详细 UI flow 见 [spec/13-settings.md](../spec/13-settings.md) §项目生命周期 UI flow
 
-## 多 Tab 同项目并发 (新增 — 审计补)
+## 多 Tab 同项目并发
 
-> audit 发现:用户开两个浏览器 tab 同一 localhost — 同时改 worldview.md,谁覆盖谁?Mastra Memory 同 thread 双方收 deltas。POC 单用户但**多 tab 是常见使用方式**。
+> 用户开两个浏览器 tab 同一 localhost — 同时改 worldview.md,谁覆盖谁?Mastra Memory 同 thread 双方收 deltas。多 tab 是单用户的常见使用方式。
 
 策略: **Web Locks API** 软锁 + 后到的 tab 进只读模式。
 
@@ -516,9 +516,9 @@ UI 在第二 tab:
 - 编辑动作 disabled,Esc 切到只读浏览模式
 - "强制接管" 按钮: 用户主动释放上一 tab 的锁 (`postMessage` 协议),接管编辑
 
-## 外部编辑器同步 (新增 — 审计补)
+## 外部编辑器同步
 
-> audit 发现:用户在 VSCode/iA Writer 直接改了 `characters/lin.md`,我们不知道;TipTap 仍显示旧内容,审批的 before-state 错位 → diff 出错。
+> 用户在 VSCode/iA Writer 直接改了 `characters/lin.md` — 应用不知道;TipTap 仍显示旧内容,审批的 before-state 错位 → diff 出错。
 
 策略: **chokidar 文件 watcher** (Node 端,在 `/api/watch` Route Handler 内挂) + SSE push 到前端。
 
@@ -548,9 +548,9 @@ export async function GET(req: Request) {
 - 用户有未保存编辑 → 弹冲突 dialog: "[文件名] 被外部修改。要 [使用磁盘版本] / [保留我的修改] / [手动 merge]"
 - 如果该文件在审批流的 before-state 中 → 该审批 invalidate (status='stale'),提示用户重做
 
-## LibSQL 连接池 (新增 — 审计补)
+## LibSQL 连接池
 
-> audit 发现:每项目独立 `index.db`,Node FD ulimit 256,同时打开 5 个项目就贴边。
+> 每项目独立 `index.db`,Node FD ulimit 256,同时打开 5 个项目就贴边。
 
 详见 [spec/01-storage-schema.md](../spec/01-storage-schema.md) §LibSQL 连接池。要点:
 
@@ -558,7 +558,7 @@ export async function GET(req: Request) {
 - 切项目时显式 `pool.delete(oldId)` close 连接
 - 删项目前必须先 close,再 fs.rm
 
-## 索引刷新策略 (审计加固 + W7 差量升级)
+## 索引刷新策略 (差量)
 
 每次 writeSetting / writeChapter 落盘后,**reindex 走单例 Worker 串行 + 差量 anchor diff**:
 

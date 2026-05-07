@@ -122,12 +122,12 @@ function isCleanBoundary(text: string, from: number, to: number, str: string): b
   if (PREFIX_OK.includes(before) || SUFFIX_OK.includes(after)) return true
 
   // 中间情况: 默认放行,但置信度降低 (UI 可显示淡色)
-  // 真要严控可改为默认 false。POC 先放行,实测 false-positive 后再调
+  // 真要严控可改为默认 false;先放行,实测 false-positive 后再调
   return true
 }
 ```
 
-**调优策略**: 上述 PREFIX/SUFFIX 列表是种子。POC W6 期间在 dev console 落一个 `falsePositiveLog` — 用户 hover 标"误识别"按钮,记录 entity + context 入 SQLite (新表 `entity_match_feedback`)。每周回看,迭代列表。
+**调优策略**: 上述 PREFIX/SUFFIX 列表是种子。在 dev console 落一个 `falsePositiveLog` — 用户 hover 标"误识别"按钮,记录 entity + context 入 SQLite (新表 `entity_match_feedback`)。每周回看,迭代列表。
 
 ## ProseMirror Plugin 集成
 

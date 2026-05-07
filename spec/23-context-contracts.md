@@ -443,7 +443,7 @@ async function buildRouterContext(input: RouterInput): Promise<BuildOutput> {
 
 ## token 计算实现
 
-POC 阶段用 tiktoken cl100k_base (≈ GPT-4 tokenizer) 估算,加 5% 安全 margin:
+用 tiktoken cl100k_base (≈ GPT-4 tokenizer) 估算,加 5% 安全 margin:
 
 ```ts
 import { encoding_for_model } from 'tiktoken'
@@ -458,7 +458,7 @@ export function countMessageTokens(msg: ModelMessage): number {
 }
 ```
 
-> ⚠ DeepSeek V4 真实 tokenizer 与 GPT-4 略有差异 (中文 token 化更紧),tiktoken 估算误差 ±5%。POC 阶段加 margin 够用,W2 后端集成时切换到 DeepSeek 官方 tokenizer (如提供)。
+> ⚠ DeepSeek V4 真实 tokenizer 与 GPT-4 略有差异 (中文 token 化更紧),tiktoken 估算误差 ±5%。加 margin 够用,后续切换到 DeepSeek 官方 tokenizer (如提供)。
 
 ## learnings 注入到 system prompt
 
@@ -538,11 +538,11 @@ await db.runtime.prompt_traces.insert({
 
 **注意**:`streamVNext` 时**不**自己再 inject lastMessages — 因为我们已经手工塞 recent_messages 了。具体策略:Mastra `lastMessages: 30` 配置只用于其他直接调 streamVNext 的场景(若有);通过 context builder 装配的 messages 数组要求 Mastra **不重复 append**。详见 spec/22 §与 Mastra 的衔接细节。
 
-## 与 Mastra 1.4.x lastMessages 重复风险 (待 spec/00 audit)
+## 与 Mastra 1.4.x lastMessages 重复风险
 
-> ⚠ spec/00 audit 项: `Memory.options.lastMessages: 30` 与 streamVNext 显式传 messages 数组的交互。如果 Mastra 会 dedupe 那 OK;如果会重复 append 30 条历史就要切到 `lastMessages: 0` + 自己装配。
+> spec/00 audit 项: `Memory.options.lastMessages: 30` 与 streamVNext 显式传 messages 数组的交互。如果 Mastra 会 dedupe 那 OK;如果会重复 append 30 条历史就要切到 `lastMessages: 0` + 自己装配。
 
-POC W2 期实测后再敲定。本节默认 Mastra 不重复(基于其设计意图),如发现重复则切换。
+默认 Mastra 不重复(基于其设计意图),如发现重复则切换。
 
 ## 与五大守则的协同 (spec/25)
 
@@ -570,8 +570,8 @@ describe('per-agent context builders', () => {
 
 ## 不解决的问题 / 待办
 
-- **DeepSeek V4 真实 tokenizer**: 暂用 tiktoken + 5% margin,W2 audit 后再调
-- **Mastra `lastMessages` 与显式 messages 重复风险**: spec/00 audit 同步核对
+- **DeepSeek V4 真实 tokenizer**: 默认 tiktoken + 5% margin,实查 (spec/00 §A) 后微调
+- **Mastra `lastMessages` 与显式 messages 重复风险**: spec/00 audit 一并核对
 - **超长章节的 retrieve 实操**: 单章 50K+ 字时 readRecentChapters 5 章可能 250K+,context builder 不裁但要监控;若高频触发警报再开 spec/26 专题
 - **streaming 中途的 token 监控**: 装配前算 total;若 tool call 后台返回大量数据可能再次接近上限,设计 `onToolCall` hook 在结果回写前对超大 tool result 做摘要 (W11+)
-- **多模态 (图)**: 完全不考虑,POC 纯文本
+- **多模态 (图)**: 完全不考虑,纯文本

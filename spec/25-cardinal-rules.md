@@ -179,7 +179,7 @@ reader_promises:                          # 已有 (spec/16)
 taboos:                                   # 已有 (spec/16)
   - "不会对老人下手"
   - "不会出卖兄弟"
-value_axes:                               # T5 新增
+value_axes:                               # 价值-轴量化 (本规约新增)
   对敌:                                   # 0=最仁慈, 1=最狠辣
     baseline: 0.85
     range: [0.7, 1.0]                     # 允许波动
@@ -347,7 +347,7 @@ async function pacingCheck(chapter: Chapter, projectChapters: Chapter[], config:
 | 已过 deadline 的 critical promise 仍 unresolved | bool | block (不让审批通过) |
 | ReaderPanel 检测"承诺荒诞化" | dropoffRisk + flag | flag = critical |
 
-### foreshadowings 表 schema 增强 (spec/16 修订, T5 落地)
+### foreshadowings 表 schema 增强 (spec/16 修订)
 
 ```sql
 ALTER TABLE foreshadowings ADD COLUMN deadline_chapter INTEGER;
@@ -566,14 +566,14 @@ export const CardinalRulesReportSchema = z.object({
 - `blockingViolations` 数 ≥ 1 时(已过 deadline critical promise),"同意"按钮**禁用**,只能拒绝;必须先把 promise 推进或调整 deadline
 - 风险报告每条可点击,跳到对应段(spec/05 entity-highlight 同款锚点跳转)
 
-详细 spec/06 §ApprovalCard 在 T5 commit 落地。
+详细见 spec/06 §ApprovalCard。
 
 ## 与 Writer / 各 Agent 的协同
 
 | 阶段 | 谁做 | 怎么用守则 |
 |---|---|---|
 | 生成前 | Writer | system prompt 注入 5 条守则 + 反例(spec/03 模板);assembleContext 必装 cardinal-rules.json + active critical promises + 涉及角色 value_axes + 距上次 milestone(spec/20) |
-| 生成中 | Writer 自检 | (无 — POC 不在生成中实时打断) |
+| 生成中 | Writer 自检 | (无 — 不在生成中实时打断) |
 | 生成后 | Validator + ReaderPanel + ArcTracker + BeatAnalyzer | 并行扫,各自的检测器汇总成 CardinalRulesReport |
 | 审批 | 用户 | 风险报告进 ApprovalCard;critical 必勾 / blocking 禁用 approve |
 | 闭环 | Reflector | 用户拒绝时,scope='cardinal_rule' 的 learnings 入库;后续 Writer 注入 |
@@ -620,6 +620,6 @@ describe('cardinal rules', () => {
 
 ## 不解决的问题 / 待办
 
-- **守则之间的优先级**: 同章 5 条都违反,UI 怎么排序展示? 当前按 critical > major > warn,同级再按守则索引;复杂场景待 W11 看
-- **跨语言扩展**: 守则现在为中文网文调优,英文/其他语种网文规则不同,POC 不做
+- **守则之间的优先级**: 同章 5 条都违反,UI 怎么排序展示? 当前按 critical > major > warn,同级再按守则索引
+- **跨语言扩展**: 守则现在为中文网文调优,英文/其他语种网文规则不同,不做
 - **学习反向 weight**: 用户多次"明知违反仍通过"的话,Reflector 是否应该降阈值? 当前不允许 — 阈值是项目级硬约束,只能用户在 SettingsDialog 显式调,不能 LLM 学习降低

@@ -64,7 +64,7 @@ const memory = new Memory({ storage: new LibSQLStore({ url: '...' }) })
 │      位置: LibSQL runtime.db (Mastra Memory 管的)                  │
 │      访问: 自动 — Agent stream 时 Mastra 拼进 messages              │
 │      生命周期: 单 session (默认 30 天不活动 GC)                      │
-│      可选压缩: 长 session (>200 messages) 时启用 — POC 默认关       │
+│      可选压缩: 长 session (>200 messages) 时启用 — 默认关             │
 │      详见: spec/22                                                │
 └──────────────────────────────────────────────────────────────────┘
                                  ▲
@@ -93,12 +93,12 @@ Mastra Memory 只管 **L2 (会话记忆)**:
 - ✅ thread (`proj:X:session:Y`) 隔离
 - ✅ resource (`X` = projectId) 隔离
 - ✅ messageHistory 持久化 (LibSQL runtime.db)
-- ✅ semantic recall (按 embedding 检索老消息) — POC 阶段**关闭** (见 spec/22 §semantic recall 决策)
+- ✅ semantic recall (按 embedding 检索老消息) — 默认**关闭** (见 spec/22 §semantic recall 决策)
 - ❌ **不**管 L3 learnings (那在 workspace.db,我们应用层管)
 - ❌ **不**管 L4 知识图谱 (那是项目 file + workspace.db)
 - ❌ **不**管 L1 装配 (我们在 spec/23 自己装配)
 
-> Mastra `Memory` 还有 working memory / scopes 等概念。POC 阶段我们只用最基础的 thread + resource,其余暂不开 — 见 spec/22 §配置决策。
+> Mastra `Memory` 还有 working memory / scopes 等概念。本项目只用最基础的 thread + resource,其余不开启 — 见 spec/22 §配置决策。
 
 ## per-agent 上下文契约 (核心设计)
 
@@ -125,11 +125,9 @@ Mastra Memory 只管 **L2 (会话记忆)**:
 
 ## L2 历史管理 (lastMessages + 可选压缩)
 
-POC 阶段:
-
 - Mastra `lastMessages: 30` (1M ctx 下放宽,与之前"为节省 token 卡到 12 条"的旧设计相反)
-- `compressed_messages` 表保留(spec/22 设计),但**默认 disabled** — 长 session (>200 messages) 时由用户手动开启,或 W11 评估默认开启时机
-- `semanticRecall: false` (与 spec/18 embedding 选型耦合,deferred)
+- `compressed_messages` 表保留(spec/22 设计),但**默认 disabled** — 长 session (>200 messages) 时由用户手动开启
+- `semanticRecall: false` (与 spec/18 embedding 选型耦合)
 
 **不做"自动压缩"是因为**:
 
@@ -161,13 +159,13 @@ POC 阶段:
 - **spec/24**: JSON 输出规约 — 决定哪些 agent 输出走 JSON mode
 - **spec/25**: 五大网文守则 — 决定 Writer / Validator / ReaderPanel 必装的额外数据 (cardinal-rules.json + active promises + value_axes + milestone)
 
-## 关键参数 (POC 默认值,可在 SettingsDialog 改)
+## 关键参数 (默认值,可在 SettingsDialog 改)
 
 | 参数 | 默认值 | 调节范围 | 说明 |
 |---|---|---|---|
 | `mastraMemory.lastMessages` | 30 | 12 - 60 | 1M ctx 下不需要紧 |
-| `mastraMemory.semanticRecall` | `false` | bool | POC 关,W11 评估 |
-| `mastraMemory.compressedMessages.enabled` | `false` | bool | POC 关;长 session > 200 messages 用户主动开 |
+| `mastraMemory.semanticRecall` | `false` | bool | 默认关 |
+| `mastraMemory.compressedMessages.enabled` | `false` | bool | 默认关;长 session > 200 messages 用户主动开 |
 | `learnings.topK` | 8 | 4 - 20 | 不是为省 token,是为模型注意力 — 注入 30 条经验反而稀释主任务 |
 | `learnings.weightFloor` | 0.2 | 0.1 - 0.5 | < floor 不注入 |
 | `learnings.weightDecay` | 0.95 / 30天 | 0.9-1.0 | 老经验衰减率 |
@@ -215,5 +213,5 @@ Reflector 是 L3 的**唯一写入者**,本章是 L3 的**统一读取规则**:
 - **多用户协作**: 本架构纯单机单用户,不考虑两人共享 thread;后续如开放,thread 加 user_id 维度
 - **跨项目记忆**: 不允许。两个项目的 learnings / messages 严格 resource 隔离 (合规 + 风格防漏)
 - **embedding 选型未定**: spec/22 §semantic recall 默认关闭,等 spec/18 选型确定后再开
-- **超大项目分卷**: 极少数项目可能确实超 1M ctx (50万字 + 全设定),需要"分卷加载"策略;W11 评估
+- **超大项目分卷**: 极少数项目可能确实超 1M ctx (50万字 + 全设定),需要"分卷加载"策略
 - **DeepSeek V4 真实 tokenizer 待 spec/00 验证**: 1M 是 token 数,本身有估算误差 (tiktoken vs 真实 tokenizer)

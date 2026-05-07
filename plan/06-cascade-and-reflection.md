@@ -60,8 +60,7 @@ Writer 生成主修改 (in-memory,未落盘)
    ▼
 触发副作用 (见 plan/04 §审批通过后的副作用): 差量 reindex / snapshot / history group / Reflector 入队
 ```
-
-### Validator + analyzeImpact 的关键约束 (升级后)
+### Validator + analyzeImpact 的关键约束
 
 - **不现场 LLM 推影响范围** — analyzeImpact step 2 的 SQL 已覆盖,LLM 只做二次判断
 - **递归全部在审批前完成** — 用户审之前所有"二级 / 三级 cascade"已被算出并合入同一 ChangeSet
@@ -70,7 +69,7 @@ Writer 生成主修改 (in-memory,未落盘)
 - **不确定时 confidence='low'**,UI 用黄色警告 + 默认不勾选
 - **needsChange=false 也必须给 reason** (审计需要,展示在影响图谱中作为"已分析但无需改动")
 
-### 性能策略 (升级后,治标策略已撤)
+### 性能策略
 
 - ~~按章节范围 ±5 章~~ — 已撤,改为 SQL 出完整候选 + weight 排序 + LLM 顶部 50 个分批过滤
 - ~~entity hash 已审过标记~~ — 已无意义 (LLM 二次过滤本就只对未审段调用)
@@ -94,11 +93,6 @@ Writer 生成主修改 (in-memory,未落盘)
 - **同一 cascade 链路内的 N 项审批合并为 1 次 reflect** — 整批数据丢给 Reflector 一次性提炼,得到的 learnings 质量更高 (上下文完整),不是为省 token
 - 决定一组审批是否同链路: 它们共享同一个 root `approval_id` (cascade 提议时的根审批),Worker 端按 root 聚合
 - 批次窗口: cascade 链全部 resolve (approve/reject/dismiss 全决) 后立即跑;单次审批无 cascade 时直接跑
-
-**不再设**:
-- ~~每会话 ≤ 5 次~~ — 用户不在意 Flash 模型 token,合理就该跑
-- ~~30s 最小间隔~~ — Reflector 入队是异步,本来就不阻塞
-- ~~累积到下次 session~~ — 阻碍即时学习
 
 入队伪码:
 
@@ -211,25 +205,7 @@ CREATE INDEX idx_learnings_scope ON learnings(project_id, scope);
 
 "命中"判定:Reflector 在审批闭环里写 `last_hit_at` 时,把当时 context builder 装载的 learnings ids 列表关联到该 approval 的 metadata,审批落定后回写 hit_count + weight (见 spec/23 prompt_traces 表)。
 
-### 防止学坏
-
-Reflector 输出经过用户审视:
-- "已学到的偏好"面板可见所有 learnings,可手动删除/修改
-- 每周自动汇总: "本周新学到 N 条经验,请检查"
-- 经验冲突时 (insight 互斥),Reflector 自我合并或弹给用户决定
-
-### 全局 vs 项目级 + Promote UI (审计补)
-
-- `scope = 'project'`: 仅当前项目用 (默认)
-- `scope = 'global'`: 跨项目,需要用户在面板上手动 promote
-
-详细 promote UI 见 [spec/13-settings.md](../spec/13-settings.md) §学习偏好面板。要点:
-
-- 项目级 → global 用 [⬆️ promote 全局] 按钮
-- 同 insight 已有 global 时弹合并 dialog (新文本 / 旧文本 / merge / 取消)
-- 全局 → 项目级用 [⬇️ 限定到当前项目]
-- 删除是软删 (移到 `learnings_archive`,30 天可恢复)
-- 每周新增 ≥ 5 条时自动弹"审视新偏好"提示
+learnings 的用户检视、软删恢复、scope=project / global 切换、promote 合并 dialog 等 UI 与安全机制详见 [spec/13-settings.md](../spec/13-settings.md) §学习偏好面板。
 
 避免一个项目的特殊偏好污染其他风格不同的项目。
 
@@ -241,6 +217,6 @@ Reflector 输出经过用户审视:
 | 增量学习 | 即时 | 需重新训练 |
 | 可解释 | 全可见 | 黑盒 |
 | 准确度 | 中 (受 prompt 长度限制) | 高 |
-| 适合场景 | POC + 长尾 | 风格固化期 |
+| 适合场景 | 起步 + 长尾 | 风格固化期 |
 
-POC 阶段方案足够。后续如发现某些经验高度重复且稳定,可以 export 成数据集为微调做准备。
+当前方案足够。后续如发现某些经验高度重复且稳定,可以 export 成数据集为微调做准备。

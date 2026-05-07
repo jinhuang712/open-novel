@@ -49,7 +49,7 @@ deepseekApiKey: "sk-..."         # 必填
 bochaApiKey: ""                   # 可选,二期
 tavilyApiKey: ""                  # 可选,二期
 
-# ★ 审计补: 成本天花板 (硬约束)
+# 成本天花板 (硬约束)
 budget:
   monthlyUsd: 50                   # 月度预算 (USD)
   warnAtUsd: 40                    # 触发警告阈值
@@ -191,7 +191,7 @@ custom:
     enabled: true
     weight: 1.5
 
-# ★ 审计补: 叙事引擎自动/手动触发
+# 叙事引擎自动/手动触发
 narrative:
   beatAnalyzer:
     runOnSave: true               # 章节落盘后自动跑
@@ -235,14 +235,14 @@ UI:
 
 ```yaml
 network:
-  enabled: false                  # POC 阶段强制 false
+  enabled: false                  # 强制 false
   defaultProvider: "bocha"        # bocha | tavily | mock
   bochaWeight: 1.0
   tavilyWeight: 0.6
   cacheHours: 24                  # 同 query 缓存
 ```
 
-UI: 整体灰显,顶部一条横幅 "🚧 二期开放,POC 阶段所有联网工具走 mock 实现"。
+UI: 整体灰显,顶部一条横幅 "🚧 二期开放,当前所有联网工具走 mock 实现"。
 
 二期开放后界面: 启用 toggle + provider 选择 + 缓存时长 + 限频。
 
@@ -282,7 +282,7 @@ UI: 整体灰显,顶部一条横幅 "🚧 二期开放,POC 阶段所有联网工
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 项目生命周期 UI flow (审计补)
+### 项目生命周期 UI flow
 
 每个动作的具体行为:
 
@@ -290,7 +290,7 @@ UI: 整体灰显,顶部一条横幅 "🚧 二期开放,POC 阶段所有联网工
 |---|---|
 | **改名** | 仅改 project.json.name,**目录名不变** (避免破坏所有引用路径)。UI 显示真实名 + 真实 id |
 | **归档 (软删)** | 移到 `~/.open-novel/_archive/{projectId}/`,UI 隐藏 (但归档区可见);保留 30 天后启动 Worker 自动彻底删 |
-| **导出 zip** | 打包 `proj_xxx.zip`,**含 .md + project.json + index.db** (审计修正:不再丢 narrative_metrics / reader_reports / approvals 这些花了 LLM 钱跑的数据);entity_refs / backlinks 这种纯派生表可在导入时重建 |
+| **导出 zip** | 打包 `proj_xxx.zip`,**含 .md + project.json + index.db** (含 narrative_metrics / reader_reports / approvals 这些花了 LLM 钱跑的数据);entity_refs / backlinks 这种纯派生表可在导入时重建 |
 | **删除 (硬删)** | 二次确认 + 输入项目名字样;先 `pool.delete(projectId)` close LibSQL,再 fs.rm 项目目录;删 runtime.db 中对应 thread |
 | **导入 zip** | 解压到 `~/.open-novel/workspaces/{newId}/`;若 projectId 冲突生成新 id;导入后 Worker reindex |
 | **恢复归档** | 移回 workspaces/,UI 重新可见 |
@@ -393,7 +393,7 @@ merge effectiveSettings = global ∪ project (project override)
 注入到 Mastra agents 实例化
 ```
 
-## 学习偏好面板 (审计补)
+## 学习偏好面板
 
 ActivityBar [💡] 入口 → 打开 LearningsPanel,展示 `learnings` 表:
 
@@ -428,7 +428,7 @@ ActivityBar [💡] 入口 → 打开 LearningsPanel,展示 `learnings` 表:
 
 ## 不做什么
 
-- **不做云同步**: POC 单设备 localhost,所有设置本地文件即可
+- **不做云同步**: 单设备 localhost,所有设置本地文件即可
 - **不做 settings profiles**: 不存"工作模式 / 出版模式"两套预设,简化模型
 - **不做 settings audit log**: 改了什么时候改的不重要,可从文件 mtime 看
-- **不做 i18n UI 文案**: POC 仅中文界面;UI 文案集中在 `lib/i18n/zh.ts` 用 key 组织,二期再加其他语言;**不再硬编码到组件**
+- **不做 i18n UI 文案**: 仅中文界面;UI 文案集中在 `lib/i18n/zh.ts` 用 key 组织,二期再加其他语言;**不再硬编码到组件**

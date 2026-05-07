@@ -2,11 +2,11 @@
 
 > 实现 plan/10-reader-simulator.md 描述的 ReaderPanel Agent 与 5 个默认 persona。
 
-## 关于 Persona 的伦理边界 (审计补)
+## 关于 Persona 的伦理边界
 
-> audit 发现:5 个默认 persona 的描述里直接绑定性别/年龄 ("22-30 岁女性"、"25-32 岁男性都市白领" 等)。这有刻板印象风险:ReaderPanel 输出"情感党"差评时,实际是在反映"22-30 女" 这一类标签,**用户被动接受偏见**。
+> 5 个默认 persona 的描述里直接绑定性别/年龄 ("22-30 岁女性"、"25-32 岁男性都市白领" 等)。这有刻板印象风险:ReaderPanel 输出"情感党"差评时,实际是在反映"22-30 女" 这一类标签,**用户被动接受偏见**。
 
-POC 处理:
+处理:
 
 1. **Persona prompt 内的"年龄/性别"描述保留** (它影响 LLM 输出的差异化,完全去除会让 5 个 persona 趋同),但
 2. **UI 强制显示一条 disclaimer**: "这些 Persona 是基于网文社区共识合成的简化读者模型,**不代表任何真实群体**。它们存在的目的是让作者从多个视角自审作品,不是社会学统计。"
@@ -14,7 +14,7 @@ POC 处理:
 4. RiskReport 卡片底部小字也带一行"模拟读者,非真实预测"
 5. 用户可在 SettingsDialog 关掉单个 persona,从此不再看到该 persona 的反应
 
-**二期改进路径**: 引入"读者类型"中性命名 (e.g. "节奏关注型" "细节关注型" "情感关注型"),把性别/年龄从 prompt 移到 metadata 的"参考标签"。POC 阶段不动,因为名字"追更党/情感党/毒舌读者"在中文网文圈是行话,对作者来说是即时可识别的概念,改名反而失去用户友好性。
+**二期改进路径**: 引入"读者类型"中性命名 (e.g. "节奏关注型" "细节关注型" "情感关注型"),把性别/年龄从 prompt 移到 metadata 的"参考标签"。当前不动,因为名字"追更党/情感党/毒舌读者"在中文网文圈是行话,对作者来说是即时可识别的概念,改名反而失去用户友好性。
 
 ## 文件分布
 
@@ -62,7 +62,7 @@ const personaReactionSchema = z.object({
   personaId: z.enum(['veteran_reader', 'casual_reader', 'rational_reader', 'genre_fan', 'new_reader']),
   overallSentiment: z.number().min(-100).max(100),
   retentionPrediction: z.number().min(0).max(100),
-  dropoffRisk: z.number().min(0).max(1),                       // 0-1, 1 = 立刻弃书 (T5 加, spec/25)
+  dropoffRisk: z.number().min(0).max(1),                       // 0-1, 1 = 立刻弃书 (spec/25)
   highlights: z.array(z.object({
     position: z.number().int().min(0),
     kind: z.enum(['爽点', '钩子', '亮点']),
@@ -89,7 +89,7 @@ const chapterRiskReportSchema = z.object({
   chapterId: z.string(),
   reactions: z.array(personaReactionSchema),
   aggregateRetention: z.number().min(0).max(100),
-  averageDropoffRisk: z.number().min(0).max(1),                // T5 (spec/25)
+  averageDropoffRisk: z.number().min(0).max(1),                // spec/25
   topRisks: z.array(z.object({
     warning: z.object({ kind: z.string(), reason: z.string() }),
     count: z.number().int().min(0),
@@ -325,9 +325,9 @@ async function callPersona(persona: Persona, chapter: Chapter): Promise<PersonaR
 
 5 个并行 + 用户自定义 (`Promise.allSettled`),失败的 persona 在聚合时按"placeholder weight=0"处理 (不影响其他 persona 的加权平均)。
 
-## 聚合算法 (审计修正)
+## 聚合算法
 
-> audit 发现:1/5 失败的 placeholder 给 retention 多少分?aggregateReactions weighted 公式没说权重在 placeholder 上是否归零。1/5 失败和 5/5 失败的 recommendation 不能一样。
+> 1/5 失败的 placeholder 给 retention 多少分,需明确;1/5 失败和 5/5 失败的 recommendation 也要区分。
 
 ```ts
 function aggregateReactions(
@@ -398,9 +398,9 @@ CREATE TABLE reader_reports (
 CREATE INDEX idx_reader_chapter ON reader_reports(chapter_id);
 ```
 
-> ⚠ **审计修正**: 早期版本写 `FOREIGN KEY (chapter_id) REFERENCES entities(id)`,但 chapter 不登记到 entities 表 (entities 主要是 character/place/item/org)。POC 简化:**去掉外键**;chapter_id 真源 = 章节目录名。
+> chapter 不登记到 entities 表 (entities 主要是 character/place/item/org),所以 `FOREIGN KEY (chapter_id) REFERENCES entities(id)` **不设外键**;chapter_id 真源 = 章节目录名。
 
-## 自定义 Persona 加载 + 注入防御 (审计加固)
+## 自定义 Persona 加载 + 注入防御
 
 ```yaml
 # ~/.open-novel/workspaces/{projectId}/personas/my-target.yaml
@@ -488,7 +488,7 @@ function RiskReport({ report }: { report: ChapterRiskReport }) {
 }
 ```
 
-## 校准 Pipeline (二期 / POC 后)
+## 校准 Pipeline (二期)
 
 `lib/personas/calibration.ts` (二期实现):
 
@@ -508,7 +508,7 @@ async function calibrate(reports: ChapterRiskReport[], stats: RealStats[]) {
 }
 ```
 
-POC 阶段不实现,只设计接口预留。
+当前不实现,只设计接口预留。
 
 ## 不做什么
 

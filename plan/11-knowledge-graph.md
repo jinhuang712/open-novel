@@ -179,7 +179,7 @@ token 预算控制详见 spec/20。
 
 ## 落地里程碑 (W7-W10 专攻)
 
-原计划 W7-W10 排的是"联网工具 + Reflector 完善"等,这次重排:
+W7-W10 安排:
 
 | 周 | 内容 | 对应 spec |
 |---|---|---|
@@ -192,7 +192,7 @@ token 预算控制详见 spec/20。
 | **W10** | L3 queryFacts 工具 + UI 查询面板 (Cmd+K query 模式) | spec/21 |
 | **W10** | L4 Setting Lint + Plan inconsistency lock + Snapshot + 派生守卫 | spec/16 §治理 |
 
-合计 4 周,占 W7-W10 全部带宽。原计划"联网工具"延后至二期(POC mock 已够)。
+合计 4 周,占 W7-W10 全部带宽。联网工具能力推迟至二期(mock 已够)。
 
 ## 与同类产品的差异(更新)
 
@@ -212,7 +212,7 @@ token 预算控制详见 spec/20。
 ## 不做什么
 
 - **不做实时 LLM 影响分析** — 影响半径必须是 SQL 出候选,LLM 仅二次过滤。任何"现场让 LLM 推这次改动会影响什么"的设计都禁止 (慢 + 漏 + 不可解释)。
-- **不做向量数据库** — 段级 embedding 落 SQLite + sqlite-vss 扩展或 LibSQL 原生 vector 支持。POC 阶段不引入 Qdrant / Milvus 等独立服务,详见 spec/18。
+- **不做向量数据库** — 段级 embedding 落 SQLite + sqlite-vss 扩展或 LibSQL 原生 vector 支持。不引入 Qdrant / Milvus 等独立服务,详见 spec/18。
 - **不做"全自动派生设定"** — 派生视图(关系矩阵 / 时间轴)是表的投影,不替作者写设定。"建议给林川加一个师父"这种主动建议留给 Validator / Reflector 的二期能力,不在本层。
 - **不做"无 schema 自由文本扫描"** — 所有 cascade / context 必须依赖 schema 化字段。自由文本里隐式提到的关系(e.g. 章节正文里写"林川的师父张三")不会被自动归一为 entity_relations 表条目;必须由作者在 character.md 显式声明,或由 Reflector 二期主动建议补全。
 - **不做跨项目知识图谱共享** — 知识图谱按项目独立,与 Memory 的 `resource = projectId` 一致。

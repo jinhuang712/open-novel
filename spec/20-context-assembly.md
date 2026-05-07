@@ -57,7 +57,7 @@ export const assembleContext = tool({
       'semantic-relevant',
       'worldview',
       'concepts',
-      // === 五大守则相关 (spec/25, T5 落地) ===
+      // === 五大守则相关 (spec/25) ===
       'cardinal-rules-config',                  // 项目级 cardinal-rules.json 配置
       'active-critical-promises',               // 当前 active 的 critical promise (deadline 接近警报)
       'character-value-axes',                   // 涉及角色的 value_axes / intelligence_axis
@@ -187,7 +187,7 @@ async function extractEntitiesFromOutline(projectId: string, outline: string): P
   // 2. 若大纲明确提"涉及角色 X / 地点 Y / 道具 Z" — 优先这些
   const explicit = parseExplicitEntities(outline)  // 简单规则: 找 "涉及:" / "登场:" 等关键词后的列表
 
-  // 3. POC 不调 LLM 做 NER (AC trie + 规则已够);二期可加 LLM fallback
+  // 3. 不调 LLM 做 NER (AC trie + 规则已够);二期可加 LLM fallback
   const ids = unique([...directHits, ...explicit])
   return Promise.all(ids.map(id => db.entities.get(projectId, id)))
 }
@@ -360,7 +360,7 @@ async function semanticRelevantSegs(
 ```ts
 async function relevantWorldview(projectId: string, entityIds: string[]): Promise<WorldviewSection[]> {
   // 取所有 worldview/* 文件,按 entity 引用密度 + 与 entity 类目相关性排序
-  // POC 简化: 直接把 worldview/_index.md 全文 + worldview/rules.md (硬规则) 全文带上
+  // 简化: 直接把 worldview/_index.md 全文 + worldview/rules.md (硬规则) 全文带上
   const indexFm = await readFile(`${projectDir(projectId)}/settings/worldview/_index.md`)
   const rules = await readFile(`${projectDir(projectId)}/settings/worldview/rules.md`)
   return [
@@ -541,8 +541,8 @@ Writer 在生成正文时:
 | `assemble-context-fallback.test.ts` | 集成 | 各种降级场景 |
 | `assemble-context-bench.bench.ts` | bench | 三档规模性能,W9 末填表 |
 
-## 已决策项 (T8 关闭)
+## 已决策项
 
-✅ **token 计数策略**: POC 用 **简化估算 (text.length / 1.5, 误差 10-15%)**。理由 = DeepSeek V4 1M ctx 下 budget 精度容忍度高 (T3 一致性优先, 不做 token budget 控制); `@dqbd/tiktoken` 二进制 ~3MB 但 DeepSeek tokenizer 真实精度未知 (spec/00 待 verify), 装了也不一定准。**W11 评估**: 若 prune / volume_summary 触发频次明显与估算偏离, 切 tiktoken。
+✅ **token 计数策略**: 简化估算 (text.length / 1.5, 误差 10-15%)。理由 = DeepSeek V4 1M ctx 下 budget 精度容忍度高 (一致性优先, 不做 token budget 控制); `@dqbd/tiktoken` 二进制 ~3MB 且 DeepSeek tokenizer 真实精度未知, 装了也不一定准。若 prune / volume_summary 触发频次明显与估算偏离, 切 tiktoken。
 
-✅ **Worldview retrieve 升级**: POC 简化为全 `_index.md + rules.md`。理由 = 1M ctx 下整个 worldview 通常 < 50K token, 全量喂入不挤压上下文; "智能选择子文件"会引入新错误源 (选错文件 = 漏看关键世界观 = 一致性破)。**W11 评估**: 若 worldview 真扩到 > 200K token (大世界观奇幻 / 修仙长篇), 再做 entity locations / category 选择, 但触发条件是规模而非性能。
+✅ **Worldview retrieve 策略**: 全 `_index.md + rules.md`。理由 = 1M ctx 下整个 worldview 通常 < 50K token, 全量喂入不挤压上下文; "智能选择子文件"会引入新错误源 (选错文件 = 漏看关键世界观 = 一致性破)。若 worldview 真扩到 > 200K token (大世界观奇幻 / 修仙长篇), 再做 entity locations / category 选择 — 触发条件是规模而非性能。

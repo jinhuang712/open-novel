@@ -149,9 +149,7 @@ export const analyzeNarrative = tool({
 - 仅输出结构化指标 + 简短自然语言提示
 ```
 
-### 调用方式 (审计修正)
-
-> audit 发现:plan/02 / plan/09 / 本文档对自动 vs 手动触发表述不一致 + 没回答"作者只想写不想分析时怎么关"。
+### 调用方式
 
 触发时机由 SettingsDialog → Section 5 §narrative.beatAnalyzer 控制:
 
@@ -405,9 +403,9 @@ ThinkingPanel 同时渲染 Checker 与 Validator 的叙事输出:
 
 UI 实现在 `components/panels/NarrativeReport.tsx` (W9 落地)。
 
-## ArcTracker 触发频率 (审计补)
+## ArcTracker 触发频率
 
-> audit 发现:ArcTracker 跨章扫描 — 章节多了怎么办?
+> ArcTracker 跨章扫描,章节多了成本会上去。
 
 `narrative.arcTracker` 设置:
 
@@ -421,9 +419,7 @@ UI 实现在 `components/panels/NarrativeReport.tsx` (W9 落地)。
 
 **性能**: ArcTracker 每次跑 1 个角色 + N 章节;并发限制 = 1 (避免同时多个角色扫导致 LibSQL 写锁竞争)。runOnNewChapter 时只跑当前章节涉及的角色,不全扫。
 
-## 用户不接受 BeatReport 的反馈环 (审计补)
-
-> audit 发现:用户不接受 BeatReport 时的反馈环 — 怎么修正模板/参数?
+## 用户不接受 BeatReport 的反馈环
 
 UI 在 NarrativeReport 卡片底部加:
 
@@ -431,9 +427,9 @@ UI 在 NarrativeReport 卡片底部加:
 [👍 准确]  [🤔 部分准确]  [👎 不准]    [我自己来标]
 ```
 
-点击 [我自己来标] 弹一个简化标注 UI,用户标 "这段才是真正的爽点"、"这段其实没我标的那么紧张"。落到 `narrative_feedback` 新表 (spec/01 待补)。**当前 POC 阶段**: 仅记录,不实时调整 prompt。**二期**: Reflector 读这些反馈,推断"对该用户来说,什么算冲突点 / 钩子",写回 learnings 表注入 BeatAnalyzer prompt。
+点击 [我自己来标] 弹一个简化标注 UI,用户标 "这段才是真正的爽点"、"这段其实没我标的那么紧张"。落到 `narrative_feedback` 表 (spec/01)。**当前**: 仅记录,不实时调整 prompt。**二期**: Reflector 读这些反馈,推断"对该用户来说,什么算冲突点 / 钩子",写回 learnings 表注入 BeatAnalyzer prompt。
 
-POC 不做 prompt 自适应,但**记录**留好,二期接入闭环。
+不做 prompt 自适应,但**记录**留好,二期接入闭环。
 
 ## 不做什么
 

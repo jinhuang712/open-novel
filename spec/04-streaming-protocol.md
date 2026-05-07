@@ -54,12 +54,12 @@ export async function POST(req: Request) {
 | `agent-handoff-end` | 子 Agent 结束 | 嵌套关闭 |
 | `finish-step` | 一个 step 结束 | 分隔线 |
 | `error` | 错误 | 红色错误卡 |
-| `analyzing` (T5 新增) | JSON mode 流式中: 当前 chunk 是 JSON 片段, 不展示给用户 | ThinkingPanel 显示 spinner + "正在分析..." 文字 |
-| `json-result` (T5 新增) | JSON mode 流完整体, 已 zod 校验通过 | 按 Agent 类型渲染对应 view (Validator → ChangeProposal 列表; ReaderPanel → 5 persona 评论卡; 等等) |
-| `json-retry` (T5 新增) | JSON 校验失败, 自动 retry | ThinkingPanel 显示 "重试 N/2" 提示 |
-| `json-failed` (T5 新增) | 2 次 retry 仍败 (spec/24 §失败处理) | toast + 折叠区显示原文 + 重试按钮 |
+| `analyzing` | JSON mode 流式中: 当前 chunk 是 JSON 片段, 不展示给用户 | ThinkingPanel 显示 spinner + "正在分析..." 文字 |
+| `json-result` | JSON mode 流完整体, 已 zod 校验通过 | 按 Agent 类型渲染对应 view (Validator → ChangeProposal 列表; ReaderPanel → 5 persona 评论卡; 等等) |
+| `json-retry` | JSON 校验失败, 自动 retry | ThinkingPanel 显示 "重试 N/2" 提示 |
+| `json-failed` | 2 次 retry 仍败 (spec/24 §失败处理) | toast + 折叠区显示原文 + 重试按钮 |
 
-### JSON mode 与 streaming 的衔接 (T5, spec/24)
+### JSON mode 与 streaming 的衔接 (spec/24)
 
 **关键约束**: Writer / Humanizer 走自然语言流式 (`text-delta` 逐字渲染);其他 agent 走 JSON mode,中间 `analyzing` chunks 不渲染,流完整体后:
 
@@ -90,7 +90,7 @@ if (ctx.metadata.jsonMode) {
 }
 ```
 
-ReaderPanel 5 persona 因 JSON 体较大(8K tokens),POC 阶段全部流完再 parse;W11 评估是否引入 incremental JSON parser (e.g. `partial-json`) 让 5 persona 一个一个出现。
+ReaderPanel 5 persona 因 JSON 体较大(8K tokens),全部流完再 parse。如有必要,可引入 incremental JSON parser (e.g. `partial-json`) 让 5 persona 一个一个出现。
 
 ## 客户端 useChat 钩子
 
@@ -157,7 +157,7 @@ const { stop } = useChat(...)
 
 ### 浏览器刷新 / 崩溃 / 网络中断
 
-**契约**: 刷新 = 抛弃当前 stream,**不**自动续传 LLM 流 (cookbook 上 SSE reconnect 续传依赖 `Last-Event-ID` 但 AI SDK 各版本支持不一致,POC 不依赖)。
+**契约**: 刷新 = 抛弃当前 stream,**不**自动续传 LLM 流 (cookbook 上 SSE reconnect 续传依赖 `Last-Event-ID` 但 AI SDK 各版本支持不一致,不依赖)。
 
 **用户体验**:
 - 刷新后 ChatBox 历史消息从 Mastra Memory thread 拉回 (memory 是 server 端落盘的,不依赖 stream)
@@ -187,7 +187,7 @@ execute: async (input, ctx) => {
 
 SSE 原生支持浏览器层重连 — 网络抖动短时,EventSource 会自动重新建连。**但我们不依赖服务端续传**: reconnect 后 server 视为新 request,client 拿到的 stream 从空开始;所以前端在 reconnect 之前已收到的 token 保留显示,reconnect 后不再期望 server 续传剩余。
 
-POC 简化:**断线超过 5 秒** UI 直接进入 cancelled 状态,提示用户"已断线,要重发吗?"。
+**断线超过 5 秒** UI 直接进入 cancelled 状态,提示用户"已断线,要重发吗?"。
 
 ## traces 归档
 
@@ -257,7 +257,7 @@ JSONL 一行一个事件:
 
 **自动重试限制**: `MODEL_TIMEOUT` / `RATE_LIMIT` 仅自动重试 1 次,失败转人工。退避: 1.5s + jitter。
 
-**遥测**: 所有错误都落 trace + DebugConsole §Errors tab。POC 不上报到任何远端。
+**遥测**: 所有错误都落 trace + DebugConsole §Errors tab。不上报到任何远端。
 
 ## 长任务进度协议 (新增)
 

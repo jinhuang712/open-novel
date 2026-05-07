@@ -327,7 +327,7 @@ CREATE INDEX idx_traces_session ON traces(session_id);
 
 未来 schema 变更时:
 - `index.db` 启动时检查 `PRAGMA user_version`,小于当前版本则跑迁移脚本
-- 迁移脚本放在 `lib/storage/migrations/{NNN}-{name}.ts`,**只允许向前**;不写回退脚本 (POC 简化,代价低于双向维护)
+- 迁移脚本放在 `lib/storage/migrations/{NNN}-{name}.ts`,**只允许向前**;不写回退脚本 (代价低于双向维护)
 - 启动时按 `user_version` 顺序串行跑所有 pending migration,跑完一条 `PRAGMA user_version = N+1`
 - markdown frontmatter 变更时,Worker 启动时扫一遍批量升级 (有版本不变性 — frontmatter 字段 `_schemaVersion: 1` 决定走哪个升级路径)
 - 用户开启时若发现 `index.db` 存在但 schema 比当前代码版本**更新** (作者降级了 app),弹错并 refuse 启动该项目;不做静默"读一半"
@@ -400,7 +400,7 @@ export function normalizeForWrite(content: string): string {
 }
 ```
 
-所有 `readSetting / readChapter / fs.readFile` 包装层调 `normalizeForRead`,所有 `writeSetting / writeChapter` 调 `normalizeForWrite`。**UTF-8 之外的编码 (GB2312 / GBK) 一律 reject** — POC 阶段不支持,避免复杂度。检测到非 UTF-8 时 UI 提示用户先在外部转码。
+所有 `readSetting / readChapter / fs.readFile` 包装层调 `normalizeForRead`,所有 `writeSetting / writeChapter` 调 `normalizeForWrite`。**UTF-8 之外的编码 (GB2312 / GBK) 一律 reject** — 不支持,避免复杂度。检测到非 UTF-8 时 UI 提示用户先在外部转码。
 
 ## SQLite WAL Mode + 并发写 (新增)
 
@@ -469,14 +469,14 @@ export async function closeAll() {
 | `setting_snapshots` | spec/16 §Snapshot | 重大设定改动自动备份 |
 | `cascade_audits` | spec/19 §L4 治理 | cascade 影响半径分析的审计日志 (递归 / 用户接受率) |
 | `reindex_failures` | spec/17 §reindex Worker §失败回滚 | reindex 失败队列 (供手动重试) |
-| `narrative_feedback` | spec/10 §用户不接受 BeatReport + 本文 §narrative_feedback (T7) | 用户对 BeatReport 的反馈 (二期 Reflector 用) |
-| `entity_match_feedback` | spec/05 §调优策略 + 本文 §entity_match_feedback (T7) | entity highlight false-positive 反馈 (W6 起记录) |
+| `narrative_feedback` | spec/10 §用户不接受 BeatReport + 本文 §narrative_feedback | 用户对 BeatReport 的反馈 (二期 Reflector 用) |
+| `entity_match_feedback` | spec/05 §调优策略 + 本文 §entity_match_feedback | entity highlight false-positive 反馈 (W6 起记录) |
 
 迁移脚本 (`002-knowledge-graph.ts`) 在 spec/16 §迁移段定义。`PRAGMA user_version = 2` 后所有项目自动启用。
 
-## narrative_feedback (T7 — schema 补)
+## narrative_feedback
 
-> 之前的 spec/01 + spec/10 都标"待补"。T7 落定义。用户在 BeatReport 上不同意 AI 的判读 (如"AI 标这段是冲突点, 我觉得不是") 时点 [我自己来标] 弹简化标注 UI, 落到本表。POC 阶段仅记录, 二期 Reflector 读这些反馈推断该用户的"个性化爽点 / 钩子定义", 写回 learnings 表注入 BeatAnalyzer prompt。
+> 用户在 BeatReport 上不同意 AI 的判读 (如"AI 标这段是冲突点, 我觉得不是") 时点 [我自己来标] 弹简化标注 UI, 落到本表。当前仅记录, 二期 Reflector 读这些反馈推断该用户的"个性化爽点 / 钩子定义", 写回 learnings 表注入 BeatAnalyzer prompt。
 
 ```sql
 CREATE TABLE narrative_feedback (
@@ -504,9 +504,9 @@ CREATE INDEX idx_narrative_feedback_unconsumed ON narrative_feedback(consumed_by
 
 **清理策略**: 无, 永久保留。每条都是宝贵的"个性化样本"。
 
-## entity_match_feedback (T7 — schema 补)
+## entity_match_feedback
 
-> 之前 spec/01 + spec/05 标"待补"。entity highlight 在编辑器里给某些词加下划线 + 悬浮显示 entity 信息时, 偶发会误命中 (如把"小米"识别成手机品牌, 但小说里是角色名)。用户右键"不是这个 entity" 落到本表。
+> entity highlight 在编辑器里给某些词加下划线 + 悬浮显示 entity 信息时, 偶发会误命中 (如把"小米"识别成手机品牌, 但小说里是角色名)。用户右键"不是这个 entity" 落到本表。
 
 ```sql
 CREATE TABLE entity_match_feedback (

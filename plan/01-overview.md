@@ -110,7 +110,7 @@ Router 路由 (识别 mode = discuss | plan | write)
 
 | 维度 | 选择 | 理由 |
 |---|---|---|
-| 应用架构 | Next.js 15 单应用 | POC 起步快,SSE 一等公民,App Router 与 AI SDK 6 集成最佳 |
+| 应用架构 | Next.js 15 单应用 | 起步快,SSE 一等公民,App Router 与 AI SDK 6 集成最佳 |
 | Agent 框架 | Mastra on AI SDK 6 | `Memory({ thread, resource })` 自带多项目隔离;`AgentNetwork` LLM 路由 |
 | LLM | DeepSeek V4 Pro/Flash | 实查 (spec/00 §C):ctx **1M tokens**, max output **384K**, 原生 JSON mode (`response_format: { type: 'json_object' }`)。Pro 用于核心创作 (writer/validator/humanizer),Flash 用于辅助 (router/checker/reflector/reader-panel/工具内 LLM),按用量优化 |
 | 编辑器 | TipTap + 自定义装饰器 + AC | TipTap 中文排版舒服;不用 `Mention` 节点 (atomic 破坏纯文本流) |
@@ -122,7 +122,7 @@ Router 路由 (识别 mode = discuss | plan | write)
 
 为保证质量,系统强制以下不变性:
 
-1. **写入必须经审批** — 所有 writeSetting / writeChapter 走 proposal 模式,落 `approvals` 表 status=pending,通过独立 endpoint resolve (见 spec/06,审计后从 SDK 一等字段改为 cookbook 模式)
+1. **写入必须经审批** — 所有 writeSetting / writeChapter 走 proposal 模式,落 `approvals` 表 status=pending,通过独立 endpoint resolve (见 spec/06)
 2. **设定不可被 Agent 静默修改** — Validator 发现矛盾时只能"提议"修改,不能直接改;最终决定权在用户
 3. **多项目数据零串扰** — Memory 用 `resource = projectId`,文件用独立目录,数据库用 `WHERE project_id = ?` 强约束;LibSQL 连接池 LRU(3)
 4. **三模式严格分离** — Router 在每次输入时强校验当前 mode 与可调用工具集

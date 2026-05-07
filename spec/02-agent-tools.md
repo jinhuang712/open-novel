@@ -2,7 +2,7 @@
 
 所有工具用 AI SDK 的 `tool()` 定义 + Zod schema 校验。
 
-> ⚠ **needsApproval 实现路径**: 早期文档假设 AI SDK 6 提供 `tool({ needsApproval: true })` 一等字段。**该假设需在 W3 启动前用 spec/00-version-audit 实查 cookbook**,如假设不成立,改写本文档 + spec/06 走 Vercel HITL cookbook 标准链路 (服务端工具 emit → 客户端 `onToolCall` 拦截 → `addToolResult` 注入)。本文档下文继续用 `needsApproval: true` 写法是占位,审计后统一替换。
+> 本文档下文 `needsApproval: true` 写法是占位。spec/00 §B 实查 AI SDK 6 是否提供 `tool({ needsApproval })` 一等字段后定稿;若无,统一改走 Vercel HITL cookbook 模式 (服务端工具 emit → 客户端 `onToolCall` 拦截 → `addToolResult` 注入,详见 spec/06)。
 
 ## 工具 input 与路径越权防御 (硬约束)
 
@@ -28,7 +28,7 @@ export function safeFromProjectRoot(projectId: string, rel: string): string {
       throw new ToolValidationError('PATH_ESCAPE', `软链接越权: ${rel}`)
     }
   }
-  // 防御 3: 黑名单 (POC 简化)
+  // 防御 3: 黑名单
   if (rel.includes('\0') || rel.includes('‮')) {
     throw new ToolValidationError('PATH_INVALID', `路径含非法字符`)
   }
@@ -38,7 +38,7 @@ export function safeFromProjectRoot(projectId: string, rel: string): string {
 
 `ToolValidationError` 继承自 `Error`,被 AI SDK runtime 拿到后 emit 为 tool-call-error 事件 (见 spec/04),不会进入审批流。LLM 看到 error 后可决定是否换 path 重试。
 
-**绝不**信任 LLM 提供的 path 仅做 `${ws(projectId)}/settings/${path}` 拼接。审计后所有工具的 `execute` 第一行必须改为:
+**绝不**信任 LLM 提供的 path 仅做 `${ws(projectId)}/settings/${path}` 拼接。所有工具的 `execute` 第一行必须改为:
 
 ```ts
 execute: async ({ path: relPath }, { projectId }) => {
@@ -200,19 +200,19 @@ export const proposeChanges = tool({
 })
 ```
 
-## 联网工具 (POC Mock)
+## 联网工具 (Mock)
 
 ### `webSearch` (mock)
 
 ```ts
 export const webSearch = tool({
-  description: '联网搜索 (POC 阶段返回 mock 数据,不要依赖结果)',
+  description: '联网搜索 (mock 数据,不要依赖结果)',
   inputSchema: z.object({
     query: z.string(),
     lang: z.enum(['zh', 'en']).default('zh'),
   }),
   execute: async ({ query, lang }) => ({
-    notice: 'POC 阶段未接入真实搜索,返回占位结果',
+    notice: '未接入真实搜索,返回占位结果',
     results: [
       { title: `[mock] ${query}`, url: 'https://example.com/1', snippet: '占位摘要 1...' },
       { title: `[mock] ${query} 相关`, url: 'https://example.com/2', snippet: '占位摘要 2...' },
@@ -225,10 +225,10 @@ export const webSearch = tool({
 
 ```ts
 export const webFetch = tool({
-  description: '抓取一个 URL 的主体内容 (POC 阶段 mock)',
+  description: '抓取一个 URL 的主体内容 (mock)',
   inputSchema: z.object({ url: z.string().url() }),
   execute: async ({ url }) => ({
-    notice: 'POC 阶段未接入真实抓取',
+    notice: '未接入真实抓取',
     title: '[mock]', text: '占位内容...',
   }),
 })
@@ -297,7 +297,7 @@ export const readApprovalHistory = tool({
 >
 > 设计理由 (为什么不让 Validator 现场推理影响范围) 见 plan/11 §核心数据流改造。
 
-## 工具内部 LLM 调用规约 (T5 新增)
+## 工具内部 LLM 调用规约
 
 工具 `execute` 内部若需调 LLM (`extractSemanticDelta` / `filterByLLM` / `concept extractor` 等),**必须经 [`callJsonAgent` (spec/24)](./24-json-output.md)** — 走 DeepSeek 原生 JSON mode + zod 校验 + 自动 retry,不允许"自由发挥再 zod parse"。
 
@@ -310,7 +310,7 @@ export const readApprovalHistory = tool({
 
 **不允许 silent fallback**: 2 次 retry 仍败 → 抛 `JsonOutputError` escalate 给用户 (toast + 折叠区显示原文 + 重试按钮)。silent fallback 会导致 cascade 漏审、概念抽取漏 entity,直接破坏一致性。
 
-## 工具输出长度截断与本地缓存 (T4 — 借鉴 opencode `tool/tool.ts:110-123`)
+## 工具输出长度截断与本地缓存 (借鉴 opencode `tool/tool.ts:110-123`)
 
 > **问题**: Checker / Validator / ReaderPanel 等 cascade subagent 单次调用产出的 JSON 可能 5KB-50KB+ (impact 候选 + cardinalRulesReport.findings + 5 persona naturalLanguageReaction 全文等)。这些原始 JSON 全塞回上下文是浪费 — Writer 重生成时不需要"persona 张三在第 47 章那条 100 字的吐槽原文", 只需要"persona 张三对本章 dropoffRisk=0.7"。
 
@@ -369,16 +369,16 @@ prune 触发时把 `_tool_cache/{toolCallId}.json` 缓存文件**真删** (`fs.u
 
 下列 tool 的输出**永远不 truncate, 不 prune**:
 
-- `volumeSummary` (T3 卷级摘要本身, 是后续生成的根锚)
+- `volumeSummary` (卷级摘要本身, 是后续生成的根锚)
 - `cardinalRulesReport.summary` (一句话级别, 本来也不会超 2KB)
 
 (对应 opencode `compaction.ts:39` `PRUNE_PROTECTED_TOOLS = ["skill"]`)
 
-## Hidden 内部 Agent (T4 — 借鉴 opencode `agent/agent.ts:190-235` 的 hidden=true)
+## Hidden 内部 Agent (借鉴 opencode `agent/agent.ts:190-235` 的 hidden=true)
 
 > opencode 把 `compaction` / `title` / `summary` 这种内部任务也实现为独立 hidden agent (`agent/agent.ts` 内置 7 个 agent 中后 3 个 `hidden: true`), 复用主 processor。我们 Reflector 已经是这个味道, 但还有几个零碎的内部 LLM 调用 (章节标题候选 / 章节摘要 / 卷级摘要 / 封面元信息) 散落在 helper 函数里 — 统一封装为 hidden agent 后一致性更好, 也方便后续插件覆写 prompt。
 
-### Hidden agent 列表 (POC + W3-W11 阶段)
+### Hidden agent 列表
 
 | 名称 | 触发 | 输入 | 输出 (zod schema, spec/24) | 模型 + reasoningEffort |
 |---|---|---|---|---|
@@ -449,7 +449,7 @@ function assertAllowed(agent, mode, tool) {
 
 ## 不可信输入的围栏 (Prompt Injection 防御)
 
-> audit 发现:webSearch / 用户拷贝来的 .md / 自定义 persona yaml — 三个外部内容源,内容会被拼进 prompt。**LLM 把"忽略前面指令" 视为指令** 是公开攻击面。POC 单用户也要防,因为 prompt-injection 完全可触发 cascade 修改 (`proposeChanges`),用户可能被诱导一键同意。
+> webSearch / 用户拷贝来的 .md / 自定义 persona yaml — 三个外部内容源,内容会被拼进 prompt。**LLM 把"忽略前面指令" 视为指令** 是公开攻击面。即便单用户也要防,prompt-injection 完全可触发 cascade 修改 (`proposeChanges`),用户可能被诱导一键同意。
 
 所有外部内容**必须**通过 `wrapUntrusted()` 包裹:
 

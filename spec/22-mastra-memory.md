@@ -16,7 +16,7 @@
 - `workspace.db` 是 **每项目一文件** (LRU(3) 连接池,见 plan/04)。两个 db 不混。
 - 唯一例外: **spec/07 状态机** 的 session.json 是文件 (`~/.open-novel/workspaces/{X}/runtime/session.json`),不进任何 db。
 
-## Mastra Memory 自带 schema (POC 关注的最小子集)
+## Mastra Memory 自带 schema (本项目关注的最小子集)
 
 `@mastra/memory@1.4.x` 默认建以下表 (具体表名以实际 sdk 为准):
 
@@ -36,8 +36,8 @@ export const memory = new Memory({
   }),
   options: {
     lastMessages: 30,        // 1M ctx 下放宽 (旧设计 12 是基于 128K ctx 假设的错误产物)
-    semanticRecall: false,   // POC 关闭, 见下
-    workingMemory: false,    // POC 关闭, 与"L3 仅 Reflector 写"原则冲突
+    semanticRecall: false,   // 关闭, 见下
+    workingMemory: false,    // 关闭, 与"L3 仅 Reflector 写"原则冲突
   },
 })
 ```
@@ -48,13 +48,13 @@ DeepSeek V4 实测 ctx 上限 1M (spec/00 §C),30 条 messages × 平均 500 tok
 
 历史包袱: 之前文档曾设 12,理由是"为省 token 防 ctx 爆";实查 V4 真实 ctx 后,这个理由作废。新值 30 给 plan / write 模式典型 session 提供完整对话历史,不至于"用户回头说'上次那个修改'已经被滑出窗口"。
 
-### 决策 2: `semanticRecall: false` (POC 关闭)
+### 决策 2: `semanticRecall: false`
 
 关闭原因:
 
-- 需要 embedding provider (BGE-M3 / DeepSeek / OpenAI),与 spec/18 决策耦合,而 spec/18 标 deferred
-- 关闭时 Mastra 用纯顺序 lastMessages,30 条够 POC 用
-- 长 session 真的需要"按语义召回老消息"再打开 — W11 评估窗口
+- 需要 embedding provider (BGE-M3 / DeepSeek / OpenAI),与 spec/18 决策耦合
+- 关闭时 Mastra 用纯顺序 lastMessages,30 条够用
+- 长 session 真的需要"按语义召回老消息"再打开
 
 打开时 (W11+):
 
@@ -106,7 +106,7 @@ export async function streamWithGuard(agent, messages, opts) {
 
 所有 Agent 调用必须经 `streamWithGuard`,直接调 `streamVNext` 在 lint 中报错 (见 spec/14 §测试规约)。
 
-## DeepSeek 适配 middleware (T3 — 借鉴 opencode `provider/transform.ts`)
+## DeepSeek 适配 middleware (借鉴 opencode `provider/transform.ts`)
 
 DeepSeek 走 `@ai-sdk/openai-compatible`, 有两个**硬性 round-trip 要求**, 不处理直接 500 错误:
 
@@ -149,7 +149,7 @@ export const deepseekPro = wrapLanguageModel({
 
 DeepSeek 把推理过程返回到 `providerOptions.openaiCompatible.reasoning_content` 字段。`@ai-sdk/openai-compatible` provider 自动设 `interleaved: { field: "reasoning_content" }`, 但 Mastra 在 messages 持久化时默认丢这个字段, 历史回传时缺失会报错。
 
-**对策**: middleware 在 `transformParams` 入口把 `providerOptions.openaiCompatible.reasoning_content` 注入回 assistant 消息(若历史有保留)。具体实现见 callJsonAgent (spec/24 T5)。
+**对策**: middleware 在 `transformParams` 入口把 `providerOptions.openaiCompatible.reasoning_content` 注入回 assistant 消息(若历史有保留)。具体实现见 callJsonAgent (spec/24)。
 
 ### 3. prompt cache_control 标记 (省 token)
 
@@ -183,7 +183,7 @@ for (const msg of [...system, ...tail]) {
 - 末尾: 最近一次用户消息 + assistant 回复, 多轮对话场景下后续调用复用率高
 - 中段不打: 中段是动态 retrieve (per-agent context contract spec/23 装配的产物), 每次调用都不一样, 打了也不命中, 浪费配额
 
-**fallback (spec/00 §H 验证不通过)**: 删除 cache_control 注入逻辑, 仅靠 prompt 头部稳定排布 (T7 spec/03 stable header) 争取客户端缓存或服务端可能的隐式缓存。**功能不阻塞**, 只是 token 成本更高。
+**若 DeepSeek 不支持 cache_control 字段**: 删除 cache_control 注入逻辑, 仅靠 prompt 头部稳定排布 (spec/03 stable header) 争取客户端缓存或服务端可能的隐式缓存。功能不阻塞, 只是 token 成本更高。
 
 ## sessionId 的 lifecycle
 
@@ -217,7 +217,7 @@ CREATE TABLE archived_threads (
 
 archived 后,前端 thread 列表按 `archived_at IS NULL` 过滤;Settings 里有"恢复已归档对话"入口。
 
-## 可选历史压缩 (`compressed_messages` 表) — POC 默认关
+## 可选历史压缩 (`compressed_messages` 表) — 默认关
 
 放在 `runtime.db` (与 mastra_messages 同库),让 cross-thread join 简单:
 
@@ -242,13 +242,13 @@ CREATE INDEX idx_compressed_resource ON compressed_messages(resource);
 CREATE INDEX idx_compressed_cascade ON compressed_messages(cascade_group_id) WHERE cascade_group_id IS NOT NULL;
 ```
 
-**为什么 POC 默认关**:
+**为什么默认关**:
 
 - 1M ctx 下,30 条 mastra_messages 远不会挤压
 - 摘要本身有损,主动制造的有损会牺牲一致性
 - 历史已有 lastMessages 滑窗会自然丢弃极老消息(超出 30 条窗口的不进 prompt,但仍存 mastra_messages 用于 UI 翻看 + Reflector 训练)
 
-**何时打开** (用户主动 / W11 评估):
+**何时打开**:
 
 - 单 session 累计 > 200 条 messages,用户感觉"AI 忘了早期讨论的设定" → SettingsDialog 开启 `mastraMemory.compressedMessages.enabled = true`
 - 开启后,任何 Agent stream 启动前若发现 mastra_messages > 60 条 (= lastMessages*2 buffer),触发后台 Flash summarize,把"非最新 30 条"按 cascade_group_id 分块写入 `compressed_messages`
@@ -348,7 +348,7 @@ const CompressionSummarySchema = z.object({
 请只输出 JSON 对象, 不要 markdown 代码块, 不要前后说明。
 ```
 
-## 卷级锚定摘要 (Volume-level Anchor Summary, T3 — 借鉴 opencode `compaction.ts:43-78`)
+## 卷级锚定摘要 (Volume-level Anchor Summary, 借鉴 opencode `compaction.ts:43-78`)
 
 > 当一本网文写到 50+ 章, 即便 1M ctx 也开始吃紧 (50 章 × 章均 8K + 历史 cascade tool 输出 ≈ 700K tokens 接近上限)。锚定摘要把"本卷已立的设定 / 已埋的伏笔 / 读者承诺 / 节奏当前阶段"等**长期不变量**冻结成一份固定结构 Markdown, 后续生成只读摘要 + 最近 N 章原文, 不再翻 ch_001 到 ch_049 的全部历史。
 
@@ -464,7 +464,7 @@ async function maybeGenerateVolumeSummary(projectId: string, justApprovedChapter
 opencode 的 `Session.context()` 取"最后一次 compaction 标记之后的所有消息" — 把 compaction 当成天然断点。我们对应版本: **rehydrate 时只读最后一份 volume_summary 之后的章节** + summary 本身, 不读更早的章节 / mastra_messages。
 
 ```ts
-// lib/boot/rehydrate-session.ts (T3 增强 §跨进程恢复实操)
+// lib/boot/rehydrate-session.ts (§跨进程恢复实操)
 export async function rehydrateProjectContext(projectId: string) {
   const lastSummary = await db.workspace(projectId).volumeSummaries.findLast()
   const checkpointChapter = lastSummary?.chapter_range_end
@@ -482,7 +482,7 @@ export async function rehydrateProjectContext(projectId: string) {
 
 **O(1) 恢复成本**: 不论项目写了多少章, rehydrate 只需读 1 份 summary + ≤ everyNChapters 章原文。
 
-## prune 老章节 tool 输出 (T3 — 借鉴 opencode `compaction.ts:300-344`)
+## prune 老章节 tool 输出 (借鉴 opencode `compaction.ts:300-344`)
 
 > 我们的 cascade 流每章会产出几十 KB 的 tool 输出 (Checker JSON + Validator JSON + ReaderPanel 5 persona JSON + ArcTracker JSON + 等)。当一本书写到 50+ 章, 这些 tool 输出累计若全部进上下文是浪费。learn opencode 的分层策略: **prune (廉价) 在 compact (昂贵) 之前**。
 
@@ -505,7 +505,7 @@ ALTER TABLE chapter_tool_runs ADD COLUMN pruned_summary TEXT;       -- prune 后
 CREATE INDEX idx_tool_runs_pruned ON chapter_tool_runs(chapter_id, pruned_at);
 ```
 
-(`chapter_tool_runs` 表的完整定义见 plan/04 T7 — SQLite session_history 那一节)
+(`chapter_tool_runs` 表的完整定义见 plan/04 §SQLite 过程数据库)
 
 ### 触发时机
 
@@ -529,7 +529,7 @@ async function maybePruneOldToolRuns(projectId: string) {
 
 prune 删原始 JSON 后, 仅保留 summary。**用户在 SettingsDialog "已修剪 Tool 输出"页面可以看摘要**, 但原 JSON 找不回。这与 chapter.md 是反的 (chapter.md 走 git, 永远可恢复)。
 
-理由: tool 输出本质是中间产物, 用户审阅闸门 (ApprovalCard) 已经保证了正确性, 留全文只是"未来可能要 debug" — POC 阶段不为这个保留几十倍存储。
+理由: tool 输出本质是中间产物, 用户审阅闸门 (ApprovalCard) 已经保证了正确性, 留全文只是"未来可能要 debug" — 不为这个保留几十倍存储。
 
 ## 跨进程恢复实操
 
@@ -608,7 +608,7 @@ systemPrompt = baseSystemPrompt + `\n\n## 已学到的偏好 (项目级)\n${lear
 
 注入的不是 mastra Memory thread 的一部分,所以**不持久化到 messages**;每次装配重新拼,反映最新的 learnings 状态。
 
-## semantic recall 何时打开 (W11 评估)
+## semantic recall 何时打开
 
 打开条件 (任一):
 
@@ -638,10 +638,10 @@ describe('mastra memory', () => {
 
 ## 不解决的问题 / 待办
 
-- **Mastra Memory schema 真实表名以 1.4.x sdk 为准**: spec/00 audit 里再核对一次,本节按逻辑视图描述
+- **Mastra Memory schema 真实表名以 1.4.x sdk 为准**
 - **compressed_messages 的搜索**: 现在 `LIKE '%林溪%'` naïve;若 entity 多可加 FTS5
 - **W11 时 semantic recall 与 paragraph_embeddings 的 embedding 复用边界**: 同 provider 但不同 namespace
 - **多用户共享 thread**: 不支持 (plan/12 §不解决)
-- **DeepSeek prompt cache 实查 (spec/00 §H)**: cache_control 字段未确认服务端识别, 本节 §3 cache_control 标记策略在 W3 实施前必须 verify; 若不支持降级为仅头部稳定排布
-- **Mastra middleware 暴露口子 (spec/00 §I)**: deepseekMiddleware 假设 Mastra 接受 wrapLanguageModel 包装; 若不接受 fallback = 绕过 Mastra Agent 直接用 streamText / generateObject, 这条决策定下来后再回写本节
-- **volume_summarizer 的"用户改设定后摘要过时"边界**: 若用户在 ch_050 时回头改 ch_010 的设定, 现存 volume_summary 中那段已锚的状态可能不准。当前策略: 检测到 setting cascade 跨过 summary 范围时自动 invalidate 该 summary 并重生成 (W11 评估精确策略)
+- **DeepSeek prompt cache 字段** (spec/00 §H): cache_control 字段服务端识别情况未定; 若不支持降级为仅头部稳定排布
+- **Mastra middleware 暴露口子** (spec/00 §I): deepseekMiddleware 假设 Mastra 接受 wrapLanguageModel 包装; 若不接受则绕过 Mastra Agent 直接用 streamText / generateObject
+- **volume_summarizer 的"用户改设定后摘要过时"边界**: 若用户在 ch_050 时回头改 ch_010 的设定, 现存 volume_summary 中那段已锚的状态可能不准。策略: 检测到 setting cascade 跨过 summary 范围时自动 invalidate 该 summary 并重生成

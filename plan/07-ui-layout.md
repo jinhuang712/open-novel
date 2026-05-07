@@ -124,7 +124,7 @@
 - "重新生成" / "重新生成上一段"
 - **`await_approval` 状态下 disabled** (灰显 + tooltip),用户必须先审批或取消才能继续
 
-### 长任务进度条 (审计补)
+### 长任务进度条
 
 ChatBox 顶部 mode toggle 下方,**当 server 推 progress 事件时**显示一条进度条:
 
@@ -160,7 +160,7 @@ ChatBox 顶部 mode toggle 下方,**当 server 推 progress 事件时**显示一
 3. ⌨️ **快捷键** (🌐)
 4. 🎨 **风格定制** (📂)
 5. 👥 **读者仿真器** (📂) ← 战略升级 002 引入
-6. 🌐 **联网** (🌐,POC 灰显)
+6. 🌐 **联网** (🌐,当前灰显)
 7. 💾 **数据管理** (🌐 + 📂)
 8. ℹ️ **关于**
 
@@ -181,20 +181,23 @@ ChatBox 顶部 mode toggle 下方,**当 server 推 progress 事件时**显示一
 
 最常用速览:
 
-| 快捷键 | 上下文 | 功能 |
-|---|---|---|
+| 快捷键 | 上下文 | 功能                                     |
+|---|---|----------------------------------------|
 | `Tab` | ChatBox | **切换 Agent 模式 (discuss/plan/write 循环)** |
-| `Shift+Tab` | ChatBox | 反向切换 |
-| `Cmd+Enter` | ChatBox | 发送 |
-| `Cmd+Shift+P` / `F1` | 全局 | 命令面板 (fuzzy 搜所有命令) |
-| `Cmd+P` | 全局 | 快速打开文件 |
-| `Cmd+,` | 全局 | 打开 Settings |
-| `Cmd+B` / `Cmd+J` / `Cmd+\`` | 全局 | 折叠 FileTree / 右侧 Panel / Console |
-| `Cmd+1`~`5` | 全局 | 切 ActivityBar 项 |
-| `F12` | Editor | Goto Definition |
-| `Cmd+K` | Editor | 框选时唤起 AI inline 改写 |
-| `Y` / `N` / `E` | Approval | 同意 / 拒绝 / 编辑后同意 |
-| `Esc` | 全局 | 关闭最顶层浮层 (硬约束,不可改) |
+| `Cmd+Enter` | ChatBox | 发送                                     |
+| `Cmd+Shift+P` / `F1` | 全局 | 命令面板 (fuzzy 搜所有命令)                     |
+| `Cmd+P` | 全局 | 快速打开文件                                 |
+| `Cmd+,` | 全局 | 打开 Settings                            |
+| `Cmd+B` / `Cmd+J` / `Cmd+\`` | 全局 | 折叠 FileTree / 右侧 Panel / Console       |
+| `Cmd+1`~`5` | 全局 | 切 ActivityBar 项                        |
+| `F12` | Editor | Goto Definition                        |
+| `Cmd+K` | Editor | 框选时唤起 AI inline 改写                     |
+| `Y` / `N` / `E` | Approval | 同意 / 拒绝 / 编辑后同意                        |
+| `Esc` | 全局 | 关闭最顶层浮层 (硬约束,不可改)                      |
+
+### Agent 询问用户的快捷选项 (待评估扩展)
+
+当 Agent 在 cascade 中需要用户决断时 (例: 主角是否写死 / 选 A 或 B 设定路线),除了点选,数字键 `1`/`2`/`3` 可对应选项 1/2/3 — 让键盘流用户不离手。本扩展点的具体 UI 形态在 ApprovalCard 决议方式定稿后回写 spec/06 + spec/12。
 
 ## 初次启动流程
 

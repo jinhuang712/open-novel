@@ -1,6 +1,6 @@
 # Spec 06 — 审批流 (Human-in-the-Loop)
 
-> ⚠ **审计修正**: 早期版本假设 `tool({ needsApproval: true })` 是 AI SDK 6 一等字段。**spec/00-version-audit 实查后再确认**。本文档下文按 **Vercel AI SDK 6 HITL cookbook 标准链路** 重写,如 audit 发现 SDK 真有 `needsApproval` 字段且行为一致,本节仍兼容(差异仅在工具定义处加不加字段);如 cookbook 是唯一路径,则 spec/02 的 `needsApproval: true` 字段需统一删除。
+> 本文档按 Vercel AI SDK 6 HITL cookbook 模式 (`onToolCall` + `addToolResult`) 设计。spec/00 §B 实查 SDK 是否有 `needsApproval` 一等字段后,工具定义处加 / 不加字段两种形态都兼容。
 
 ## 设计
 
@@ -98,7 +98,7 @@ export const writeSettingProposal = tool({
 **`approvals` 表 schema 升级** (在 spec/01 既有 schema 上加):
 ```sql
 ALTER TABLE approvals ADD COLUMN change_set TEXT;       -- JSON,含 main + cascade[] + graph + metadata
-ALTER TABLE approvals ADD COLUMN parent_approval_id INTEGER;  -- 二期: 跨多次审批的链路 (POC 单 ApprovalCard 整批,无需用)
+ALTER TABLE approvals ADD COLUMN parent_approval_id INTEGER;  -- 二期: 跨多次审批的链路 (当前 ApprovalCard 整批,无需用)
 ```
 旧 `payload` / `diff` / `cascade` 列保留兼容(读取时 fallback);新逻辑全用 `change_set`。
 
@@ -302,7 +302,7 @@ export function ApprovalCard({ proposal }: { proposal: ApprovalProposal }) {
         )
       })}
 
-      {/* 五大守则风险报告 (T5 新增, spec/25) */}
+      {/* 五大守则风险报告 (spec/25) */}
       {proposal.cardinalRulesReport && (
         <CardinalRulesReportPanel
           report={proposal.cardinalRulesReport}
@@ -603,7 +603,7 @@ UI 路径: Settings → 审批历史 → 选某条 → "回退"。
 - **原子写盘** — `fs.writeFile(path + '.tmp')` + `fs.rename` 避免半截内容;db.history.insert 在同一 transaction
 - **AbortSignal 检查** — execute 内每次进 fs/db 操作前 `if (signal.aborted) return earlyExit()`,但**不中断**已开始的 fs.rename (单步原子操作);step 级粒度的取消
 
-## Validator-Writer doom-loop 检测 (T6 — 借鉴 opencode `processor.ts:351-374`)
+## Validator-Writer doom-loop 检测 (借鉴 opencode `processor.ts:351-374`)
 
 > **问题场景**: 用户开启自动 cascade (write 模式 → Writer 写 → Checker / Validator / ReaderPanel 跑 → Validator 拒绝 → Writer 重生成 → Validator 又拒绝 → ...). 如果 Writer 反复给出几乎相同的输出 (LLM 没真正吸收 Validator 的反馈), 就会无限循环烧 token, 用户在前端看到的只是"还在生成"。
 
@@ -614,7 +614,7 @@ opencode 处理类似情况 (`processor.ts:351-374`): 检测最近 N 个 tool ca
 ```ts
 // lib/agents/doom-loop-detector.ts
 const DOOM_LOOP_THRESHOLD = 3
-const SIMILARITY_THRESHOLD = 0.9    // 经验值, W3+ 实测调整
+const SIMILARITY_THRESHOLD = 0.9    // 经验值,可基于实测调整
 
 export class DoomLoopDetector {
   private recentWriterOutputs: { chapterId: string; text: string; rejectReason: string }[] = []
@@ -659,8 +659,8 @@ export class DoomLoopDetector {
 ```
 
 `computePairwiseSimilarity` 用简化策略:
-- 去除空白和标点后做 character-level Jaccard 相似度 (POC 阶段够; 二期可换 BGE-M3 embedding 余弦相似度)
-- 阈值 0.9 是经验值, W3+ 真跑起来后视实测调整
+- 去除空白和标点后做 character-level Jaccard 相似度 (二期可换 BGE-M3 embedding 余弦相似度)
+- 阈值 0.9 是经验值,实测后再调整
 
 ### 升级到用户的 UI 表现
 

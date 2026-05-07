@@ -2,7 +2,7 @@
 
 所有 Prompt 存放在 `lib/prompts/{agent}.md`,启动时载入。Prompt 中用 `{{var}}` 表示变量替换 (运行时由 prompt loader 注入)。
 
-## 两段式拼装: stable header + dynamic body (T7 — 借鉴 opencode prompt cache)
+## 两段式拼装: stable header + dynamic body (借鉴 opencode prompt cache)
 
 > opencode 主动让 system prompt 头部不变以命中 anthropic / openai cache (`session/llm.ts:124-128`)。我们借同一思路: 每个 agent prompt **拆为两段**, 配合 spec/22 §DeepSeek 适配 middleware §3 cache_control 标记策略, 让 stable 段稳定命中 prompt cache (依赖 spec/00 §H verify)。
 
@@ -27,7 +27,7 @@ system message[1] = dynamic body (本次调用拼装, 不标 cache_control)
 - system[1] **不标** (中段动态)
 - messages 末尾 2 条 (最近一次 user + assistant) 标 `cache_control` (借 opencode pattern)
 
-**为什么 system[1] 也算"前段中的第 2 段不标"**: opencode 标前 2 段 system, 因为 anthropic / openrouter / kimi 等的 cache 在大多数场景下两段头部都能稳定。我们的 system[1] 是 **per-call dynamic**, 标了反而每次都 cache miss + 浪费配额。**选择只标 system[0]**, 配合 messages 末尾 2 条, 总共 3 段而非 4 段。
+**为什么 system[1] 也算"前段中的第 2 段不标"**: opencode 标前 2 段 system,因为 anthropic / openrouter / kimi 等的 cache 在大多数场景下两段头部都能稳定。我们的 system[1] 是 **per-call dynamic**,标了反而每次都 cache miss + 浪费配额。**只标 system[0]**,配合 messages 末尾 2 条,总共 3 段而非 4 段。
 
 **stable header 不变量** (动态内容禁止进入 system[0]):
 - ❌ 不放当前 chapterId / sessionId / 时间戳
@@ -48,11 +48,11 @@ system message[1] = dynamic body (本次调用拼装, 不标 cache_control)
 [4. 用户偏好经验注入 (来自 learnings 表)]      — dynamic
 [5. Agent 专用指令]                          — dynamic
 [6. 工具调用约束]                            — dynamic
-[7. 不可信内容围栏 (强制 — 审计补)]            — stable
+[7. 不可信内容围栏 (强制)]                     — stable
 [8. 输出形态声明 (JSON mode 或 自然语言)]      — stable
 ```
 
-### 公共片段 8: 输出形态 (T5 新增)
+### 公共片段 8: 输出形态
 
 > 详见 [spec/24-json-output.md](./24-json-output.md)。
 

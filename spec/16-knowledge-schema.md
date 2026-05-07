@@ -39,7 +39,7 @@ CREATE INDEX idx_rel_active ON entity_relations(source_id, since_chapter, until_
 
 ### kind 枚举 (开放扩展)
 
-POC 内置 17 种,自由扩展走 `metadata` 字段:
+内置 17 种,自由扩展走 `metadata` 字段:
 
 | 类别 | kind 列表 |
 |---|---|
@@ -101,7 +101,7 @@ CREATE INDEX idx_tl_validity ON entity_timeline(entity_id, valid_from_chapter, v
 | `social_rank` | string | `commoner` / `executive` / `boss` |
 | `key_possession` | entity_id (item) JSON list | `["item_pocket_watch_x1y2"]` |
 
-attribute 集合 POC 内置以上 9 类,扩展通过 `metadata` JSON 字段(后续可加列)。
+attribute 集合内置以上 9 类,扩展通过 `metadata` JSON 字段(后续可加列)。
 
 ### 关键查询模式
 
@@ -122,7 +122,7 @@ reindex Worker 推断:
 1. 若 character.md frontmatter `initial_state.age = 28` + worldview `era = 现代-2010` + 章节 ch_050 内出现"三年后林川生日"→ 自动写入 `(lin, age, 31, ch_050, ch_???, source=narrative, confidence=70)` 一行,UI 标 "待确认"
 2. 若 章节 ch_010 § 3 出现"林川走出北京站"→ 推断 `(lin, location, place_beijing, ch_010, ch_???, source=narrative, confidence=75)`
 
-二期可加 LLM 主动扫描 narrative 推断时间轴。POC 阶段:作者在 character.md 显式声明 (frontmatter `initial_state` + 用户编辑 timeline 注解) 为主路径,narrative 推断为辅路径。
+二期可加 LLM 主动扫描 narrative 推断时间轴。当前:作者在 character.md 显式声明 (frontmatter `initial_state` + 用户编辑 timeline 注解) 为主路径,narrative 推断为辅路径。
 
 ## 表 3 — concepts
 
@@ -228,8 +228,8 @@ CREATE INDEX idx_cref_violations ON concept_refs(is_violation) WHERE is_violatio
 reindex 时按 concept.semantic 判:
 - `absent` → 任何命中 = violation
 - `present` → 0 violation (只是引用)
-- `restricted` → 配合上下文 LLM 判 (POC 简化为 0,二期接 LLM)
-- `mandatory` / `unique` → 上下文 LLM 判 (POC 简化为 0)
+- `restricted` → 配合上下文 LLM 判 (当前简化为 0,二期接 LLM)
+- `mandatory` / `unique` → 上下文 LLM 判 (当前简化为 0)
 
 violation = 1 的行让 Validator cascade 自动捞起来重写。
 
@@ -305,7 +305,7 @@ type ForeshadowingMetadata = {
 - `major`: 主线相关承诺,deadline 接近无推进 → warn
 - `minor`: 一般伏笔,deadline 不强约束
 
-**lint 增强** (POC 阶段实现):
+**lint 增强**:
 
 - `kind='foreshadowing'/'promise'` 且 `weight='critical'` 且 `deadline_chapter < current_chapter` 且 `status='pending'` → 写章节时 promiseAccountabilityCheck (spec/25) 标 `blocking=true`
 - 距 deadline ≤ 3 章无 `recently_touched_in` 命中 → warn level (`warn` 守则的 majorpromise / `critical` 守则的 critical promise)
@@ -439,7 +439,7 @@ export const baseSettingFrontmatter = z.object({
 })
 ```
 
-新类型 (faction / organization / item / event / foreshadowing / story-line / chapter-arc) 在 spec/16 各自分段补 schema(POC 阶段先用 baseSettingFrontmatter + 各自 metadata JSON 字段,二期再升级)。
+新类型 (faction / organization / item / event / foreshadowing / story-line / chapter-arc) 在 spec/16 各自分段补 schema(先用 baseSettingFrontmatter + 各自 metadata JSON 字段,二期再升级)。
 
 ## 迁移 (\_schemaVersion 1 → 2)
 

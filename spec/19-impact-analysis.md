@@ -147,7 +147,6 @@ export async function extractSemanticDelta(
 
 ### LLM 介入策略
 
-POC 阶段:
 - frontmatter / relations / initial_state diff: **不调 LLM**,纯结构化 diff
 - 正文 → concepts diff: **调 LLM Flash**(必要,因为概念是从自然语言抽出来的)
 - 正文 → paragraph diff: 不调 LLM(用 anchor diff)
@@ -328,9 +327,9 @@ db.function('chapter_within_range', chapter_within_range)
 - `weight = 100` 必查(直接 entity 提及 / 同段 relation / 概念表面词命中)
 - `weight = 70-95` 高优先(关系上下游 / dependencies / timeline 区间)
 - `weight = 30-70` 中优先(语义相关)
-- `weight < 30` POC 阶段不进入 LLM filter(降本)
+- `weight < 30` 不进入 LLM filter(降本)
 
-LLM filter 的输入按 weight 降序,**最多 50 个候选段**(POC 上限,防止 LLM 过载)。超出的按 weight 排序后裁剪,UI 提示"还有 X 段未审"。
+LLM filter 的输入按 weight 降序,**最多 50 个候选段**(防止 LLM 过载)。超出的按 weight 排序后裁剪,UI 提示"还有 X 段未审"。
 
 ## Step 3 — LLM 二次过滤
 

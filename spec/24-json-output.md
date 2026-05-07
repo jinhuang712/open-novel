@@ -300,13 +300,13 @@ export const ConceptExtractorOutputSchema = z.object({
 
 **maxTokens**: 4K
 
-## DeepSeek middleware 集成 (T5 — 借鉴 opencode `session/llm.ts:391-405`)
+## DeepSeek middleware 集成 (借鉴 opencode `session/llm.ts:391-405`)
 
 > opencode 用 `wrapLanguageModel + transformParams middleware` 注入 DeepSeek round-trip (`provider/transform.ts`), 而不是在每个 agent 调用里 if-else 处理 reasoning_content / cache_control。**我们采用同一 pattern**: model 实例本身就是包装好的, callJsonAgent 不感知 DeepSeek 特殊性。
 
 ### 抽象 deepseekMiddleware (定义在 spec/22 §DeepSeek 适配 middleware)
 
-spec/22 T3 已定义 `deepseekMiddleware: LanguageModelV2Middleware`, 负责:
+spec/22 已定义 `deepseekMiddleware: LanguageModelV2Middleware`, 负责:
 
 1. `transformParams` 阶段: 历史 assistant 消息缺 `reasoning_content` 时注入空占位
 2. `transformParams` 阶段: `providerOptions.openaiCompatible.cache_control` 标记 system 前 2 段 + 末尾 2 条 (依赖 spec/00 §H verify)
@@ -338,14 +338,10 @@ export const deepseekFlash = wrapLanguageModel({
 
 callJsonAgent 接受这些包装后的 model 实例, 不再自己处理 DeepSeek 特殊字段。
 
-### fallback (spec/00 §I 验证不通过)
+### 若 Mastra 不接受 wrapLanguageModel 包装
 
-如果 Mastra Agent 不接受 wrapLanguageModel 包装后的 model:
-
-- **方案 A** (优先): callJsonAgent 已经直调 Vercel AI SDK `generateText`, 不走 Mastra Agent。fallback 路径 = 全部走 callJsonAgent (Mastra 仅保留 Memory + Workflow), Writer / Humanizer 这两个 NL 流式 agent 也包一层 callTextAgent (本节扩展) 直接走 streamText。
+- **方案 A** (优先): callJsonAgent 已经直调 Vercel AI SDK `generateText`, 不走 Mastra Agent。路径 = 全部走 callJsonAgent (Mastra 仅保留 Memory + Workflow), Writer / Humanizer 这两个 NL 流式 agent 也包一层 callTextAgent (本节扩展) 直接走 streamText。
 - **方案 B**: 不用 middleware, 在 callJsonAgent 内部手动调 `transformParams` 等价逻辑, 每次调用前修改 messages。
-
-最终选哪条 W3 实施前回写本节。
 
 ## 失败处理 (统一 retry 策略)
 
@@ -463,8 +459,6 @@ spec/03 各 Agent 的 system prompt 模板**必须包含**:
 - JSON 格式时,示例 JSON + "请只输出 JSON 对象,不要 markdown 代码块,不要前后说明"
 - 自然语言时,正常 prompt
 
-spec/03 在 T5 commit 同步落地。
-
 ## 测试 (与 spec/14 对齐)
 
 ```ts
@@ -481,6 +475,6 @@ describe('json output spec', () => {
 
 ## 不解决的问题 / 待办
 
-- **Streaming 中实时校验中间 JSON**: 目前是流完再 parse;若需要实时(如 ReaderPanel persona 一个一个出),需要 incremental JSON parser (e.g. partial-json) — POC 不做
-- **schema 自动估算 maxTokens**: 现在手填,有遗漏风险;后续可写一个 `estimateMaxTokensFromSchema(schema)` 工具,W11 看
+- **Streaming 中实时校验中间 JSON**: 目前是流完再 parse;若需要实时(如 ReaderPanel persona 一个一个出),需要 incremental JSON parser (e.g. partial-json) — 当前不做
+- **schema 自动估算 maxTokens**: 现在手填,有遗漏风险;后续可写一个 `estimateMaxTokensFromSchema(schema)` 工具
 - **JSON mode 与 Mastra Memory 的 message 序列化**: Mastra 自动把 assistant content 写进 mastra_messages,JSON 字符串正常存,UI 翻看历史时需要 pretty-print(spec/22 §UI 翻看历史细节)
