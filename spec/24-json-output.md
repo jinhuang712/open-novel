@@ -300,22 +300,70 @@ export const ConceptExtractorOutputSchema = z.object({
 
 **maxTokens**: 4K
 
+## DeepSeek middleware 集成 (T5 — 借鉴 opencode `session/llm.ts:391-405`)
+
+> opencode 用 `wrapLanguageModel + transformParams middleware` 注入 DeepSeek round-trip (`provider/transform.ts`), 而不是在每个 agent 调用里 if-else 处理 reasoning_content / cache_control。**我们采用同一 pattern**: model 实例本身就是包装好的, callJsonAgent 不感知 DeepSeek 特殊性。
+
+### 抽象 deepseekMiddleware (定义在 spec/22 §DeepSeek 适配 middleware)
+
+spec/22 T3 已定义 `deepseekMiddleware: LanguageModelV2Middleware`, 负责:
+
+1. `transformParams` 阶段: 历史 assistant 消息缺 `reasoning_content` 时注入空占位
+2. `transformParams` 阶段: `providerOptions.openaiCompatible.cache_control` 标记 system 前 2 段 + 末尾 2 条 (依赖 spec/00 §H verify)
+
+### 各 model 实例统一包装
+
+```ts
+// lib/agents/llm.ts
+import { wrapLanguageModel } from 'ai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import { deepseekMiddleware } from './deepseek-middleware'   // spec/22
+
+const deepseek = createOpenAICompatible({
+  name: 'deepseek',
+  apiKey: process.env.DEEPSEEK_API_KEY!,
+  baseURL: 'https://api.deepseek.com/v1',
+})
+
+export const deepseekProMax = wrapLanguageModel({
+  model: deepseek.languageModel('deepseek-v4-pro'),
+  middleware: [deepseekMiddleware],
+})
+
+export const deepseekFlash = wrapLanguageModel({
+  model: deepseek.languageModel('deepseek-v4-flash'),
+  middleware: [deepseekMiddleware],
+})
+```
+
+callJsonAgent 接受这些包装后的 model 实例, 不再自己处理 DeepSeek 特殊字段。
+
+### fallback (spec/00 §I 验证不通过)
+
+如果 Mastra Agent 不接受 wrapLanguageModel 包装后的 model:
+
+- **方案 A** (优先): callJsonAgent 已经直调 Vercel AI SDK `generateText`, 不走 Mastra Agent。fallback 路径 = 全部走 callJsonAgent (Mastra 仅保留 Memory + Workflow), Writer / Humanizer 这两个 NL 流式 agent 也包一层 callTextAgent (本节扩展) 直接走 streamText。
+- **方案 B**: 不用 middleware, 在 callJsonAgent 内部手动调 `transformParams` 等价逻辑, 每次调用前修改 messages。
+
+最终选哪条 W3 实施前回写本节。
+
 ## 失败处理 (统一 retry 策略)
 
 ```ts
 // lib/agents/json-output.ts
 export async function callJsonAgent<T>({
-  model, messages, schema, maxTokens, label,
+  model, messages, schema, maxTokens, label, threadId,
 }: {
-  model: LanguageModel
+  model: LanguageModel                             // 已经是 wrapLanguageModel 包装后的实例
   messages: ModelMessage[]
   schema: z.ZodSchema<T>
   maxTokens: number
   label: string                                    // 用于 trace / 错误信息
+  threadId?: string                                // 可选 — 续 thread (subagent task_id 续跑模式, 借 opencode tool/task.ts)
 }): Promise<T> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     const result = await generateText({
-      model,
+      model,                                       // wrapLanguageModel 已注入 deepseekMiddleware
       messages: attempt === 1 ? messages : [
         ...messages,
         { role: 'user', content: '上次返回不合法或为空,请确保返回**非空**且**字段完整**的 JSON 对象,严格符合示例结构。' },
