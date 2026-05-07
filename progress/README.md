@@ -56,5 +56,6 @@ NNN-{slug}.md
 | 003 | UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计 | 2026-04-30 | 跨期 (W2-W3) | (本期 docs commit) | (W2/W3 收尾各自) |
 | 004 | 文档审计加固 (9 严重 + 23 中等 + 3 新 spec + drift 修正) | 2026-04-30 | 跨期 (W2 末尾,W3 启动前必清) | (本期 docs commit) | (W3 day-1 跑 spec/00 后追加) |
 | 005 | 知识图谱专攻 (cascade + RAG 真正可工作的地基: 1 plan + 6 spec + 5 同步;W7-W10 重排) | 2026-05-06 | 跨期 (W2 末尾,W7-W10 落地前) | (本期 docs commit) | (W10 收尾) |
+| 006 | 记忆 / 上下文 / JSON 输出 / 五大守则 一致性优先重设计 (5 反馈点 → 6 commit tree: T1-T6;1 plan + 5 新 spec + 14 同步) | 2026-05-06 | 跨期 (W2 末尾,W3-W11 落地前) | `5c6f8a7` (T1) → 本批末 (T6) | (W11 收尾) |
 
 (后续每条 entry 自动追加到此表)
