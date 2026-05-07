@@ -310,6 +310,131 @@ export const readApprovalHistory = tool({
 
 **不允许 silent fallback**: 2 次 retry 仍败 → 抛 `JsonOutputError` escalate 给用户 (toast + 折叠区显示原文 + 重试按钮)。silent fallback 会导致 cascade 漏审、概念抽取漏 entity,直接破坏一致性。
 
+## 工具输出长度截断与本地缓存 (T4 — 借鉴 opencode `tool/tool.ts:110-123`)
+
+> **问题**: Checker / Validator / ReaderPanel 等 cascade subagent 单次调用产出的 JSON 可能 5KB-50KB+ (impact 候选 + cardinalRulesReport.findings + 5 persona naturalLanguageReaction 全文等)。这些原始 JSON 全塞回上下文是浪费 — Writer 重生成时不需要"persona 张三在第 47 章那条 100 字的吐槽原文", 只需要"persona 张三对本章 dropoffRisk=0.7"。
+
+**对策** (借 opencode `Truncate.GLOB` 模式): tool execute 完成后, 若输出 string size 超 `TOOL_OUTPUT_MAX_CHARS = 2000`, 自动写到 `~/.open-novel/workspaces/{projectId}/_tool_cache/{toolCallId}.json`, 返回值里只放摘要 + 路径占位。
+
+### 实现
+
+```ts
+// lib/tools/truncate.ts
+export const TOOL_OUTPUT_MAX_CHARS = 2000
+
+export async function truncateToolOutput(
+  projectId: string,
+  toolCallId: string,
+  output: string,
+  summarize: (full: string) => string,    // 调用方提供"如何摘要"的策略
+): Promise<{ output: string; cachePath?: string; truncated: boolean }> {
+  if (output.length <= TOOL_OUTPUT_MAX_CHARS) {
+    return { output, truncated: false }
+  }
+  const cacheDir = path.join(workspaceRoot(projectId), '_tool_cache')
+  await fs.mkdir(cacheDir, { recursive: true })
+  const cachePath = path.join(cacheDir, `${toolCallId}.json`)
+  await fs.writeFile(cachePath, output, 'utf8')
+
+  const summary = summarize(output)        // 例如取 cardinalRulesReport.summary + dropoffRisk + counts
+  const truncated = [
+    summary,
+    '',
+    `[TRUNCATED] 原始输出 ${output.length} 字符已写入 ${cachePath}`,
+    `用户可在 SettingsDialog "Tool 输出缓存" 页查看, 也可用 readToolCache(toolCallId) 工具读取`,
+  ].join('\n')
+
+  return { output: truncated, cachePath, truncated: true }
+}
+```
+
+### 各 cascade tool 的 summarize 策略
+
+| Tool | summarize() 保留字段 |
+|---|---|
+| Checker (BeatAnalyzer) | `rhythmScore` + `flagsForAuthor[].kind` 列表 + `cardinalRulesReport.summary` |
+| Validator | `contradictions[].kind+entityRef` 列表 + `arcs.findings.count` + `cardinalRulesReport.summary` |
+| ReaderPanel (5 persona 合并输出) | 每 persona: `dropoffRisk` + `cardinalRulesFlags.length` + 第 1 条 reaction 的 30 字摘要 |
+| ArcTracker | `findings.length` + 最严重 1 条 (`severity=critical` 优先) |
+| analyzeImpact | candidate count + 命中文件 path 列表 |
+
+### 与 spec/22 prune 老章节 tool 输出 的关系
+
+- **truncate** = tool 调用**当下**的截断 (输出 > 2KB 立即处理), 写本地缓存
+- **prune** = 章节落盘 N 周后的**进一步**清理 (10 章后只保 cardinalRulesReport.summary, 30 章后只保 1 句话)
+
+prune 触发时把 `_tool_cache/{toolCallId}.json` 缓存文件**真删** (`fs.unlink`), 因为 30 章前的原文已经体现在 volume_summary 里。
+
+### 永久保留集 (PRUNE_PROTECTED_TOOLS 对应)
+
+下列 tool 的输出**永远不 truncate, 不 prune**:
+
+- `volumeSummary` (T3 卷级摘要本身, 是后续生成的根锚)
+- `cardinalRulesReport.summary` (一句话级别, 本来也不会超 2KB)
+
+(对应 opencode `compaction.ts:39` `PRUNE_PROTECTED_TOOLS = ["skill"]`)
+
+## Hidden 内部 Agent (T4 — 借鉴 opencode `agent/agent.ts:190-235` 的 hidden=true)
+
+> opencode 把 `compaction` / `title` / `summary` 这种内部任务也实现为独立 hidden agent (`agent/agent.ts` 内置 7 个 agent 中后 3 个 `hidden: true`), 复用主 processor。我们 Reflector 已经是这个味道, 但还有几个零碎的内部 LLM 调用 (章节标题候选 / 章节摘要 / 卷级摘要 / 封面元信息) 散落在 helper 函数里 — 统一封装为 hidden agent 后一致性更好, 也方便后续插件覆写 prompt。
+
+### Hidden agent 列表 (POC + W3-W11 阶段)
+
+| 名称 | 触发 | 输入 | 输出 (zod schema, spec/24) | 模型 + reasoningEffort |
+|---|---|---|---|---|
+| `chapter-title` | Writer 章节落盘前, 候选 3-5 个标题 | 本章 outline + 上一章末段 + 全章节标题列表 | `ChapterTitleCandidatesSchema` (5 候选 + 1 默认推荐) | Flash + default |
+| `chapter-summary` | 章节落盘后, 写入 chapter.md frontmatter `summary` 字段 | 本章正文 | `ChapterSummarySchema` (200-400 字摘要 + 关键事件列表) | Flash + default |
+| `volume-summarizer` | spec/22 §卷级锚定摘要 触发条件满足 | 上一份 volume_summary + 新章节 chapter_summaries | `VolumeSummarySchema` (9 段固定结构) | Flash + default |
+| `cover-meta` | 用户首次完成第一卷或主动要求 | worldview.md + 主线 character.md + 本卷 volume_summary | `CoverMetaSchema` (slogan + tagline + 关键词 + 推荐分类) | Flash + default |
+| `compaction` (旧 compressOldMessages) | spec/22 §可选历史压缩 启用 + > 60 条 messages | mastra_messages 旧批次 | `CompressionSummarySchema` (spec/22) | Flash + default |
+| `reflection` (= 现 Reflector) | 用户 approve / reject 后 cascade 末 | approval history 单批 | `ReflectionOutputSchema` (spec/24) | Flash + default |
+
+**全部走 Flash + default**: 这些都是输出短的辅助任务, 不是创作核心。Reflector 例外? 否, Reflector 是从 cascade 反馈学经验, 短摘要级 — Flash + default 够。
+
+### 实现统一封装
+
+```ts
+// lib/agents/hidden/index.ts
+export type HiddenAgentName =
+  | 'chapter-title'
+  | 'chapter-summary'
+  | 'volume-summarizer'
+  | 'cover-meta'
+  | 'compaction'
+  | 'reflection'
+
+export const HIDDEN_AGENT_REGISTRY: Record<HiddenAgentName, {
+  systemPrompt: string                                  // 模板, 引用自 spec/03
+  schema: z.ZodSchema                                   // spec/24 zod
+  model: 'flash'
+  maxTokens: number
+}> = { /* ... */ }
+
+export async function runHiddenAgent<N extends HiddenAgentName>(
+  name: N,
+  input: HiddenAgentInput[N],
+  ctx: { projectId: string; threadId?: string },
+): Promise<HiddenAgentOutput[N]> {
+  const cfg = HIDDEN_AGENT_REGISTRY[name]
+  return callJsonAgent({                                // spec/24
+    label: `hidden:${name}`,
+    model: deepseekFlash,
+    schema: cfg.schema,
+    maxTokens: cfg.maxTokens,
+    messages: buildMessages(cfg.systemPrompt, input),
+    threadId: ctx.threadId,                             // 可续 thread (subagent task_id 续跑模式, 借 opencode tool/task.ts)
+  })
+}
+```
+
+### 与 plan/02 §Agent 总览 的关系
+
+plan/02 总览只列 7 个 user-facing agent (Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel), **不列 hidden**。hidden 在 spec/02 维护, 是实现细节。借 opencode 把"压缩对话"也叫 agent 的设计哲学: 但 hidden 不进 SettingsDialog 模型覆盖列表, 不在 ApprovalCard 显示作者, 默认行为对用户透明。
+
+### Reflector 现状重命名
+
+`Reflector` (现 plan/02 总览第 5 个) 与 hidden `reflection` 是同一个东西。一致性起见, **保留 Reflector 名 (user-facing 习惯), 但实现归到 HIDDEN_AGENT_REGISTRY['reflection']**, plan/02 表里 Reflector 仍显示。这是命名层 vs 实现层的解耦, 不冲突。
+
 ## 模式约束
 
 Router 在每次调用前 assert `(agent, mode, tool)` 三元组合法:
