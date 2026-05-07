@@ -541,8 +541,8 @@ Writer 在生成正文时:
 | `assemble-context-fallback.test.ts` | 集成 | 各种降级场景 |
 | `assemble-context-bench.bench.ts` | bench | 三档规模性能,W9 末填表 |
 
-## 待决策项
+## 已决策项 (T8 关闭)
 
-⏳ **token 计数策略**:`@dqbd/tiktoken` (准确,~3MB 二进制) vs 简化估算 (text.length / 1.5,误差 10-15%) — 影响 budget 准确度。POC 先用估算,二期可换。
+✅ **token 计数策略**: POC 用 **简化估算 (text.length / 1.5, 误差 10-15%)**。理由 = DeepSeek V4 1M ctx 下 budget 精度容忍度高 (T3 一致性优先, 不做 token budget 控制); `@dqbd/tiktoken` 二进制 ~3MB 但 DeepSeek tokenizer 真实精度未知 (spec/00 待 verify), 装了也不一定准。**W11 评估**: 若 prune / volume_summary 触发频次明显与估算偏离, 切 tiktoken。
 
-⏳ **Worldview retrieve 升级**:POC 简化为全 `_index.md + rules.md`;二期按 entity locations / category 智能选择子文件。
+✅ **Worldview retrieve 升级**: POC 简化为全 `_index.md + rules.md`。理由 = 1M ctx 下整个 worldview 通常 < 50K token, 全量喂入不挤压上下文; "智能选择子文件"会引入新错误源 (选错文件 = 漏看关键世界观 = 一致性破)。**W11 评估**: 若 worldview 真扩到 > 200K token (大世界观奇幻 / 修仙长篇), 再做 entity locations / category 选择, 但触发条件是规模而非性能。

@@ -28,12 +28,16 @@ CREATE INDEX idx_emb_model ON paragraph_embeddings(model_name);
 
 embedding BLOB 存储格式:F32 little-endian 数组,直接 buffer dump。读时 `new Float32Array(buffer)` 还原。
 
-## 选型对比 (待用户决策)
+## 选型对比 (T8 决议: BGE-M3 本地)
 
-| 维度 | BGE-M3 (本地) | DeepSeek Embedding | OpenAI text-embedding-3-small |
+> **决议** (.claude/plans/reactive-hatching-flute.md §七 T8): POC 锁 **BGE-M3 本地**。理由 = 0 边际成本 (重算自由) + 隐私 (创作隐私是网文作者强诉求) + 中文质量第一 (BAAI 出品)。代价: 启动需 Ollama (~600MB 二进制依赖)。
+>
+> spec/00 §J 仍在 W8 day-1 verify Ollama 当前版稳定性 + transformers.js fallback。如 verify 失败, fallback 顺序 = DeepSeek embedding (复用 API key) → OpenAI text-embedding-3-small。
+
+| 维度 | BGE-M3 (本地) **← 选定** | DeepSeek Embedding (fallback 1) | OpenAI text-embedding-3-small (fallback 2) |
 |---|---|---|---|
 | **托管方式** | 本地 (Ollama/llama.cpp/transformers.js) | 云 API | 云 API |
-| **维度** | 1024 | 1536 (待 audit 实查) | 1536 (可 reduce) |
+| **维度** | 1024 | 1536 (W8 spec/00 §J verify) | 1536 (可 reduce) |
 | **中文质量** | ⭐⭐⭐⭐⭐ (北京智源 BAAI 出品,中英多语并优) | ⭐⭐⭐⭐ (DeepSeek 自家中文训练数据) | ⭐⭐⭐ (英文导向) |
 | **首字 token 时延** | < 100ms (本地 GPU) / ~500ms (CPU M1) | ~200ms (云) | ~150ms (云) |
 | **批量速度 (100 段)** | ~3s (M1 CPU) / 0.5s (GPU) | ~2s (依赖网) | ~1.5s |
@@ -43,22 +47,18 @@ embedding BLOB 存储格式:F32 little-endian 数组,直接 buffer dump。读时
 | **隐私** | ✅ 本地 | 中 (DeepSeek 服务器) | 中 (OpenAI 服务器) |
 | **跨模型一致性** | 自家维护,版本可锁 | DeepSeek 升级版本可能不兼容 (POC 已规划 v4 model 闸门) | OpenAI 历史不兼容 (text-embedding-ada → 3 已断 case) |
 
-### 推荐 (待你拍板)
+### 决议依据 (T8)
 
-POC 阶段我倾向 **BGE-M3 本地** 原因:
-1. 0 边际成本 (一次性下载) — 用户的"不担心 token"指令对生成模型有效,但 embedding 量级高得多 (5 万段 × 200 字 = 1000 万 tokens,跑一次)。本地无成本,可任意全量重算
+POC 阶段锁 **BGE-M3 本地**, 理由:
+1. 0 边际成本 (一次性下载) — 用户"不担心 token"对生成模型有效, 但 embedding 量级高得多 (5 万段 × 200 字 = 1000 万 tokens, 跑一次), 重算自由的价值远大于一次性 ~600MB 安装
 2. 隐私 + 离线 — 创作隐私是网文作者强诉求
 3. 中文质量第一 (BAAI 出品)
 
-代价:
-- 增加 ~600MB 二进制依赖
-- 需要 Ollama 或 transformers.js + ONNX
+启动 / 装机指引 (W8 实施):
+- macOS: `brew install ollama && ollama pull bge-m3`
+- Web 端 fallback: transformers.js + ONNX 自动加载 (用户首次启动 ~5min 下载, 后续走浏览器缓存)
 
-如果嫌 ~600MB 太重,**fallback 到 DeepSeek embedding** (云 API,与现有 DeepSeek API key 复用),代价是离线场景失效 + 每次全量 reindex 收费 (1000 章约 $0.5)。
-
-如果 DeepSeek 没开放 embedding API (audit 后确认),**fallback 到 OpenAI text-embedding-3-small** (维度可 reduce 到 512 节省 BLOB 存储)。
-
-**等你拍板再补 spec/00 §embedding model audit 的实查项**。
+W8 spec/00 §J 实查 Ollama 稳定性, 如失败按 §选型对比 fallback 顺序自动降级。
 
 ### model 切换迁移
 
@@ -246,7 +246,7 @@ CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vector_search(
 CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vss0(embedding(1024));
 ```
 
-具体接入哪个取决于 spec/00 §audit 实查 LibSQL 与 sqlite-vss 的可用性。**待用户决策**(与 embedding model 选型同期决定)。
+具体接入哪个取决于 spec/00 §J 实查 LibSQL 与 sqlite-vss 的可用性。**T8 决议**: W8 day-1 优先尝试 LibSQL native vector (`libsql-server > 0.24` + `vector_search` 虚拟表), 兼容 LibSQL 单文件结构; 若当前 `@mastra/libsql` 不带, 降级到 sqlite-vss extension (sidecar load_extension)。两者都失败再降级到朴素 cosine (5K 段以下能跑)。
 
 ### 3. 检索结果鲁棒性
 
@@ -298,10 +298,10 @@ anchor added     → reembedAnchor
 | `embedding-fallback.test.ts` | 集成 | provider 不可用时所有调用方降级,不抛 |
 | `embedding-bench.bench.ts` | bench | 5K / 20K 段规模朴素 cosine 耗时;W8 末填表 |
 
-## 待决策项 (用户侧)
+## 已决策项 (T8 关闭)
 
-⏳ **embedding 模型选型**:BGE-M3 本地 / DeepSeek 云 / OpenAI 云 — 见 §选型对比 表
-⏳ **vector 索引升级路径**:sqlite-vss vs LibSQL native vector — 待 spec/00 实查后决定
-⏳ **embedding model 升级时的全量重算成本上限**:是否设 UI 提示"切换 model 将重算 N 段,预计 X 分钟,确认?" — 设默认阈值 1000 段以上必弹
+✅ **embedding 模型选型**: 锁 **BGE-M3 本地**, fallback 1 = DeepSeek, fallback 2 = OpenAI (见 §选型对比 + §决议依据)
+✅ **vector 索引升级路径**: 优先 LibSQL native vector → sqlite-vss → 朴素 cosine (见 §决议条款 W8 day-1 实施顺序)
+✅ **embedding model 升级时的全量重算成本上限**: 默认阈值 **1000 段以上必弹 UI 提示**, 显示 "切换 model 将重算 N 段, 预计 X 分钟, 确认?"; 1000 段以下静默重算
 
-(对应 plan/11 落地里程碑 W8 之前需关闭这些。)
+(对应 plan/11 落地里程碑 W8 day-1 verify 后立即按本表实施。)
