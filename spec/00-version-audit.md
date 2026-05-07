@@ -80,7 +80,7 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 
 **模型选型守约** (借鉴 opencode `provider/transform.ts:549-561` 的模型差异化处理):
 
-> ❌ **禁止 fallback 到 `deepseek-chat` / `deepseek-reasoner` / `deepseek-r1` / `deepseek-v3`** — 这些旧模型没有 reasoning effort 控制,也没有 V4 的 `max` variant,与 plan/02 的 `reasoningEffort=max` 设计 (T2) 冲突。一旦 V4 临时不可用,直接 escalate 到用户而非静默回退到 V3/旧版,因为旧模型行为差异会让 cardinal-rules 检测精度劣化。
+> ❌ **禁止 fallback 到 `deepseek-chat` / `deepseek-reasoner` / `deepseek-r1` / `deepseek-v3`** — 这些旧模型没有 reasoning effort 控制,也没有 V4 的 `max` variant,与 plan/02 的混合分档设计 (T2: `v4-pro + max` / `v4-flash + default`) 冲突。一旦 V4 临时不可用,直接 escalate 到用户而非静默回退到 V3/旧版,因为旧模型行为差异会让 cardinal-rules 检测精度劣化。
 
 ### G. DeepSeek JSON 输出模式 ✅ **2026-05-06 实查完成**
 

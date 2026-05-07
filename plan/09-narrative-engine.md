@@ -4,15 +4,15 @@
 
 ## 归属与边界
 
-| 能力 | 归属 Agent | 模型 (reasoningEffort 全 max, 见 plan/02) | 触发面 | 输入规模 |
+| 能力 | 归属 Agent | 模型 + reasoningEffort (见 plan/02 混合分档) | 触发面 | 输入规模 |
 |---|---|---|---|---|
-| **BeatAnalyzer** | Checker | Flash + max | 章节落盘后 (runOnSave) | 单章 |
+| **BeatAnalyzer** | Checker | Flash + default | 章节落盘后 (runOnSave) | 单章 |
 | **ArcTracker** | Validator | Pro + max | 新章节落盘 (runOnNewChapter) + 周期性 (triggerEveryNChapters) | 跨章 + character.md |
 | **结构模板库** | Writer (调用方) | — (静态文件) | Writer 在大纲生成时显式 applyTemplate | — |
 
 ArcTracker 划归 Validator 的原因:
 1. **抽象层次对齐** — Validator 主职是"跨章 / 跨设定的一致性",ArcTracker 的"性格偏离"是软一致性,与事实矛盾同源
-2. **输出长度对齐** — Validator 用 Pro (输出可长), ArcTracker 跨章 cascade 报告也可能很长, 走 Pro 同样合适; reasoningEffort=max 全开后 Flash 也能拿深度推理, 但 Validator 的输出长度需求决定了用 Pro
+2. **模型档对齐** — Validator 用 Pro+max (深度推理 + 长输出), ArcTracker 跨章弧光分析需要同款配置; BeatAnalyzer 章内分析输出短走 Flash+default 即可
 3. **非闸门语义对齐** — Validator 不直接落盘,所有变更经 Writer + needsApproval;ArcTracker 也只产报告供作者参考
 
 ## 为什么要有它

@@ -4,13 +4,13 @@
 
 | Agent | 模型 | mode | reasoningEffort | 主职 | 输出形态 | 可调用工具 | 是否需审批 |
 |---|---|---|---|---|---|---|---|
-| **Router** | Flash | primary | max | 模式分流 + 意图识别 + 子 Agent 编排 | **JSON** (spec/24) | (调用其他 Agent 的子工具) | 否 |
-| **Writer** (吐字) | Pro | primary | max | 生成正文 / 章节概要 / 设定文档 | NL 流式 | readSetting, readChapter, listSettings, writeSetting✓, writeChapter✓, webSearch (mock), applyTemplate | 是 (写操作) |
-| **Checker** (章内审阅) | Flash | subagent | max | 风格 / 流畅 / 章内节奏 + **BeatAnalyzer** + **守则 1/3/5 检测** | **JSON** | readChapter, listSettings, analyzeNarrative, checkPacing | 否 (只读) |
-| **Validator** (跨章一致性) | Pro | subagent | max | 事实矛盾 + cascade 影响 + **ArcTracker** + **守则 2/4 检测** | **JSON** | readSetting, listSettings, readChapter, searchEntities, trackArc, analyzeImpact, checkPromise | 否 (只读,提议变更经 Writer 落盘) |
-| **Reflector** (反思) | Flash | subagent | max | 从用户审批/拒绝中提炼经验 | **JSON** | readApprovalHistory, recordLearning | 否 |
-| **Humanizer** (去 AI 化) | Pro | subagent | max | 长句拆 + 口语化 + 节奏调整 | NL 流式 | readChapter, writeChapter✓ | 是 |
-| **ReaderPanel** (读者仿真) | Flash | subagent | max | 5 persona 并行模拟 + **守则 1/2/3/4/5 综合评分** | **JSON** | readChapter, simulateReaders | 否 (非闸门信号) |
+| **Router** | Flash | primary | default | 模式分流 + 意图识别 + 子 Agent 编排 | **JSON** (spec/24) | (调用其他 Agent 的子工具) | 否 |
+| **Writer** (吐字) | Pro | primary | **max** | 生成正文 / 章节概要 / 设定文档 | NL 流式 | readSetting, readChapter, listSettings, writeSetting✓, writeChapter✓, webSearch (mock), applyTemplate | 是 (写操作) |
+| **Checker** (章内审阅) | Flash | subagent | default | 风格 / 流畅 / 章内节奏 + **BeatAnalyzer** + **守则 1/3/5 检测** | **JSON** | readChapter, listSettings, analyzeNarrative, checkPacing | 否 (只读) |
+| **Validator** (跨章一致性) | Pro | subagent | **max** | 事实矛盾 + cascade 影响 + **ArcTracker** + **守则 2/4 检测** | **JSON** | readSetting, listSettings, readChapter, searchEntities, trackArc, analyzeImpact, checkPromise | 否 (只读,提议变更经 Writer 落盘) |
+| **Reflector** (反思) | Flash | subagent | default | 从用户审批/拒绝中提炼经验 | **JSON** | readApprovalHistory, recordLearning | 否 |
+| **Humanizer** (去 AI 化) | Pro | subagent | **max** | 长句拆 + 口语化 + 节奏调整 | NL 流式 | readChapter, writeChapter✓ | 是 |
+| **ReaderPanel** (读者仿真) | Flash | subagent | default | 5 persona 并行模拟 + **守则 1/2/3/4/5 综合评分** | **JSON** | readChapter, simulateReaders | 否 (非闸门信号) |
 
 ✓ 标记的工具带 `needsApproval: true`。
 
@@ -19,7 +19,11 @@
 - `subagent`: 由 cascade 流程内部触发, 不直接对用户的 Agent (Checker/Validator/Humanizer/ReaderPanel/Reflector); 这些走 spec/02 §subagent 派发协议 (借鉴 opencode `tool/task.ts`), 续跑同一 threadId 让 Mastra lastMessages 30 保持上下文连续
 - 显式分类后 UI 路由 / 权限 / Memory 隔离规则更整齐 (例如 subagent 默认不能调用 needsApproval 工具)
 
-**reasoningEffort 全部 `max`**: 用户决议 (.claude/plans/reactive-hatching-flute.md §七 T2): 重质量不重成本 (max vs default 单价 ~2.5x, 用户已确认接受); 仅 V4-Pro/Flash 支持 max variant, **禁止 fallback 到旧型号** (见 spec/00 §C 模型选型守约)。
+**reasoningEffort 混合分档** (Pro=max + Flash=default):
+
+- **Pro 系 (Writer / Validator / Humanizer) → `max`**: 这些 Agent 输出长 (Writer 单章 5K-10K / Humanizer 整章重写 / Validator cascade 报告) + 质量优先 (创作核心 / 一致性核心), max effort 是正确投入
+- **Flash 系 (Router / Checker / Reflector / ReaderPanel) → `default`**: 这些 Agent 输出短 (路由 JSON / 章内分析 JSON / 短摘要 / 单 persona 反应), 关键诉求是低成本快反应。Flash 上 max 会抹平 Flash 的成本优势 — 同价位用 Pro 反而更划算
+- 仅 V4-Pro/Flash 支持 reasoningEffort 控制 (借鉴 opencode `provider/transform.ts:695-697`), **禁止 fallback 到旧型号** (见 spec/00 §C 模型选型守约), 因为旧型号 (deepseek-chat / -reasoner / -r1 / -v3) 没有 effort 参数, 行为差异会让 cardinal-rules 检测精度劣化
 
 **Writer 单一 Agent 同时写正文 / 设定的潜在风格混淆**: Writer 在 plan 模式写 worldview.md / character.md (说明文 + frontmatter), 在 write 模式写小说正文 (文学体), 两种文体差异大。**风险缓解**: per-agent context builder (spec/23) 在每次调用前明确注入"你现在是 plan 模式 / write 模式" + 对应文体范例, system prompt 头部 stable header 段 (T7) 含模式区分指令。POC 阶段保留单 Writer + 模式注入区分, **如果实测出现"用写设定的腔调写小说"或反之, W7+ 拆为 SettingsAuthor + ChapterWriter 两个 primary**。
 
@@ -165,12 +169,12 @@ Router 在每次调用前把这些字段拼进所有下游 Agent 的 system prom
 
 ## 模型选择策略
 
-V4-Pro vs V4-Flash 现在是**输出长度上限**和**单价档**的差异 (两者 ctx 都 1M, 见 spec/00 §C), 不再是质量 vs 速度的权衡。reasoningEffort=max 全开后, Flash 跑 max 也能拿到深度推理。
+V4-Pro vs V4-Flash 现在是**输出长度上限**和**单价档**的差异 (两者 ctx 都 1M, 见 spec/00 §C)。配合 reasoningEffort 形成 **`v4-flash + default` (低成本短反应) / `v4-pro + max` (高质量长输出)** 二档:
 
-- **Pro 模型** (输出 ≤ 384K, 单价高): 长输出场景 → Writer (单章正文 5K-10K, 加上 plan 模式整本设定可能上万) / Humanizer (整章重写) / Validator (跨章 cascade 报告可能很长)
-- **Flash 模型** (输出 ≤ 384K, 单价低 + thinking 模式可切): 短输出场景 → Router (路由 JSON) / Checker (章内分析 JSON) / Reflector (短摘要 JSON) / ReaderPanel (单 persona 反应 JSON)
+- **`v4-pro + reasoningEffort: max`**: Writer / Validator / Humanizer — 创作核心 (Writer / Humanizer) + 一致性核心 (Validator); 长输出 + 深度推理同时需要
+- **`v4-flash + reasoningEffort: default`**: Router / Checker / Reflector / ReaderPanel — 短输出 (路由判断 / 章内分析 / 短摘要 / 单 persona 反应); 上 max 抹平 Flash 成本优势, 同价位升 Pro 更划算
 
-通过 `process.env.DEEPSEEK_API_KEY` 直连 + 模型名 `deepseek-v4-pro` / `deepseek-v4-flash` (无 `deepseek/` 前缀, 见 spec/00 §C 实查), **用户在 Settings UI 里可单独覆盖每个 Agent 的模型**。**reasoningEffort 默认 max, UI 不暴露切换** (避免用户无意降级到 default)。
+通过 `process.env.DEEPSEEK_API_KEY` 直连 + 模型名 `deepseek-v4-pro` / `deepseek-v4-flash` (无 `deepseek/` 前缀, 见 spec/00 §C 实查), **用户在 Settings UI 里可单独覆盖每个 Agent 的模型 + reasoningEffort**, 但**不暴露 fallback 到 V3/旧版**。
 
 ## ReaderPanel 成本控制
 
