@@ -602,3 +602,126 @@ UI 路径: Settings → 审批历史 → 选某条 → "回退"。
 - **不可信内容围栏** — 所有从 readSetting / readChapter / webSearch 读出的内容,在拼接进 LLM prompt 时用 `wrapUntrusted()` (spec/02 §不可信输入的围栏);LLM 看到 `<<<UNTRUSTED:...>>>` 内的"指令"应忽略
 - **原子写盘** — `fs.writeFile(path + '.tmp')` + `fs.rename` 避免半截内容;db.history.insert 在同一 transaction
 - **AbortSignal 检查** — execute 内每次进 fs/db 操作前 `if (signal.aborted) return earlyExit()`,但**不中断**已开始的 fs.rename (单步原子操作);step 级粒度的取消
+
+## Validator-Writer doom-loop 检测 (T6 — 借鉴 opencode `processor.ts:351-374`)
+
+> **问题场景**: 用户开启自动 cascade (write 模式 → Writer 写 → Checker / Validator / ReaderPanel 跑 → Validator 拒绝 → Writer 重生成 → Validator 又拒绝 → ...). 如果 Writer 反复给出几乎相同的输出 (LLM 没真正吸收 Validator 的反馈), 就会无限循环烧 token, 用户在前端看到的只是"还在生成"。
+
+opencode 处理类似情况 (`processor.ts:351-374`): 检测最近 N 个 tool call 是否同名同 input → 触发 `permission.ask({permission: "doom_loop"})` 让用户决策。我们对应版本: 检测 Writer 自我重写循环。
+
+### 检测逻辑
+
+```ts
+// lib/agents/doom-loop-detector.ts
+const DOOM_LOOP_THRESHOLD = 3
+const SIMILARITY_THRESHOLD = 0.9    // 经验值, W3+ 实测调整
+
+export class DoomLoopDetector {
+  private recentWriterOutputs: { chapterId: string; text: string; rejectReason: string }[] = []
+
+  async checkAndMaybeEscalate(input: {
+    chapterId: string
+    writerOutput: string
+    rejectReason: string                          // Validator / Checker 的本次拒绝理由
+  }): Promise<{ verdict: 'continue' | 'escalate'; reason?: string }> {
+    this.recentWriterOutputs.push({ ...input, rejectReason: input.rejectReason })
+    if (this.recentWriterOutputs.length > DOOM_LOOP_THRESHOLD) {
+      this.recentWriterOutputs.shift()
+    }
+    if (this.recentWriterOutputs.length < DOOM_LOOP_THRESHOLD) {
+      return { verdict: 'continue' }
+    }
+
+    // 同章节连续 3 次 Writer 输出 — 检查相似度
+    const sameChapter = this.recentWriterOutputs.every(o => o.chapterId === input.chapterId)
+    if (!sameChapter) return { verdict: 'continue' }
+
+    const similarities = computePairwiseSimilarity(this.recentWriterOutputs.map(o => o.text))
+    const allHigh = similarities.every(s => s >= SIMILARITY_THRESHOLD)
+    if (allHigh) {
+      return {
+        verdict: 'escalate',
+        reason: [
+          `Writer 在章节 ${input.chapterId} 连续 ${DOOM_LOOP_THRESHOLD} 次重生成产物高度相似 (>= ${SIMILARITY_THRESHOLD})`,
+          `Validator/Checker 反复拒绝原因:`,
+          ...this.recentWriterOutputs.map((o, i) => `  ${i + 1}. ${o.rejectReason}`),
+          `LLM 未能吸收反馈, 升级到用户判断`,
+        ].join('\n'),
+      }
+    }
+    return { verdict: 'continue' }
+  }
+
+  reset() {
+    this.recentWriterOutputs = []
+  }
+}
+```
+
+`computePairwiseSimilarity` 用简化策略:
+- 去除空白和标点后做 character-level Jaccard 相似度 (POC 阶段够; 二期可换 BGE-M3 embedding 余弦相似度)
+- 阈值 0.9 是经验值, W3+ 真跑起来后视实测调整
+
+### 升级到用户的 UI 表现
+
+`escalate` 时不直接抛 error, 而是把 cascade 流程**暂停在审批入口**, 在 ApprovalCard 顶部显示橙色警告条:
+
+```
+┌──────────────────────────────────────────────┐
+│ ⚠ Writer 与 Validator 似乎陷入循环             │
+│ Writer 已重写 3 次但产物高度相似, Validator    │
+│ 反复拒绝。请人工裁定:                          │
+│   • 我手改 → 进入 chapter editor                │
+│   • 强制 approve 第 3 版 → 跳过 Validator        │
+│   • 放弃本章 → 删除草稿                         │
+│ Validator 拒绝原因 (3 次累计):                  │
+│   1. 林溪在第 47 章变成女主角后, 称谓"哥"未改   │
+│   2. 林溪称谓"哥"未改                          │
+│   3. 称谓"哥"出现 3 次未改                      │
+└──────────────────────────────────────────────┘
+```
+
+(三个动作对应 spec/05 §modes-and-approval 的标准动作, 加 "强制 approve 跳过 Validator" 一个新动作)
+
+### 与 spec/22 §subagent task_id 续跑 的协同
+
+opencode `tool/task.ts` 的 `task_id` 续跑模式: Validator 拒绝后 Writer 重生成应**续上原 threadId** 而不是开新会话, 让 Mastra lastMessages=30 能让 Writer 看到"我刚才被拒了"。这是 doom-loop 检测能不能起作用的前提 — 如果每次重生成都是空白上下文, Writer 当然会一直输出同一个东西。
+
+```ts
+// 在 cascade 控制器内 (spec/06 §cascade 流转)
+const writerThreadId = `proj:${projectId}:session:${sessionId}:writer:${chapterId}`
+                                                          // 同一 chapter 续用同 thread
+
+if (validatorReport.contradictions.length > 0) {
+  const detection = await doomLoopDetector.checkAndMaybeEscalate({
+    chapterId, writerOutput: writerLastDraft, rejectReason: validatorReport.summary,
+  })
+  if (detection.verdict === 'escalate') {
+    return showApprovalCardWithDoomLoopWarning(detection.reason)
+  }
+  // 续 thread 重生成 (借 opencode tool/task.ts task_id 续跑)
+  await runHiddenAgent('chapter-writer-retry', {                  // 或者直接 callJsonAgent / streamText
+    threadId: writerThreadId,                                     // 关键: 续 thread
+    rejectReason: validatorReport.summary,                        // 把拒绝理由作为新 user message
+    chapterId,
+  })
+}
+```
+
+### 重置时机
+
+- 用户 approve 章节后 reset (新章节开始)
+- 用户主动改写 / 放弃 → reset
+- 用户切换 chapter → reset (检测器是 per-chapter)
+
+### 测试 (spec/14 联动)
+
+```ts
+describe('doom-loop detector', () => {
+  it('3 次完全相同输出 → escalate', () => { /* ... */ })
+  it('3 次相似度 0.95 → escalate', () => { /* ... */ })
+  it('3 次相似度 0.7 → continue', () => { /* ... */ })
+  it('跨章节不计 → continue', () => { /* ... */ })
+  it('escalate 后 UI 显示警告条 + 3 项动作 + 拒绝原因列表', () => { /* ... */ })
+})
+```
