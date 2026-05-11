@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact) - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/19-impact-analysis.html</span>
+</nav>
+<h1 id="spec-19-影响半径与-cascade-工具-analyzeimpact">Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact)</h1>
+<blockquote>
+<p>实现 plan/11-knowledge-graph.md L2 算法层第三项 + L3 工具层第一项。本文档定义影响半径计算器 (纯 SQL,不调 LLM)、<code>analyzeImpact</code> 工具签名、LLM 二次过滤流程、递归 cascade 终止条件。</p>
+</blockquote>
+<h2 id="设计原则">设计原则</h2>
+<ol>
+<li><strong>影响候选必须由 SQL 出</strong>,不靠 LLM 现场推。漏 SQL 索引 = bug,不应用 LLM &quot;猜&quot;补救</li>
+<li><strong>LLM 仅做&quot;是不是真受影响&quot;的二次判断</strong>,不做&quot;找哪些段受影响&quot;的一次发现</li>
+<li><strong>递归 cascade 必须有终止条件</strong>,且 metric 是&quot;影响半径单调下降&quot;</li>
+<li><strong>置信度全程透传</strong>,UI 据此分级显示</li>
+</ol>
+<h2 id="工作链路-取代-plan06-解决方案">工作链路 (取代 plan/06 §解决方案)</h2>
+<blockquote>
+<p>⚠ <strong>关键交互模型</strong>: 整个 cascade 递归在 <strong>审批之前</strong> 的内部循环里完成。Writer 生成主修改 (in-memory),<code>analyzeImpact</code> 内部递归 ≤3 层把所有 cascade proposal 算清楚,<strong>汇总成一个 ChangeSet 一次审</strong>。用户审完后才落盘。任何&quot;先落盘 → 再触发 cascade&quot;或&quot;逐项 ApprovalCard&quot;的设计都是错的。</p>
+</blockquote>
+<pre><code>Writer agent 出主修改 (in-memory)
+   ↓
+Validator agent execute → 调 analyzeImpact 工具,传入 main delta
+   ↓
+[analyzeImpact 内部递归循环]
+   │
+   ├ 第 1 轮 (轮次记 round=1, weightFloor=30):
+   │   step 1: extractSemanticDelta(main delta) — LLM Flash 抽结构化 delta
+   │            (entity-attribute / relation-add / concept-add / paragraph-rewrite ...)
+   │   step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)
+   │            - entity_refs / concept_refs (weight=100)
+   │            - 关系上下游 1 跳 (weight=50-90)
+   │            - dependencies 锚点上下游 (weight=70)
+   │            - timeline 区间内引用 (weight=80)
+   │            - embeddings 语义相关 topK (weight=cos×100)
+   │   step 3: filterByLLM — Pro 批 5 段 → ChangeProposal[round=1]
+   │
+   ├ Writer 内部短调用: 对每条 needsChange=true 的 proposal 生成 afterText (in-memory)
+   │
+   ├ 第 2 轮 (round=2, weightFloor=60):
+   │   step 1: extractSemanticDelta(round=1 的 afterText 集合) — 把这些当作新 delta
+   │   step 2: computeImpactRadius — 必须严格收缩 (候选 ⊆ 第 1 轮剩余)
+   │   step 3: filterByLLM → ChangeProposal[round=2]
+   │
+   ├ Writer 内部短调用 (round=2 afterText)
+   │
+   ├ 第 3 轮 (round=3, weightFloor=90)... 同上
+   │
+   └ 终止 — 任一条件成立即停:
+        a. 候选段集为空
+        b. 半径未严格收缩 (currSet 不是 prevSet 子集 / |currSet| ≥ |prevSet|)
+        c. round = 3
+   │
+   ↓
+汇总 ChangeSet:
+   - 主修改 (cascadeLevel=0,Writer 原始输出)
+   - 第 1 轮 ChangeProposal[] (cascadeLevel=1)
+   - 第 2 轮 ChangeProposal[] (cascadeLevel=2)
+   - 第 3 轮 ChangeProposal[] (cascadeLevel=3)
+   - 影响图谱 (节点 = entity / file / concept,边 = 影响传播,标 cascadeLevel)
+   ↓
+analyzeImpact 工具返回 → Validator agent 把 ChangeSet 提交给 ApprovalCard
+   ↓
+**一次** ApprovalCard 呈现整批 (见 spec/06):
+   用户勾选 + 一键同意 / 部分同意 / 拒绝
+   ↓
+用户 approve → POST /api/approvals/{id}/resolve
+   ↓
+后端 transaction 一次落盘所有 accepted 文件
+   ↓
+落盘副作用 (差量 reindex / snapshot / history group / Reflector;见 plan/04)
+</code></pre>
+<p><strong>Writer 内部短调用</strong> 是新加的概念 — 它不走完整的 chat / streaming,直接调 Writer agent 的 generate 模式 (无审批,因为产物只在内存),输入 <code>(原 anchor 文本, proposal.proposedText 或 LLM 第 3 步给的修改建议)</code>,输出 <code>afterText</code>。这次调用本身<strong>不</strong>触发任何工具(包括嵌套 analyzeImpact),纯文本生成,~1-3s。</p>
+<h2 id="step-1-semantic-delta-抽取">Step 1 — Semantic Delta 抽取</h2>
+<pre><code class="language-ts">// lib/impact/delta-extractor.ts
+export type SemanticDelta =
+  | { kind: &#39;entity-attribute&#39;; entityId: string; attribute: string; before: string; after: string }
+  | { kind: &#39;entity-relation-add&#39;; sourceId: string; targetId: string; relKind: string; since?: string }
+  | { kind: &#39;entity-relation-remove&#39;; sourceId: string; targetId: string; relKind: string }
+  | { kind: &#39;entity-timeline-update&#39;; entityId: string; attribute: string; valid: { from: string; to?: string }; before: string; after: string }
+  | { kind: &#39;concept-add&#39;; conceptId: string; semantic: string; surfaceForms: string[] }
+  | { kind: &#39;concept-remove&#39;; conceptId: string }
+  | { kind: &#39;concept-semantic-change&#39;; conceptId: string; before: string; after: string }
+  | { kind: &#39;paragraph-rewrite&#39;; anchorId: string; beforeText: string; afterText: string }
+  | { kind: &#39;frontmatter-other&#39;; entityId: string; field: string; before: any; after: any }
+
+export async function extractSemanticDelta(
+  projectId: string,
+  filePath: string,
+  before: string,
+  after: string,
+): Promise&lt;SemanticDelta[]&gt; {
+  // 1. frontmatter diff
+  const beforeFm = parseFrontmatter(before)
+  const afterFm = parseFrontmatter(after)
+  const deltas: SemanticDelta[] = []
+
+  // 1a. 普通字段
+  for (const [key, beforeVal] of Object.entries(beforeFm)) {
+    if (afterFm[key] !== beforeVal) {
+      // 已知字段 → 映射到 entity-attribute
+      if (key === &#39;gender&#39; || key === &#39;role&#39; || key === &#39;expected_arc&#39; || ...) {
+        deltas.push({ kind: &#39;entity-attribute&#39;, entityId: beforeFm.id, attribute: key, before: beforeVal, after: afterFm[key] })
+      } else {
+        deltas.push({ kind: &#39;frontmatter-other&#39;, entityId: beforeFm.id, field: key, before: beforeVal, after: afterFm[key] })
+      }
+    }
+  }
+
+  // 1b. relations 数组 diff (add/remove/update)
+  const beforeRels = beforeFm.relations ?? []
+  const afterRels = afterFm.relations ?? []
+  for (const newRel of afterRels) {
+    const exist = beforeRels.find(r =&gt; r.kind === newRel.kind &amp;&amp; r.target === newRel.target)
+    if (!exist) deltas.push({ kind: &#39;entity-relation-add&#39;, ... })
+  }
+  for (const oldRel of beforeRels) {
+    const stillExist = afterRels.find(r =&gt; r.kind === oldRel.kind &amp;&amp; r.target === oldRel.target)
+    if (!stillExist) deltas.push({ kind: &#39;entity-relation-remove&#39;, ... })
+  }
+
+  // 1c. initial_state 字段 diff → entity-timeline-update
+  // ... 类似处理
+
+  // 2. 正文 diff (worldview/rules.md → 概念变化)
+  if (filePath.includes(&#39;worldview/rules.md&#39;) || filePath.includes(&#39;worldview/&#39;)) {
+    // 调 LLM Flash 抽 concepts delta (与 spec/16 §概念抽取流程类似,但作 delta 比较)
+    const beforeConcepts = await extractConceptsFromText(before)
+    const afterConcepts = await extractConceptsFromText(after)
+    deltas.push(...diffConcepts(beforeConcepts, afterConcepts))
+  }
+
+  // 3. 章节正文 diff → paragraph-rewrite (按 spec/17 anchor diff 结果)
+  if (filePath.startsWith(&#39;chapters/&#39;)) {
+    const anchorDiff = await diffAnchors(beforeRows, afterParagraphs)
+    for (const m of anchorDiff.modified) {
+      deltas.push({ kind: &#39;paragraph-rewrite&#39;, anchorId: m.old.anchor_id, beforeText: m.old.text, afterText: m.new.text })
+    }
+    // rewritten 同等
+  }
+
+  return deltas
+}
+</code></pre>
+<p><code>extractConceptsFromText</code> 调用 spec/16 §concept-extractor prompt,但短 prompt 化(只问&quot;列举此文中所有硬规则&quot;,不问 diff)。然后在 JS 层比对前后两次抽取结果。</p>
+<h3 id="llm-介入策略">LLM 介入策略</h3>
+<ul>
+<li>frontmatter / relations / initial_state diff: <strong>不调 LLM</strong>,纯结构化 diff</li>
+<li>正文 → concepts diff: <strong>调 LLM Flash</strong>(必要,因为概念是从自然语言抽出来的)</li>
+<li>正文 → paragraph diff: 不调 LLM(用 anchor diff)</li>
+</ul>
+<h2 id="step-2-sql-影响半径">Step 2 — SQL 影响半径</h2>
+<pre><code class="language-ts">// lib/impact/radius.ts
+export type ImpactRadius = {
+  candidateAnchors: { anchorId: string; reason: string; weight: number }[]
+  affectedFiles: { filePath: string; reason: string }[]
+  affectedEntities: { entityId: string; reason: string }[]
+  graph: ImpactGraph                     // 节点 + 边,UI 可视化
+}
+
+export async function computeImpactRadius(
+  projectId: string,
+  deltas: SemanticDelta[],
+): Promise&lt;ImpactRadius&gt; {
+  const candidates: { anchorId: string; reason: string; weight: number }[] = []
+
+  for (const d of deltas) {
+    switch (d.kind) {
+      case &#39;entity-attribute&#39;: {
+        // 直接受影响: 所有 entity_refs 该 entity
+        const refs = await db.execute(`
+          SELECT er.anchor_id, er.snippet, pa.file_path
+          FROM entity_refs er
+          JOIN paragraph_anchors pa ON er.anchor_id = pa.anchor_id
+          WHERE er.entity_id = ? AND pa.deleted_at IS NULL
+        `, d.entityId)
+        for (const r of refs) {
+          candidates.push({ anchorId: r.anchor_id, reason: `提及 ${d.entityId} 的 ${d.attribute}`, weight: 100 })
+        }
+
+        // 间接受影响: 该 entity 的关系上下游 (1 跳)
+        if (d.attribute === &#39;gender&#39; || d.attribute === &#39;role&#39; || d.attribute === &#39;name&#39;) {
+          const relPartners = await db.execute(`
+            SELECT DISTINCT target_id AS partner FROM entity_relations WHERE source_id = ?
+            UNION
+            SELECT DISTINCT source_id AS partner FROM entity_relations WHERE target_id = ?
+          `, d.entityId, d.entityId)
+          for (const p of relPartners) {
+            const partnerRefs = await db.execute(`
+              SELECT er.anchor_id FROM entity_refs er
+              JOIN paragraph_anchors pa ON er.anchor_id = pa.anchor_id
+              WHERE er.entity_id = ? AND pa.deleted_at IS NULL
+            `, p.partner)
+            for (const r of partnerRefs) {
+              candidates.push({ anchorId: r.anchor_id, reason: `${d.entityId} 的关系方 ${p.partner}`, weight: 50 })
+            }
+          }
+        }
+        break
+      }
+
+      case &#39;entity-relation-add&#39;:
+      case &#39;entity-relation-remove&#39;: {
+        // 直接受影响: 两端 entity 同时出现的段
+        const sql = `
+          SELECT er1.anchor_id FROM entity_refs er1
+          JOIN entity_refs er2 ON er1.anchor_id = er2.anchor_id
+          JOIN paragraph_anchors pa ON er1.anchor_id = pa.anchor_id
+          WHERE er1.entity_id = ? AND er2.entity_id = ? AND pa.deleted_at IS NULL
+        `
+        const refs = await db.execute(sql, d.sourceId, d.targetId)
+        for (const r of refs) {
+          candidates.push({ anchorId: r.anchor_id, reason: `${d.sourceId} 和 ${d.targetId} 同段`, weight: 90 })
+        }
+        break
+      }
+
+      case &#39;concept-add&#39;:
+      case &#39;concept-semantic-change&#39;: {
+        // 直接受影响: 表面词命中的所有段 (concept_refs)
+        const refs = await db.execute(`
+          SELECT cr.anchor_id, cr.snippet FROM concept_refs cr
+          JOIN paragraph_anchors pa ON cr.anchor_id = pa.anchor_id
+          WHERE cr.concept_id = ? AND pa.deleted_at IS NULL
+        `, d.conceptId)
+        for (const r of refs) {
+          candidates.push({ anchorId: r.anchor_id, reason: `命中概念 ${d.conceptId}`, weight: 95 })
+        }
+        // 若新增 concept 是 &#39;absent&#39; 语义 (e.g. &quot;无手机&quot;) → 命中的段全部 violation,需重写
+        if (d.kind === &#39;concept-add&#39; &amp;&amp; d.semantic === &#39;absent&#39;) {
+          // ... 自动 mark is_violation = 1 (在 reindex 时已做,这里不重复)
+        }
+        break
+      }
+
+      case &#39;concept-remove&#39;: {
+        // 该 concept 的 concept_refs 全部失效 → 但段本身不需重写,只是 lint 提示
+        // 不加 candidate
+        break
+      }
+
+      case &#39;entity-timeline-update&#39;: {
+        // 受影响: 该 entity 在 valid 区间内的所有 entity_refs
+        const refs = await db.execute(`
+          SELECT er.anchor_id, pa.file_path FROM entity_refs er
+          JOIN paragraph_anchors pa ON er.anchor_id = pa.anchor_id
+          WHERE er.entity_id = ? AND pa.deleted_at IS NULL
+            AND pa.file_path GLOB &#39;chapters/*&#39;
+            AND chapter_within_range(pa.file_path, ?, ?)
+        `, d.entityId, d.valid.from, d.valid.to ?? &#39;ch_zzz&#39;)
+        for (const r of refs) {
+          candidates.push({ anchorId: r.anchor_id, reason: `${d.entityId}.${d.attribute} 在该章节区间变化`, weight: 80 })
+        }
+        break
+      }
+
+      case &#39;paragraph-rewrite&#39;: {
+        // 受影响: 依赖此段的 dependencies 上下游
+        const deps = await db.execute(`
+          SELECT * FROM dependencies
+          WHERE (source_anchor = ? OR target_anchor = ?)
+            AND status IN (&#39;pending&#39;, &#39;planted&#39;, &#39;paid-off&#39;)
+        `, d.anchorId, d.anchorId)
+        for (const dep of deps) {
+          const otherAnchor = dep.source_anchor === d.anchorId ? dep.target_anchor : dep.source_anchor
+          candidates.push({ anchorId: otherAnchor, reason: `dependency ${dep.kind} #${dep.id}`, weight: 70 })
+        }
+
+        // 若是章节段,后续章节里相同 entity 的近 N 段也是候选 (语义连续性)
+        // → 用 embeddings.semanticSearch (spec/18) 取 topK
+        if (await isChapterAnchor(projectId, d.anchorId)) {
+          const semantic = await semanticSearch(projectId, d.afterText, { topK: 5, excludeAnchors: [d.anchorId] })
+          for (const s of semantic) {
+            candidates.push({ anchorId: s.anchorId, reason: `语义相关 (cosine ${s.similarity.toFixed(2)})`, weight: Math.round(s.similarity * 100) })
+          }
+        }
+        break
+      }
+
+      // ... 其他 kind 类似
+    }
+  }
+
+  // 去重 + 合并 (同 anchor 的多 reason 合一,weight 取 max)
+  const merged = new Map&lt;string, { anchorId: string; reason: string; weight: number }&gt;()
+  for (const c of candidates) {
+    const exist = merged.get(c.anchorId)
+    if (!exist || exist.weight &lt; c.weight) merged.set(c.anchorId, c)
+  }
+
+  const sortedCandidates = Array.from(merged.values()).sort((a, b) =&gt; b.weight - a.weight)
+
+  return {
+    candidateAnchors: sortedCandidates,
+    affectedFiles: ...,
+    affectedEntities: ...,
+    graph: buildImpactGraph(deltas, sortedCandidates),
+  }
+}
+</code></pre>
+<h3 id="章节区间-helper">章节区间 helper</h3>
+<pre><code class="language-ts">// SQL 中没有直接支持,在 lib 层提供
+function chapter_within_range(filePath: string, from: string, to: string): boolean {
+  // &#39;chapters/050-XX/draft.md&#39; → &#39;050&#39;
+  // from = &#39;ch_010&#39; → &#39;010&#39;, to = &#39;ch_080&#39; → &#39;080&#39;
+  const match = filePath.match(/chapters\/(\d{3})-/)
+  if (!match) return false
+  const ord = match[1]
+  const fromOrd = from.replace(/[^\d]/g, &#39;&#39;).padStart(3, &#39;0&#39;)
+  const toOrd = to.replace(/[^\d]/g, &#39;&#39;).padStart(3, &#39;0&#39;)
+  return ord &gt;= fromOrd &amp;&amp; ord &lt;= toOrd
+}
+
+// 注册为 SQLite custom function (better-sqlite3 / LibSQL 都支持)
+db.function(&#39;chapter_within_range&#39;, chapter_within_range)
+</code></pre>
+<h3 id="weight-语义">Weight 语义</h3>
+<ul>
+<li><code>weight = 100</code> 必查(直接 entity 提及 / 同段 relation / 概念表面词命中)</li>
+<li><code>weight = 70-95</code> 高优先(关系上下游 / dependencies / timeline 区间)</li>
+<li><code>weight = 30-70</code> 中优先(语义相关)</li>
+<li><code>weight &lt; 30</code> 不进入 LLM filter(降本)</li>
+</ul>
+<p>LLM filter 的输入按 weight 降序,<strong>最多 50 个候选段</strong>(防止 LLM 过载)。超出的按 weight 排序后裁剪,UI 提示&quot;还有 X 段未审&quot;。</p>
+<h2 id="step-3-llm-二次过滤">Step 3 — LLM 二次过滤</h2>
+<blockquote>
+<p>走 <a href="./24-json-output.html">DeepSeek JSON mode (spec/24)</a> — 用 <code>callJsonAgent</code> 统一 retry / zod 校验 / max_tokens 估算。</p>
+</blockquote>
+<pre><code class="language-ts">// lib/impact/llm-filter.ts
+import { callJsonAgent } from &#39;@/lib/agents/json-output&#39;
+import { ImpactFilterBatchOutputSchema } from &#39;@/lib/agents/schemas&#39;      // spec/24
+
+export async function filterByLLM(
+  projectId: string,
+  deltas: SemanticDelta[],
+  candidates: { anchorId: string; reason: string; weight: number }[],
+): Promise&lt;ChangeProposal[]&gt; {
+  // 单 prompt 处理多个候选,降本
+  const proposals: ChangeProposal[] = []
+  const batches = chunk(candidates, 5)         // 每 5 段一批 (spec/24 §maxTokens 估算: 5 段 ≈ 2K)
+
+  for (const batch of batches) {
+    const anchorTexts = await Promise.all(batch.map(c =&gt; fetchAnchorText(projectId, c.anchorId)))
+    const prompt = renderPrompt(&#39;lib/impact/prompts/filter.md&#39;, {
+      deltas, candidates: batch.map((c, i) =&gt; ({ ...c, text: anchorTexts[i] })),
+    })
+
+    // Flash 模型 + JSON mode (二次过滤是二元判断, Flash 完全够用; Pro 留给 Validator 一致性审)
+    const response = await callJsonAgent({
+      label: &#39;impact-filter-batch&#39;,
+      model: deepseekFlash,
+      schema: ImpactFilterBatchOutputSchema,
+      maxTokens: 2_000,
+      messages: [
+        { role: &#39;system&#39;, content: FILTER_SYSTEM_PROMPT },           // 见 spec/03 §filter 模板
+        { role: &#39;user&#39;, content: prompt },
+      ],
+    })
+
+    // 把 ImpactFilterBatchOutput.candidates 映射成 ChangeProposal[]
+    proposals.push(...response.candidates.filter(c =&gt; c.affected).map(c =&gt; ({
+      anchorId: c.anchorId,
+      targetFile: anchorToFile(c.anchorId),
+      needsChange: true,
+      proposedText: undefined,                                       // afterText 由 Writer 内部短调用补
+      reason: c.reason,
+      confidence: c.confidence,
+    })))
+  }
+
+  return proposals
+}
+</code></pre>
+<p><code>ImpactFilterBatchOutputSchema</code> 见 <a href="./24-json-output.html">spec/24 §analyzeImpact LLM filter</a>。</p>
+<h3 id="filter-prompt-libimpactpromptsfiltermd">filter prompt (<code>lib/impact/prompts/filter.md</code>)</h3>
+<pre><code class="language-markdown">你是 Open Novel 影响过滤器。任务:对一组**候选受影响段**,判定每段是否真的需要改写,并给出建议。
+
+# 设定改动 (semantic delta)
+{{#deltas}}
+- {{kind}}: {{summary}}
+{{/deltas}}
+
+# 候选段 (按相关性排序)
+{{#candidates}}
+## #{{i}} ({{reason}}, weight={{weight}})
+File: {{anchorId}} ({{filePath}})
+Text:
+&quot;&quot;&quot;
+{{text}}
+&quot;&quot;&quot;
+{{/candidates}}
+
+# 输出
+JSON:
+{
+  &quot;proposals&quot;: [
+    {
+      &quot;anchorId&quot;: &quot;anc_xxx&quot;,
+      &quot;targetFile&quot;: &quot;...&quot;,
+      &quot;needsChange&quot;: true,
+      &quot;proposedText&quot;: &quot;...&quot;,
+      &quot;reason&quot;: &quot;为什么这段需要改 — 引用 delta 第 N 条&quot;,
+      &quot;confidence&quot;: &quot;high&quot;
+    },
+    {
+      &quot;anchorId&quot;: &quot;anc_yyy&quot;,
+      &quot;needsChange&quot;: false,
+      &quot;reason&quot;: &quot;虽然命中关键词,但语境是反讽,无需改&quot;,
+      &quot;confidence&quot;: &quot;high&quot;
+    }
+  ]
+}
+
+# 严格规则
+- needsChange=false 也必须给 reason (作者审计需要解释)
+- proposedText 仅在 needsChange=true 时给
+- 若不确定,confidence=&#39;low&#39; 并给保守的 proposedText
+- 不要超出 deltas 描述的改动范围 (e.g. 改 lin.gender 时不要顺带改其他无关属性)
+</code></pre>
+<h2 id="step-4-输出最终-changeset-影响图谱">Step 4 — 输出最终 ChangeSet + 影响图谱</h2>
+<p><code>analyzeImpact</code> 工具的最终返回 (内部 ≤3 轮递归后汇总):</p>
+<pre><code class="language-ts">type AnalyzeImpactResult = {
+  proposals: ChangeProposal[]            // 全 cascade 层级合并 (cascadeLevel: 1 / 2 / 3)
+  graph: {
+    nodes: { id: string; kind: &#39;entity&#39; | &#39;file&#39; | &#39;concept&#39;; label: string; cascadeLevel: number }[]
+    edges: { from: string; to: string; kind: &#39;ref&#39; | &#39;relation&#39; | &#39;concept&#39; | &#39;dep&#39;; weight: number; cascadeLevel: number }[]
+  }
+  cardinalRulesReport?: CardinalRulesReport     // 五大守则风险报告 (spec/25);plan 模式 cascade 也会触发
+  metadata: {
+    rounds: number                       // 实际跑了几轮 (1-3)
+    totalCandidatesPerRound: number[]    // 每轮候选段数,递减序
+    filteredByLLM: number                // 累计 needsChange=false
+    droppedByWeight: number              // 累计 weight &lt; weightFloor 未送 LLM
+    terminationReason: &#39;depth-limit&#39; | &#39;no-candidates&#39; | &#39;no-shrink&#39; | &#39;no-needs-change&#39;
+  }
+}
+</code></pre>
+<h3 id="cascade-与五大守则的衔接-spec25">Cascade 与五大守则的衔接 (spec/25)</h3>
+<p>cascade 不仅扫&quot;事实一致性&quot;,还要扫&quot;守则一致性&quot;。两类敏感修改触发额外的全章节重扫:</p>
+<table>
+<thead>
+<tr>
+<th>修改类型</th>
+<th>守则触发</th>
+<th>额外扫描</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>character.md</code> 改 <code>reader_promises</code> / <code>taboos</code> / <code>value_axes</code></td>
+<td>守则 2 (人设崩坏)</td>
+<td>全 active 章节里涉及该角色的段都要 Validator characterIntegrityCheck 重审 — 老 promise 已被改后,可能不再有&quot;违反&quot;问题,但<strong>新 promise</strong> 可能被既有章节违反</td>
+</tr>
+<tr>
+<td><code>character.md</code> 改 <code>intelligence_axis</code></td>
+<td>守则 2 (假智谋)</td>
+<td>全主角策略成功的章节 → 重审对手 IQ 是否合理</td>
+</tr>
+<tr>
+<td><code>foreshadowings</code> 表改 <code>deadline_chapter</code> / <code>weight</code></td>
+<td>守则 4 (期待感)</td>
+<td>promiseAccountabilityCheck 全 active critical promise 重审</td>
+</tr>
+<tr>
+<td><code>cardinal-rules.json</code> 阈值调整</td>
+<td>守则 1/3/5 阈值</td>
+<td>不重扫(阈值是&quot;未来章节用&quot;,已审章节不重算;用户可点&quot;重新评估当前章节&quot;手动触发)</td>
+</tr>
+</tbody></table>
+<p>实现:<code>writeSetting</code> 工具 execute 中,若发现修改命中以上类型,在内部递归 cascade 前<strong>先</strong>跑一遍守则相关的全 active 章节扫,把额外发现的 violation 进 ChangeProposal[round=1] 一起进 ApprovalCard。</p>
+<p><strong>性能考虑</strong>: 全章节扫只在守则相关字段改动时触发;普通&quot;性别 / 名字&quot;改动不触发(那些有自己的 cascade 路径)。</p>
+<p>UI 在 ApprovalCard 顶部展示影响图 (Mermaid graph / reactflow),用 cascadeLevel 着色 (主修改红 / 一级橙 / 二级黄 / 三级浅黄),作者一眼看到&quot;这次改动逐层辐射到哪些 entity / 文件&quot;。</p>
+<h2 id="工具签名-注册到-spec02-工具集">工具签名 (注册到 spec/02 工具集)</h2>
+<pre><code class="language-ts">// lib/agents/tools/analyze-impact.ts
+export const analyzeImpact = tool({
+  description: &#39;分析一次 setting / 章节改动的影响范围,返回 ChangeProposal[] 与影响图谱&#39;,
+  inputSchema: z.object({
+    filePath: z.string(),
+    before: z.string(),                  // 旧内容 (含 frontmatter)
+    after: z.string(),                   // 新内容
+  }),
+  outputSchema: analyzeImpactResultSchema,
+  execute: async ({ filePath, before, after }, { projectId }) =&gt; {
+    // 路径 safePath
+    const safe = safeFromProjectRoot(projectId, filePath)
+    // step 1: extract initial semantic delta
+    const initialDelta = await extractSemanticDelta(projectId, filePath, before, after)
+    // step 2-4: 内部递归 (≤3 轮) 出全部 cascade level 的 proposals
+    const allProposals = await runCascadeRecursion(projectId, initialDelta)
+    const graph = buildImpactGraph(initialDelta, allProposals)
+    return {
+      proposals: allProposals,
+      graph,
+      metadata: { /* rounds / totalCandidatesPerRound / ... */ },
+    }
+  },
+})
+</code></pre>
+<p>工具分配 (附录 spec/02 §工具分配):<strong>Validator</strong>。其他 agent 不得调用。</p>
+<h2 id="递归-cascade-终止条件-在-analyzeimpact-内部循环中">递归 Cascade 终止条件 (在 analyzeImpact 内部循环中)</h2>
+<blockquote>
+<p>注: 递归发生在 analyzeImpact 工具的<strong>单次调用</strong>内部,不是用户跨多个 ApprovalCard 的多次审批。用户只看到一次 ApprovalCard,内部已经迭代到稳态。</p>
+</blockquote>
+<pre><code>analyzeImpact 工具入口 (传入 main delta)
+   ↓
+round = 1, weightFloor = 30
+   ↓
+loop:
+   computeImpactRadius(weightFloor) → 出候选
+   if 候选空: break
+   filterByLLM(候选) → ChangeProposal[round]
+   if needsChange=true 的 proposal 数 = 0: break (LLM 判全部不需要改)
+   Writer 内部短调用 → 各 proposal 生成 afterText (in-memory)
+   round += 1
+   if round &gt; 3: break
+   weightFloor += 30                              # 30 → 60 → 90
+   nextDelta = 把 afterText 集合算成 paragraph-rewrite + concept-* delta
+   if 半径不严格收缩 (currSet 不是 prevSet 子集 / |currSet| ≥ |prevSet|): break
+   delta = nextDelta; continue
+</code></pre>
+<p><strong>实现伪码</strong>:</p>
+<pre><code class="language-ts">async function runCascadeRecursion(
+  projectId: string,
+  initialDelta: SemanticDelta[],
+): Promise&lt;ChangeProposal[]&gt; {
+  let allProposals: ChangeProposal[] = []
+  let currentDelta = initialDelta
+  let prevCandidateSet: Set&lt;string&gt; | null = null
+  let weightFloor = 30
+
+  for (let round = 1; round &lt;= 3; round++) {
+    const radius = await computeImpactRadius(projectId, currentDelta, { weightFloor })
+    if (radius.candidateAnchors.length === 0) break
+
+    // 半径单调收缩检查 (round ≥ 2)
+    const currSet = new Set(radius.candidateAnchors.map(c =&gt; c.anchorId))
+    if (prevCandidateSet) {
+      if (currSet.size &gt;= prevCandidateSet.size) break       // 没收缩
+      for (const id of currSet) {
+        if (!prevCandidateSet.has(id)) {                     // 出现新段
+          // 半径破坏单调性 — 停 (不能让系统不停发散)
+          return allProposals
+        }
+      }
+    }
+    prevCandidateSet = currSet
+
+    const proposals = await filterByLLM(projectId, currentDelta, radius.candidateAnchors)
+    const toRewrite = proposals.filter(p =&gt; p.needsChange)
+    if (toRewrite.length === 0) break                        // 全判不需要改
+
+    proposals.forEach(p =&gt; p.cascadeLevel = round)
+    allProposals.push(...proposals)
+
+    // Writer 内部短调用 (生成 afterText) — 这次调用不带任何 tool
+    const afterTexts = await Promise.all(toRewrite.map(p =&gt;
+      writerInternalRewrite(projectId, p.anchorId, p.proposedText)
+    ))
+
+    // 把这些 afterText 转为下一轮 delta
+    currentDelta = afterTexts.map((text, i) =&gt; ({
+      kind: &#39;paragraph-rewrite&#39;,
+      anchorId: toRewrite[i].anchorId,
+      beforeText: &#39;...&#39;,  // 已存在内容
+      afterText: text,
+    }))
+
+    weightFloor += 30
+  }
+
+  return allProposals
+}
+</code></pre>
+<p><strong>Writer 内部短调用 <code>writerInternalRewrite</code></strong>: 调用 Writer agent 的 generate 模式 (无 tool,无审批),输入 <code>(原 anchor 文本 + proposedText 提示)</code>,输出最终 afterText。~1-3s 单段。</p>
+<p><strong>UI 显示进度</strong>: ApprovalCard 出现前的&quot;分析中&quot;页面显示&quot;正在分析影响范围...</p>
+<ul>
+<li>第 1 轮: 找到 N 段候选,LLM 过滤中...</li>
+<li>第 2 轮: N 段二级 cascade,LLM 过滤中...</li>
+<li>第 3 轮: N 段三级 cascade</li>
+<li>完成: 整批 K 段 ChangeSet 准备就绪 [查看]&quot;</li>
+</ul>
+<p>用户<strong>不能干预内部循环</strong>(无法&quot;在第 2 轮就提前 approve&quot;),只能等汇总完整批审。如果用户耐心不足,可在 SettingsDialog 调&quot;递归深度上限&quot;= 1 / 2 / 3 (默认 3)。</p>
+<h2 id="取代-plan06-性能考虑">取代 plan/06 §性能考虑</h2>
+<ul>
+<li>❌ 旧:&quot;按章节范围 ±5 章&quot; — 已删 (治标策略,本 spec 取代)</li>
+<li>❌ 旧:&quot;基于 entity hash 的&#39;已审过&#39;标记&quot; — 已无意义,LLM 二次过滤本就只对未审过段调用</li>
+<li>❌ 旧:&quot;章节级 word_count + entity_count diff 短路&quot; — 改为按 anchor diff 短路 (无段变化即跳过)</li>
+</ul>
+<h2 id="l4-治理-cascade-audit">L4 治理 — Cascade Audit</h2>
+<p>每次 analyzeImpact 调用记录到新表:</p>
+<pre><code class="language-sql">CREATE TABLE cascade_audits (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  triggered_by_approval_id INTEGER NOT NULL,
+  parent_audit_id INTEGER,                          -- 递归层级
+  total_candidates INTEGER NOT NULL,
+  filtered_by_llm INTEGER NOT NULL,
+  proposals_count INTEGER NOT NULL,
+  llm_token_cost INTEGER,                           -- 累计 (Pro tokens)
+  duration_ms INTEGER NOT NULL,
+  graph_json TEXT NOT NULL,                         -- 完整影响图,审计 / 复盘用
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (parent_audit_id) REFERENCES cascade_audits(id)
+);
+CREATE INDEX idx_cascade_project ON cascade_audits(project_id, created_at DESC);
+</code></pre>
+<p>UI: SettingsDialog → &quot;Cascade 历史&quot;显示每次 cascade 的影响图、proposals 数、用户接受率。Reflector 输入也包括 cascade_audits 数据 (用户拒绝某 proposal 时,提炼&quot;这种类型的 cascade 用户倾向 / 不倾向接受&quot;)。</p>
+<h2 id="测试">测试</h2>
+<table>
+<thead>
+<tr>
+<th>测试</th>
+<th>类型</th>
+<th>覆盖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>delta-extractor.test.ts</code></td>
+<td>单元</td>
+<td>frontmatter diff / relations diff / paragraph-rewrite diff 各 case</td>
+</tr>
+<tr>
+<td><code>impact-radius.test.ts</code></td>
+<td>集成</td>
+<td>各 delta kind 的 SQL 查询命中预期段</td>
+</tr>
+<tr>
+<td><code>impact-radius-edge.test.ts</code></td>
+<td>单元</td>
+<td>关系上下游、章节区间、语义相关边界</td>
+</tr>
+<tr>
+<td><code>llm-filter.test.ts</code></td>
+<td>golden</td>
+<td>给 fixture deltas + 候选,验 LLM 输出稳定</td>
+</tr>
+<tr>
+<td><code>cascade-recursion.test.ts</code></td>
+<td>集成</td>
+<td>三层递归终止;循环候选检测</td>
+</tr>
+<tr>
+<td><code>cascade-audit.test.ts</code></td>
+<td>集成</td>
+<td>cascade_audits 落库正确</td>
+</tr>
+</tbody></table>
+  </main>
+</body>
+</html>

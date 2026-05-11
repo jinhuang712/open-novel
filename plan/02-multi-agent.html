@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02 — 多 Agent 拓扑 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/02-multi-agent.html</span>
+</nav>
+<h1 id="02-多-agent-拓扑">02 — 多 Agent 拓扑</h1>
+<h2 id="agent-总览">Agent 总览</h2>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>模型</th>
+<th>mode</th>
+<th>reasoningEffort</th>
+<th>主职</th>
+<th>输出形态</th>
+<th>可调用工具</th>
+<th>是否需审批</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Router</strong></td>
+<td>Flash</td>
+<td>primary</td>
+<td>default</td>
+<td>模式分流 + 意图识别 + 子 Agent 编排</td>
+<td><strong>JSON</strong> (spec/24)</td>
+<td>(调用其他 Agent 的子工具)</td>
+<td>否</td>
+</tr>
+<tr>
+<td><strong>Writer</strong> (吐字)</td>
+<td>Pro</td>
+<td>primary</td>
+<td><strong>max</strong></td>
+<td>生成正文 / 章节概要 / 设定文档</td>
+<td>NL 流式</td>
+<td>readSetting, readChapter, listSettings, writeSetting✓, writeChapter✓, webSearch (mock), applyTemplate</td>
+<td>是 (写操作)</td>
+</tr>
+<tr>
+<td><strong>Checker</strong> (章内审阅)</td>
+<td>Flash</td>
+<td>subagent</td>
+<td>default</td>
+<td>风格 / 流畅 / 章内节奏 + <strong>BeatAnalyzer</strong> + <strong>守则 1/3/5 检测</strong></td>
+<td><strong>JSON</strong></td>
+<td>readChapter, listSettings, analyzeNarrative, checkPacing</td>
+<td>否 (只读)</td>
+</tr>
+<tr>
+<td><strong>Validator</strong> (跨章一致性)</td>
+<td>Pro</td>
+<td>subagent</td>
+<td><strong>max</strong></td>
+<td>事实矛盾 + cascade 影响 + <strong>ArcTracker</strong> + <strong>守则 2/4 检测</strong></td>
+<td><strong>JSON</strong></td>
+<td>readSetting, listSettings, readChapter, searchEntities, trackArc, analyzeImpact, checkPromise</td>
+<td>否 (只读,提议变更经 Writer 落盘)</td>
+</tr>
+<tr>
+<td><strong>Reflector</strong> (反思)</td>
+<td>Flash</td>
+<td>subagent</td>
+<td>default</td>
+<td>从用户审批/拒绝中提炼经验</td>
+<td><strong>JSON</strong></td>
+<td>readApprovalHistory, recordLearning</td>
+<td>否</td>
+</tr>
+<tr>
+<td><strong>Humanizer</strong> (去 AI 化)</td>
+<td>Pro</td>
+<td>subagent</td>
+<td><strong>max</strong></td>
+<td>长句拆 + 口语化 + 节奏调整</td>
+<td>NL 流式</td>
+<td>readChapter, writeChapter✓</td>
+<td>是</td>
+</tr>
+<tr>
+<td><strong>ReaderPanel</strong> (读者仿真)</td>
+<td>Flash</td>
+<td>subagent</td>
+<td>default</td>
+<td>5 persona 并行模拟 + <strong>守则 1/2/3/4/5 综合评分</strong></td>
+<td><strong>JSON</strong></td>
+<td>readChapter, simulateReaders</td>
+<td>否 (非闸门信号)</td>
+</tr>
+</tbody></table>
+<p>✓ 标记的工具带 <code>needsApproval: true</code>。</p>
+<p><strong>mode 分类</strong> (借鉴 opencode <code>agent/agent.ts:31</code> 三态模型):</p>
+<ul>
+<li><code>primary</code>: 直接面对用户输入入口的 Agent (Router 接 UI 路由 / Writer 接生成请求)</li>
+<li><code>subagent</code>: 由 cascade 流程内部触发, 不直接对用户的 Agent (Checker/Validator/Humanizer/ReaderPanel/Reflector); 这些走 spec/02 §subagent 派发协议 (借鉴 opencode <code>tool/task.ts</code>), 续跑同一 threadId 让 Mastra lastMessages 30 保持上下文连续</li>
+<li>显式分类后 UI 路由 / 权限 / Memory 隔离规则更整齐 (例如 subagent 默认不能调用 needsApproval 工具)</li>
+</ul>
+<p><strong>reasoningEffort 混合分档</strong> (Pro=max + Flash=default):</p>
+<ul>
+<li><strong>Pro 系 (Writer / Validator / Humanizer) → <code>max</code></strong>: 这些 Agent 输出长 (Writer 单章 5K-10K / Humanizer 整章重写 / Validator cascade 报告) + 质量优先 (创作核心 / 一致性核心), max effort 是正确投入</li>
+<li><strong>Flash 系 (Router / Checker / Reflector / ReaderPanel) → <code>default</code></strong>: 这些 Agent 输出短 (路由 JSON / 章内分析 JSON / 短摘要 / 单 persona 反应), 关键诉求是低成本快反应。Flash 上 max 会抹平 Flash 的成本优势 — 同价位用 Pro 反而更划算</li>
+<li>仅 V4-Pro/Flash 支持 reasoningEffort 控制 (借鉴 opencode <code>provider/transform.ts:695-697</code>), <strong>禁止 fallback 到旧型号</strong> (见 spec/00 §C 模型选型守约), 因为旧型号 (deepseek-chat / -reasoner / -r1 / -v3) 没有 effort 参数, 行为差异会让 cardinal-rules 检测精度劣化</li>
+</ul>
+<p><strong>Writer 单一 Agent 同时写正文 / 设定的潜在风格混淆</strong>: Writer 在 plan 模式写 worldview.md / character.md (说明文 + frontmatter), 在 write 模式写小说正文 (文学体), 两种文体差异大。<strong>风险缓解</strong>: per-agent context builder (spec/23) 在每次调用前明确注入&quot;你现在是 plan 模式 / write 模式&quot; + 对应文体范例, system prompt 头部 stable header 段 (spec/03) 含模式区分指令。保留单 Writer + 模式注入区分, <strong>若实测出现&quot;用写设定的腔调写小说&quot;或反之, 拆为 SettingsAuthor + ChapterWriter 两个 primary</strong>。</p>
+<p><strong>输出形态 (spec/24)</strong>:</p>
+<ul>
+<li><strong>JSON</strong> 输出走 DeepSeek 原生 JSON mode (<code>response_format: { type: &#39;json_object&#39; }</code>),应用层 zod 校验 + retry,失败 escalate 用户(详见 <a href="../spec/24-json-output.html">spec/24-json-output.html</a>)</li>
+<li><strong>NL 流式</strong> 输出自然语言流,用户阅读;Writer / Humanizer 走这条</li>
+</ul>
+<p><strong>叙事引擎拆给两个 Agent</strong>: BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章性格偏离 → 归 Validator。两者实现共置于 <a href="./09-narrative-engine.html">09-narrative-engine.html</a>;<strong>ReaderPanel 详见</strong> <a href="./10-reader-simulator.html">10-reader-simulator.html</a>。</p>
+<p><strong>五大守则检测分工 (spec/25)</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>守则</th>
+<th>主检测</th>
+<th>二审</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1. 黄金三章</td>
+<td>ArcTracker (在 Validator)</td>
+<td>ReaderPanel</td>
+</tr>
+<tr>
+<td>2. 人设崩坏</td>
+<td>Validator (characterIntegrityCheck)</td>
+<td>ReaderPanel</td>
+</tr>
+<tr>
+<td>3. 节奏崩盘</td>
+<td>BeatAnalyzer + ArcTracker</td>
+<td>—</td>
+</tr>
+<tr>
+<td>4. 期待感兑现</td>
+<td>Validator (promiseAccountabilityCheck)</td>
+<td>ReaderPanel</td>
+</tr>
+<tr>
+<td>5. 金手指依赖</td>
+<td>BeatAnalyzer + ArcTracker</td>
+<td>ReaderPanel</td>
+</tr>
+</tbody></table>
+<p>各检测器输出汇成 <code>CardinalRulesReport</code> (spec/25 §风险报告输出) 进 ApprovalCard。</p>
+<h2 id="路由策略-router-行为">路由策略 (Router 行为)</h2>
+<p>Router 是入口,负责把用户输入分流到合适的下游 Agent。它的 system prompt 包含:</p>
+<ol>
+<li><strong>当前模式约束</strong>: discuss / plan / write — 决定可调用哪些工具</li>
+<li><strong>当前项目上下文</strong>: 项目名、流派、Agent 性格、风格偏好</li>
+<li><strong>学习经验注入</strong>: 从 <code>learnings</code> 表取 top-N (按 weight + recency)</li>
+<li><strong>意图分类示例</strong>:<ul>
+<li>&quot;你觉得主角应该长什么样&quot; → discuss,自答 (RAG 角色文件)</li>
+<li>&quot;把主角改成女生&quot; → plan,委派 Writer + Validator</li>
+<li>&quot;写第三章开头&quot; → write,委派 Writer + Checker + Validator</li>
+</ul>
+</li>
+</ol>
+<p>Mastra 的 <code>AgentNetwork</code> 让 Router 把下游 Agent 当作工具调用 (<code>agents-as-tools</code> 模式)。</p>
+<h2 id="agent-间协作流程">Agent 间协作流程</h2>
+<h3 id="plan-模式-生成修改设定">Plan 模式 (生成/修改设定)</h3>
+<pre><code>Router → (decide: 调用 Writer)
+Writer → 生成 worldview.md draft (含 frontmatter)
+Writer → 调 writeSetting tool (needsApproval=true)
+        ↓
+        AI SDK 挂起 → 前端渲染 ApprovalCard (含 diff)
+        ↓ (用户点同意)
+        addToolResult({ output: &#39;approved&#39; }) 让流继续
+        ↓
+        实际落盘 + index.db.entities 刷新
+        ↓
+Validator → 自动并行检查: 这个新 worldview 与现存所有 character.md 是否冲突?
+       └─ 若冲突: 把冲突列表回喂 Router
+              ↓
+              Router 提议追加 cascade 修改 (依然走 Writer + needsApproval 链路)
+        ↓
+Reflector → 取本轮 (Writer 输出 + 用户最终决定),提炼 1-3 条经验,写入 learnings
+</code></pre>
+<h3 id="write-模式-生成章节正文">Write 模式 (生成章节正文)</h3>
+<pre><code>Router → 委派 Writer
+Writer → 读 settings/* + chapter outline + 历史章节
+Writer → 流式生成正文 (逐段 emit)
+        ↓ (流式过程中)
+Checker → 并行审风格 (轻量 prompt,只看最近 1000 字)
+Validator → 并行扫一致性 (重点查角色行为、地点、时间是否冲突)
+        ↓ (writer 完成后)
+若 narrative.beatAnalyzer.runOnSave (默认 true) → Checker 跑 BeatAnalyzer
+若 narrative.arcTracker.runOnNewChapter (默认 true) → Validator 跑 ArcTracker (本章涉及角色)
+若 Checker / Validator 提出修改建议 → Writer 自我重写一次 (≤1 次,避免循环)
+        ↓
+若 readerPanel.runOnSave (默认 true) → 5 persona 并行 → ChapterRiskReport
+        ↓
+最终 → writeChapterProposal (落 approvals 表,见 spec/06)
+        ↓
+ApprovalCard (展示完整章节 + 叙事报告 + 风险报告 + Validator cascade)
+        ↓ 用户同意 → POST /api/approvals/{id}/resolve → 落盘 + reindex
+        ↓
+Reflector 入队 (本批 cascade 合一次,≤5/会话,见 plan/06)
+</code></pre>
+<p>各自动触发的开关均在 SettingsDialog → Section 5 (读者仿真器 + 叙事引擎),用户可关闭节省成本。</p>
+<p>注意 ReaderPanel 是<strong>非闸门</strong>输出 — 信号挂在 ApprovalCard 内,作者可参考可忽略。</p>
+<h3 id="discuss-模式">Discuss 模式</h3>
+<p>只读。Router 直接答复,可调 readSetting / readChapter / searchEntities,<strong>不</strong>调任何 write* 工具。Reflector 不跑 (无审批闭环)。</p>
+<h2 id="多项目隔离-memory">多项目隔离 (Memory)</h2>
+<blockquote>
+<p>详细的记忆四层模型 (L1 工作记忆 / L2 会话记忆 / L3 项目记忆 / L4 知识图谱) 与 per-agent 上下文契约见 <a href="./12-memory-and-context.html">plan/12</a>;Mastra Memory 落地细节见 <a href="../spec/22-mastra-memory.html">spec/22</a>;per-agent context builder 实现见 <a href="../spec/23-context-contracts.html">spec/23</a>。本节只列 Memory 多项目隔离要点。</p>
+</blockquote>
+<pre><code class="language-ts">// lib/agents/memory.ts
+import { Memory } from &#39;@mastra/memory&#39;
+import { LibSQLStore } from &#39;@mastra/libsql&#39;
+
+export const memory = new Memory({
+  storage: new LibSQLStore({ url: &#39;file:&#39; + path.join(os.homedir(), &#39;.open-novel&#39;, &#39;runtime.db&#39;) }),
+  options: {
+    lastMessages: 30,        // 1M ctx 下放宽; 与 spec/22 对齐
+    semanticRecall: false,   // 默认关
+    workingMemory: false,    // 与&quot;L3 仅 Reflector 写&quot;原则冲突
+  },
+})
+</code></pre>
+<p>调用约束 — 所有 Agent 必经 <code>streamWithGuard</code> (而非直接 <code>streamVNext</code>):</p>
+<pre><code class="language-ts">await streamWithGuard(routerAgent, ctx.messages, {
+  memory: { thread: `proj:${projectId}:session:${sessionId}`, resource: projectId },
+  providerOptions: ctx.metadata.jsonMode
+    ? { deepseek: { response_format: { type: &#39;json_object&#39; } } }       // spec/24
+    : undefined,
+})
+// 缺 thread/resource 或 thread 中的 projectId 与 resource 不一致直接报错
+</code></pre>
+<p><code>resource = projectId</code> 确保跨项目零串扰;<code>thread</code> 切会话,旧对话可恢复;guard 函数防御性二次校验。</p>
+<p>每次 Agent stream 启动前先调对应 <a href="../spec/23-context-contracts.html">per-agent context builder (spec/23)</a> — 由它装配 system / learnings / L4 retrieve / messages,并标记 <code>jsonMode</code>。<strong>不允许 Agent 自拼 prompt</strong>(plan/01 不变性 L14)。</p>
+<h2 id="风格-性格定制">风格 / 性格定制</h2>
+<p>每个项目 <code>project.json</code>:</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;...&quot;,
+  &quot;name&quot;: &quot;重生互联网&quot;,
+  &quot;genre&quot;: &quot;都市重生&quot;,
+  &quot;style&quot;: &quot;幽默轻松,节奏快,短句多&quot;,
+  &quot;agentPersonality&quot;: &quot;毒舌助理,会主动指出剧情漏洞&quot;,
+  &quot;exampleCorpus&quot;: [&quot;.../范文1.md&quot;, &quot;.../范文2.md&quot;]
+}
+</code></pre>
+<p>Router 在每次调用前把这些字段拼进所有下游 Agent 的 system prompt,确保风格一致。</p>
+<h2 id="模型选择策略">模型选择策略</h2>
+<p>V4-Pro vs V4-Flash 现在是<strong>输出长度上限</strong>和<strong>单价档</strong>的差异 (两者 ctx 都 1M, 见 spec/00 §C)。配合 reasoningEffort 形成 <strong><code>v4-flash + default</code> (低成本短反应) / <code>v4-pro + max</code> (高质量长输出)</strong> 二档:</p>
+<ul>
+<li><strong><code>v4-pro + reasoningEffort: max</code></strong>: Writer / Validator / Humanizer — 创作核心 (Writer / Humanizer) + 一致性核心 (Validator); 长输出 + 深度推理同时需要</li>
+<li><strong><code>v4-flash + reasoningEffort: default</code></strong>: Router / Checker / Reflector / ReaderPanel — 短输出 (路由判断 / 章内分析 / 短摘要 / 单 persona 反应); 上 max 抹平 Flash 成本优势, 同价位升 Pro 更划算</li>
+</ul>
+<p>通过 <code>process.env.DEEPSEEK_API_KEY</code> 直连 + 模型名 <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code> (无 <code>deepseek/</code> 前缀, 见 spec/00 §C 实查), <strong>用户在 Settings UI 里可单独覆盖每个 Agent 的模型 + reasoningEffort</strong>, 但<strong>不暴露 fallback 到 V3/旧版</strong>。</p>
+<h2 id="readerpanel-成本控制">ReaderPanel 成本控制</h2>
+<p>ReaderPanel 每章跑 5 个 (+ N 自定义) persona,潜在 token 开销不小。控制策略:</p>
+<ul>
+<li>全部走 Flash 模型 (单价低)</li>
+<li>用户可在 SettingsDialog → &quot;读者仿真器&quot; tab 整体禁用</li>
+<li>自定义 persona 单独开关 + weight 调节</li>
+<li>章节 &gt;5K 字时只取关键段 (前 1000 字 + 后 800 字 + 中段冲突点),不全文喂入</li>
+</ul>
+  </main>
+</body>
+</html>

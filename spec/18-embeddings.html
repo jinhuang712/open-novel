@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 18 — 段级 Embedding 与语义检索 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/18-embeddings.html</span>
+</nav>
+<h1 id="spec-18-段级-embedding-与语义检索">Spec 18 — 段级 Embedding 与语义检索</h1>
+<blockquote>
+<p>实现 plan/11-knowledge-graph.md L2 算法层第二项。本文档定义段级向量索引、增量计算、检索 API、模型选型对比。</p>
+</blockquote>
+<h2 id="用途">用途</h2>
+<p>段级 embedding 服务三个核心场景:</p>
+<ol>
+<li><strong><code>assembleContext</code> 工具 (spec/20)</strong>:Writer 写章节前,把章节 outline 做 query,从已写章节里 topK 检索&quot;语义相关段&quot;,注入 prompt</li>
+<li><strong><code>queryFacts</code> 工具 (spec/21) §semantic-search 模式</strong>:作者主动查&quot;林川以前对女上司说过什么类似台词&quot;</li>
+<li><strong><code>analyzeImpact</code> 工具 (spec/19) §rewriting candidates</strong>:Validator 拿 setting 改动后,可附带&quot;语义最相关的 N 段&quot;作为补充候选</li>
+</ol>
+<h2 id="paragraph-embeddings-表-确认-schema">paragraph_embeddings 表 (确认 schema)</h2>
+<pre><code class="language-sql">CREATE TABLE paragraph_embeddings (
+  anchor_id TEXT PRIMARY KEY,
+  embedding BLOB NOT NULL,                -- F32 array,字节序见下
+  model_name TEXT NOT NULL,               -- &#39;bge-m3&#39; / &#39;deepseek-v1&#39; / &#39;text-embedding-3-small&#39;
+  model_dim INTEGER NOT NULL,             -- 1024 / 1536 / 3072
+  content_hash TEXT NOT NULL,             -- 与 paragraph_anchors.content_hash 对应
+  norm REAL NOT NULL,                     -- 预计算 L2 norm (用于 cosine 加速)
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (anchor_id) REFERENCES paragraph_anchors(anchor_id) ON DELETE CASCADE
+);
+CREATE INDEX idx_emb_model ON paragraph_embeddings(model_name);
+</code></pre>
+<p>embedding BLOB 存储格式:F32 little-endian 数组,直接 buffer dump。读时 <code>new Float32Array(buffer)</code> 还原。</p>
+<h2 id="选型对比-锁-bge-m3-本地">选型对比 (锁 BGE-M3 本地)</h2>
+<blockquote>
+<p><strong>决议</strong>: 锁 <strong>BGE-M3 本地</strong>。理由 = 0 边际成本 (重算自由) + 隐私 (创作隐私是网文作者强诉求) + 中文质量第一 (BAAI 出品)。代价: 启动需 Ollama (~600MB 二进制依赖)。Fallback 顺序: DeepSeek embedding (复用 API key) → OpenAI text-embedding-3-small。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>BGE-M3 (本地) <strong>← 选定</strong></th>
+<th>DeepSeek Embedding (fallback 1)</th>
+<th>OpenAI text-embedding-3-small (fallback 2)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>托管方式</strong></td>
+<td>本地 (Ollama/llama.cpp/transformers.js)</td>
+<td>云 API</td>
+<td>云 API</td>
+</tr>
+<tr>
+<td><strong>维度</strong></td>
+<td>1024</td>
+<td>1536</td>
+<td>1536 (可 reduce)</td>
+</tr>
+<tr>
+<td><strong>中文质量</strong></td>
+<td>⭐⭐⭐⭐⭐ (北京智源 BAAI 出品,中英多语并优)</td>
+<td>⭐⭐⭐⭐ (DeepSeek 自家中文训练数据)</td>
+<td>⭐⭐⭐ (英文导向)</td>
+</tr>
+<tr>
+<td><strong>首字 token 时延</strong></td>
+<td>&lt; 100ms (本地 GPU) / ~500ms (CPU M1)</td>
+<td>~200ms (云)</td>
+<td>~150ms (云)</td>
+</tr>
+<tr>
+<td><strong>批量速度 (100 段)</strong></td>
+<td>~3s (M1 CPU) / 0.5s (GPU)</td>
+<td>~2s (依赖网)</td>
+<td>~1.5s</td>
+</tr>
+<tr>
+<td><strong>离线可用</strong></td>
+<td>✅</td>
+<td>❌ 须连云</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>成本 (1000 章 × 平均 200 段)</strong></td>
+<td>$0 (一次性下载 ~600MB 模型)</td>
+<td>~$0.5 (按 DeepSeek $0.0002 / 1K tokens)</td>
+<td>~$1 (OpenAI $0.02 / 1M tokens)</td>
+</tr>
+<tr>
+<td><strong>集成复杂度</strong></td>
+<td>中 (需 Ollama / Web 端 ONNX)</td>
+<td>低 (HTTP)</td>
+<td>低 (HTTP)</td>
+</tr>
+<tr>
+<td><strong>隐私</strong></td>
+<td>✅ 本地</td>
+<td>中 (DeepSeek 服务器)</td>
+<td>中 (OpenAI 服务器)</td>
+</tr>
+<tr>
+<td><strong>跨模型一致性</strong></td>
+<td>自家维护,版本可锁</td>
+<td>DeepSeek 升级版本可能不兼容 (已规划 v4 model 闸门)</td>
+<td>OpenAI 历史不兼容 (text-embedding-ada → 3 已断 case)</td>
+</tr>
+</tbody></table>
+<h3 id="决议依据">决议依据</h3>
+<p>锁 <strong>BGE-M3 本地</strong>, 理由:</p>
+<ol>
+<li>0 边际成本 (一次性下载) — 用户&quot;不担心 token&quot;对生成模型有效, 但 embedding 量级高得多 (5 万段 × 200 字 = 1000 万 tokens, 跑一次), 重算自由的价值远大于一次性 ~600MB 安装</li>
+<li>隐私 + 离线 — 创作隐私是网文作者强诉求</li>
+<li>中文质量第一 (BAAI 出品)</li>
+</ol>
+<p>启动 / 装机指引 (W8 实施):</p>
+<ul>
+<li>macOS: <code>brew install ollama &amp;&amp; ollama pull bge-m3</code></li>
+<li>Web 端 fallback: transformers.js + ONNX 自动加载 (用户首次启动 ~5min 下载, 后续走浏览器缓存)</li>
+</ul>
+<p>W8 spec/00 §J 实查 Ollama 稳定性, 如失败按 §选型对比 fallback 顺序自动降级。</p>
+<h3 id="model-切换迁移">model 切换迁移</h3>
+<p>如果中途换 model (e.g. BGE-M3 → 二期换 OpenAI v4):</p>
+<ul>
+<li><code>paragraph_embeddings.model_name</code> 字段使新旧并存可查询</li>
+<li>切换后入队全量 reindex,逐段重算,旧 model_name 行批量删除</li>
+<li>UI 显示&quot;重建索引中... 67/120 章&quot;</li>
+</ul>
+<h2 id="接入抽象层">接入抽象层</h2>
+<pre><code class="language-ts">// lib/embeddings/index.ts
+export interface EmbeddingProvider {
+  name: string
+  dim: number
+  embed(texts: string[]): Promise&lt;Float32Array[]&gt;     // 批量,顺序对应
+  isAvailable(): Promise&lt;boolean&gt;
+}
+
+// 具体实现
+export class BgeM3Provider implements EmbeddingProvider { /* Ollama HTTP */ }
+export class DeepSeekProvider implements EmbeddingProvider { /* DeepSeek API */ }
+export class OpenAIProvider implements EmbeddingProvider { /* OpenAI API */ }
+
+// 选择器
+export function getEmbeddingProvider(): EmbeddingProvider {
+  const choice = process.env.EMBEDDING_PROVIDER ?? &#39;bge-m3&#39;
+  switch (choice) {
+    case &#39;bge-m3&#39;: return new BgeM3Provider()
+    case &#39;deepseek&#39;: return new DeepSeekProvider()
+    case &#39;openai&#39;: return new OpenAIProvider()
+    default: throw new Error(`Unknown provider: ${choice}`)
+  }
+}
+</code></pre>
+<p>具体实现 (Ollama 本地端) 示例:</p>
+<pre><code class="language-ts">// lib/embeddings/bge-m3.ts
+export class BgeM3Provider implements EmbeddingProvider {
+  name = &#39;bge-m3&#39;
+  dim = 1024
+  private url = process.env.OLLAMA_URL ?? &#39;http://localhost:11434&#39;
+
+  async embed(texts: string[]): Promise&lt;Float32Array[]&gt; {
+    const results: Float32Array[] = []
+    // Ollama 不原生支持批量,串行调用
+    for (const text of texts) {
+      const r = await fetch(`${this.url}/api/embeddings`, {
+        method: &#39;POST&#39;,
+        body: JSON.stringify({ model: &#39;bge-m3&#39;, prompt: text }),
+      })
+      const data = await r.json() as { embedding: number[] }
+      results.push(new Float32Array(data.embedding))
+    }
+    return results
+  }
+
+  async isAvailable() {
+    try {
+      const r = await fetch(`${this.url}/api/tags`)
+      const data = await r.json() as { models: { name: string }[] }
+      return data.models.some(m =&gt; m.name.includes(&#39;bge-m3&#39;))
+    } catch { return false }
+  }
+}
+</code></pre>
+<p>启动时检查 <code>isAvailable()</code>;不可用时降级到 DeepSeek,再不可用降级到 &quot;embeddings 不工作,语义检索功能 disabled,但其他功能照常&quot;。</p>
+<h2 id="增量计算">增量计算</h2>
+<pre><code class="language-ts">// lib/embeddings/incremental.ts
+export async function reembedAnchor(projectId: string, anchorId: string, text: string) {
+  const provider = getEmbeddingProvider()
+  if (!await provider.isAvailable()) return  // 降级 silent
+  const [embedding] = await provider.embed([text])
+  const norm = Math.sqrt(embedding.reduce((s, v) =&gt; s + v * v, 0))
+  const buf = Buffer.from(embedding.buffer)
+  const contentHash = sha256(text)
+  await db.execute(`
+    INSERT INTO paragraph_embeddings (anchor_id, embedding, model_name, model_dim, content_hash, norm, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(anchor_id) DO UPDATE SET
+      embedding = excluded.embedding,
+      model_name = excluded.model_name,
+      content_hash = excluded.content_hash,
+      norm = excluded.norm,
+      created_at = excluded.created_at
+  `, anchorId, buf, provider.name, provider.dim, contentHash, norm, now())
+}
+</code></pre>
+<p>调用入口在 spec/17 §reindex Worker 升级 §applyAnchorDiff 的 <code>enqueueParagraphRescan</code> 内。</p>
+<h3 id="批量优化">批量优化</h3>
+<p>reindex 时若有 ≥ 5 段需要重算,合并一次 batch:</p>
+<pre><code class="language-ts">async function reembedBatch(projectId: string, items: { anchorId: string; text: string }[]) {
+  const provider = getEmbeddingProvider()
+  const embs = await provider.embed(items.map(i =&gt; i.text))
+  const tx = await db.beginTransaction()
+  try {
+    for (let i = 0; i &lt; items.length; i++) {
+      // 同上 INSERT/UPSERT
+    }
+    await tx.commit()
+  } catch (e) { await tx.rollback(); throw e }
+}
+</code></pre>
+<h2 id="检索-api">检索 API</h2>
+<h3 id="1-朴素-sql-起步">1. 朴素 SQL (起步)</h3>
+<p>未上 sqlite-vss / LibSQL vector 时,直接读全部 embeddings 在 JS 层计算 cosine:</p>
+<pre><code class="language-ts">// lib/embeddings/search.ts
+export async function semanticSearch(
+  projectId: string,
+  query: string,
+  options: {
+    topK?: number
+    filterFile?: string                    // glob: &#39;chapters/0*&#39;
+    excludeAnchors?: string[]
+  } = {},
+): Promise&lt;{ anchorId: string; similarity: number; snippet: string }[]&gt; {
+  const { topK = 10, filterFile, excludeAnchors = [] } = options
+  const provider = getEmbeddingProvider()
+  const [queryEmb] = await provider.embed([query])
+  const queryNorm = Math.sqrt(queryEmb.reduce((s, v) =&gt; s + v * v, 0))
+
+  // SQL 取所有 embedding (起步阶段简单)
+  const rows = await db.execute(`
+    SELECT pe.anchor_id, pe.embedding, pe.norm, pa.heading_path, pa.start_offset, pa.end_offset, pa.file_path
+    FROM paragraph_embeddings pe
+    JOIN paragraph_anchors pa ON pe.anchor_id = pa.anchor_id
+    WHERE pa.deleted_at IS NULL
+      ${filterFile ? `AND pa.file_path GLOB ?` : &#39;&#39;}
+      ${excludeAnchors.length ? `AND pa.anchor_id NOT IN (${excludeAnchors.map(_ =&gt; &#39;?&#39;).join(&#39;,&#39;)})` : &#39;&#39;}
+  `, ...(filterFile ? [filterFile] : []), ...excludeAnchors)
+
+  // JS 层 cosine + topK heap
+  const heap = new MinHeap&lt;{ anchorId: string; similarity: number }&gt;(topK)
+  for (const r of rows) {
+    const emb = new Float32Array(r.embedding.buffer)
+    const dot = dotProduct(queryEmb, emb)
+    const cos = dot / (queryNorm * r.norm)
+    heap.push({ anchorId: r.anchor_id, similarity: cos })
+  }
+
+  // 取 topK + 拉 snippet
+  return Promise.all(heap.toArray().sort((a, b) =&gt; b.similarity - a.similarity).map(async h =&gt; ({
+    anchorId: h.anchorId,
+    similarity: h.similarity,
+    snippet: await fetchAnchorSnippet(projectId, h.anchorId),
+  })))
+}
+</code></pre>
+<h3 id="2-性能阈值">2. 性能阈值</h3>
+<p>朴素 SQL + JS cosine 在以下规模可接受:</p>
+<table>
+<thead>
+<tr>
+<th>段数</th>
+<th>朴素扫描耗时 (M1 CPU)</th>
+<th>是否升级</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&lt; 5,000</td>
+<td>&lt; 50ms</td>
+<td>OK</td>
+</tr>
+<tr>
+<td>5,000 - 20,000</td>
+<td>50-200ms</td>
+<td>仍可接受</td>
+</tr>
+<tr>
+<td>&gt; 20,000</td>
+<td>&gt; 200ms</td>
+<td>升级到 sqlite-vss / LibSQL vector</td>
+</tr>
+</tbody></table>
+<p>起步用朴素扫描;若 Demo 项目突破 20K 段,<strong>升级路径</strong>:</p>
+<pre><code class="language-sql">-- LibSQL native vector (libsql-server &gt; 0.24)
+CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vector_search(
+  embedding FLOAT32(1024)
+);
+
+-- 或 sqlite-vss (sidecar 需 load extension)
+CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vss0(embedding(1024));
+</code></pre>
+<p><strong>决议</strong>: 优先 LibSQL native vector (<code>libsql-server &gt; 0.24</code> + <code>vector_search</code> 虚拟表), 兼容 LibSQL 单文件结构; 若当前 <code>@mastra/libsql</code> 不带, 降级到 sqlite-vss extension (sidecar load_extension)。两者都失败再降级到朴素 cosine (5K 段以下能跑)。</p>
+<h3 id="3-检索结果鲁棒性">3. 检索结果鲁棒性</h3>
+<p>cosine 相似度在中文 + BGE-M3 上的经验阈值:</p>
+<ul>
+<li>≥ 0.85 = 强相关</li>
+<li>0.7 ~ 0.85 = 弱相关</li>
+<li>&lt; 0.7 = 噪声</li>
+</ul>
+<p><code>semanticSearch</code> 默认丢弃 &lt; 0.6 结果(可配置)。topK 取的是绝对最高,即使全是 &lt; 0.6,也可能返回(由调用方决定是否使用)。</p>
+<h2 id="与其他系统对接">与其他系统对接</h2>
+<h3 id="与-entity-refs-concept-refs-双索引互补">与 entity_refs / concept_refs 双索引互补</h3>
+<p>embeddings 解决&quot;语义相关&quot;(同义、近义),entity_refs / concept_refs 解决&quot;显式提及&quot;。assembleContext 工具的 retrieve 链路同时用两类索引,合并去重(详见 spec/20)。</p>
+<h3 id="与-paragraph-anchors-的-lifecycle-联动">与 paragraph_anchors 的 lifecycle 联动</h3>
+<pre><code>anchor unchanged → embedding 不动
+anchor modified  → enqueueParagraphRescan → reembedAnchor
+anchor rewritten → 旧 anchor 软删 → CASCADE 删 paragraph_embeddings 行 (FK ON DELETE CASCADE)
+                   新 anchor → reembedAnchor
+anchor deleted   → 同 rewritten 后半 (软删 anchor → embedding 一并 cascade 删)
+anchor added     → reembedAnchor
+</code></pre>
+<p>软删 anchor (deleted_at != NULL) 是否保留 embedding?</p>
+<ul>
+<li>保留 (deleted_at != NULL 时不参与检索,但供&quot;恢复&quot;路径)</li>
+<li>30 天硬删 anchor 时一并 CASCADE 删 embedding</li>
+</ul>
+<h2 id="离线-降级行为">离线 / 降级行为</h2>
+<table>
+<thead>
+<tr>
+<th>provider 不可用</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启动时 (e.g. Ollama 没启动)</td>
+<td>后台尝试,主路径不阻塞;UI 状态栏显示&quot;语义索引离线&quot;,<code>assembleContext</code> 跳过语义部分,<code>queryFacts</code> semantic-search 模式 disabled</td>
+</tr>
+<tr>
+<td>reindex 中途</td>
+<td>该段 embedding 跳过,落 reindex_failures 记 reason=&#39;embedding-unavailable&#39;,Worker 后台 retry</td>
+</tr>
+<tr>
+<td>检索时不可用</td>
+<td>返回空数组,调用方按&quot;未命中&quot;处理,不抛错</td>
+</tr>
+</tbody></table>
+<p>降级语义:<strong>embedding 是&quot;锦上添花&quot;,不应使主流程瘫痪</strong>。具体的 entity_refs / concept_refs / dependencies 不依赖 embedding。</p>
+<h2 id="测试">测试</h2>
+<table>
+<thead>
+<tr>
+<th>测试</th>
+<th>类型</th>
+<th>覆盖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>embedding-providers.test.ts</code></td>
+<td>集成</td>
+<td>三 provider 各自 isAvailable + embed 正确;mock 化 LLM 端</td>
+</tr>
+<tr>
+<td><code>incremental-reembed.test.ts</code></td>
+<td>集成</td>
+<td>anchor diff 后 paragraph_embeddings 增量正确</td>
+</tr>
+<tr>
+<td><code>semantic-search.test.ts</code></td>
+<td>集成</td>
+<td>给 30 段 fixture,query 命中预期 anchor,topK 准确</td>
+</tr>
+<tr>
+<td><code>embedding-fallback.test.ts</code></td>
+<td>集成</td>
+<td>provider 不可用时所有调用方降级,不抛</td>
+</tr>
+<tr>
+<td><code>embedding-bench.bench.ts</code></td>
+<td>bench</td>
+<td>5K / 20K 段规模朴素 cosine 耗时;W8 末填表</td>
+</tr>
+</tbody></table>
+<h2 id="已决策项">已决策项</h2>
+<p>✅ <strong>embedding 模型选型</strong>: 锁 <strong>BGE-M3 本地</strong>, fallback 1 = DeepSeek, fallback 2 = OpenAI (见 §选型对比 + §决议依据)
+✅ <strong>vector 索引路径</strong>: 优先 LibSQL native vector → sqlite-vss → 朴素 cosine (见 §决议条款 实施顺序)
+✅ <strong>embedding model 升级时的全量重算成本上限</strong>: 阈值 <strong>1000 段以上必弹 UI 提示</strong>, 显示 &quot;切换 model 将重算 N 段, 预计 X 分钟, 确认?&quot;; 1000 段以下静默重算</p>
+  </main>
+</body>
+</html>

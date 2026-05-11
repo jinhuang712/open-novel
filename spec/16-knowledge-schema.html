@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 16 — 知识图谱 Schema - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/16-knowledge-schema.html</span>
+</nav>
+<h1 id="spec-16-知识图谱-schema">Spec 16 — 知识图谱 Schema</h1>
+<blockquote>
+<p>实现 plan/11-knowledge-graph.md L1 数据层。本文档定义 4 张新表 + 1 张段锚表 (实现见 spec/17) + 1 张段嵌入表 (实现见 spec/18) + character.md frontmatter 升级 + 概念抽取流程。</p>
+</blockquote>
+<h2 id="设计原则">设计原则</h2>
+<ol>
+<li><strong>表与 entity 单向 FK</strong> — 所有新表都引用 <code>entities(id)</code>,但 entities 表不反向依赖,避免循环</li>
+<li><strong>时间字段全部以 chapterId 表达,不用墙钟</strong> — 故事内时间是 chapter 序,与作者写作真实时间无关</li>
+<li><strong>frontmatter 是事实源,SQLite 是索引</strong> — 用户改 character.md 后,reindex Worker 重写 entity_relations / entity_timeline 中所有 <code>source = &#39;frontmatter&#39;</code> 的行</li>
+<li><strong>派生表 vs 事实表分离</strong> — entity_relations 是派生表 (从 frontmatter + 章节扫描出来),<code>relationships/notes/*.md</code> 是用户对关系的注解 (事实)</li>
+</ol>
+<h2 id="表-1-entity-relations">表 1 — entity_relations</h2>
+<pre><code class="language-sql">CREATE TABLE entity_relations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source_id TEXT NOT NULL,                -- char_lin_a3f2
+  target_id TEXT NOT NULL,                -- char_zhang_b1c4
+  kind TEXT NOT NULL,                     -- 关系类型,见下方枚举
+  since_chapter TEXT,                     -- ch_005 起建立此关系 (nullable = 故事初始)
+  until_chapter TEXT,                     -- 在 ch_080 解除/转化 (nullable = 仍持续)
+  strength INTEGER NOT NULL DEFAULT 50 CHECK (strength BETWEEN 0 AND 100),
+  reciprocal_kind TEXT,                   -- 对偶关系: source.mentor → target.disciple (nullable)
+  evidence_file TEXT NOT NULL,            -- settings/characters/lin.md 或 chapters/005-XX/draft.md
+  evidence_anchor TEXT,                   -- 段级 stable id (见 spec/17)
+  evidence_quote TEXT,                    -- 该关系来源的原文片段 ≤ 200 字
+  source TEXT NOT NULL,                   -- &#39;frontmatter&#39; | &#39;narrative&#39; | &#39;user-edit&#39;
+  confidence INTEGER NOT NULL DEFAULT 100 CHECK (confidence BETWEEN 0 AND 100),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (source_id) REFERENCES entities(id) ON DELETE CASCADE,
+  FOREIGN KEY (target_id) REFERENCES entities(id) ON DELETE CASCADE,
+  UNIQUE(source_id, target_id, kind, since_chapter)   -- 防重复 reindex
+);
+CREATE INDEX idx_rel_src ON entity_relations(source_id, kind);
+CREATE INDEX idx_rel_tgt ON entity_relations(target_id, kind);
+CREATE INDEX idx_rel_active ON entity_relations(source_id, since_chapter, until_chapter);
+</code></pre>
+<h3 id="kind-枚举-开放扩展">kind 枚举 (开放扩展)</h3>
+<p>内置 17 种,自由扩展走 <code>metadata</code> 字段:</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>kind 列表</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>血缘</td>
+<td><code>parent</code> <code>child</code> <code>sibling</code> <code>spouse</code> <code>relative</code></td>
+</tr>
+<tr>
+<td>师承</td>
+<td><code>mentor</code> <code>disciple</code> <code>peer-disciple</code></td>
+</tr>
+<tr>
+<td>上下级</td>
+<td><code>superior</code> <code>subordinate</code> <code>colleague</code></td>
+</tr>
+<tr>
+<td>情感</td>
+<td><code>lover</code> <code>crush</code> <code>ex-lover</code></td>
+</tr>
+<tr>
+<td>对立</td>
+<td><code>enemy</code> <code>rival</code> <code>target</code> <code>victim</code></td>
+</tr>
+<tr>
+<td>同盟</td>
+<td><code>ally</code> <code>friend</code> <code>partner</code></td>
+</tr>
+</tbody></table>
+<p>reciprocal_kind 对照:<code>mentor</code> ↔ <code>disciple</code>、<code>parent</code> ↔ <code>child</code>、<code>spouse</code> ↔ <code>spouse</code>、<code>enemy</code> ↔ <code>enemy</code> 等。reindex 时若发现 source.kind=mentor 但 target 没有对应 disciple 行,自动补一行(strength 同步)。</p>
+<h3 id="来源等级-用于冲突解决">来源等级 (用于冲突解决)</h3>
+<p>reindex 后同 (source_id, target_id) 可能出现多行(frontmatter 写&quot;林川是张三师父&quot;,章节正文又被 LLM 抽出&quot;林川对张三说&#39;师父好&#39;&quot;):</p>
+<table>
+<thead>
+<tr>
+<th>source 等级</th>
+<th>信任</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>user-edit</code></td>
+<td>最高;手动注释,锁,reindex 不覆盖</td>
+</tr>
+<tr>
+<td><code>frontmatter</code></td>
+<td>高;用户在 character.md 显式声明</td>
+</tr>
+<tr>
+<td><code>narrative</code></td>
+<td>中;LLM 从章节正文抽取,confidence &lt; 80 时 UI 黄色警告&quot;待确认&quot;</td>
+</tr>
+</tbody></table>
+<p>冲突时:<code>user-edit</code> &gt; <code>frontmatter</code> &gt; <code>narrative</code>。<code>narrative</code> 行 confidence &lt; 60 时 UI 不显示,只在 lint 时提示作者&quot;是否登记&quot;。</p>
+<h2 id="表-2-entity-timeline">表 2 — entity_timeline</h2>
+<pre><code class="language-sql">CREATE TABLE entity_timeline (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_id TEXT NOT NULL,
+  attribute TEXT NOT NULL,                -- 见 attribute 枚举
+  value TEXT NOT NULL,                    -- 字符串/JSON,按 attribute 解释
+  valid_from_chapter TEXT NOT NULL,       -- ch_001 起此值有效
+  valid_to_chapter TEXT,                  -- 至 ch_050 失效 (nullable = 至今)
+  declared_in TEXT NOT NULL,              -- 来源文件
+  declared_anchor TEXT,                   -- 段级 stable id
+  declared_quote TEXT,                    -- ≤ 200 字
+  source TEXT NOT NULL,                   -- &#39;frontmatter&#39; | &#39;narrative&#39; | &#39;user-edit&#39;
+  confidence INTEGER NOT NULL DEFAULT 100 CHECK (confidence BETWEEN 0 AND 100),
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
+  UNIQUE(entity_id, attribute, valid_from_chapter, source)
+);
+CREATE INDEX idx_tl_entity_attr ON entity_timeline(entity_id, attribute);
+CREATE INDEX idx_tl_validity ON entity_timeline(entity_id, valid_from_chapter, valid_to_chapter);
+</code></pre>
+<h3 id="attribute-枚举">attribute 枚举</h3>
+<table>
+<thead>
+<tr>
+<th>attribute</th>
+<th>value 类型</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>age</code></td>
+<td>int</td>
+<td><code>28</code></td>
+</tr>
+<tr>
+<td><code>location</code></td>
+<td>entity_id (place)</td>
+<td><code>place_beijing_2010</code></td>
+</tr>
+<tr>
+<td><code>mood</code></td>
+<td>string</td>
+<td><code>depressed</code></td>
+</tr>
+<tr>
+<td><code>power_level</code></td>
+<td>string</td>
+<td><code>tier-3</code></td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td><code>alive</code> / <code>dead</code> / <code>missing</code> / <code>coma</code></td>
+</tr>
+<tr>
+<td><code>affiliation</code></td>
+<td>entity_id (org/faction)</td>
+<td><code>org_donghai_a3f2</code></td>
+</tr>
+<tr>
+<td><code>wealth</code></td>
+<td>string (粗粒度)</td>
+<td><code>poor</code> / <code>middle</code> / <code>rich</code></td>
+</tr>
+<tr>
+<td><code>social_rank</code></td>
+<td>string</td>
+<td><code>commoner</code> / <code>executive</code> / <code>boss</code></td>
+</tr>
+<tr>
+<td><code>key_possession</code></td>
+<td>entity_id (item) JSON list</td>
+<td><code>[&quot;item_pocket_watch_x1y2&quot;]</code></td>
+</tr>
+</tbody></table>
+<p>attribute 集合内置以上 9 类,扩展通过 <code>metadata</code> JSON 字段(后续可加列)。</p>
+<h3 id="关键查询模式">关键查询模式</h3>
+<pre><code class="language-sql">-- 林川 ch_050 时年龄
+SELECT value FROM entity_timeline
+ WHERE entity_id = &#39;char_lin_a3f2&#39; AND attribute = &#39;age&#39;
+   AND valid_from_chapter &lt;= &#39;ch_050&#39;
+   AND (valid_to_chapter IS NULL OR valid_to_chapter &gt; &#39;ch_050&#39;)
+ ORDER BY confidence DESC, source ASC LIMIT 1;
+</code></pre>
+<p>(章节 ID 排序用字典序前 LPad chapter order 序号,详见 spec/17 §章节序与字典序。)</p>
+<h3 id="自动推断规则">自动推断规则</h3>
+<p>reindex Worker 推断:</p>
+<ol>
+<li>若 character.md frontmatter <code>initial_state.age = 28</code> + worldview <code>era = 现代-2010</code> + 章节 ch_050 内出现&quot;三年后林川生日&quot;→ 自动写入 <code>(lin, age, 31, ch_050, ch_???, source=narrative, confidence=70)</code> 一行,UI 标 &quot;待确认&quot;</li>
+<li>若 章节 ch_010 § 3 出现&quot;林川走出北京站&quot;→ 推断 <code>(lin, location, place_beijing, ch_010, ch_???, source=narrative, confidence=75)</code></li>
+</ol>
+<p>二期可加 LLM 主动扫描 narrative 推断时间轴。当前:作者在 character.md 显式声明 (frontmatter <code>initial_state</code> + 用户编辑 timeline 注解) 为主路径,narrative 推断为辅路径。</p>
+<h2 id="表-3-concepts">表 3 — concepts</h2>
+<pre><code class="language-sql">CREATE TABLE concepts (
+  id TEXT PRIMARY KEY,                    -- concept_no_phone_x1y2
+  category TEXT NOT NULL,                 -- &#39;tech&#39; | &#39;magic&#39; | &#39;taboo&#39; | &#39;glossary&#39; | &#39;rule&#39; | &#39;culture&#39;
+  semantic TEXT NOT NULL,                 -- &#39;absent&#39; | &#39;present&#39; | &#39;restricted&#39; | &#39;mandatory&#39; | &#39;unique&#39;
+  title TEXT NOT NULL,                    -- &#39;此世界没有手机&#39;
+  surface_forms TEXT NOT NULL,            -- JSON [&#39;手机&#39;, &#39;移动电话&#39;, &#39;电话&#39;, &#39;mobile&#39;]
+  description TEXT NOT NULL,              -- 完整描述
+  defined_in TEXT NOT NULL,               -- worldview/rules.md
+  defined_anchor TEXT,                    -- 段级 stable id
+  source TEXT NOT NULL,                   -- &#39;llm-extracted&#39; | &#39;user-edit&#39;
+  confidence INTEGER NOT NULL DEFAULT 100 CHECK (confidence BETWEEN 0 AND 100),
+  status TEXT NOT NULL DEFAULT &#39;active&#39;,  -- &#39;active&#39; | &#39;reviewing&#39; | &#39;archived&#39;
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_concepts_category ON concepts(category);
+CREATE INDEX idx_concepts_status ON concepts(status);
+</code></pre>
+<p><code>semantic</code> 字段语义:</p>
+<ul>
+<li><code>absent</code> — 此世界<strong>没有</strong>该事物 (e.g. 无手机)</li>
+<li><code>present</code> — <strong>存在</strong>且无特殊限制</li>
+<li><code>restricted</code> — 存在但<strong>受限</strong> (e.g. 武器限平民,法师限考核)</li>
+<li><code>mandatory</code> — 强制要求 (e.g. 全民修炼)</li>
+<li><code>unique</code> — 独一无二 (e.g. 只有主角能用某能力)</li>
+</ul>
+<h3 id="概念抽取流程">概念抽取流程</h3>
+<pre><code>worldview/rules.md 落盘
+   ↓
+reindex Worker 入队 concept-extraction job
+   ↓
+LLM Flash 跑 spec/16 §concept-extractor prompt:
+   &quot;从这段文字中提取所有&#39;世界硬规则&#39;(影响后续创作的硬性约束):
+    每条输出 { title, surface_forms, semantic, category, description }&quot;
+   ↓
+返回候选 concepts (status=&#39;reviewing&#39;)
+   ↓
+SettingsDialog → 概念审视面板 (新)
+  | 候选 | 类别 | 语义 | 表面词 | [接受] [拒绝] [改] |
+   ↓
+用户接受 → status=&#39;active&#39; + 入 concepts 表 + concept_refs 全文重扫
+用户拒绝 → status=&#39;archived&#39; (留底防重复抽)
+</code></pre>
+<h3 id="concept-extractor-prompt-libconceptspromptsextractormd">concept-extractor prompt (<code>lib/concepts/prompts/extractor.md</code>)</h3>
+<pre><code class="language-markdown">你是 Open Novel 概念抽取器。任务:从世界观/设定文本中提取**会影响后续章节创作的硬规则**。
+
+# 输入
+{{worldview_or_rules_text}}
+
+# 输出
+JSON 数组,每条形如:
+{
+  &quot;title&quot;: &quot;此世界没有手机&quot;,
+  &quot;surface_forms&quot;: [&quot;手机&quot;, &quot;移动电话&quot;, &quot;电话&quot;, &quot;mobile&quot;],
+  &quot;semantic&quot;: &quot;absent&quot;,
+  &quot;category&quot;: &quot;tech&quot;,
+  &quot;description&quot;: &quot;故事设定为蒸汽朋克 1900 年,无现代通讯手段...&quot;
+}
+
+# 严格规则
+- 只提取**硬规则** (会让某段未来创作变成&quot;违反设定&quot;的)
+- 不提取风格 / 偏好 / 一般描述
+- surface_forms 至少 2 个 (含同义词、缩写、英文)
+- 不确定时不要输出 (宁缺勿滥)
+- 输出严格 JSON 数组
+</code></pre>
+<h2 id="表-4-concept-refs">表 4 — concept_refs</h2>
+<p>与 entity_refs 对称结构,但索引概念表面词:</p>
+<pre><code class="language-sql">CREATE TABLE concept_refs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  concept_id TEXT NOT NULL,
+  source_file TEXT NOT NULL,
+  source_anchor TEXT,                     -- 段级 stable id
+  position_from INTEGER NOT NULL,         -- 字符 offset (within paragraph)
+  position_to INTEGER NOT NULL,
+  matched_text TEXT NOT NULL,             -- &#39;手机&#39; / &#39;移动电话&#39; (实际命中表面词)
+  snippet TEXT NOT NULL,                  -- 前后 30 字
+  is_violation INTEGER NOT NULL DEFAULT 0, -- 1 = 与 concept.semantic 冲突 (e.g. concept=&#39;no phone&#39; 但章节出现&#39;手机&#39;)
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE CASCADE,
+  UNIQUE(concept_id, source_file, position_from)
+);
+CREATE INDEX idx_cref_concept ON concept_refs(concept_id);
+CREATE INDEX idx_cref_source ON concept_refs(source_file);
+CREATE INDEX idx_cref_violations ON concept_refs(is_violation) WHERE is_violation = 1;
+</code></pre>
+<h3 id="is-violation-计算">is_violation 计算</h3>
+<p>reindex 时按 concept.semantic 判:</p>
+<ul>
+<li><code>absent</code> → 任何命中 = violation</li>
+<li><code>present</code> → 0 violation (只是引用)</li>
+<li><code>restricted</code> → 配合上下文 LLM 判 (当前简化为 0,二期接 LLM)</li>
+<li><code>mandatory</code> / <code>unique</code> → 上下文 LLM 判 (当前简化为 0)</li>
+</ul>
+<p>violation = 1 的行让 Validator cascade 自动捞起来重写。</p>
+<h2 id="表-5-dependencies">表 5 — dependencies</h2>
+<p>跨文件 / 跨设定的显式依赖:</p>
+<pre><code class="language-sql">CREATE TABLE dependencies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL,                     -- 见 kind 枚举
+  source_file TEXT NOT NULL,              -- foreshadowing/001-pocket-watch.md
+  source_anchor TEXT,                     -- 段级 stable id (来源)
+  target_file TEXT NOT NULL,              -- chapters/010-XX/draft.md
+  target_anchor TEXT NOT NULL,            -- 段级 stable id (锚点必填)
+  status TEXT NOT NULL DEFAULT &#39;pending&#39;, -- 见 status 枚举
+  metadata TEXT,                          -- JSON: 收割章节 / 强度 / Custom 字段
+  user_note TEXT,                         -- 用户对此依赖的注解
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_dep_target ON dependencies(target_file, target_anchor);
+CREATE INDEX idx_dep_source ON dependencies(source_file);
+CREATE INDEX idx_dep_status ON dependencies(status);
+CREATE INDEX idx_dep_kind ON dependencies(kind);
+</code></pre>
+<h3 id="kind-枚举">kind 枚举</h3>
+<table>
+<thead>
+<tr>
+<th>kind</th>
+<th>语义</th>
+<th>例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>foreshadowing</code></td>
+<td>伏笔</td>
+<td>foreshadowing/X.md → ch_010 § 5 (埋点)</td>
+</tr>
+<tr>
+<td><code>payoff</code></td>
+<td>收割</td>
+<td>foreshadowing/X.md → ch_080 § 12 (收割点)</td>
+</tr>
+<tr>
+<td><code>callback</code></td>
+<td>呼应</td>
+<td>ch_080 → ch_005 (回调早期场景)</td>
+</tr>
+<tr>
+<td><code>setup</code></td>
+<td>铺垫</td>
+<td>character/lin.md → ch_001 (设定 → 首次落地)</td>
+</tr>
+<tr>
+<td><code>continuity</code></td>
+<td>延续</td>
+<td>ch_010 → ch_011 (上一章末尾接下一章开头)</td>
+</tr>
+<tr>
+<td><code>promise</code></td>
+<td>承诺</td>
+<td>reader-promises.md → ch_???? (尚未兑现)</td>
+</tr>
+</tbody></table>
+<h3 id="status-枚举">status 枚举</h3>
+<table>
+<thead>
+<tr>
+<th>status</th>
+<th>语义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>pending</code></td>
+<td>已建立,尚未触达 (foreshadowing 已埋,未收割)</td>
+</tr>
+<tr>
+<td><code>planted</code></td>
+<td>埋点已写 (ch_010 § 5 已含怀表描写)</td>
+</tr>
+<tr>
+<td><code>paid-off</code></td>
+<td>收割已写 (ch_080 § 12 已揭示怀表是关键)</td>
+</tr>
+<tr>
+<td><code>broken</code></td>
+<td>锚点失效 (ch_010 § 5 段被删,需作者处理)</td>
+</tr>
+<tr>
+<td><code>archived</code></td>
+<td>用户主动归档 (放弃此伏笔)</td>
+</tr>
+</tbody></table>
+<h3 id="lint-触发规则">lint 触发规则</h3>
+<p>reindex 后扫一遍 dependencies:</p>
+<ul>
+<li><code>pending</code> 但 target_anchor 找不到 → 改 <code>broken</code>,UI 红色警告&quot;伏笔锚点失效&quot;</li>
+<li><code>pending</code> 但 metadata.expected_payoff_by &lt; current_chapter → 改 <code>pending</code> + UI 黄色警告&quot;伏笔超期未收割&quot;</li>
+<li><code>paid-off</code> 但 source_anchor 找不到 → 改 <code>broken</code>(收割点没了埋点)</li>
+</ul>
+<h3 id="metadata-字段-kindforeshadowing-promise-专用五大守则期待感兑现-spec25">metadata 字段 (kind=&#39;foreshadowing&#39; / &#39;promise&#39; 专用,五大守则期待感兑现 spec/25)</h3>
+<pre><code class="language-ts">type ForeshadowingMetadata = {
+  expected_payoff_by?: string             // 期望收割章节 ID (e.g. &#39;ch_030&#39;)
+  // === v3 新增 (spec/25 守则 4: 期待感兑现) ===
+  deadline_chapter?: number                // 硬 deadline 章节序号 (&gt;= 0)
+  deadline_word_count?: number             // 或者按字数 deadline (alternative)
+  weight: &#39;critical&#39; | &#39;major&#39; | &#39;minor&#39;   // critical = 弃书级承诺 (e.g. &quot;三年之约 / 战神归来 / 复仇&quot;)
+  expected_resolution_pattern?: string     // e.g. &quot;战神回归后 ≤ 5 章必须展现实力&quot;
+  recently_touched_in?: string[]           // 最近 N 章触及该承诺的章节 IDs (派生)
+}
+</code></pre>
+<p><strong><code>weight</code> 语义</strong> (spec/25 守则 4):</p>
+<ul>
+<li><code>critical</code>: 三年之约 / 战神归来 / 复仇这种核心承诺,违反 = 弃书级,deadline 已过未 resolved → ApprovalCard <code>blocking</code> 不让通过</li>
+<li><code>major</code>: 主线相关承诺,deadline 接近无推进 → warn</li>
+<li><code>minor</code>: 一般伏笔,deadline 不强约束</li>
+</ul>
+<p><strong>lint 增强</strong>:</p>
+<ul>
+<li><code>kind=&#39;foreshadowing&#39;/&#39;promise&#39;</code> 且 <code>weight=&#39;critical&#39;</code> 且 <code>deadline_chapter &lt; current_chapter</code> 且 <code>status=&#39;pending&#39;</code> → 写章节时 promiseAccountabilityCheck (spec/25) 标 <code>blocking=true</code></li>
+<li>距 deadline ≤ 3 章无 <code>recently_touched_in</code> 命中 → warn level (<code>warn</code> 守则的 majorpromise / <code>critical</code> 守则的 critical promise)</li>
+</ul>
+<h2 id="表-6-paragraph-anchors-实现详见-spec17">表 6 — paragraph_anchors (实现详见 spec/17)</h2>
+<pre><code class="language-sql">CREATE TABLE paragraph_anchors (
+  anchor_id TEXT PRIMARY KEY,             -- 算法见 spec/17 §稳定 ID
+  file_path TEXT NOT NULL,
+  paragraph_index INTEGER NOT NULL,       -- 当前段在文件中的顺序 (1-based)
+  heading_path TEXT,                      -- &#39;第一章 § 段落 5&#39;
+  content_hash TEXT NOT NULL,             -- sha256(段内容)
+  prev_anchor TEXT,                       -- 邻接段 (用于稳定性追踪)
+  next_anchor TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_anchors_file ON paragraph_anchors(file_path);
+CREATE INDEX idx_anchors_hash ON paragraph_anchors(content_hash);
+</code></pre>
+<h2 id="表-7-paragraph-embeddings-实现详见-spec18">表 7 — paragraph_embeddings (实现详见 spec/18)</h2>
+<pre><code class="language-sql">CREATE TABLE paragraph_embeddings (
+  anchor_id TEXT PRIMARY KEY,
+  embedding BLOB NOT NULL,                -- F32 array,长度 = embedding model dim
+  model_name TEXT NOT NULL,               -- &#39;bge-m3&#39; / &#39;deepseek-embedding-v1&#39; / ...
+  model_dim INTEGER NOT NULL,             -- 1024 / 1536
+  content_hash TEXT NOT NULL,             -- 与 paragraph_anchors.content_hash 对应,用于增量
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (anchor_id) REFERENCES paragraph_anchors(anchor_id) ON DELETE CASCADE
+);
+-- 是否建 vss 虚拟表 (LibSQL 原生 vector / sqlite-vss),见 spec/18 §选型决策
+</code></pre>
+<h2 id="charactermd-frontmatter-升级">character.md frontmatter 升级</h2>
+<p>替换 spec/01 §characterFrontmatter 的 zod schema:</p>
+<pre><code class="language-ts">// lib/storage/frontmatter-schema.ts
+export const characterFrontmatter = z.object({
+  // === 既有字段 (兼容) ===
+  id: z.string().regex(/^char_[a-z0-9-]{1,24}_[a-f0-9]{4}$/),
+  type: z.literal(&#39;character&#39;),
+  canonical_name: z.string().min(1).max(20),
+  aliases: z.array(z.string().min(1).max(20)).default([]),
+  gender: z.enum([&#39;male&#39;, &#39;female&#39;, &#39;other&#39;, &#39;unknown&#39;]).default(&#39;unknown&#39;),
+  role: z.enum([&#39;protagonist&#39;, &#39;support&#39;, &#39;antagonist&#39;, &#39;extra&#39;]).default(&#39;extra&#39;),
+  appearance: z.string().max(500).optional(),
+  personality: z.string().max(500).optional(),
+  background: z.string().max(2000).optional(),
+  expected_arc: z.string().max(1000).optional(),
+  created_at: isoDate,
+  updated_at: isoDate,
+  source: z.enum([&#39;writer-agent&#39;, &#39;user-edit&#39;, &#39;imported&#39;]),
+
+  // === 新增字段 (W7 落地) ===
+
+  // 故事开头的 snapshot (作为 entity_timeline 第一行的来源)
+  initial_state: z.object({
+    age: z.number().int().min(0).max(200).optional(),
+    location: z.string().regex(/^place_/).optional(),       // place entity id
+    affiliation: z.string().regex(/^(org|faction)_/).optional(),
+    power_level: z.string().max(20).optional(),
+    status: z.enum([&#39;alive&#39;, &#39;dead&#39;, &#39;missing&#39;, &#39;coma&#39;]).default(&#39;alive&#39;),
+    wealth: z.enum([&#39;destitute&#39;, &#39;poor&#39;, &#39;middle&#39;, &#39;rich&#39;, &#39;wealthy&#39;]).optional(),
+    social_rank: z.string().max(20).optional(),
+  }).optional(),
+
+  // 关系 (作为 entity_relations frontmatter source 的来源)
+  relations: z.array(z.object({
+    kind: z.string().max(20),                               // 见 entity_relations §kind 枚举
+    target: z.string().regex(/^(char|org|faction|item)_/),
+    since: z.string().regex(/^ch_/).optional(),             // 起始章节
+    until: z.string().regex(/^ch_/).optional(),             // 结束章节
+    strength: z.number().int().min(0).max(100).default(50),
+    note: z.string().max(200).optional(),
+  })).default([]),
+
+  // 已对读者的承诺 (与 reader-promises.md 双锚)
+  reader_promises: z.array(z.string().max(100)).default([]),
+
+  // 角色级禁区 (Validator lint 用)
+  taboos: z.array(z.string().max(100)).default([]),
+
+  // === v3 新增 (W7 + spec/25 五大守则人设崩坏检测) ===
+
+  // 行为价值观基线 (守则 2: 角色行为偏离 baseline &gt; 0.4 = critical)
+  // 各 axis 0-1 浮点, 0=最负向, 1=最正向; baseline 是平时表现, range 是允许波动
+  value_axes: z.record(
+    z.string().max(20),                                       // axis name: &#39;对敌&#39; / &#39;对友&#39; / &#39;对女&#39; / &#39;对长辈&#39; 等
+    z.object({
+      baseline: z.number().min(0).max(1),
+      range: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),  // [min, max]
+    })
+  ).default({}),
+
+  // 智力基线 (守则 2: 假智谋真降智检测; 主角策略成功时对手 IQ 不应低于 baseline*0.7)
+  intelligence_axis: z.object({
+    baseline: z.number().min(0).max(1),
+    iq_range: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+  }).optional(),
+
+  // 派生标记 (relationships/_matrix.md 等派生文件标 true,UI 锁写)
+  derived: z.boolean().default(false),
+
+  _schemaVersion: z.literal(3).default(3),                  // ← bump v3
+})
+</code></pre>
+<p><code>_schemaVersion: 1 → 2 → 3</code> 触发迁移脚本(详见 spec/16 §迁移)。<strong>v3 迁移</strong>只补 <code>value_axes: {}</code> + <code>intelligence_axis: undefined</code> 默认值 — 不破坏既有 character.md。用户需要时在 SettingsDialog &quot;角色基线&quot;面板填入,或 Reflector 从历次审批反馈逐步学习填充。</p>
+<h3 id="其他-frontmatter-也升级">其他 frontmatter 也升级</h3>
+<pre><code class="language-ts">// 通用 frontmatter (worldview / outline / events / items / locations / ...)
+export const baseSettingFrontmatter = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string().min(1).max(60),
+  category: z.string().optional(),                          // &#39;rule&#39; / &#39;history&#39; / ... 子类
+  derived: z.boolean().default(false),                      // 派生文件
+  surface_forms: z.array(z.string()).optional(),            // 让该实体被 AC trie 索引的别名 (concepts 用)
+  created_at: isoDate,
+  updated_at: isoDate,
+  source: z.enum([&#39;writer-agent&#39;, &#39;user-edit&#39;, &#39;imported&#39;]),
+  _schemaVersion: z.number().int().min(1).default(2),
+})
+</code></pre>
+<p>新类型 (faction / organization / item / event / foreshadowing / story-line / chapter-arc) 在 spec/16 各自分段补 schema(先用 baseSettingFrontmatter + 各自 metadata JSON 字段,二期再升级)。</p>
+<h2 id="迁移-schemaversion-1-2">迁移 (_schemaVersion 1 → 2)</h2>
+<p><code>lib/storage/migrations/002-knowledge-graph.ts</code>:</p>
+<pre><code class="language-ts">export async function migrate002(projectId: string) {
+  const db = getDb(projectId)
+
+  // 1. 建表 (CREATE TABLE IF NOT EXISTS)
+  await db.exec(/* entity_relations / entity_timeline / concepts / concept_refs / dependencies SQL */)
+  await db.exec(/* paragraph_anchors / paragraph_embeddings SQL,见 spec/17/18 */)
+
+  // 2. 扫所有 character.md,从 frontmatter 注入 entity_timeline + entity_relations
+  for (const charFile of await listCharacters(projectId)) {
+    const fm = await readCharFrontmatter(charFile)
+    if (!fm.initial_state) continue
+    // initial_state → entity_timeline (valid_from = ch_001 默认)
+    for (const [attr, value] of Object.entries(fm.initial_state)) {
+      await db.execute(/* INSERT entity_timeline */)
+    }
+    // relations → entity_relations
+    for (const rel of fm.relations ?? []) {
+      await db.execute(/* INSERT entity_relations + reciprocal */)
+    }
+  }
+
+  // 3. 概念抽取 — 入队 worldview/rules.md 跑 LLM,落 concepts (status=&#39;reviewing&#39;)
+  // (用户后续在概念审视面板逐一接受)
+  await enqueueConceptExtraction(projectId)
+
+  // 4. 段级 anchor + embedding 全量 reindex (Worker 异步,不阻塞)
+  await enqueueParagraphReindex(projectId)
+
+  // 5. PRAGMA user_version = 2
+  await db.exec(&#39;PRAGMA user_version = 2&#39;)
+}
+</code></pre>
+<p>迁移<strong>只向前</strong>,与 spec/01 §数据迁移既有约定一致。</p>
+<h2 id="l4-治理-setting-lint">L4 治理 — Setting Lint</h2>
+<p>每次 plan 模式保存触发 <code>lib/storage/lint.ts</code>:</p>
+<table>
+<thead>
+<tr>
+<th>检查项</th>
+<th>严重度</th>
+<th>触发条件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>角色无 expected_arc</td>
+<td>warning</td>
+<td>character.md frontmatter 缺该字段</td>
+</tr>
+<tr>
+<td>角色无 initial_state</td>
+<td>warning</td>
+<td>缺 initial_state.age 或 initial_state.location</td>
+</tr>
+<tr>
+<td>孤儿 entity</td>
+<td>warning</td>
+<td>entity 在 entities 表中存在,但 entity_refs 零行,且无 relations 上下游</td>
+</tr>
+<tr>
+<td>循环 relation</td>
+<td>error</td>
+<td>A → mentor → B 同时 B → mentor → A</td>
+</tr>
+<tr>
+<td>失效锚点</td>
+<td>error</td>
+<td>dependencies.target_anchor 在 paragraph_anchors 中找不到</td>
+</tr>
+<tr>
+<td>关系 strength 超界</td>
+<td>error</td>
+<td>不在 [0, 100]</td>
+</tr>
+<tr>
+<td>时间线冲突</td>
+<td>error</td>
+<td>同 (entity, attribute) 两行 valid 区间重叠且 source 同级别 (无法仲裁)</td>
+</tr>
+<tr>
+<td>概念审视待处理</td>
+<td>info</td>
+<td>concepts.status = &#39;reviewing&#39; 累计 ≥ 1</td>
+</tr>
+<tr>
+<td>伏笔超期未收割</td>
+<td>warning</td>
+<td>dependencies.status = &#39;pending&#39; AND metadata.expected_payoff_by &lt; current_chapter</td>
+</tr>
+<tr>
+<td>reader_promise 数量过多</td>
+<td>info</td>
+<td>character.reader_promises.length &gt; 5 (容易写崩)</td>
+</tr>
+</tbody></table>
+<p>UI: SettingsDialog → 设定健康度面板,显示问题列表 + 跳转 + [一键修复] (后者仅简单项,如补默认 status)。</p>
+<h2 id="l4-治理-plan-inconsistency-lock">L4 治理 — Plan Inconsistency Lock</h2>
+<pre><code class="language-ts">// lib/storage/inconsistency-lock.ts
+export async function checkPlanLock(projectId: string): Promise&lt;LockState&gt; {
+  const pending = await db.approvals.findPending(projectId, { source: &#39;cascade&#39; })
+  const broken = await db.dependencies.where({ status: &#39;broken&#39; }).count()
+  if (pending.length === 0 &amp;&amp; broken === 0) return { locked: false }
+  return {
+    locked: true,
+    reasons: [
+      ...(pending.length &gt; 0 ? [`${pending.length} 条 cascade 提议未决`] : []),
+      ...(broken &gt; 0 ? [`${broken} 条伏笔锚点失效`] : []),
+    ],
+  }
+}
+</code></pre>
+<p>write 模式启动前调用;locked = true 时弹 dialog &quot;请先处理设定不一致项 [跳转 cascade 队列] / [跳转 lint 报告]&quot;,不允许 mode = write。</p>
+<p>绕过:用户可点 &quot;强制写作&quot;(高级选项,后台仍记录 audit log;不推荐但保留逃生口)。</p>
+<h2 id="l4-治理-snapshot">L4 治理 — Snapshot</h2>
+<p>每次 writeSetting 落盘后,若改动文件属于 (P0 类目: worldview/* / outline/master.md / characters/*),自动 snapshot:</p>
+<pre><code class="language-sql">CREATE TABLE setting_snapshots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id TEXT NOT NULL,
+  triggered_by_approval_id INTEGER,       -- 哪次审批触发
+  snapshot_dir TEXT NOT NULL,             -- ~/.open-novel/.snapshots/{projectId}/{ts}/
+  size_bytes INTEGER NOT NULL,
+  description TEXT,                       -- 一句话变更摘要
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL                -- 默认 30 天后清理
+);
+CREATE INDEX idx_snap_project ON setting_snapshots(project_id, created_at DESC);
+</code></pre>
+<p>snapshot_dir 内容:</p>
+<pre><code>.snapshots/{projectId}/{ts}/
+├── settings/                   # 完整 settings/ 拷贝
+└── manifest.json               # { changed_files, agent, reason }
+</code></pre>
+<p>UI: SettingsDialog → 历史快照面板,显示时间轴 + 每条 [还原] 按钮(走 ApprovalCard 让用户审一次完整 diff 再覆盖)。</p>
+<p>清理: 每周后台 Worker 删 expires_at &lt; now 的 snapshot;手动 promote = expires_at += 90 days。</p>
+<h2 id="l4-治理-派生文件守卫">L4 治理 — 派生文件守卫</h2>
+<pre><code class="language-ts">// lib/storage/derived-guard.ts
+export async function assertNotDerived(filePath: string) {
+  const fm = await readFrontmatter(filePath)
+  if (fm.derived === true) {
+    throw new ToolValidationError(&#39;DERIVED_FILE_READONLY&#39;, `${filePath} 是派生文件,改动 SQLite 表即可`)
+  }
+}
+</code></pre>
+<p>writeSetting 调用前先 assert。读取派生文件正常(供 LLM / Writer 取用)。
+UI: 打开派生文件时编辑器 read-only + 顶部 banner &quot;派生视图,改动 SQLite 表后会自动重生成&quot;。</p>
+<h2 id="测试-与-spec14-对接">测试 (与 spec/14 对接)</h2>
+<table>
+<thead>
+<tr>
+<th>测试名</th>
+<th>类型</th>
+<th>覆盖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>entity-relations.test.ts</code></td>
+<td>单元</td>
+<td>reciprocal 自动补、source 优先级、UNIQUE 约束</td>
+</tr>
+<tr>
+<td><code>entity-timeline.test.ts</code></td>
+<td>单元</td>
+<td>时间区间查询、attribute 枚举、来源仲裁</td>
+</tr>
+<tr>
+<td><code>concepts-extractor.test.ts</code></td>
+<td>golden</td>
+<td>给 5 段 worldview 文本,验证 concept 抽取结果稳定</td>
+</tr>
+<tr>
+<td><code>dependencies-lint.test.ts</code></td>
+<td>单元</td>
+<td>失效锚点检测、超期收割提示、循环 setup-payoff</td>
+</tr>
+<tr>
+<td><code>frontmatter-migration.test.ts</code></td>
+<td>集成</td>
+<td>老 character.md 走 migrate002 后 timeline / relations 表正确灌入</td>
+</tr>
+<tr>
+<td><code>derived-guard.test.ts</code></td>
+<td>单元</td>
+<td>writeSetting 派生文件被拒、读取正常</td>
+</tr>
+<tr>
+<td><code>plan-inconsistency-lock.test.ts</code></td>
+<td>集成</td>
+<td>有未决 cascade 时 mode=write 切换被拦</td>
+</tr>
+</tbody></table>
+<p>详细 fixture 见 spec/14。</p>
+  </main>
+</body>
+</html>

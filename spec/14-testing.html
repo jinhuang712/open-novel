@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 14 — 测试策略 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/14-testing.html</span>
+</nav>
+<h1 id="spec-14-测试策略">Spec 14 — 测试策略</h1>
+<h2 id="测试金字塔">测试金字塔</h2>
+<pre><code>    ▲ E2E (Playwright)            少量 (核心 user flow,可选)
+    ─────────────────
+    ▲ 集成 (vitest + msw)         中量 (Route Handlers + Mastra agent + 工具流)
+    ─────────────────────
+    ▲ 单元 (vitest)              大量 (lib/* 纯函数 + state machine + reducer)
+    ─────────────────────────
+</code></pre>
+<h2 id="framework-选型">Framework 选型</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>Framework</th>
+<th>锁定版本 (W3 audit 后填)</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单元 + 集成</td>
+<td><strong>vitest</strong> + <code>@vitest/ui</code> + <code>vitest/browser</code> (TipTap 测试用)</td>
+<td>(实查)</td>
+<td>与 Vite/Bun 生态对齐;比 jest 启动快 10x;原生 ESM/TS</td>
+</tr>
+<tr>
+<td>Route Handler 集成</td>
+<td>vitest + <code>next/test</code> (Next.js 15 内置)</td>
+<td>同 next</td>
+<td>App Router 直测</td>
+</tr>
+<tr>
+<td>LLM 拦截</td>
+<td><strong>msw</strong> (Mock Service Worker)</td>
+<td>(实查)</td>
+<td>拦截 fetch,模拟 DeepSeek/Mastra responses</td>
+</tr>
+<tr>
+<td>状态机</td>
+<td><code>@xstate/test</code></td>
+<td>(实查)</td>
+<td>XState v5 官方</td>
+</tr>
+<tr>
+<td>E2E</td>
+<td><strong>playwright</strong></td>
+<td>(实查)</td>
+<td>与 shadcn 模板兼容;支持中文 IME 测试</td>
+</tr>
+<tr>
+<td>性能基准</td>
+<td><code>vitest bench</code></td>
+<td>(内置)</td>
+<td>Aho-Corasick 性能数据落地</td>
+</tr>
+</tbody></table>
+<h2 id="文件分布">文件分布</h2>
+<pre><code>.
+├── vitest.config.ts                  # 单测/集成测配置
+├── playwright.config.ts              # E2E 配置 (W11+)
+├── tests/
+│   ├── unit/
+│   │   ├── shortcuts.test.ts
+│   │   ├── modes.test.ts
+│   │   ├── modeMachine.test.ts
+│   │   ├── ahocorasick.test.ts
+│   │   ├── ahocorasick.bench.ts
+│   │   ├── frontmatter-schema.test.ts
+│   │   └── path-traversal.test.ts
+│   ├── integration/
+│   │   ├── api-keys.test.ts
+│   │   ├── api-files.test.ts
+│   │   ├── api-chat.test.ts
+│   │   ├── approval-flow.test.ts
+│   │   └── cascade-resume.test.ts
+│   ├── e2e/                          # W11+ 才补
+│   │   ├── boot-and-settings.spec.ts
+│   │   ├── plan-mode.spec.ts
+│   │   └── write-mode.spec.ts
+│   ├── fixtures/                     # 共用 mock 数据
+│   │   ├── projects/
+│   │   ├── chapters/
+│   │   └── llm-responses/
+│   └── golden/                       # LLM 输出 snapshot
+│       ├── beat-analyzer/
+│       ├── reader-panel/
+│       └── writer/
+└── .github/workflows/
+    ├── ci.yml                         # PR 时跑 typecheck/lint/build/test
+    └── nightly-llm.yml                # nightly 跑真实 LLM golden (有成本)
+</code></pre>
+<h2 id="单测-must-have-清单-按-w-落地">单测 must-have 清单 (按 W 落地)</h2>
+<h3 id="w2-末尾">W2 末尾</h3>
+<ul>
+<li><code>frontmatter-schema.test.ts</code>: zod schema 校验所有 7 类 frontmatter</li>
+<li><code>path-traversal.test.ts</code>: <code>assertUnderHome</code>、<code>writeSetting</code> 拒绝 <code>../</code></li>
+<li><code>modes.test.ts</code>: cycleMode / 反向 cycleMode</li>
+</ul>
+<h3 id="w3">W3</h3>
+<ul>
+<li><code>modeMachine.test.ts</code> (基于 spec/07 § 测试):<ul>
+<li>discuss 不会进入 awaitingApproval</li>
+<li>awaitingApproval 中切 mode 被拒绝</li>
+<li>cascade 链路连续多个 awaitingApproval 串行</li>
+<li><strong>新增</strong> USER_INPUT 在 awaitingApproval 被 reject + toast (audit 补)</li>
+<li><strong>新增</strong> 浏览器刷新 → session.json reload → state 恢复正确</li>
+</ul>
+</li>
+</ul>
+<h3 id="w4-w5">W4-W5</h3>
+<ul>
+<li><code>shortcuts.test.ts</code> (基于 spec/12 §测试约束):<ul>
+<li>每条快捷键 trigger key → handler called</li>
+<li>上下文区分: 同键在 chatbox vs editor 走不同 handler</li>
+<li>冲突检测: 重绑产生冲突时禁止保存</li>
+<li><strong>新增</strong> IME 候选活跃 (composing=true) 时 Tab 不切模式 (audit 补)</li>
+</ul>
+</li>
+<li><code>frontmatter.test.ts</code>: BOM / CRLF / 编码归一化</li>
+<li><code>aho-corasick.test.ts</code> + bench: 边界裁剪 / 中文子串 (李白 vs 李白菜) / 50K 字 + 500 patterns 性能</li>
+</ul>
+<h3 id="w6-w7">W6-W7</h3>
+<ul>
+<li><code>entity-highlight.test.ts</code>: TipTap Decoration 增量 + IME composition 跳过</li>
+<li><code>cascade-resume.test.ts</code>: 5 项审到第 3 项 simulate 关闭 → reload → 后两项重新出现</li>
+<li><code>approval-flow.test.ts</code>: <code>addToolResult</code> 协议端到端</li>
+</ul>
+<h3 id="w8">W8+</h3>
+<ul>
+<li><code>cost-cap.test.ts</code>: 触顶后 ChatBox disabled</li>
+<li><code>reader-panel.test.ts</code>: 1/5 失败的 aggregateRetention 公式 / 全失败的 inconclusive</li>
+</ul>
+<h2 id="集成测策略">集成测策略</h2>
+<h3 id="route-handler-测试范式">Route Handler 测试范式</h3>
+<pre><code class="language-ts">// tests/integration/api-keys.test.ts
+import { POST } from &#39;@/app/api/keys/route&#39;
+
+it(&#39;rejects path traversal in body&#39;, async () =&gt; {
+  const req = new Request(&#39;http://localhost/api/keys&#39;, {
+    method: &#39;POST&#39;,
+    body: JSON.stringify({ deepseekApiKey: &#39;../../etc/passwd&#39; }),
+  })
+  const res = await POST(req)
+  expect(res.status).toBe(400)
+})
+</code></pre>
+<h3 id="llm-mock-范式-msw">LLM mock 范式 (msw)</h3>
+<pre><code class="language-ts">// tests/setup-msw.ts
+import { setupServer } from &#39;msw/node&#39;
+import { http, HttpResponse } from &#39;msw&#39;
+
+export const server = setupServer(
+  http.post(&#39;https://api.deepseek.com/*&#39;, async ({ request }) =&gt; {
+    const body = await request.json()
+    // 根据 body 决定返回哪个 fixture
+    return HttpResponse.json(loadFixture(body.messages))
+  }),
+)
+</code></pre>
+<p>所有集成测<strong>默认走 msw mock</strong>,真实 LLM 只在 <code>nightly-llm.yml</code> 跑。</p>
+<h2 id="llm-golden-test-策略">LLM Golden Test 策略</h2>
+<h3 id="问题">问题</h3>
+<p>LLM 输出非确定性,直接 snapshot 会脆弱。</p>
+<h3 id="方案">方案</h3>
+<ol>
+<li><strong>结构化输出走 schema 校验 + 关键字段断言</strong>:<pre><code class="language-ts">it(&#39;beat analyzer outputs valid BeatReport&#39;, async () =&gt; {
+  const out = await analyzeNarrative({ chapterId: &#39;fixture_chapter_001&#39; })
+  expect(out).toMatchSchema(beatReportSchema)
+  expect(out.rhythmScore).toBeGreaterThanOrEqual(0)
+  expect(out.rhythmScore).toBeLessThanOrEqual(100)
+  expect(out.flagsForAuthor.length).toBeGreaterThan(0)
+})
+</code></pre>
+</li>
+<li><strong>自由文本 (Writer 输出) 走&quot;特征断言&quot;</strong> 而非全文 snapshot:<ul>
+<li>字数在 ±20% 期望范围</li>
+<li>不出现 AI 标记句 (&quot;无论是...还是...&quot; 等黑名单)</li>
+<li>frontmatter 完备</li>
+</ul>
+</li>
+<li><strong>完整 snapshot 仅用于 prompt 模板本身的回归</strong> (prompt 改了 → 提示重跑)</li>
+</ol>
+<h3 id="成本封顶">成本封顶</h3>
+<p><code>nightly-llm.yml</code> 头部:</p>
+<pre><code class="language-yaml">env:
+  LLM_BUDGET_USD_DAILY: &quot;5&quot;           # 单日预算
+  LLM_BUDGET_USD_PER_RUN: &quot;0.5&quot;       # 单次 run 预算
+</code></pre>
+<p>测试 runner 每发一个请求记账,触顶 fail-fast。</p>
+<h2 id="xstate-测试-xstatetest">XState 测试 (<code>@xstate/test</code>)</h2>
+<pre><code class="language-ts">import { createTestModel } from &#39;@xstate/test&#39;
+
+const testModel = createTestModel(modeMachine)
+
+it(&#39;await_approval 中切 mode 被拒&#39;, async () =&gt; {
+  const path = testModel.getShortestPathsTo({ planning: &#39;awaitingApproval&#39; })[0]
+  await path.test({})
+  // 在该状态下 send SWITCH_MODE
+  expect(/* 状态没变 */).toBe(true)
+})
+</code></pre>
+<h2 id="ci-配置">CI 配置</h2>
+<p><code>.github/workflows/ci.yml</code>:</p>
+<pre><code class="language-yaml">name: CI
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+        with: { version: 9 }
+      - uses: actions/setup-node@v5
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+      - run: pnpm test:int
+      - run: pnpm build
+</code></pre>
+<p><code>nightly-llm.yml</code> (cron 凌晨跑,只在 main 分支):</p>
+<pre><code class="language-yaml">on:
+  schedule: [{ cron: &#39;0 18 * * *&#39; }]   # UTC 18:00 = CST 02:00
+  workflow_dispatch:
+jobs:
+  golden:
+    runs-on: ubuntu-latest
+    env:
+      DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+      LLM_BUDGET_USD_DAILY: &quot;5&quot;
+    steps:
+      - ... (同上,但跑 pnpm test:golden)
+</code></pre>
+<h2 id="packagejson-scripts">package.json scripts</h2>
+<pre><code class="language-json">{
+  &quot;scripts&quot;: {
+    &quot;test&quot;: &quot;vitest&quot;,
+    &quot;test:unit&quot;: &quot;vitest run tests/unit&quot;,
+    &quot;test:int&quot;: &quot;vitest run tests/integration&quot;,
+    &quot;test:bench&quot;: &quot;vitest bench&quot;,
+    &quot;test:e2e&quot;: &quot;playwright test&quot;,
+    &quot;test:golden&quot;: &quot;vitest run tests/golden --reporter verbose&quot;
+  }
+}
+</code></pre>
+<h2 id="不做什么">不做什么</h2>
+<ul>
+<li><strong>不做 100% 覆盖率追求</strong>: 重点在状态机 / 路径越权 / 模式约束 / 数据完整性,UI 细节不强求覆盖</li>
+<li><strong>不做&quot;快照即测试&quot;</strong>: snapshot 文件不入库 git (<code>.gitignore</code> 忽略 <code>__snapshots__/</code>),用结构化断言替代</li>
+<li><strong>不做 mutation testing / fuzzing</strong>: 二期再考虑</li>
+<li><strong>不做 visual regression</strong>: shadcn 组件已足够稳定,UI 视觉回归靠手测</li>
+</ul>
+<h2 id="落地里程碑">落地里程碑</h2>
+<table>
+<thead>
+<tr>
+<th>周</th>
+<th>测试动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>W2 retro</td>
+<td>vitest.config.ts + 3 个 must-have 单测 (frontmatter / path-traversal / modes)</td>
+</tr>
+<tr>
+<td>W3</td>
+<td>XState 状态机 8 个测试 + Route Handler 3 个集成测</td>
+</tr>
+<tr>
+<td>W4-W7</td>
+<td>滚动覆盖 (entity-highlight / approval-flow / cascade-resume)</td>
+</tr>
+<tr>
+<td>W8</td>
+<td>Cost cap / Reader Panel 失败聚合</td>
+</tr>
+<tr>
+<td>W11</td>
+<td>E2E playwright 起步 (boot + plan + write 三个 happy path)</td>
+</tr>
+<tr>
+<td>W12</td>
+<td>Nightly golden + budget cap</td>
+</tr>
+</tbody></table>
+  </main>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>08 — 技术栈锁定与版本策略 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/08-tech-stack.html</span>
+</nav>
+<h1 id="08-技术栈锁定与版本策略">08 — 技术栈锁定与版本策略</h1>
+<blockquote>
+<p>后续代码 commit 以本文档为依据。版本号实查清单见 spec/00。</p>
+</blockquote>
+<h2 id="锁定的库版本">锁定的库版本</h2>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>版本</th>
+<th>锁定策略</th>
+<th>关键说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>next</code></td>
+<td><code>15.5.x</code></td>
+<td>锁主线 (LTS 到 2026-10)</td>
+<td>不切 v16,v15 LTS 覆盖整个项目周期</td>
+</tr>
+<tr>
+<td><code>react</code> / <code>react-dom</code></td>
+<td><code>19.2.x</code></td>
+<td>锁主线</td>
+<td>Next 15.5 + TipTap 3 + AI SDK 6 共同要求</td>
+</tr>
+<tr>
+<td><code>typescript</code></td>
+<td><code>^5.9</code></td>
+<td>caret</td>
+<td>XState v5 / AI SDK 6 ergonomics 在 5.6+ 最佳</td>
+</tr>
+<tr>
+<td><code>tailwindcss</code></td>
+<td><code>4.2.x</code></td>
+<td>锁主线</td>
+<td>Oxide 重写后 GA,与 v3 不兼容</td>
+</tr>
+<tr>
+<td><code>@tailwindcss/postcss</code></td>
+<td><code>4.2.x</code></td>
+<td>锁主线</td>
+<td>v4 拆分出的独立 PostCSS plugin</td>
+</tr>
+<tr>
+<td><code>@tiptap/{react,pm,starter-kit}</code></td>
+<td><code>3.16.x</code></td>
+<td>锁主线</td>
+<td>v3 与 v2 在我们调用面兼容,SSR 需 <code>immediatelyRender: false</code></td>
+</tr>
+<tr>
+<td><code>mastra</code> / <code>@mastra/core</code></td>
+<td><code>1.4.x</code></td>
+<td>锁主线</td>
+<td>1.0 在 2026-01 发布,1.x 仍在演进,需密切跟踪</td>
+</tr>
+<tr>
+<td><code>@mastra/libsql</code></td>
+<td><code>0.16.x</code></td>
+<td>锁主线</td>
+<td>仍是 0.x;<strong>注意 issue #4507 — 必须显式给 <code>file:</code> URL,绝不用默认路径</strong></td>
+</tr>
+<tr>
+<td><code>@mastra/memory</code></td>
+<td><code>1.4.x</code></td>
+<td>锁主线</td>
+<td>thread+resource 隔离的实现</td>
+</tr>
+<tr>
+<td><code>ai</code> (Vercel AI SDK)</td>
+<td><code>^6.0</code></td>
+<td>caret</td>
+<td>v6 已稳,minor 增量。HITL 接入方案 (<code>needsApproval</code> 一等字段 vs cookbook <code>onToolCall</code> + <code>addToolResult</code>) 详见 spec/00 §B</td>
+</tr>
+<tr>
+<td><code>@ai-sdk/react</code></td>
+<td><code>^6.0</code></td>
+<td>caret</td>
+<td><code>useChat</code> / <code>addToolResult</code> / <code>onToolCall</code></td>
+</tr>
+<tr>
+<td><code>@ai-sdk/deepseek</code></td>
+<td><code>2.0.x</code></td>
+<td>锁主线</td>
+<td>周更频繁。✅ 已实查 (spec/00 §C): model ID <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code>,ctx 1M,max output 384K,原生 JSON mode</td>
+</tr>
+<tr>
+<td><code>xstate</code> / <code>@xstate/react</code></td>
+<td><code>^5.0</code></td>
+<td>caret</td>
+<td>三模式状态机用</td>
+</tr>
+<tr>
+<td><code>zustand</code></td>
+<td><code>^5.0</code></td>
+<td>caret</td>
+<td>客户端 store</td>
+</tr>
+<tr>
+<td><code>react-resizable-panels</code></td>
+<td><code>4.10.x</code></td>
+<td>锁主线</td>
+<td>五区可拖拽布局</td>
+</tr>
+<tr>
+<td><code>ahocorasick</code> (BrunoRB)</td>
+<td><code>^1.0</code></td>
+<td>caret</td>
+<td>10KB JS,实体高亮的字符串多模匹配</td>
+</tr>
+<tr>
+<td><code>gray-matter</code> / <code>unified</code> / <code>remark-*</code></td>
+<td>latest</td>
+<td>caret</td>
+<td>Markdown frontmatter + AST 处理</td>
+</tr>
+<tr>
+<td><code>lucide-react</code></td>
+<td>latest</td>
+<td>caret</td>
+<td>shadcn 默认图标库</td>
+</tr>
+<tr>
+<td><code>cva</code> / <code>clsx</code> / <code>tailwind-merge</code></td>
+<td>latest</td>
+<td>caret</td>
+<td>shadcn 三件套</td>
+</tr>
+<tr>
+<td><code>sonner</code></td>
+<td><code>^2.0</code></td>
+<td>caret</td>
+<td>shadcn 推荐的 toast 库</td>
+</tr>
+<tr>
+<td><code>tw-animate-css</code></td>
+<td>latest</td>
+<td>caret</td>
+<td>Tailwind v4 era 的 shadcn 动画</td>
+</tr>
+</tbody></table>
+<h2 id="锁定策略原则">锁定策略原则</h2>
+<ul>
+<li><strong>锁主线 (无 caret)</strong>: 0.x 包、快速演进的 1.x 包、直接决定渲染输出/native binding 的包 — 任何 minor 漂移都可能引起破坏性变更</li>
+<li><strong>caret (<code>^</code>)</strong>: 类型包、稳定版 v5/v6 主流框架包、生态边缘工具</li>
+<li><code>pnpm-lock.yaml</code> 入库,作为 single-source-of-truth — 任何团队成员安装得到一致的依赖树</li>
+</ul>
+<h2 id="集成关键点">集成关键点</h2>
+<h3 id="nextjs-mastra">Next.js + Mastra</h3>
+<ul>
+<li><strong><code>next.config.ts</code></strong> 必须包含 <code>serverExternalPackages: [&#39;mastra&#39;, &#39;@mastra/core&#39;, &#39;@mastra/memory&#39;, &#39;@mastra/libsql&#39;]</code> — 否则 bundler 会试图打包 libsql 的 native 绑定,失败</li>
+<li><strong>所有触 Mastra 的 Route Handler 必须</strong> <code>export const runtime = &#39;nodejs&#39;</code> (Edge runtime 不支持 fs / native bindings)</li>
+<li><strong>globalThis 缓存模式</strong>: dev hot-reload 会反复实例化 mastra,导致 LibSQL 连接泄漏。在 <code>lib/mastra/index.ts</code> 用 <code>globalThis.__openNovelMastra</code> 缓存,模仿 Prisma 的 Next.js dev 范式</li>
+</ul>
+<h3 id="nextjs-tiptap-v3">Next.js + TipTap (v3)</h3>
+<ul>
+<li><strong><code>&#39;use client&#39;</code> 边界</strong>: TipTap 的 <code>useEditor</code>、<code>@tiptap/pm</code>、<code>@tiptap/starter-kit</code> 间接 touch <code>window</code>,host 组件 + adapter 实现都必须 <code>&#39;use client&#39;</code></li>
+<li><strong><code>immediatelyRender: false</code></strong> 是 TipTap 3 在 SSR 下的默认要求,不加会出 hydration warning</li>
+<li><strong>不用 <code>next/dynamic({ ssr: false })</code></strong>: 单 <code>&#39;use client&#39;</code> 已足够,dynamic import 仅在 FCP 出现压力时再考虑</li>
+</ul>
+<h3 id="tailwind-v4-vs-v3-的行为变化">Tailwind v4 vs v3 的行为变化</h3>
+<ul>
+<li><strong>配置位置</strong>: 不再有 <code>tailwind.config.ts</code>;主题、CSS 变量、颜色都在 <code>app/globals.css</code> 的 <code>@theme inline { ... }</code> 块中</li>
+<li><strong>PostCSS plugin</strong>: 从 <code>tailwindcss</code> 主包拆出 — 必须额外装 <code>@tailwindcss/postcss</code></li>
+<li><strong>指令变化</strong>: <code>@tailwind base/components/utilities</code> → 单一 <code>@import &#39;tailwindcss&#39;;</code></li>
+<li><strong><code>@custom-variant dark</code></strong>: dark mode variant 通过 <code>@custom-variant dark (&amp;:is(.dark *))</code> 显式声明</li>
+<li><strong>回退方案</strong>: 若 v4 在某场景阻塞 (&gt;1h),可降到 3.4.x — 改动量约 30 分钟</li>
+</ul>
+<h3 id="shadcnui-v4-era">shadcn/ui v4 era</h3>
+<ul>
+<li>跑 <code>pnpm dlx shadcn@latest init</code> 自动识别 Tailwind v4 (但<strong>注意</strong>: 因企业 SSL 拦截 ui.shadcn.com,我们手工写组件,不依赖 CLI fetch)</li>
+<li>锁定的初始化参数: Style=new-york / RSC=true / TSX=true / baseColor=slate / cssVariables=true / iconLibrary=lucide</li>
+<li><strong><code>components.json</code></strong> 仍要写,作为 shadcn <code>add</code> 命令未来可用的元数据</li>
+<li>初始最小集: <code>button card dialog input label resizable scroll-area separator tabs textarea</code></li>
+</ul>
+<h3 id="libsql-路径治理-issue-4507-兜底">LibSQL 路径治理 (issue #4507 兜底)</h3>
+<ul>
+<li><strong>绝不</strong>用 <code>~</code> 字面量 (Node fs 不展开),始终用 <code>os.homedir()</code></li>
+<li><strong>始终</strong>给 LibSQL <code>file:${absPath}</code> 形式 URL,绝不让它走默认 <code>.mastra/mastra.db</code> (有删档 bug)</li>
+<li>写 <code>lib/storage/paths.ts</code> 集中所有路径解析,W3 直接 import,不重新计算</li>
+</ul>
+<h3 id="deepseek-v4-配置-实查后">DeepSeek V4 配置 (实查后)</h3>
+<p><strong>模型 ID 与能力</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>模型</th>
+<th>ID</th>
+<th>ctx</th>
+<th>max output</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pro</td>
+<td><code>deepseek-v4-pro</code></td>
+<td>1M</td>
+<td>384K</td>
+<td>Writer / Validator / Humanizer (核心创作 + 一致性审 + 改写)</td>
+</tr>
+<tr>
+<td>Flash</td>
+<td><code>deepseek-v4-flash</code></td>
+<td>1M</td>
+<td>384K</td>
+<td>Router / Checker / Reflector / ReaderPanel / 工具内 LLM 短调用</td>
+</tr>
+</tbody></table>
+<p><strong>1M ctx 的设计含义</strong>: 普通章节场景下不需要 token 预算控制,把&quot;一致性所需的全部上下文&quot;装齐是头等优先级 — 见 plan/12 §一致性优先 + spec/23 §per-agent 上下文契约。</p>
+<p><strong>JSON 输出模式</strong>(详见 <a href="../spec/24-json-output.html">spec/24-json-output.html</a>):</p>
+<pre><code class="language-ts">import { deepseek } from &#39;@ai-sdk/deepseek&#39;
+import { generateText } from &#39;ai&#39;
+
+await generateText({
+  model: deepseek(&#39;deepseek-v4-flash&#39;),
+  messages: [
+    { role: &#39;system&#39;, content: &#39;You are a router. Output valid JSON in the format: { &quot;intent&quot;: &quot;...&quot;, &quot;mode&quot;: &quot;...&quot; }&#39; },
+    { role: &#39;user&#39;, content: &#39;...&#39; },
+  ],
+  providerOptions: {
+    deepseek: {
+      response_format: { type: &#39;json_object&#39; },
+    },
+  },
+  maxTokens: 512,        // 必须基于 zod schema 估算; 不能默认 4096 (会被截断风险/浪费)
+})
+</code></pre>
+<p><strong>JSON mode 关键约束</strong>:</p>
+<ul>
+<li>system 或 user prompt 必须含 &quot;json&quot; 字样 + 提供示例</li>
+<li>DeepSeek 不强制 schema → 应用层 zod 校验 + 失败 retry 1 次,2 次仍败 escalate</li>
+<li><code>max_tokens</code> 必须基于 schema 估算(防 JSON 中途截断 — 大坑)</li>
+<li>偶尔返回空 content → retry + 加 &quot;请确保返回非空 JSON&quot; 后缀</li>
+<li>streaming 时拼完整 chunks 再 parse,中间 chunks 不展示给用户</li>
+</ul>
+<h3 id="mastra-memory-配置">Mastra Memory 配置</h3>
+<p>详见 <a href="../spec/22-mastra-memory.html">spec/22 §配置决策</a> + <a href="./12-memory-and-context.html">plan/12 §四层记忆模型</a>:</p>
+<pre><code class="language-ts">new Memory({
+  storage: new LibSQLStore({ url: &#39;file:&#39; + path.join(os.homedir(), &#39;.open-novel&#39;, &#39;runtime.db&#39;) }),
+  options: {
+    lastMessages: 30,        // 1M ctx 下放宽; 30 条原文不会挤压一致性 retrieve
+    semanticRecall: false,   // 默认关
+    workingMemory: false,    // 与&quot;L3 仅 Reflector 写&quot;原则冲突 — 不让 LLM 在 stream 中 upsert 记忆
+  },
+})
+</code></pre>
+<p><strong>关键决策汇总</strong>:</p>
+<ul>
+<li>runtime.db = Mastra Memory 全部 thread + messages (跨项目共享单文件,逻辑用 thread/resource 隔离)</li>
+<li>workspace.db = 每项目一文件,项目数据 (chapters / settings / learnings / approvals / paragraph_anchors / ...) — 与 runtime.db 严格不混</li>
+<li>所有 Agent stream 必经 <code>streamWithGuard</code> (memory-guard) 验证 thread/resource projectId 一致 — 直接调 <code>streamVNext</code> lint 报错</li>
+<li>所有 prompt 装配必经 per-agent context builder (spec/23) — Agent 自拼 prompt 是反模式</li>
+</ul>
+<h2 id="版本升级流程-未来">版本升级流程 (未来)</h2>
+<ul>
+<li>单一 minor bump (e.g. <code>next 15.5.4 → 15.5.7</code>):测试 + lockfile 更新 + commit <code>chore(deps): bump next 15.5.7</code>,无需 doc 更新</li>
+<li>主版本切换 (e.g. <code>next 15 → 16</code>):必须先 PR 更新本文档 + plan/spec 受影响章节 + 跑全套验收,然后再 code commit</li>
+<li>从 caret 收紧到锁主线 (生产准备时):整体走一遍 doc commit <code>docs(plan/08): tighten version locks for production</code></li>
+</ul>
+<h2 id="不在本期范围">不在本期范围</h2>
+<ul>
+<li>私有包注册表 / npm proxy 配置 (localhost 直连 npmjs)</li>
+<li>多 lockfile 共存 (Yarn / npm) — 强制 pnpm</li>
+<li>跨平台兼容 (我们只测 macOS;Windows / Linux 留待二期)</li>
+</ul>
+  </main>
+</body>
+</html>

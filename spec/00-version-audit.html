@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 00 — 版本审计闸门 (W3 启动前必跑) - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/00-version-audit.html</span>
+</nav>
+<h1 id="spec-00-版本审计闸门-w3-启动前必跑">Spec 00 — 版本审计闸门 (W3 启动前必跑)</h1>
+<blockquote>
+<p>本文档替代 plan/08 中的&quot;猜版本&quot;做法,把 W3 接线日的版本号从训练数据预测改为 npm 实查。<strong>任何 W3+ 代码 commit 之前必须先过这一关。</strong></p>
+</blockquote>
+<h2 id="为什么要有这个">为什么要有这个</h2>
+<p>文档 audit 后发现的最高优先级风险: plan/08 / spec 全栈所引用的版本号 (<code>mastra 1.4.x</code>、<code>@mastra/libsql 0.16.x</code>、<code>ai ^6.0</code>、<code>@ai-sdk/deepseek 2.0.x</code>、模型 ID <code>deepseek/deepseek-v4-pro</code>) 是基于训练数据 + 调研文章的&quot;应然&quot;假设,<strong>没有任何 commit 把 npm 真实可装版本写下来过</strong>。一旦 W3 第一次 <code>pnpm add</code> 失败或 model API 返回 404,整个时间表立刻崩。</p>
+<p>把版本审计前置到 W3 启动前<strong>单独一次性跑完</strong>,产出一张确定表,写回 plan/08 后再动代码。</p>
+<h2 id="审计清单">审计清单</h2>
+<h3 id="a-npm-包真实最新版本">A. npm 包真实最新版本</h3>
+<p>逐条命令,把输出粘进 <code>progress/00X-version-audit.md</code> 的&quot;实查结果&quot;表:</p>
+<pre><code class="language-bash"># 框架核心
+npm view next versions --json | jq &#39;.[-5:]&#39;              # 期望 15.5.x 仍是 LTS
+npm view react versions --json | jq &#39;.[-5:]&#39;             # 期望 19.x stable
+npm view typescript versions --json | jq &#39;.[-3:]&#39;
+
+# 编辑器
+npm view @tiptap/react versions --json | jq &#39;.[-5:]&#39;     # 期望 3.x
+npm view @tiptap/pm versions --json | jq &#39;.[-5:]&#39;
+npm view @tiptap/starter-kit versions --json | jq &#39;.[-5:]&#39;
+
+# 样式
+npm view tailwindcss versions --json | jq &#39;.[-5:]&#39;       # 期望 4.x
+npm view @tailwindcss/postcss versions --json | jq &#39;.[-5:]&#39;
+
+# Agent 框架 ★ 最高风险
+npm view mastra versions --json | jq &#39;.[-10:]&#39;            # 是否真有 1.x?
+npm view @mastra/core versions --json | jq &#39;.[-10:]&#39;      # 同上
+npm view @mastra/libsql versions --json | jq &#39;.[-10:]&#39;    # 0.x?
+npm view @mastra/memory versions --json | jq &#39;.[-10:]&#39;
+
+# AI SDK ★ 最高风险
+npm view ai versions --json | jq &#39;.[-10:]&#39;                # v6 是否 stable?
+npm view @ai-sdk/react versions --json | jq &#39;.[-10:]&#39;
+npm view @ai-sdk/deepseek versions --json | jq &#39;.[-10:]&#39;  # 期望 2.x
+
+# 状态/工具
+npm view xstate versions --json | jq &#39;.[-3:]&#39;
+npm view zustand versions --json | jq &#39;.[-3:]&#39;
+npm view react-resizable-panels versions --json | jq &#39;.[-3:]&#39;
+npm view ahocorasick versions --json | jq &#39;.[-3:]&#39;
+</code></pre>
+<h3 id="b-ai-sdk-6-的-needsapproval-api-形态">B. AI SDK 6 的 <code>needsApproval</code> API 形态</h3>
+<p><strong>关键</strong>: plan/05 / spec/02 / spec/06 全栈假设 <code>tool({ needsApproval: true })</code> 是 AI SDK 6 一等字段。<strong>很可能不是</strong>。</p>
+<p>需要实查:</p>
+<ol>
+<li>查阅 Vercel AI SDK 6 官方 Human-in-the-Loop cookbook (<a href="https://ai-sdk.dev">https://ai-sdk.dev</a> 的 cookbook 索引)</li>
+<li>在 W3 用最小可运行代码 reproduce: 一个工具 emit → 客户端 <code>onToolCall</code> 拦截 → 用户决议 → <code>addToolResult</code> 注入</li>
+<li>把真实 API 形态写入 <code>spec/06-approval-flow.md</code> (替换 <code>needsApproval: true</code> 为 cookbook 标准链路)</li>
+</ol>
+<p>如果 SDK 真有 <code>needsApproval</code> 一等字段,就走那条路;否则按 cookbook 模式重写 spec/02 + spec/06 + plan/05 三处。</p>
+<h3 id="c-deepseek-模型-id-与定价">C. DeepSeek 模型 ID 与定价</h3>
+<p><strong>问题</strong>: spec/03 / plan/02 / README 都写 <code>deepseek/deepseek-v4-pro</code> <code>deepseek/deepseek-v4-flash</code>。这两个具体型号名是基于&quot;DeepSeek 类比 OpenAI Pro/Flash 命名&quot;的猜测,真实 model id 必须实查。</p>
+<p><strong>实查结果</strong> (来源: <a href="https://api-docs.deepseek.com/zh-cn/quick_start/pricing/">https://api-docs.deepseek.com/zh-cn/quick_start/pricing/</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Agent 用途</th>
+<th>训练数据假设</th>
+<th>真实 model id</th>
+<th>ctx 上限</th>
+<th>max output</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Pro 系 (Writer/Validator/Humanizer)</td>
+<td><code>deepseek/deepseek-v4-pro</code></td>
+<td><strong><code>deepseek-v4-pro</code></strong></td>
+<td><strong>1M tokens</strong></td>
+<td><strong>384K tokens</strong></td>
+<td>单价见官方;Pro/Flash 分级确认存在</td>
+</tr>
+<tr>
+<td>Flash 系 (Router/Checker/Reflector/ReaderPanel)</td>
+<td><code>deepseek/deepseek-v4-flash</code></td>
+<td><strong><code>deepseek-v4-flash</code></strong></td>
+<td><strong>1M tokens</strong></td>
+<td><strong>384K tokens</strong></td>
+<td>Flash 含 thinking / non-thinking 两档</td>
+</tr>
+<tr>
+<td>旧名</td>
+<td><code>deepseek-chat</code> / <code>deepseek-reasoner</code></td>
+<td>(即将弃用)</td>
+<td>—</td>
+<td>—</td>
+<td>官方说明: 旧名将被映射到 V4-Flash 的 non-thinking / thinking 模式后弃用,新代码不要用</td>
+</tr>
+</tbody></table>
+<p><strong>关键修正</strong> (与之前训练数据假设的偏差):</p>
+<ul>
+<li><strong>ctx 上限</strong>: 训练数据假设 128K → 实查 <strong>1M tokens</strong>(8 倍差异)。这意味着 spec/23 / plan/12 的 token 预算控制设计完全无必要,改为 per-agent 上下文契约 + 一致性优先</li>
+<li><strong>max output</strong>: 之前没考虑 → <strong>384K tokens</strong>(对 Writer 单次写超长章节非常友好,但 JSON mode 必须配套设 <code>max_tokens</code> 防截断,见 §G)</li>
+<li><strong>模型命名</strong>: 实查证实 <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code> 是真实 ID(无 <code>deepseek/</code> 前缀,纯 model 名)</li>
+<li><strong>reasoning</strong>: 没有独立 reasoning model;V4-Flash 自带 thinking 模式,通过参数切换;不需要再为 ArcTracker / Validator 单独选 reasoner</li>
+</ul>
+<p><strong>模型选型守约</strong> (借鉴 opencode <code>provider/transform.ts:549-561</code> 的模型差异化处理):</p>
+<blockquote>
+<p>❌ <strong>禁止 fallback 到 <code>deepseek-chat</code> / <code>deepseek-reasoner</code> / <code>deepseek-r1</code> / <code>deepseek-v3</code></strong> — 这些旧模型没有 reasoning effort 控制,也没有 V4 的 <code>max</code> variant,与 plan/02 的混合分档设计 (<code>v4-pro + max</code> / <code>v4-flash + default</code>) 冲突。一旦 V4 临时不可用,直接 escalate 到用户而非静默回退到 V3/旧版,因为旧模型行为差异会让 cardinal-rules 检测精度劣化。</p>
+</blockquote>
+<h3 id="g-deepseek-json-输出模式">G. DeepSeek JSON 输出模式</h3>
+<p><strong>问题</strong>: 我们大量 Agent (Router / Validator / Checker / ArcTracker / ReaderPanel / Reflector / concept extractor / extractSemanticDelta / filterByLLM) 输出本质结构化,过去用&quot;prompt 嘱咐 + zod 解析自然语言&quot;会反复出现&quot;模型回了一段话和 JSON 混在一起&quot;的解析失败。需要确认 DeepSeek 是否原生支持 JSON 输出模式。</p>
+<p><strong>实查结果</strong> (来源: <a href="https://api-docs.deepseek.com/zh-cn/guides/json_mode">https://api-docs.deepseek.com/zh-cn/guides/json_mode</a>):</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>实查结论</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启用方式</td>
+<td><code>response_format: { type: &#39;json_object&#39; }</code></td>
+</tr>
+<tr>
+<td>Prompt 要求</td>
+<td>system 或 user 必须含 &quot;json&quot; 字样 + 提供示例 JSON</td>
+</tr>
+<tr>
+<td>Schema enforcement</td>
+<td>❌ <strong>不强制 schema</strong> (不像 OpenAI structured outputs);只保证返回<strong>合法 JSON</strong>,字段语义要应用层 zod 校验</td>
+</tr>
+<tr>
+<td>Streaming 支持</td>
+<td>文档未明说,但官方示例为 streaming 形式,可用;客户端要拼完整 chunks 后再 parse</td>
+</tr>
+<tr>
+<td>Tool calling 关系</td>
+<td>是分开的两个独立 feature</td>
+</tr>
+<tr>
+<td>模型支持</td>
+<td>文档示例用 V4-Pro,V4-Flash 应该也支持(W3 实测)</td>
+</tr>
+<tr>
+<td>失败行为</td>
+<td>偶尔返回<strong>空 content</strong> (官方明说);<strong><code>max_tokens</code> 没设好会中途截断 JSON</strong>(大坑)</td>
+</tr>
+</tbody></table>
+<p><strong>集成约束</strong> (后续 spec/24 详写):</p>
+<ul>
+<li>DeepSeek 不强 schema → 我们端 zod 校验失败必须 retry 1 次,2 次仍败 escalate</li>
+<li><code>max_tokens</code> 必须基于 zod schema 字段大小估算(防截断),不允许&quot;塞个大数完事&quot;</li>
+<li>system prompt 强制含示例 JSON,不允许&quot;模型自由发挥结构&quot;</li>
+<li>streaming 模式下中间 chunks 不展示给用户(除 Writer / Humanizer 自然语言流外)</li>
+<li>空 content 检测 → retry + 加 &quot;请确保返回非空 JSON&quot; 后缀</li>
+</ul>
+<h3 id="d-vercel-ai-gateway-路由策略">D. Vercel AI Gateway 路由策略</h3>
+<p>实查:</p>
+<ol>
+<li>AI Gateway 是否对接 DeepSeek (sdk.vercel.ai/providers 列表)</li>
+<li>计费走 Gateway 还是直连 DeepSeek?</li>
+<li>是否需要 Gateway?(直连可能更省钱,Gateway 的优势是多 provider 切换,单 provider 不需要)</li>
+</ol>
+<p>如果 Gateway 不必要,改成直连 <code>@ai-sdk/deepseek</code> + 直接 <code>process.env.DEEPSEEK_API_KEY</code>,plan/01 §关键决策表 + plan/08 删 &quot;via Vercel AI Gateway&quot; 字样。</p>
+<h3 id="e-libsql-4507-与-native-binding">E. LibSQL #4507 与 native binding</h3>
+<p>实查:</p>
+<ol>
+<li>当前 <code>@mastra/libsql</code> 最新版是否仍有 #4507 (默认路径删档 bug)</li>
+<li><code>serverExternalPackages: [&#39;@mastra/libsql&#39;]</code> 在 Next.js 15.5 实际 build 是否成功</li>
+<li>macOS arm64 (M 系列) 上 native .node 文件是否在 install 时正确拉到</li>
+</ol>
+<p>如果 (1) 已修,删 plan/08 的 #4507 兜底语;若仍存在,加固 <code>lib/storage/paths.ts</code> 的覆盖逻辑。</p>
+<h3 id="f-tailwind-4-shadcnui-兼容性">F. Tailwind 4 + shadcn/ui 兼容性</h3>
+<p>实查:</p>
+<ol>
+<li>shadcn/ui 当前模板 (<code>pnpm dlx shadcn@latest init</code>) 是否已支持 Tailwind v4</li>
+<li>(我们手写组件,但仍要确认 <code>tw-animate-css</code> 等周边包能用)</li>
+</ol>
+<h3 id="h-deepseek-prompt-cache-真实支持情况">H. DeepSeek prompt cache 真实支持情况</h3>
+<p><strong>问题</strong>: opencode 在 <code>provider/transform.ts:328-377</code> 给 DeepSeek (走 <code>@ai-sdk/openai-compatible</code>) 标了 <code>providerOptions.openaiCompatible.cache_control: { type: &quot;ephemeral&quot; }</code>,但<strong>这只是 opencode 的假设, 不一定 DeepSeek 服务端真支持这个字段</strong>。我们 spec/22 设计了&quot;system 前 2 段 + 末尾 2 条消息打 cache_control&quot;的策略以省 prompt token, 必须先验证字段真被 DeepSeek 端识别。</p>
+<p>实查:</p>
+<ol>
+<li>看 DeepSeek 官方文档 (<a href="https://api-docs.deepseek.com/zh-cn">https://api-docs.deepseek.com/zh-cn</a>) 是否有 prompt cache / context cache 章节</li>
+<li>如有,字段名是 <code>cache_control</code> (OpenAI-compatible) 还是 DeepSeek 自定义?是否需要额外 header / endpoint 切换?</li>
+<li>如无,确认是否走自动缓存(部分 provider 如 Anthropic 是 opt-in,部分如 Gemini context cache 是显式 API 创建)</li>
+<li>若真不支持,<strong>spec/22 的 cache_control 策略要降级为&quot;prompt 头部稳定排布&quot;</strong> — 仅靠头部稳定争取后续可能的客户端缓存,不依赖服务端。</li>
+</ol>
+<p><strong>结果回写</strong>: spec/22 §DeepSeek prompt cache 标记策略 + plan/08 §DeepSeek V4 配置。</p>
+<h3 id="i-mastra-wraplanguagemodel-middleware-暴露情况">I. Mastra <code>wrapLanguageModel</code> + middleware 暴露情况</h3>
+<p><strong>问题</strong>: opencode 用 <code>wrapLanguageModel + transformParams middleware</code> (<code>session/llm.ts:391-405</code>) 注入 DeepSeek 特殊 round-trip (强制 <code>reasoning_content</code> 占位 + 历史消息透传). 我们 spec/22 和 spec/24 都假设可以在 Mastra agent 之上加同样的 middleware. <strong>Mastra 实际是否暴露这个口子未确认</strong>.</p>
+<p>实查:</p>
+<ol>
+<li>看 Mastra 文档 / 源码,<code>mastra.Agent</code> / <code>Mastra.create()</code> 是否接受 Vercel AI SDK 的 <code>wrapLanguageModel</code> 包装后的 model 实例</li>
+<li>或: Mastra 是否有自己的 middleware/hook 机制等价 (例如 <code>onBeforeStream</code> / <code>transformMessages</code>)</li>
+<li>或: Mastra 的 <code>agent.stream()</code> 是否 expose <code>experimental_transform</code> / <code>prepareStep</code> 等 AI SDK 5+ 钩子</li>
+</ol>
+<p><strong>fallback 路径</strong>: 如果 Mastra 不暴露任何 middleware 口子,<strong>绕过 Mastra 直接用 Vercel AI SDK 的 <code>streamText</code> / <code>generateObject</code></strong>,在外层包一层我们自己的 callJsonAgent 实现 (Mastra 只用作 Memory / Workflow 编排,不参与 LLM 调用)。<strong>spec/22 + spec/24 必须在 fallback 章节里写明这条退路</strong>.</p>
+<h3 id="j-embedding-provider-选型与-vector-索引">J. embedding provider 选型与 vector 索引</h3>
+<p><strong>问题</strong>: spec/18 列了 BGE-M3 / DeepSeek embedding / OpenAI text-embedding-3-small 三选一的对比表,作者推荐 BGE-M3 本地。<strong>默认锁 BGE-M3 (见 spec/18 §决议依据),W8 启动前需在此 audit 里 verify 实施前提</strong>.</p>
+<p>实查 (W8 day-1):</p>
+<ol>
+<li>Ollama 当前最新版是否仍稳定提供 <code>bge-m3</code> 模型 (<code>ollama pull bge-m3</code>)</li>
+<li>transformers.js (Web 端 fallback) 是否支持 BGE-M3 ONNX 导出版本</li>
+<li><code>paragraph_embeddings_vss</code> 走 LibSQL native vector (<code>libsql-server &gt; 0.24</code>) 还是 sqlite-vss extension — 实查当前 <code>@mastra/libsql</code> 是否带 vector_search 虚拟表</li>
+<li>DeepSeek embedding API 是否已开放 (备用 fallback;开放则单独标 endpoint + dim)</li>
+</ol>
+<p><strong>结果回写</strong>: spec/18 §3 vector 索引路径 + spec/18 §选型对比。</p>
+<h2 id="实查产出格式">实查产出格式</h2>
+<p>W3 启动第一日,<strong>先开 <code>progress/00X-version-audit.md</code></strong>,按以下结构填:</p>
+<pre><code class="language-markdown"># 00X — Version Audit
+
+**日期**: YYYY-MM-DD
+**周次**: W3 day-1
+
+## 实查结果
+
+### npm 包
+
+| 包 | 文档假设 | 实查最新稳定版 | 决定锁的版本 | 决定理由 |
+|---|---|---|---|---|
+| next | 15.5.x | (实查输出) | (决定) | (理由) |
+| ... |
+
+### AI SDK 6 needsApproval
+
+- 是 / 否 一等字段
+- 真实 API 形态 (粘 cookbook 链接 + 关键代码)
+- 改写哪些 spec 文件: ...
+
+### DeepSeek 模型
+
+| Agent | 真实 model id | 单价 | 备注 |
+| ... |
+
+### Gateway 决策
+
+- 用 / 不用 Vercel AI Gateway
+- 改写哪些文档: ...
+
+### LibSQL #4507
+
+- 仍存在 / 已修
+- 兜底措施: ...
+
+### Tailwind 4 + shadcn
+
+- 兼容 / 不兼容
+- 备选方案: ...
+
+## 改写文档清单 (实查后)
+
+- [ ] plan/08 §锁定的库版本 — 替换为实查表
+- [ ] plan/01 §关键技术决策汇总 — 修正&quot;via Vercel AI Gateway&quot;语
+- [ ] plan/02 §模型选择策略 — 修正模型 id
+- [ ] spec/02 §writeSetting / writeChapter — 改写为 cookbook 形态
+- [ ] spec/06 §服务端实现 — 重写
+- [ ] spec/03 §模型偏好注入 — 修正 model id
+- [ ] README.md §技术栈表 — 同步
+- [ ] spec/22 §DeepSeek prompt cache — 按 §H 实查结果调整 cache_control 字段或降级
+- [ ] spec/22 + spec/24 §middleware 注入 — 按 §I 结果决定 (Mastra 内 / 绕开 Mastra)
+- [ ] spec/18 §选型对比 + §vector 索引 — 按 §J 结果定稿
+</code></pre>
+<h2 id="不变性">不变性</h2>
+<ol>
+<li><strong>没跑过 audit,不允许动 W3 代码</strong> (即使 W2 已经写完 5 个 commit)</li>
+<li><strong>audit 出来与 plan 不一致时,必须更新 plan,不许 plan 不动直接照&quot;现实&quot;写代码</strong> — 文档先行原则不可破</li>
+<li><strong>如果实查发现某依赖根本不存在 (如 mastra 1.x 仍未 release)</strong>,立刻停下来,与用户对齐降级路径 (e.g. 直接用 AI SDK 6 不上 Mastra,把 Memory 隔离自己实现)</li>
+</ol>
+<h2 id="与-plan08-的关系">与 plan/08 的关系</h2>
+<ul>
+<li>plan/08 表格中的版本号在 audit 跑完前<strong>视为占位</strong></li>
+<li>audit 跑完后,plan/08 完全重写为实查产物</li>
+<li>后续每次 dependency bump 单独 commit (chore deps),只在主版本切换时回头更新 plan/08</li>
+</ul>
+  </main>
+</body>
+</html>

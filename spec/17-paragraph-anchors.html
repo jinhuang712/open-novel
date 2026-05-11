@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 17 — 段级稳定 ID 与差量 reindex - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/17-paragraph-anchors.html</span>
+</nav>
+<h1 id="spec-17-段级稳定-id-与差量-reindex">Spec 17 — 段级稳定 ID 与差量 reindex</h1>
+<blockquote>
+<p>实现 plan/11-knowledge-graph.md L2 算法层第一项。本文档定义段锚点 (paragraph anchor) 的稳定 ID 算法、<code>paragraph_anchors</code> 表使用、差量 reindex 流程,以及段移动 / 重命名 / 拆分 / 合并的稳定性追踪策略。</p>
+</blockquote>
+<h2 id="为什么要段级-id">为什么要段级 ID</h2>
+<p>当前 reindex 颗粒度是<strong>文件级</strong>(spec/01 §索引刷新流程: 解析 frontmatter → 全文重扫 entity_refs)。这在长篇场景下三个致命缺陷:</p>
+<ol>
+<li><strong>dependencies 锚不住</strong> — <code>foreshadowing/X.md</code> 要锚定&quot;ch_010 § 5&quot;段落;若 ID 不稳定 (比如用段索引序号),作者插入一段后,ch_010 § 5 变成 § 6,锚点全乱。</li>
+<li><strong>embedding 重算昂贵</strong> — 改一个字,全文重新算 embedding 是浪费。差量需要&quot;哪些段变了&quot;的精确判定。</li>
+<li><strong>影响半径不准</strong> — Validator 想知道&quot;改 <code>lin.gender</code> 后 ch_005 哪几段需要改&quot;,必须有段级 ID 而非&quot;整个文件&quot;。</li>
+</ol>
+<h2 id="切分规则">切分规则</h2>
+<p>把 markdown 文件按以下规则切成段:</p>
+<pre><code class="language-ts">// lib/storage/paragraph-split.ts
+export type Paragraph = {
+  index: number                         // 从 1 起
+  headingPath: string                   // &#39;第一章 / § 段落 5&#39; 或 &#39;林川 / 性格&#39;
+  text: string                          // 段内容 (不含 heading)
+  startOffset: number                   // 在原文件中的字符 offset
+  endOffset: number
+}
+
+export function splitParagraphs(content: string): Paragraph[] {
+  // 1. 剥 frontmatter (--- 开 / 闭包之间)
+  // 2. 按 \n\n+ 切块
+  // 3. heading (# / ## / ###...) 单独成段,heading 跟随的 text 段落继承 headingPath
+  // 4. 代码块 (``` / ~~~) 整个保留为一段,不内部切
+  // 5. 列表项 (- / 1.) 每行各自为一段
+  // 6. 表格 (|...|) 整张表为一段
+  // 7. ATX 风格的&quot;# 第一章&quot; + 段落内容,headingPath 累加; &#39;###&#39; 不重置上层
+  // 8. 空段 (text.trim() === &#39;&#39;) 跳过
+}
+</code></pre>
+<p>切完每段都带 <code>headingPath</code> (用于稳定 ID + UI 显示)。</p>
+<h2 id="稳定-id-算法">稳定 ID 算法</h2>
+<pre><code class="language-ts">// lib/storage/anchor.ts
+import { createHash } from &#39;node:crypto&#39;
+
+export function computeAnchor(p: Paragraph, fileId: string): string {
+  // 三个组件:文件 ID + heading 路径 + 内容指纹
+  const headingDigest = sha1(p.headingPath).slice(0, 8)
+  const contentDigest = computeContentSignature(p.text).slice(0, 12)
+  return `anc_${fileId.slice(-6)}_${headingDigest}_${contentDigest}`
+}
+
+// 内容指纹: 不只是 hash,要&quot;温和&quot;以容忍小改
+function computeContentSignature(text: string): string {
+  // 1. 归一化: 删 whitespace + 标点 + 数字
+  const normalized = text
+    .replace(/\s+/g, &#39;&#39;)
+    .replace(/[，。!?:;&quot;&quot;&#39;&#39;《》【】、,.!?:;()[\]{}]/g, &#39;&#39;)
+    .replace(/\d+/g, &#39;#&#39;)
+  // 2. 取 sha256 前 24 hex
+  return sha256(normalized).slice(0, 24)
+}
+</code></pre>
+<h3 id="关键设计为什么-anchor-既含-heading-又含-content">关键设计:为什么 anchor 既含 heading 又含 content</h3>
+<ul>
+<li><strong>只用 paragraph_index</strong>:作者插入一段后所有后续段 ID 偏移 → 锚全失效。<strong>禁用</strong>。</li>
+<li><strong>只用 content hash</strong>:作者改一个字,ID 变,foreshadowing 锚断。也不行。</li>
+<li><strong>只用 heading + index</strong>:作者重命名 heading 或重排序段落 → ID 变。也不行。</li>
+<li><strong>三段组合 + content 用归一化指纹</strong>:对小修改容忍,对大段重写不容忍。这是经过权衡的最佳折中。</li>
+</ul>
+<h3 id="权衡承认">权衡承认</h3>
+<p><code>computeContentSignature</code> 删去标点 + 空格 + 数字 后做 hash。后果:</p>
+<ul>
+<li>✅ 改个错别字不影响 anchor (内容指纹相同)</li>
+<li>✅ 加 / 删标点不影响</li>
+<li>❌ 删一句话(明显内容变化)anchor 变 (符合预期)</li>
+<li>❌ 把&quot;林川走了&quot;改成&quot;林川离开了&quot; — 同一意思不同字,anchor 会变</li>
+</ul>
+<p>最后这个 corner case 由&quot;邻接段对照&quot;(下方)兜底:reindex 时若旧 anchor X 找不到了,但邻接段 (X-1, X+1 的 anchor) 仍在,且 X 位置有新段 Y 内容相似度高 → 把 X 视为&quot;重写为 Y&quot;,dependencies 锚点迁移到 Y。</p>
+<h2 id="paragraph-anchors-表-schema">paragraph_anchors 表 (schema)</h2>
+<p>(已在 spec/16 §表 6 定义,此处补全语义)</p>
+<pre><code class="language-sql">CREATE TABLE paragraph_anchors (
+  anchor_id TEXT PRIMARY KEY,
+  file_path TEXT NOT NULL,
+  paragraph_index INTEGER NOT NULL,
+  heading_path TEXT,
+  content_hash TEXT NOT NULL,             -- 完整 sha256 (供 diff 检测)
+  content_signature TEXT NOT NULL,        -- 归一化指纹 (anchor_id 用)
+  prev_anchor TEXT,                       -- 前一段 anchor (双链)
+  next_anchor TEXT,                       -- 后一段 anchor
+  start_offset INTEGER NOT NULL,          -- 在 file 中的字符 offset
+  end_offset INTEGER NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  -- 软删除: anchor 失效但仍保留 (供 dependencies 标 broken),保留 30 天后清理
+  deleted_at TEXT
+);
+CREATE INDEX idx_anchors_file ON paragraph_anchors(file_path) WHERE deleted_at IS NULL;
+CREATE INDEX idx_anchors_hash ON paragraph_anchors(content_hash);
+CREATE INDEX idx_anchors_signature ON paragraph_anchors(content_signature);
+CREATE INDEX idx_anchors_double_link ON paragraph_anchors(prev_anchor, next_anchor);
+</code></pre>
+<h2 id="差量-reindex-流程">差量 reindex 流程</h2>
+<h3 id="触发时机">触发时机</h3>
+<pre><code>writeSetting / writeChapter 落盘
+   ↓
+reindex Worker 取该 file
+   ↓
+读旧的 paragraph_anchors (WHERE file_path = X AND deleted_at IS NULL)
+   ↓
+按 splitParagraphs(新内容) 算新段集
+   ↓
+diff 算法 (见下) 判:
+   - 哪些 anchor 不变 (未改)
+   - 哪些 anchor 内容微调 (signature 同 但 content_hash 不同)
+   - 哪些 anchor 删除 (旧的找不到对应)
+   - 哪些 anchor 新增 (新内容没对应旧 anchor)
+   - 哪些 anchor 是&quot;重写&quot; (旧 anchor 失效 + 邻接相同 + 新位置内容近似)
+   ↓
+对各类做对应处理 (见下)
+   ↓
+广播 &#39;anchors:changed&#39; 事件 → 下游 (entity_refs / concept_refs / embeddings / dependencies) 各自处理
+</code></pre>
+<h3 id="diff-算法">diff 算法</h3>
+<pre><code class="language-ts">// lib/storage/anchor-diff.ts
+type DiffResult = {
+  unchanged: { old: AnchorRow; new: Paragraph }[]
+  modified: { old: AnchorRow; new: Paragraph; changed: &#39;content&#39; | &#39;position&#39; }[]
+  deleted: AnchorRow[]
+  added: Paragraph[]
+  rewritten: { old: AnchorRow; new: Paragraph; similarity: number }[]
+}
+
+export function diffAnchors(oldRows: AnchorRow[], newParagraphs: Paragraph[]): DiffResult {
+  // 1. 第一遍: 按 (heading_path, content_signature) 二元组配对 — 命中 = unchanged 或 modified
+  const oldByKey = new Map&lt;string, AnchorRow&gt;()
+  for (const r of oldRows) oldByKey.set(`${r.heading_path}::${r.content_signature}`, r)
+
+  const unchanged: any[] = []
+  const modified: any[] = []
+  const matched = new Set&lt;string&gt;()
+
+  for (const p of newParagraphs) {
+    const newKey = `${p.headingPath}::${computeContentSignature(p.text)}`
+    const oldRow = oldByKey.get(newKey)
+    if (oldRow) {
+      matched.add(oldRow.anchor_id)
+      const newHash = sha256(p.text)
+      if (newHash === oldRow.content_hash) unchanged.push({ old: oldRow, new: p })
+      else modified.push({ old: oldRow, new: p, changed: &#39;content&#39; })
+    }
+  }
+
+  // 2. 剩余: 旧未匹配 = 待定 deleted; 新未匹配 = 待定 added
+  const oldRest = oldRows.filter(r =&gt; !matched.has(r.anchor_id))
+  const newRest = newParagraphs.filter(p =&gt; {
+    const k = `${p.headingPath}::${computeContentSignature(p.text)}`
+    return !oldByKey.has(k) || matched.has(oldByKey.get(k)!.anchor_id) === false
+  })
+
+  // 3. 第二遍: 邻接段对照 — 旧 anchor X 失效,但 prev/next 仍在,新内容相似度 ≥ 0.7 → rewritten
+  const rewritten: any[] = []
+  for (const oldRow of oldRest) {
+    const candidate = newRest.find(p =&gt; isAdjacent(oldRow, p, oldRows, newParagraphs)
+      &amp;&amp; textSimilarity(oldRow.content_hash_text /* 需要存原文 */, p.text) &gt;= 0.7)
+    if (candidate) {
+      rewritten.push({ old: oldRow, new: candidate, similarity: textSimilarity(...) })
+      newRest.splice(newRest.indexOf(candidate), 1)
+    }
+  }
+
+  // 4. 余下的: 旧 = deleted, 新 = added
+  return {
+    unchanged, modified, rewritten,
+    deleted: oldRest.filter(r =&gt; !rewritten.some(rw =&gt; rw.old.anchor_id === r.anchor_id)),
+    added: newRest,
+  }
+}
+</code></pre>
+<p><code>textSimilarity</code>:</p>
+<ul>
+<li>简化的 Jaccard 字符 trigram 集合 (中文 + 英文都 OK,无依赖)</li>
+<li>二期可上 cosine + embedding (但 embedding 本身就是要 reindex 出来的,鸡生蛋 → 当前不上)</li>
+</ul>
+<p><code>isAdjacent</code> 比对 prev_anchor/next_anchor 的 heading_path 是否在新段的前后。</p>
+<h3 id="各类型的处理">各类型的处理</h3>
+<pre><code class="language-ts">async function applyAnchorDiff(filePath: string, diff: DiffResult) {
+  // unchanged: 不动
+  // modified: 更新 content_hash + start/end_offset,保留 anchor_id 不变
+  for (const m of diff.modified) {
+    await db.execute(`UPDATE paragraph_anchors SET content_hash = ?, start_offset = ?, end_offset = ?, updated_at = ?
+                      WHERE anchor_id = ?`, ...)
+    // 触发下游: embedding 重算 + entity_refs/concept_refs 该段重扫
+    await enqueueParagraphRescan(m.old.anchor_id, m.new.text)
+  }
+
+  // rewritten: 软删旧 anchor + 新 anchor + dependencies 迁移
+  for (const r of diff.rewritten) {
+    await db.execute(`UPDATE paragraph_anchors SET deleted_at = ? WHERE anchor_id = ?`, now(), r.old.anchor_id)
+    const newAnchorId = computeAnchor(r.new, fileId(filePath))
+    await db.execute(`INSERT INTO paragraph_anchors (...) VALUES (...)`, newAnchorId, ...)
+    // 关键: dependencies 锚点迁移
+    await db.execute(`UPDATE dependencies SET target_anchor = ?, updated_at = ?
+                      WHERE target_anchor = ?`, newAnchorId, now(), r.old.anchor_id)
+    await db.execute(`UPDATE dependencies SET source_anchor = ?, updated_at = ?
+                      WHERE source_anchor = ?`, newAnchorId, now(), r.old.anchor_id)
+    // entity_relations / entity_timeline 的 evidence_anchor / declared_anchor 同迁
+    await migrateAnchorRefs(r.old.anchor_id, newAnchorId)
+    await enqueueParagraphRescan(newAnchorId, r.new.text)
+  }
+
+  // deleted: 软删 + dependencies 标 broken
+  for (const d of diff.deleted) {
+    await db.execute(`UPDATE paragraph_anchors SET deleted_at = ? WHERE anchor_id = ?`, now(), d.anchor_id)
+    await db.execute(`UPDATE dependencies SET status = &#39;broken&#39;, updated_at = ? WHERE target_anchor = ? OR source_anchor = ?`,
+                     now(), d.anchor_id, d.anchor_id)
+    // 不删 entity_relations / entity_timeline 行 — 仅 evidence 失效,事实仍保留
+  }
+
+  // added: 新建 anchor + 全套下游
+  for (const a of diff.added) {
+    const newAnchorId = computeAnchor(a, fileId(filePath))
+    await db.execute(`INSERT INTO paragraph_anchors (...) VALUES (...)`, newAnchorId, ...)
+    await enqueueParagraphRescan(newAnchorId, a.text)
+  }
+
+  // 重新编织 prev_anchor/next_anchor 双链
+  await rebuildDoubleLinks(filePath)
+}
+</code></pre>
+<h3 id="邻接段双链的作用">邻接段双链的作用</h3>
+<p><code>prev_anchor</code> / <code>next_anchor</code> 不是必需(可由 paragraph_index 推),但用作:</p>
+<ol>
+<li><strong>rewritten 探测的快速判断</strong> — 不必扫整个 file 找邻接,直接读双链</li>
+<li><strong>段移动检测</strong> — 段从 ch_005 移到 ch_007:旧 anchor (file=ch_005, prev=A, next=B) 失效;新 anchor (file=ch_007) 内容相同 → 可触发跨文件 anchor 迁移(当前不做,二期补)</li>
+<li><strong>UI 段间导航</strong> — Editor &quot;下一段&quot; / &quot;上一段&quot;操作直接走双链</li>
+</ol>
+<h2 id="章节序与字典序-anchor-排序">章节序与字典序 (anchor 排序)</h2>
+<p><code>paragraph_anchors</code> 内部用 <code>(file_path, paragraph_index)</code> 排序;但跨章节查询(影响半径)需要按章节 + 段联合排序。</p>
+<p>章节 ID 字典序兼容:<code>spec/01</code> 已规定 <code>chapters/{NNN-{slug}}/draft.md</code>,NNN 是 3 位 0 padding,即 <code>001</code>, <code>010</code>, <code>100</code>。字典序 == 章节顺序。</p>
+<p>跨章节查询示例:</p>
+<pre><code class="language-sql">-- 取 ch_005 § X 锚点之前的所有 ch_001-005 段落
+SELECT * FROM paragraph_anchors
+ WHERE file_path GLOB &#39;chapters/0??-*/draft.md&#39;
+   AND (file_path &lt; &#39;chapters/005&#39; OR
+        (file_path GLOB &#39;chapters/005-*&#39; AND paragraph_index &lt; 23))
+   AND deleted_at IS NULL
+ ORDER BY file_path, paragraph_index;
+</code></pre>
+<h2 id="entity-refs-concept-refs-改造">entity_refs / concept_refs 改造</h2>
+<p>之前 (spec/01) <code>entity_refs.position_from / position_to</code> 是文件级字符 offset。改造为段锚点 + 段内 offset:</p>
+<pre><code class="language-sql">ALTER TABLE entity_refs ADD COLUMN anchor_id TEXT REFERENCES paragraph_anchors(anchor_id);
+ALTER TABLE entity_refs ADD COLUMN intra_paragraph_offset INTEGER;       -- 段内字符 offset
+
+CREATE INDEX idx_refs_anchor ON entity_refs(anchor_id);
+</code></pre>
+<p>(concept_refs 同等改造,见 spec/16 §表 4 已含 source_anchor。)</p>
+<p>迁移脚本 (<code>004-paragraph-anchors.ts</code>) 重扫所有现有 entity_refs,按 file_path + position_from 反查所属 anchor,populate 新两列。</p>
+<p>reindex 时:</p>
+<ul>
+<li>段 unchanged → entity_refs 不动</li>
+<li>段 modified / rewritten → 删该 anchor 下所有 entity_refs,重扫该段重新 INSERT</li>
+<li>段 deleted → 级联删 entity_refs (FK ON DELETE CASCADE 不开,因为我们软删 anchor;手动 cascade 删 entity_refs)</li>
+<li>段 added → 全新扫描,INSERT entity_refs</li>
+</ul>
+<h2 id="reindex-worker-升级-spec01-sqlite-wal-mode-并发写">reindex Worker 升级 (spec/01 §SQLite WAL Mode + 并发写)</h2>
+<h3 id="工作单元变化">工作单元变化</h3>
+<table>
+<thead>
+<tr>
+<th>旧</th>
+<th>新</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>单位 = 文件</td>
+<td>单位 = (文件, anchor diff)</td>
+</tr>
+<tr>
+<td>操作 = DELETE + INSERT 全部 entity_refs</td>
+<td>操作 = 按 anchor 增量</td>
+</tr>
+<tr>
+<td>同 source_file 1s 内 dedupe</td>
+<td>同 anchor 1s 内 dedupe</td>
+</tr>
+</tbody></table>
+<h3 id="并发模型">并发模型</h3>
+<ul>
+<li>Worker 单例不变 (避免 SQLite 写锁竞争)</li>
+<li>Worker 内部按&quot;文件粒度&quot;串行,但同文件的多 anchor 操作在一个 transaction 内提交</li>
+<li>一次 reindex 任务结构: <code>{ file, oldAnchors, newParagraphs }</code></li>
+</ul>
+<h3 id="失败回滚">失败回滚</h3>
+<pre><code class="language-ts">async function reindexOneFile(projectId: string, filePath: string) {
+  const tx = await db.beginTransaction()
+  try {
+    const newPars = splitParagraphs(content)
+    const oldRows = await db.fetchAnchors(filePath)
+    const diff = diffAnchors(oldRows, newPars)
+    await applyAnchorDiff(filePath, diff, tx)
+    await rescanAllInFile(filePath, tx)        // entity_refs / concept_refs
+    await tx.commit()
+    broadcast(&#39;anchors:changed&#39;, { filePath, diff })
+  } catch (e) {
+    await tx.rollback()
+    logger.error(&#39;reindex failed&#39;, { filePath, error: e })
+    // 不抛 — Worker 继续处理下一个;失败任务进 reindex_failures 表
+    await db.reindex_failures.add({ filePath, error: String(e), at: now() })
+  }
+}
+</code></pre>
+<p><code>reindex_failures</code> 表:</p>
+<pre><code class="language-sql">CREATE TABLE reindex_failures (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file_path TEXT NOT NULL,
+  error TEXT NOT NULL,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  resolved_at TEXT
+);
+</code></pre>
+<p>UI 在 SettingsDialog → &quot;索引健康&quot;显示&quot;N 条 reindex 待重试&quot;,点开手动重试或忽略。</p>
+<h2 id="性能目标">性能目标</h2>
+<p>参考目标 (W7-W8 用 vitest bench 实测填充):</p>
+<table>
+<thead>
+<tr>
+<th>章节大小</th>
+<th>段数</th>
+<th>全量 reindex 耗时</th>
+<th>差量 reindex (改 1 段)</th>
+<th>差量 reindex (改 5 段)</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>5K 字</td>
+<td>~30</td>
+<td>&lt; 50ms</td>
+<td>&lt; 10ms</td>
+<td>&lt; 20ms</td>
+</tr>
+<tr>
+<td>20K 字</td>
+<td>~120</td>
+<td>&lt; 200ms</td>
+<td>&lt; 12ms</td>
+<td>&lt; 30ms</td>
+</tr>
+<tr>
+<td>50K 字</td>
+<td>~300</td>
+<td>&lt; 500ms</td>
+<td>&lt; 15ms</td>
+<td>&lt; 40ms</td>
+</tr>
+</tbody></table>
+<p>embedding 计算时间不计入此表(那是 spec/18)。</p>
+<h2 id="边界情况">边界情况</h2>
+<table>
+<thead>
+<tr>
+<th>情况</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>文件被外部编辑器整文件覆盖 (chokidar 触发)</td>
+<td>按 writeChapter 路径走差量 reindex,无差异</td>
+</tr>
+<tr>
+<td>文件大量段重写 (e.g. AI 全章重写)</td>
+<td>diff 大概率退化为 deleted + added,锚点迁移失败,dependencies 大批 broken — UI 红色警告&quot;该章节锚点大变,请检查相关伏笔&quot;</td>
+</tr>
+<tr>
+<td>段被切成 2 段 (用户加了 \n\n)</td>
+<td>第一段 unchanged 或 modified,第二段 added (signature 与原段不同) — dependencies 留在第一段,符合预期 (锚定在前半部分)</td>
+</tr>
+<tr>
+<td>两段被合并</td>
+<td>两个旧 anchor 中一个 deleted (signature 不再匹配),另一个 modified (现在多了内容);dependencies 落在 modified 那段</td>
+</tr>
+<tr>
+<td>heading 改名 (<code># 性格</code> → <code># 性格特征</code>)</td>
+<td>headingPath 变 → anchor_id 变,但 content_signature 同 → diff 标 rewritten,dependencies 自动迁移</td>
+</tr>
+<tr>
+<td>frontmatter 改 (e.g. <code>age: 28</code> → <code>30</code>)</td>
+<td>frontmatter 不进段切分,reindex 走 entities/entity_timeline 而非 anchor 系统 (二者并行,互不干扰)</td>
+</tr>
+</tbody></table>
+<h2 id="l4-治理-锚点失效-lint">L4 治理 — 锚点失效 lint</h2>
+<p>每次 reindex 后跑 <code>lib/lint/anchor-health.ts</code>:</p>
+<table>
+<thead>
+<tr>
+<th>检查</th>
+<th>严重度</th>
+<th>触发</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>broken dependencies</td>
+<td>error</td>
+<td>dependencies.status = &#39;broken&#39; 累计 ≥ 1</td>
+</tr>
+<tr>
+<td>大批 anchor 失效 (单次 reindex deleted ≥ 30%)</td>
+<td>warning</td>
+<td>UI 提示&quot;是否本次 AI 全章重写正确?可在快照恢复&quot;</td>
+</tr>
+<tr>
+<td>软删 anchor 超 30 天</td>
+<td>info</td>
+<td>后台清理任务硬删</td>
+</tr>
+</tbody></table>
+<h2 id="测试">测试</h2>
+<table>
+<thead>
+<tr>
+<th>测试</th>
+<th>类型</th>
+<th>覆盖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>paragraph-split.test.ts</code></td>
+<td>单元</td>
+<td>heading 嵌套、列表、代码块、表格、空段</td>
+</tr>
+<tr>
+<td><code>anchor-id.test.ts</code></td>
+<td>单元</td>
+<td>同内容不同位置 anchor 不同;改字 anchor 变;改空格 anchor 不变</td>
+</tr>
+<tr>
+<td><code>anchor-diff.test.ts</code></td>
+<td>单元</td>
+<td>unchanged / modified / deleted / added / rewritten 5 种 diff 都准确</td>
+</tr>
+<tr>
+<td><code>anchor-rewrite-migration.test.ts</code></td>
+<td>集成</td>
+<td>段重写后 dependencies / entity_relations / entity_timeline 锚点正确迁移</td>
+</tr>
+<tr>
+<td><code>paragraph-anchor-bench.bench.ts</code></td>
+<td>bench</td>
+<td>5K/20K/50K 字三档差量耗时;W7-W8 填表</td>
+</tr>
+<tr>
+<td><code>reindex-failure-recovery.test.ts</code></td>
+<td>集成</td>
+<td>中途 throw 后事务回滚 + reindex_failures 落记录 + 手动重试通</td>
+</tr>
+</tbody></table>
+<p>详细 fixture 见 spec/14。</p>
+  </main>
+</body>
+</html>

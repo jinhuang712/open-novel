@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01 — 系统概览 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/01-overview.html</span>
+</nav>
+<h1 id="01-系统概览">01 — 系统概览</h1>
+<h2 id="目标">目标</h2>
+<p>为有志于在番茄小说发表作品的作者,提供一个<strong>像 VSCode 一样工作的 AI 创作工作台</strong>。它不是一键生成器,而是一个<strong>始终把用户放在驾驶位的创作助手</strong>:Agent 提议、用户审批、系统持久。</p>
+<h2 id="核心用户场景">核心用户场景</h2>
+<pre><code>1. 输入故事种子 → 生成世界观/大纲/角色等设定 → 用户逐项审阅、修改
+2. 修改某个核心角色资料 → 系统自动扫所有相关章节/设定 → 用户审批 cascade 改动
+3. 一键生成章节概要 → 审 → 一键生成章节正文 → 审 → 一键去 AI 化
+4. 写作中点击角色名 → 跳转到角色资料 → 编辑 → 返回 → 系统已同步引用
+5. 同时维护多个项目,互不污染
+</code></pre>
+<h2 id="7-agent-拓扑-mastra-agentnetwork">7 Agent 拓扑 (Mastra <code>AgentNetwork</code>)</h2>
+<pre><code>                  ┌─────────────────┐
+                  │  User (ChatBox) │
+                  └────────┬────────┘
+                           │  prompt + mode
+                           ▼
+                  ┌─────────────────┐
+                  │  Router (Flash) │ ← 模式分流 + 意图识别
+                  └────────┬────────┘
+            ┌──────────────┼──────────────┐
+            ▼              ▼              ▼
+       ┌────────┐   ┌──────────────┐    ┌────────────┐
+       │ Writer │   │   Checker    │    │  Validator │
+       │ (Pro)  │   │   (Flash)    │    │   (Pro)    │
+       │  吐字  │   │ +叙事引擎子能力│    │   一致性   │
+       └────┬───┘   └──────┬───────┘    └──────┬─────┘
+            │              │ (BeatAnalyzer /          │
+            │              │  ArcTracker / 模板库)     │
+            │              │                          │
+            └─────┬────────┴──────────┬───────┬───────┘
+                  ▼                   ▼       ▼
+       ┌─────────────────┐    ┌──────────┐ ┌──────────────┐
+       │  ReaderPanel    │    │Reflector │ │  Humanizer   │
+       │  (Flash, NEW)   │    │ (Flash)  │ │    (Pro)     │
+       │  5 persona 仿真 │    │  反思    │ │   去 AI 化   │
+       └─────────────────┘    └──────────┘ └──────────────┘
+</code></pre>
+<p>详见: <a href="./02-multi-agent.html">02-multi-agent.html</a> (Agent 详解) / <a href="./09-narrative-engine.html">09-narrative-engine.html</a> (叙事引擎) / <a href="./10-reader-simulator.html">10-reader-simulator.html</a> (读者仿真器) / <a href="./11-knowledge-graph.html">11-knowledge-graph.html</a> (知识图谱:cascade + RAG 真正可工作的地基) / <a href="./12-memory-and-context.html">12-memory-and-context.html</a> (Agent 记忆四层 + per-agent 上下文契约 + 一致性优先);spec 入口见 <a href="../spec/24-json-output.html">spec/24-json-output.html</a> (JSON 结构化输出统一规约) + <a href="../spec/25-cardinal-rules.html">spec/25-cardinal-rules.html</a> (五大网文守则)。</p>
+<h2 id="数据流概览">数据流概览</h2>
+<pre><code>ChatBox 输入
+   │
+   ▼
+Router 路由 (识别 mode = discuss | plan | write)
+   │
+   ├─ discuss → 优先 queryFacts (spec/21) 直查 SQL → 命中即答
+   │             (未命中 fallback 自由 LLM,RAG 设定 read-only;无落盘)
+   │
+   ├─ plan → Writer 生成主修改 (in-memory,proposal-only,不落盘)
+   │           ↓
+   │      Validator 调 analyzeImpact (spec/19):
+   │        [内部递归 ≤3 轮,用户不可见,纯内存]
+   │          - 第 1 轮: extractSemanticDelta + SQL 影响半径 + LLM filter → ChangeProposal[1]
+   │          - Writer 内部短调用生成 afterText
+   │          - 第 2 轮: 同上,基于第 1 轮 afterText,半径严格收缩
+   │          - 第 3 轮: 同上
+   │          - 终止: 候选空 / 半径不收缩 / 深度=3
+   │           ↓
+   │      汇总 ChangeSet (主修改 + 1-3 级 cascade + 影响图谱)
+   │           ↓
+   │      **一次** ApprovalCard:用户勾选 + 编辑 + 一键同意/部分同意/拒绝
+   │           ↓ (用户 approve)
+   │      后端 transaction 一次写所有 accepted 文件
+   │           ↓
+   │      副作用: 差量 anchor reindex + 知识图谱表 upsert + snapshot + history group
+   │           ↓
+   │      Reflector 按 cascade 链路批次合并入队
+   │
+   └─ write → Writer Context Builder (spec/23) 装配:
+   │            assembleContext (spec/20) — entity 状态 + 活跃关系 + 待处理伏笔 + 最近章节 + 语义相关 + 世界观 + 概念约束
+   │            + 守则相关 (spec/25): cardinal-rules.json + active critical promises + character value_axes + milestone cadence + rolling pacing metrics + isGoldenChapter
+   │           ↓
+   │       生成章节 (in-memory,proposal-only,自然语言流式)
+   │           ↓
+   │      并行检测 (各走 JSON mode, spec/24):
+   │        - Checker (Flash) 风格审 + BeatAnalyzer + 守则 1/3/5 检测
+   │        - Validator (Pro) 一致性审 + ArcTracker + analyzeImpact + 守则 2/4 检测
+   │        - ReaderPanel (Flash×5) 5 persona 仿真 + 守则 1-5 综合二审 → ChapterRiskReport
+   │           ↓
+   │      汇总 ChangeSet (章节正文 + cascade 修改) + CardinalRulesReport (spec/25)
+   │           ↓
+   │      **一次** ApprovalCard:
+   │        - 守则 critical 风险存在 → 强制勾&quot;明知违反仍通过&quot;才能 approve
+   │        - blocking violation (已过 deadline 的 critical promise) → 完全禁用 approve
+   │           ↓
+   │      用户决议 → 后端 transaction 一次写 → 副作用 (含 reindex + Reflector 学 cardinal_rule scope)
+</code></pre>
+<p><strong>关键不变性 (跨流程)</strong>:</p>
+<ul>
+<li>所有 stream 必经 <a href="../spec/23-context-contracts.html">per-agent context builder (spec/23)</a>, 不允许 agent 自拼 prompt</li>
+<li>所有结构化输出走 <a href="../spec/24-json-output.html">JSON mode (spec/24)</a>, zod 校验失败 retry + escalate, 不允许 silent fallback</li>
+<li>任何 ChangeSet 落盘前必跑 <a href="../spec/25-cardinal-rules.html">五大守则检测 (spec/25)</a>, critical / blocking 严控不可绕过</li>
+<li>1M ctx 下 (spec/00 §C) 不做 token 预算裁剪 — 一致性 &gt; 节流</li>
+</ul>
+<p><strong>关键交互不变性</strong>: 所有写盘动作必须经过 ApprovalCard 整批审。&quot;内部 cascade 递归&quot;和&quot;用户审批&quot;是两个分离的阶段:递归全在内存,审批在 UI;落盘只在 approve 后,事务原子。</p>
+<h2 id="关键技术决策汇总">关键技术决策汇总</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>选择</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>应用架构</td>
+<td>Next.js 15 单应用</td>
+<td>起步快,SSE 一等公民,App Router 与 AI SDK 6 集成最佳</td>
+</tr>
+<tr>
+<td>Agent 框架</td>
+<td>Mastra on AI SDK 6</td>
+<td><code>Memory({ thread, resource })</code> 自带多项目隔离;<code>AgentNetwork</code> LLM 路由</td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>DeepSeek V4 Pro/Flash</td>
+<td>实查 (spec/00 §C):ctx <strong>1M tokens</strong>, max output <strong>384K</strong>, 原生 JSON mode (<code>response_format: { type: &#39;json_object&#39; }</code>)。Pro 用于核心创作 (writer/validator/humanizer),Flash 用于辅助 (router/checker/reflector/reader-panel/工具内 LLM),按用量优化</td>
+</tr>
+<tr>
+<td>编辑器</td>
+<td>TipTap + 自定义装饰器 + AC</td>
+<td>TipTap 中文排版舒服;不用 <code>Mention</code> 节点 (atomic 破坏纯文本流)</td>
+</tr>
+<tr>
+<td>存储</td>
+<td>md (内容) + LibSQL (索引)</td>
+<td>md 人类可读 + Git 友好;sql 处理引用图/历史/学习</td>
+</tr>
+<tr>
+<td>联网</td>
+<td>接口预留 + Mock</td>
+<td>二期接 Bocha (中文) + Tavily (英文),用 MCP sidecar</td>
+</tr>
+<tr>
+<td>三模式</td>
+<td>XState 状态机</td>
+<td>discuss 不写,plan 改设定,write 改章节,严格闸门</td>
+</tr>
+</tbody></table>
+<h2 id="不变性约束-invariants">不变性约束 (Invariants)</h2>
+<p>为保证质量,系统强制以下不变性:</p>
+<ol>
+<li><strong>写入必须经审批</strong> — 所有 writeSetting / writeChapter 走 proposal 模式,落 <code>approvals</code> 表 status=pending,通过独立 endpoint resolve (见 spec/06)</li>
+<li><strong>设定不可被 Agent 静默修改</strong> — Validator 发现矛盾时只能&quot;提议&quot;修改,不能直接改;最终决定权在用户</li>
+<li><strong>多项目数据零串扰</strong> — Memory 用 <code>resource = projectId</code>,文件用独立目录,数据库用 <code>WHERE project_id = ?</code> 强约束;LibSQL 连接池 LRU(3)</li>
+<li><strong>三模式严格分离</strong> — Router 在每次输入时强校验当前 mode 与可调用工具集</li>
+<li><strong>每次审批必反思</strong> — Reflector 在每次审批闭环 (approve / reject / edited) + 用户手动改写 Agent 内容后入队跑,无 token / 频率 cap;同一 cascade 链路下的 N 项审批会合并为一次 reflect (批次语义,不是为省 token) (见 plan/06 §Reflector 触发时机)</li>
+<li><strong>路径越权零信任</strong> — 所有读写工具 execute 第一行强制 <code>safeFromProjectRoot()</code>,不依赖前端校验 (见 spec/02)</li>
+<li><strong>不可信内容围栏</strong> — 所有外部内容 (web / 用户拷贝 .md / 自定义 persona) 拼进 prompt 时用 <code>&lt;&lt;&lt;UNTRUSTED:...&gt;&gt;&gt;</code> 包裹,Agent system prompt 显式声明忽略其中&quot;指令&quot;</li>
+<li><strong>docs-before-code</strong> — 任何代码 commit 之前对应 plan/spec 必须先有,且需用户 approve docs 后才动代码 (项目级 workflow 不变性)</li>
+<li><strong>影响半径不依赖 LLM</strong> — Validator cascade 第一步必须是 SQL 查影响半径 (analyzeImpact step 2);LLM 只做&quot;段是否真受影响&quot;二次过滤。漏 SQL 索引 = bug,不应用 LLM &quot;猜&quot;补救 (见 plan/11 + spec/19)</li>
+<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/character-ages.md</code> 等是 SQLite 表的 markdown 投影,frontmatter 标 <code>derived: true</code>,reindex 自动重生成,UI 锁写 (见 spec/16 §派生文件守卫)</li>
+<li><strong>未决 cascade 阻断 write</strong> — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用,弹 dialog 引导处理 (见 spec/16 §Plan Inconsistency Lock)</li>
+<li><strong>段锚点稳定</strong> — 段移动 / 重命名 / 改字不应使 dependencies / paragraph_embeddings 失效;reindex 走&quot;内容签名 + 邻接段对照&quot;维持锚点 (见 spec/17)</li>
+<li><strong>L4 知识图谱是单一事实源</strong> — L1 工作记忆 / L2 会话历史 / L3 项目经验中任何与 L4 冲突的内容,answer 时以 L4 为准 (见 plan/12 §四层记忆模型;例: 历史 message 里说&quot;林溪是男的&quot;,但 L4 character 已改女,以 L4 为准)</li>
+<li><strong>per-agent 上下文契约严格写死,Writer/Validator 必装项不允许省略</strong> — 1M ctx (spec/00 §C) 给的就是奢侈装齐的本钱;一致性所需的全部数据必装,不允许&quot;为节省临时省略&quot;。各 agent 必经对应 context builder (spec/23),不允许 agent 自拼 prompt;真超 1M 时抛 ContextOverflowError 让用户分卷,绝不 silent 砍 retrieve</li>
+<li><strong>L3 learnings 仅 Reflector 可写</strong> — LLM 在 stream 中不允许直接 upsert learnings,只有 Reflector 在审批闭环后写;读由 context builder 按 weight desc top-8 注入 (见 plan/06 + plan/12);<code>scope=&#39;cardinal_rule&#39;</code> top-1 永远保留不被砍</li>
+<li><strong>结构化输出必走 JSON mode + zod 校验</strong> — Router / Validator / Checker / Reflector / ReaderPanel / 工具内 LLM 调用 (extractSemanticDelta / filterByLLM / concept extractor / compress) 必经 <code>callJsonAgent</code> (spec/24): DeepSeek <code>response_format: json_object</code> + 应用层 zod 校验 + 失败 retry 1 次 + 2 次失败抛 <code>JsonOutputError</code> escalate;不允许&quot;自由发挥再 zod parse&quot;,不允许 silent fallback (那会让 cascade 漏审 / 概念抽取漏 entity)</li>
+<li><strong>五大网文守则不可违反</strong> — 黄金三章 / 人设崩坏 / 节奏崩盘 / 期待感失约 / 金手指依赖 (见 spec/25)。Validator + ReaderPanel + ArcTracker + BeatAnalyzer 自动检测,汇成 <code>CardinalRulesReport</code> 进 ApprovalCard:critical 风险存在用户<strong>必须勾</strong>&quot;明知违反仍通过&quot;才能 approve;blocking violation (已过 deadline 的 critical promise) 完全禁用 approve;不允许 silent commit 违反守则的内容。<code>cardinal-rules.json</code> 阈值用户可微调,但 <code>enabled: true</code> UI 锁死</li>
+</ol>
+<h2 id="与同类产品的差异">与同类产品的差异</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>NovelCrafter / Sudowrite</th>
+<th>Open Novel</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>联网研究</td>
+<td>无 (闭合 Story Bible)</td>
+<td>接口预留,二期开放</td>
+</tr>
+<tr>
+<td>一致性守护</td>
+<td>手动 Codex</td>
+<td>自动 cascade + Validator</td>
+</tr>
+<tr>
+<td>反馈学习</td>
+<td>无</td>
+<td>Reflector 自动持久化经验</td>
+</tr>
+<tr>
+<td>多 Agent</td>
+<td>单 Agent + 模板</td>
+<td><strong>7 Agent 协作</strong></td>
+</tr>
+<tr>
+<td>透明度</td>
+<td>黑盒</td>
+<td>全流式可见</td>
+</tr>
+<tr>
+<td>中文</td>
+<td>弱</td>
+<td>一等公民</td>
+</tr>
+<tr>
+<td><strong>叙事力学诊断</strong></td>
+<td>无</td>
+<td><strong>BeatAnalyzer + ArcTracker</strong> (节奏 / 情绪曲线 / 角色弧光偏离)</td>
+</tr>
+<tr>
+<td><strong>发布前留存预演</strong></td>
+<td>无</td>
+<td><strong>ReaderPanel</strong> (5 persona 模拟读者反应,生成章节风险报告)</td>
+</tr>
+<tr>
+<td><strong>结构模板可调用</strong></td>
+<td>无 / 强模板套用</td>
+<td>三幕 / 英雄之旅 / 起承转合 / 番茄黄金三章,可调用不强制</td>
+</tr>
+<tr>
+<td><strong>知识图谱 (W7-W10)</strong></td>
+<td>静态 Codex (实体卡片)</td>
+<td><strong>6 维图: 实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义</strong> (见 plan/11)</td>
+</tr>
+<tr>
+<td><strong>Cascade 影响范围</strong></td>
+<td>无 / 全人工</td>
+<td><strong>纯 SQL 出候选 + LLM 二次过滤 + 递归 ≤3 层</strong> (见 spec/19)</td>
+</tr>
+<tr>
+<td><strong>写章节上下文</strong></td>
+<td>用户手动选 cards 塞 prompt</td>
+<td><strong>assembleContext</strong> 自动 retrieve + token 预算 (见 spec/20)</td>
+</tr>
+<tr>
+<td><strong>边写边查</strong></td>
+<td>静态搜索 / 跳卡片</td>
+<td><strong>queryFacts</strong> 4 模式 (entity-at / relations-of / mentions-of / semantic-search) (见 spec/21)</td>
+</tr>
+</tbody></table>
+<p>后六条是与&quot;AI 代笔工具&quot;赛道的核心区分点 — 我们不是写得更好的 AI,是<strong>把世界装进 AI 的合伙人 + 懂叙事的诊断师 + 懂读者的预演场</strong>。</p>
+  </main>
+</body>
+</html>

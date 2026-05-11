@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>04 — 存储模型 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/04-storage-model.html</span>
+</nav>
+<h1 id="04-存储模型">04 — 存储模型</h1>
+<h2 id="设计原则">设计原则</h2>
+<ul>
+<li><strong>内容人类可读</strong>: 设定与正文必须是 markdown,可编辑可 diff 可备份</li>
+<li><strong>索引/历史/学习独立</strong>: 用 SQLite (LibSQL) 管引用图、变更历史、反馈经验,<strong>用户不感知</strong></li>
+<li><strong>多项目无串扰</strong>: 每个项目一个目录,一个独立 <code>index.db</code></li>
+<li><strong>存放在用户目录</strong>: 不污染代码仓库,iCloud/Time Machine 友好</li>
+<li><strong>关注点分离 — 产物 vs 过程</strong> (借鉴 opencode <code>session/session.sql.ts</code>): <strong>用户产物</strong>走 Markdown (chapter.md / character.md / outline.md / cardinal-rules.json 等, file tree view 可见可编辑可 git 跟踪); <strong>运行时过程数据</strong>走 SQLite (LLM 调用日志 / tool retry 记录 / token 用量 / JSON parse 失败 / cascade 路径 / etc, 给开发者调试用)。两者数据库分开 (<code>index.db</code> for 产物索引, <code>session_history.db</code> for 过程数据), 避免写入并发冲突且语义清晰。</li>
+</ul>
+<h2 id="存储位置">存储位置</h2>
+<pre><code>~/.open-novel/
+├── runtime.db                       # Mastra Memory 全局会话 (跨项目)
+├── settings.json                    # API keys / 用户偏好 (UI 修改)
+├── .snapshots/                      # 设定快照 (见 spec/16 §Snapshot)
+│   └── {projectId}/{timestamp}/
+└── workspaces/
+    ├── proj_重生互联网_a3f2/
+    │   ├── project.json
+    │   ├── settings/
+    │   │   ├── worldview/                       # ← 拆目录
+    │   │   │   ├── _index.md                    # 摘要 + 子文件列表 (供 LLM 快读)
+    │   │   │   ├── geography.md                 # 地理总论
+    │   │   │   ├── history.md                   # 历史脉络
+    │   │   │   ├── politics.md                  # 政治格局
+    │   │   │   ├── economy.md                   # 经济体系
+    │   │   │   ├── technology.md                # 科技 / 工业 (现代 / 科幻必备)
+    │   │   │   ├── culture.md                   # 风俗 / 民族 / 语言
+    │   │   │   ├── religion.md                  # 信仰 / 神系
+    │   │   │   └── rules.md                     # 世界硬规则 (e.g. &quot;此世界没有手机&quot;)
+    │   │   ├── outline/                         # ← 拆目录
+    │   │   │   ├── _index.md                    # 总纲 + 卷列表
+    │   │   │   ├── master.md                    # 全书一句话 / 三幕结构 / 总爽点节奏
+    │   │   │   ├── volumes/                     # 卷大纲
+    │   │   │   │   ├── 01-rebirth.md            # 第一卷
+    │   │   │   │   └── 02-startup.md            # 第二卷
+    │   │   │   └── chapter-outlines/            # 章节大纲索引 (内容仍在 chapters/{id}/outline.md)
+    │   │   │       └── _registry.md             # 章节-卷映射
+    │   │   ├── beats.md                         # 节拍设计 (兼容,不拆)
+    │   │   ├── characters/
+    │   │   │   ├── lin.md
+    │   │   │   └── wang.md
+    │   │   ├── factions/                        # ← 新 (阵营)
+    │   │   │   ├── _index.md
+    │   │   │   ├── donghai-group.md
+    │   │   │   └── chaoting.md
+    │   │   ├── organizations/                   # ← 新 (公司 / 门派 / 公会 / 政府,与 faction 不同维)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md
+    │   │   ├── locations/                       # ← 新 (替代 places)
+    │   │   │   ├── _index.md
+    │   │   │   ├── regions/                     # 大区
+    │   │   │   ├── cities/                      # 城市
+    │   │   │   ├── buildings/                   # 建筑
+    │   │   │   └── landmarks/                   # 地标
+    │   │   ├── items/                           # ← 新 (重要物品 / 法宝 / 信物)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md
+    │   │   ├── events/                          # ← 新 (历史事件 + 故事内关键事件)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md
+    │   │   ├── timeline/                        # ← 新
+    │   │   │   ├── _index.md
+    │   │   │   ├── era.md                       # 纪年体系 (大宇宙背景)
+    │   │   │   ├── story-clock.md               # 故事内时间推进 (绑章节)
+    │   │   │   └── character-ages.md            # 派生 — 由 entity_timeline 表生成
+    │   │   ├── relationships/                   # ← 新
+    │   │   │   ├── _index.md
+    │   │   │   ├── _matrix.md                   # 派生 — 由 entity_relations 表生成
+    │   │   │   └── notes/                       # 用户对某关系的注解
+    │   │   │       └── {id}.md
+    │   │   ├── story-lines/                     # ← 新
+    │   │   │   ├── _index.md
+    │   │   │   ├── main.md                      # 主线
+    │   │   │   └── subplots/                    # 支线
+    │   │   │       └── {id}.md
+    │   │   ├── foreshadowing/                   # ← 新 (预埋伏笔)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md                      # 单条伏笔: 埋点 / 收割点 / 状态
+    │   │   ├── chapter-arcs/                    # ← 新 (按弧划分章节段落)
+    │   │   │   ├── _index.md
+    │   │   │   └── {id}.md                      # e.g. 前世篇 ch_001-040
+    │   │   ├── power-system/                    # ← 新 (流派相关,仅玄幻 / 修仙 / 系统流用)
+    │   │   │   ├── _index.md
+    │   │   │   ├── overview.md
+    │   │   │   ├── tiers.md                     # 等阶
+    │   │   │   ├── techniques.md                # 功法 / 招式
+    │   │   │   └── artifacts.md                 # 法宝体系
+    │   │   ├── glossary/                        # ← 新 (术语 / 黑话 / 设定专有名词)
+    │   │   │   └── _index.md                    # 单文件即可,术语 ≤ 几百条
+    │   │   ├── taboos.md                        # ← 新 (作者明确&quot;绝对不能写&quot;)
+    │   │   ├── themes.md                        # ← 新 (主题 / 核心矛盾 / 价值观)
+    │   │   └── reader-promises.md               # ← 新 (已对读者立的旗 / 承诺)
+    │   ├── chapters/
+    │   │   └── 001-重生那一夜/
+    │   │       ├── outline.md
+    │   │       ├── draft.md
+    │   │       └── meta.json
+    │   ├── index.db                 # SQLite per-project (含 7 张新表,见 spec/16-18)
+    │   └── trace/
+    │       └── 2026-04-29-session-abc.jsonl
+    └── proj_末世修仙_b7c1/
+        └── ...
+</code></pre>
+<h3 id="目录设计要点">目录设计要点</h3>
+<ol>
+<li><strong>每个目录有 <code>_index.md</code></strong> — 给 LLM 快速读&quot;这个目录里有什么 + 一句话摘要&quot;,不必扫整个目录。结构:<pre><code class="language-yaml">---
+id: index_worldview_a3f2
+type: index
+for_directory: worldview
+---
+# 世界观索引
+
+## 子文件 (8 个)
+- geography.md — 地理总论 (200 字摘要)
+- history.md — 历史脉络 (200 字摘要)
+- ...
+</code></pre>
+</li>
+<li><strong>派生文件</strong> (<code>relationships/_matrix.md</code> / <code>timeline/character-ages.md</code>) — 这些是 SQLite 表的 markdown 投影,frontmatter 标 <code>derived: true</code>,UI 锁写 (见 spec/16 §派生文件守卫)。reindex 时自动重生成。</li>
+<li><strong>空目录的处理</strong> — 若用户项目流派不需要某目录(都市流不需要 power-system/),目录仍创建,<code>_index.md</code> 写一行&quot;此目录适用于玄幻 / 修仙 / 系统流,本项目暂未使用&quot;。空目录不影响 reindex,不影响 token (assembleContext 不会把空目录塞 prompt)。</li>
+<li><strong>非派生 <code>_matrix.md</code> 用户能扩展</strong> — 用户在 <code>relationships/notes/{id}.md</code> 写&quot;林川和王老板的私人恩怨详情&quot;,这些 notes 不参与 entity_relations 表派生,只供 Writer assembleContext 时取用。</li>
+</ol>
+<h2 id="markdown-frontmatter-规范">Markdown frontmatter 规范</h2>
+<p>每个内容文件用 YAML frontmatter 携带元数据。</p>
+<h3 id="角色-charactersxmd">角色 (<code>characters/X.md</code>)</h3>
+<blockquote>
+<p>⚠ frontmatter v3 — W2 末新增 <code>value_axes</code> / <code>intelligence_axis</code> 字段供五大守则人设崩坏检测 (spec/25);v2 字段 <code>reader_promises</code> / <code>taboos</code> / <code>arc</code> 在 W7 加入 (见 spec/16)。</p>
+</blockquote>
+<pre><code class="language-yaml">---
+id: char_lin_a3f2
+type: character
+canonical_name: 林川
+aliases:
+  - 川哥
+  - 林总
+gender: male
+age: 28
+role: protagonist
+# v2 (W7+):
+reader_promises:                          # 读者承诺,违反 = critical (spec/25 守则 2)
+  - &quot;杀伐果断,不会对队友下手&quot;
+  - &quot;重情义,会为队友报仇&quot;
+taboos:                                   # 角色禁忌,违反 = critical
+  - &quot;不会对老人下手&quot;
+  - &quot;不会出卖兄弟&quot;
+arc:                                      # 角色弧光 (ArcTracker 跟踪)
+  start: 软弱
+  end: 杀伐果断
+  trajectory: [&#39;受辱&#39;, &#39;觉醒&#39;, &#39;复仇&#39;, &#39;掌权&#39;]
+# v3 (W7+, spec/25):
+value_axes:                               # 行为价值观基线,偏离 &gt; 0.4 = critical
+  对敌:                                   # 0=最仁慈, 1=最狠辣
+    baseline: 0.85
+    range: [0.7, 1.0]
+  对友:                                   # 0=最绝情, 1=最重情
+    baseline: 0.90
+    range: [0.75, 1.0]
+  对女:
+    baseline: 0.6
+    range: [0.4, 0.8]
+intelligence_axis:                        # 智力基线 (假智谋检测用)
+  baseline: 0.85                          # 0=笨, 1=极聪明
+  iq_range: [0.7, 1.0]
+created_at: 2026-04-29T10:00:00+08:00
+updated_at: 2026-04-29T11:30:00+08:00
+source: writer-agent
+---
+
+# 林川
+
+## 性格
+...
+
+## 背景
+...
+</code></pre>
+<h3 id="世界观-settingsworldviewmd">世界观 (<code>settings/worldview.md</code>)</h3>
+<pre><code class="language-yaml">---
+id: world_main
+type: worldview
+title: 2010 年北京互联网圈
+era: 现代-2010
+genre: 都市重生
+created_at: ...
+---
+
+# 世界观设定
+...
+</code></pre>
+<h3 id="章节-chapters001-xxdraftmd">章节 (<code>chapters/001-XX/draft.md</code>)</h3>
+<blockquote>
+<p>⚠ frontmatter v2 — W2 末新增 <code>pov</code> / <code>pov_breakdown</code> / <code>hook_type</code> (1-3 章必填) / <code>main_line</code> / <code>progress_milestone</code> / <code>agency_breakdown</code> (派生) 字段供五大守则节奏 / 黄金三章 / 金手指检测 (spec/25)。</p>
+</blockquote>
+<pre><code class="language-yaml">---
+id: ch_001
+type: chapter
+chapter_index: 1                          # 派生 (从 order 字段)
+order: 1
+title: 重生那一夜
+word_count: 3247
+status: draft                             # draft | reviewed | published
+# v2 字段 (spec/25):
+pov:                                      # POV 角色 list (按出场顺序)
+  - 林溪
+pov_breakdown:                            # 派生 (Validator 扫段后填,主角段比例)
+  林溪: 0.78
+  王伟: 0.22
+hook_type: 冲突                           # 1-3 章必填: 悬念 / 冲突 / 爽点 / 钩子 / 谜团
+named_characters:                         # 派生 (本章命名角色出场名单)
+  - 林溪
+  - 王伟
+  - 老板
+setting_description_ratio: 0.18           # 派生 (设定/环境描写占比)
+main_line: true                           # true=主线 / false=支线
+progress_milestone: null                  # null 或: 突破 / 夺宝 / 打脸 / 复仇 / 升级 / 觉醒 / 解谜
+pov_protagonist_ratio: 1.0                # 派生 (主角 POV 段比例)
+agency_breakdown:                         # 派生 (主角能动性占比, BeatAnalyzer 标段后聚合)
+  active_decision: 0.45                   # 主动决策
+  passive_receive: 0.20                   # 被动接收
+  system_reward: 0.10                     # 系统奖励
+  wisdom_choice: 0.15                     # 智慧抉择
+  struggle: 0.10                          # 挣扎抗争
+referenced_entities:
+  - char_lin_a3f2
+  - place_beijing_2010
+created_at: ...
+updated_at: ...
+---
+
+# 第一章 重生那一夜
+
+林川猛地从床上坐起来...
+</code></pre>
+<h3 id="五大守则项目级配置-cardinal-rulesjson">五大守则项目级配置 (<code>cardinal-rules.json</code>)</h3>
+<blockquote>
+<p>项目级硬约束配置;<code>enabled: true</code> 锁死,只能微调阈值。详见 <a href="../spec/25-cardinal-rules.html">spec/25-cardinal-rules.html</a>。</p>
+</blockquote>
+<pre><code class="language-jsonc">// ~/.open-novel/workspaces/{projectId}/cardinal-rules.json
+{
+  &quot;version&quot;: 1,
+  &quot;goldenChapters&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;indexRange&quot;: [1, 3],
+    &quot;minProtagonistPOVRatio&quot;: 0.6,
+    &quot;maxSettingDescriptionRatio&quot;: 0.25,
+    &quot;protagonistFirstAppearByWordCount&quot;: 1000,
+    &quot;maxNamedCharactersInFirst3Chapters&quot;: 5,
+    &quot;requireHookTypes&quot;: [&quot;悬念&quot;, &quot;冲突&quot;, &quot;爽点&quot;, &quot;钩子&quot;, &quot;谜团&quot;]
+  },
+  &quot;characterIntegrity&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;promiseViolationThreshold&quot;: &quot;any&quot;,
+    &quot;tabooViolationThreshold&quot;: &quot;any&quot;,
+    &quot;valueAxisDeviationMax&quot;: 0.4,
+    &quot;minOpponentIntelligenceRatio&quot;: 0.7
+  },
+  &quot;pacing&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;maxChaptersBetweenMilestones&quot;: 5,
+    &quot;minProtagonistPOVRatio&quot;: 0.7,
+    &quot;maxSideLineRatio&quot;: 0.3,
+    &quot;maxConsecutiveAbsenceChapters&quot;: 2,
+    &quot;rollingWindow&quot;: 10
+  },
+  &quot;promiseAccountability&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;warnBeforeDeadlineChapters&quot;: 3,
+    &quot;blockOnOverdueCritical&quot;: true
+  },
+  &quot;protagonistAgency&quot;: {
+    &quot;enabled&quot;: true,
+    &quot;systemDependencyAxis&quot;: 0.3,
+    &quot;minActiveDecisionRatio&quot;: 0.3,
+    &quot;maxSystemRewardRatio&quot;: 0.3
+  }
+}
+</code></pre>
+<h2 id="sqlite-schema-indexdb-per-project">SQLite Schema (<code>index.db</code> per-project)</h2>
+<p>详见 <a href="../spec/01-storage-schema.html">spec/01-storage-schema.html</a> 与 <a href="../spec/16-knowledge-schema.html">spec/16-knowledge-schema.html</a>,核心表:</p>
+<p><strong>基础表 (spec/01)</strong>:</p>
+<ul>
+<li><code>entities</code>: 实体登记 (id, canonical_name, aliases JSON, category, file_path)</li>
+<li><code>entity_refs</code>: 实体在哪个文件哪段被提及 (早期叫 <code>references</code> — SQL 保留字,已重命名)</li>
+<li><code>backlinks</code>: 反向索引 (打开角色页时显示 &quot;被 X 章引用&quot;)</li>
+<li><code>history</code>: 变更历史 (谁、何时、改了什么、为什么)</li>
+<li><code>learnings</code>: Reflector 提炼的经验</li>
+<li><code>approvals</code>: 审批记录 (含 diff 与决定)</li>
+<li><code>traces</code>: Agent 流式日志归档 (JSONL 形态太重时按需 ingest)</li>
+<li><code>narrative_metrics</code>: BeatAnalyzer / ArcTracker 输出 (spec/10)</li>
+</ul>
+<p><strong>知识图谱表 (spec/16-18)</strong>:</p>
+<ul>
+<li><code>entity_relations</code>: 双向语义关系 (师徒 / 敌友 / 上下级 / ...)</li>
+<li><code>entity_timeline</code>: 角色随章节变化的属性 (age / location / mood / power_level / ...)</li>
+<li><code>concepts</code> + <code>concept_refs</code>: worldview 硬规则当作 pseudo-entity 索引</li>
+<li><code>dependencies</code>: 跨文件 / 跨设定显式锚定 (foreshadowing / payoff / callback / ...)</li>
+<li><code>paragraph_anchors</code>: 段级稳定 ID + 邻接双链</li>
+<li><code>paragraph_embeddings</code>: 段级向量索引</li>
+<li><code>setting_snapshots</code>: 重大设定改动自动备份</li>
+<li><code>cascade_audits</code>: cascade 影响半径分析的审计日志</li>
+<li><code>reindex_failures</code>: reindex 失败队列 (供手动重试)</li>
+<li><code>narrative_feedback</code>: BeatReport 用户反馈 (二期 Reflector 用, schema 详见 spec/01 §narrative_feedback / entity_match_feedback)</li>
+<li><code>entity_match_feedback</code>: entity highlight false-positive 反馈 (W6 起记录, schema 详见 spec/01)</li>
+<li><code>volume_summaries</code>: 卷级锚定摘要 (T3, schema 详见 spec/22 §卷级锚定摘要)</li>
+</ul>
+<h2 id="sqlite-过程数据库-session-historydb-per-project-t7">SQLite 过程数据库 (<code>session_history.db</code> per-project, T7)</h2>
+<blockquote>
+<p>借鉴 opencode <code>session/session.sql.ts</code> + drizzle 的 SQLite 单文件持久化模式。<strong>与 <code>index.db</code> 严格分库</strong>, 因为产物索引和过程数据语义截然不同(前者面向 LLM 检索 + 用户文件浏览, 后者面向开发者调试 + 性能监控), 混在一起会让备份策略 / 写入并发 / schema migration 都更难。</p>
+</blockquote>
+<h3 id="路径">路径</h3>
+<pre><code>~/.open-novel/workspaces/{projectId}/
+├── index.db                    # 产物索引 (上文)
+└── session_history.db          # 运行时过程 (本节)
+</code></pre>
+<h3 id="schema-drizzle-migration-006-session-historyts">Schema (drizzle migration <code>006-session-history.ts</code>)</h3>
+<pre><code class="language-sql">-- LLM 调用日志 (每次 callJsonAgent / streamText 一行)
+CREATE TABLE llm_calls (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT,                                       -- 对应 mastra_threads.id (跨库引用, 不强 FK)
+  agent TEXT NOT NULL,                                  -- &#39;writer&#39; / &#39;validator&#39; / &#39;hidden:chapter-summary&#39; / ...
+  model TEXT NOT NULL,                                  -- &#39;deepseek-v4-pro&#39; / &#39;deepseek-v4-flash&#39;
+  reasoning_effort TEXT NOT NULL,                       -- &#39;max&#39; / &#39;default&#39;
+  json_mode INTEGER NOT NULL,                           -- 0 / 1
+  prompt_tokens INTEGER NOT NULL,
+  completion_tokens INTEGER NOT NULL,
+  reasoning_tokens INTEGER,                             -- DeepSeek reasoning_content 计费
+  cache_read_tokens INTEGER,                            -- 命中 cache 的 token 数 (依赖 spec/00 §H verify)
+  cache_write_tokens INTEGER,
+  cost_cny REAL,                                        -- 估算成本 (按当前定价)
+  finish_reason TEXT,                                   -- &#39;stop&#39; / &#39;length&#39; / &#39;tool_calls&#39; / &#39;error&#39;
+  duration_ms INTEGER NOT NULL,
+  started_at INTEGER NOT NULL,                          -- unix ms
+  ended_at INTEGER NOT NULL
+);
+CREATE INDEX idx_llm_calls_thread ON llm_calls(thread_id);
+CREATE INDEX idx_llm_calls_agent_time ON llm_calls(agent, started_at DESC);
+
+-- callJsonAgent retry 记录 (每次 retry / 失败一行, 关联 llm_call_id)
+CREATE TABLE json_retries (
+  id TEXT PRIMARY KEY,
+  llm_call_id TEXT NOT NULL REFERENCES llm_calls(id),
+  attempt INTEGER NOT NULL,                             -- 1, 2 (callJsonAgent 最多 2 次)
+  failure_kind TEXT NOT NULL,                           -- &#39;empty_content&#39; / &#39;truncated&#39; / &#39;invalid_json&#39; / &#39;schema_violation&#39;
+  raw_text TEXT,                                        -- 失败原文 (可能很长, &gt; 2K 时走 _tool_cache)
+  zod_issues TEXT,                                      -- JSON: zod errors
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_json_retries_call ON json_retries(llm_call_id);
+
+-- cascade tool 执行记录 (与 spec/22 §prune 老章节 tool 输出 联动)
+CREATE TABLE chapter_tool_runs (
+  id TEXT PRIMARY KEY,
+  chapter_id TEXT NOT NULL,                             -- 关联 chapters.id
+  tool_name TEXT NOT NULL,                              -- &#39;beat-analyzer&#39; / &#39;arc-tracker&#39; / &#39;reader-panel&#39; / ...
+  agent TEXT NOT NULL,                                  -- &#39;checker&#39; / &#39;validator&#39; / &#39;reader-panel&#39;
+  llm_call_id TEXT REFERENCES llm_calls(id),
+  raw_output_path TEXT,                                 -- 若 truncated: _tool_cache/{toolCallId}.json (spec/02)
+  raw_output_size INTEGER NOT NULL,                     -- bytes
+  pruned_at INTEGER,                                    -- spec/22 prune 时间戳, NULL = 未 prune
+  pruned_summary TEXT,                                  -- prune 后保留的摘要
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX idx_tool_runs_chapter ON chapter_tool_runs(chapter_id, created_at DESC);
+CREATE INDEX idx_tool_runs_pruned ON chapter_tool_runs(chapter_id, pruned_at);
+
+-- doom-loop 检测记录 (spec/06)
+CREATE TABLE doom_loop_events (
+  id TEXT PRIMARY KEY,
+  chapter_id TEXT NOT NULL,
+  detected_at INTEGER NOT NULL,
+  recent_outputs_summary TEXT NOT NULL,                 -- JSON: 3 次 Writer 输出的相似度 + 拒绝原因
+  user_action TEXT,                                     -- &#39;manual_edit&#39; / &#39;force_approve&#39; / &#39;discard&#39; / null (待决)
+  resolved_at INTEGER
+);
+CREATE INDEX idx_doom_loop_chapter ON doom_loop_events(chapter_id);
+
+-- prompt cache 命中统计 (用于评估 cache 策略效果)
+CREATE TABLE prompt_cache_stats (
+  id TEXT PRIMARY KEY,
+  llm_call_id TEXT NOT NULL REFERENCES llm_calls(id),
+  cache_segments_marked INTEGER NOT NULL,               -- 本次 mark 了几段 cache_control
+  cache_hit_segments INTEGER,                           -- 服务端返回命中几段 (若 spec/00 §H verify 后能拿到)
+  cache_savings_tokens INTEGER,
+  recorded_at INTEGER NOT NULL
+);
+</code></pre>
+<h3 id="不进-sqlite-的内容继续走-markdown-文件">不进 SQLite 的内容(继续走 Markdown / 文件)</h3>
+<table>
+<thead>
+<tr>
+<th>数据</th>
+<th>存储</th>
+<th>理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>chapter.md / character.md / outline.md / worldview.md / cardinal-rules.json</td>
+<td>Markdown 文件</td>
+<td>用户产物, file tree 可见, git 跟踪</td>
+</tr>
+<tr>
+<td>settings/* 全树</td>
+<td>Markdown 文件</td>
+<td>同上</td>
+</tr>
+<tr>
+<td>volume_summaries (卷级摘要内容)</td>
+<td><code>index.db</code> (产物索引一侧)</td>
+<td>是给 LLM 检索用的&quot;产物&quot; 不是过程; 长期生命周期</td>
+</tr>
+<tr>
+<td>Mastra Memory threads / messages</td>
+<td><code>~/.open-novel/runtime.db</code></td>
+<td>Mastra 自动管理, 跨项目共享但 resource 隔离</td>
+</tr>
+<tr>
+<td><code>_tool_cache/{toolCallId}.json</code> truncated 原始输出</td>
+<td>散文件</td>
+<td>体积大,prune 时清理,不进数据库</td>
+</tr>
+</tbody></table>
+<h3 id="写入约束">写入约束</h3>
+<ul>
+<li><strong>session_history.db 只写不查 (90% 场景)</strong>: 主要由 callJsonAgent / cascade 控制器异步写; 查询走 SettingsDialog &quot;调试 / 监控&quot; 页或 W11 prompt_traces 面板, 不在主流程</li>
+<li><strong>写失败不阻塞主流程</strong>: 例如 prompt_cache_stats 写失败仅 log warn, 不影响 LLM 调用结果</li>
+<li><strong>30 天滚动归档</strong>: 默认保留最近 30 天数据, 更早行 batch 删除 (volume_summaries 例外, 永久保留, 但它在 index.db 不在这里)</li>
+</ul>
+<h3 id="mastra-与-libsql-的连接关系">Mastra 与 LibSQL 的连接关系</h3>
+<p><code>runtime.db</code> (Mastra Memory) 和 <code>session_history.db</code> (本节) 都是 LibSQL, 同一份连接池 (plan/04 §LibSQL 连接池) 即可服务两者。索引 <code>index.db</code> 是第三个连接, LRU(3) 容纳: index.db × 1 + session_history.db × 1 + runtime.db × 1 = 3 个项目并发上限。</p>
+<h2 id="数据隔离保证">数据隔离保证</h2>
+<ol>
+<li><strong>文件层</strong>: 每个项目独立目录,操作以 <code>projectId</code> 为前缀,绝不跨项目读写</li>
+<li><strong>数据库层</strong>: <code>index.db</code> 在项目目录内,不存在跨库查询</li>
+<li><strong>Memory 层</strong>: Mastra <code>Memory({ resource: projectId })</code> 自动隔离会话历史</li>
+<li><strong>校验</strong>: 所有 storage 函数签名第一个参数是 <code>projectId</code>,内部 assert 路径前缀</li>
+</ol>
+<h2 id="修改提交的全链路-含审批前内部-cascade-递归">修改提交的全链路 (含审批前内部 cascade 递归)</h2>
+<blockquote>
+<p>⚠ <strong>关键交互模型</strong>: <code>writeSetting</code> / <code>writeChapter</code> 是 <strong>proposal-only</strong> 工具 (见 spec/06),<strong>不直接落盘</strong>。从用户输入到磁盘改变,中间隔着完整的 cascade 内部递归 + 用户审批两道闸:</p>
+</blockquote>
+<pre><code>用户在 plan 模式发起意图
+   ↓
+Writer 出主修改 (in-memory)
+   ↓
+[内部递归循环 — 用户不可见,无任何落盘]
+   ├ 第 1 轮 analyzeImpact (基于 main delta) → ChangeProposal[1]
+   ├ Writer 内部对 needsChange=true 项生成 afterText (内存)
+   ├ 第 2 轮 analyzeImpact (基于第 1 轮 afterText) → ChangeProposal[2]
+   └ ... ≤3 轮,半径单调下降 + weight 阈值递增 (见 spec/19)
+   ↓ 递归终止
+汇总 ChangeSet (主修改 + 所有 cascade proposal,含二级)
+   ↓
+**一次** ApprovalCard 呈现整批:
+  - 顶部影响图谱 (节点 = entity / file,边 = 影响传播)
+  - 每条 proposal 一行 diff (默认全展开,可折叠)
+  - 每条 proposal 有勾选框 (默认勾)
+  - [全选] [全不选] [一键同意勾选项] [手动编辑某条] [拒绝全部]
+   ↓
+用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items: [...] }
+   ↓
+**↓ 此处才开始落盘 ↓**
+</code></pre>
+<p>下一节列的&quot;副作用&quot;只在 approve 通过后触发,不是 cascade 的源头。</p>
+<h2 id="审批通过后的副作用">审批通过后的副作用</h2>
+<p>每次 ApprovalCard 整批 approve 通过后,后端 <code>POST /api/approvals/{id}/resolve</code> 在一个 SQLite transaction 内:</p>
+<ol>
+<li>按 transaction 一次写所有 <code>accepted_items</code> 文件 (主修改 + 勾选的 cascade proposal)</li>
+<li>重新解析每个文件 frontmatter,upsert 到 <code>entities</code> 表</li>
+<li>触发 Worker 异步<strong>差量</strong> reindex (见 spec/17 §差量 reindex,按文件批量入队):<ul>
+<li>段级 anchor diff (unchanged / modified / rewritten / deleted / added)</li>
+<li>仅 dirty 段重扫 entity_refs / concept_refs</li>
+<li>仅 dirty 段重算 paragraph_embeddings (见 spec/18 §增量计算)</li>
+</ul>
+</li>
+<li><strong>frontmatter delta 同步知识图谱表</strong>:<ul>
+<li><code>relations</code> 字段变化 → upsert 到 <code>entity_relations</code> (source=&#39;frontmatter&#39;)</li>
+<li><code>initial_state</code> 变化 → upsert 到 <code>entity_timeline</code></li>
+<li>派生文件 (<code>_matrix.md</code> / <code>character-ages.md</code>) 重生成</li>
+</ul>
+</li>
+<li><strong>若主修改属于 P0 设定文件 (<code>worldview/*</code> / <code>characters/*</code> / <code>outline/master.md</code>)</strong>: 自动 setting snapshot (见 spec/16 §Snapshot)</li>
+<li>写一组 <code>history</code> 记录 (整批用同一个 <code>cascade_group_id</code>,便于&quot;回退某次审批&quot;还原整批)</li>
+<li>Reflector 按 cascade 链路批次合并入队 (见 plan/06 §Reflector 触发时机)</li>
+</ol>
+<p><strong>事务原子性</strong>: 步骤 1 在一个 transaction 内,任一文件写盘失败 → 全部 rollback;reindex 副作用入队但 Worker 是异步串行,不影响主 transaction。</p>
+<h2 id="备份策略">备份策略</h2>
+<ul>
+<li>用户数据完全在 <code>~/.open-novel/</code>,iCloud / Time Machine 自然备份</li>
+<li>提供&quot;Export Project&quot;按钮: 打包成 zip (<code>projectId.zip</code>),<strong>含所有 .md + index.db</strong>。<code>narrative_metrics / reader_reports / approvals / learnings</code> 是花了 LLM 钱跑出来的数据,丢了等于丢钱;<code>entity_refs</code> <code>backlinks</code> 这种纯派生表在导入后由 Worker 重建。</li>
+<li>提供&quot;Import Project&quot;按钮: 解压后,若 projectId 冲突自动生成新 id;Worker 后台重建 entity_refs / backlinks</li>
+<li>详细 UI flow 见 <a href="../spec/13-settings.html">spec/13-settings.html</a> §项目生命周期 UI flow</li>
+</ul>
+<h2 id="多-tab-同项目并发">多 Tab 同项目并发</h2>
+<blockquote>
+<p>用户开两个浏览器 tab 同一 localhost — 同时改 worldview.md,谁覆盖谁?Mastra Memory 同 thread 双方收 deltas。多 tab 是单用户的常见使用方式。</p>
+</blockquote>
+<p>策略: <strong>Web Locks API</strong> 软锁 + 后到的 tab 进只读模式。</p>
+<pre><code class="language-ts">// lib/storage/tab-lock.ts
+export async function acquireProjectLock(projectId: string, onLost: () =&gt; void) {
+  const ac = new AbortController()
+  navigator.locks.request(`open-novel:project:${projectId}`, { signal: ac.signal },
+    async (lock) =&gt; {
+      if (!lock) return    // 没拿到 (其他 tab 持有)
+      // 拿到了 — 维持 lock 直到 tab 关闭或显式释放
+      await new Promise&lt;void&gt;((resolve) =&gt; { ac.signal.addEventListener(&#39;abort&#39;, () =&gt; resolve()) })
+    },
+  ).catch(onLost)
+  return ac
+}
+</code></pre>
+<p>UI 在第二 tab:</p>
+<ul>
+<li>顶部 banner &quot;另一个标签页正在编辑此项目,本标签页只读&quot;;</li>
+<li>编辑动作 disabled,Esc 切到只读浏览模式</li>
+<li>&quot;强制接管&quot; 按钮: 用户主动释放上一 tab 的锁 (<code>postMessage</code> 协议),接管编辑</li>
+</ul>
+<h2 id="外部编辑器同步">外部编辑器同步</h2>
+<blockquote>
+<p>用户在 VSCode/iA Writer 直接改了 <code>characters/lin.md</code> — 应用不知道;TipTap 仍显示旧内容,审批的 before-state 错位 → diff 出错。</p>
+</blockquote>
+<p>策略: <strong>chokidar 文件 watcher</strong> (Node 端,在 <code>/api/watch</code> Route Handler 内挂) + SSE push 到前端。</p>
+<pre><code class="language-ts">// app/api/watch/route.ts (long-lived SSE)
+export const runtime = &#39;nodejs&#39;
+
+export async function GET(req: Request) {
+  const projectId = new URL(req.url).searchParams.get(&#39;projectId&#39;)!
+  const watcher = chokidar.watch(getProjectDir(projectId) + &#39;/**/*.md&#39;, {
+    ignoreInitial: true, atomic: true,
+  })
+  const stream = new ReadableStream({
+    start(controller) {
+      watcher.on(&#39;change&#39;, (path) =&gt; {
+        controller.enqueue(`event: fs:changed\ndata: ${JSON.stringify({ path })}\n\n`)
+      })
+    },
+  })
+  req.signal.addEventListener(&#39;abort&#39;, () =&gt; watcher.close())
+  return new Response(stream, { headers: { &#39;content-type&#39;: &#39;text/event-stream&#39; } })
+}
+</code></pre>
+<p>前端:</p>
+<ul>
+<li>收到 fs:changed 后,如果该文件在某个 Tab 打开 + 用户没有未保存编辑 → 静默 reload</li>
+<li>用户有未保存编辑 → 弹冲突 dialog: &quot;[文件名] 被外部修改。要 [使用磁盘版本] / [保留我的修改] / [手动 merge]&quot;</li>
+<li>如果该文件在审批流的 before-state 中 → 该审批 invalidate (status=&#39;stale&#39;),提示用户重做</li>
+</ul>
+<h2 id="libsql-连接池">LibSQL 连接池</h2>
+<blockquote>
+<p>每项目独立 <code>index.db</code>,Node FD ulimit 256,同时打开 5 个项目就贴边。</p>
+</blockquote>
+<p>详见 <a href="../spec/01-storage-schema.html">spec/01-storage-schema.html</a> §LibSQL 连接池。要点:</p>
+<ul>
+<li>LRU cache (<code>max: 3</code>) 维持最多 3 个项目并发活跃</li>
+<li>切项目时显式 <code>pool.delete(oldId)</code> close 连接</li>
+<li>删项目前必须先 close,再 fs.rm</li>
+</ul>
+<h2 id="索引刷新策略-差量">索引刷新策略 (差量)</h2>
+<p>每次 writeSetting / writeChapter 落盘后,<strong>reindex 走单例 Worker 串行 + 差量 anchor diff</strong>:</p>
+<ul>
+<li>防止 5 个 cascade 并发 reindex 触发 SQLite 写锁竞争</li>
+<li>Worker 内部 queue + LRU dedupe (同 anchor 1s 内只处理一次)</li>
+<li><strong>差量 anchor diff</strong> (spec/17): 改一段不重扫全文件,只算该段 entity_refs / concept_refs / paragraph_embeddings</li>
+<li><strong>embedding 增量</strong> (spec/18): 段未变 → embedding 不动;段重写 → 该段 embedding 异步重算</li>
+<li><strong>失败队列</strong> (spec/17 §reindex Worker §失败回滚): 中途 throw 进 <code>reindex_failures</code> 表,UI 可手动重试</li>
+<li>详见 <a href="../spec/01-storage-schema.html">spec/01-storage-schema.html</a> §SQLite WAL Mode + 并发写 + <a href="../spec/17-paragraph-anchors.html">spec/17-paragraph-anchors.html</a> §reindex Worker 升级</li>
+</ul>
+  </main>
+</body>
+</html>

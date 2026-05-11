@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 24 — JSON 结构化输出统一规约 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/24-json-output.html</span>
+</nav>
+<h1 id="spec-24-json-结构化输出统一规约">Spec 24 — JSON 结构化输出统一规约</h1>
+<blockquote>
+<p>项目里所有&quot;分析 / 路由 / 抽取 / 仿真 / 反思&quot;类 Agent 输出<strong>必走 DeepSeek 原生 JSON mode</strong>;只有&quot;创作 / 改写 / 对话&quot;类走自然语言。这一章把&quot;何时走 / 怎么走 / 失败怎么办&quot;写死,后续所有 spec 引用本章。</p>
+</blockquote>
+<h2 id="设计原则">设计原则</h2>
+<table>
+<thead>
+<tr>
+<th>原则</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>强制 JSON mode</strong></td>
+<td>输出本质结构化的 Agent 必启用 <code>response_format: { type: &#39;json_object&#39; }</code>,不允许&quot;自由发挥再 zod parse&quot;</td>
+</tr>
+<tr>
+<td><strong>应用层 zod 校验</strong></td>
+<td>DeepSeek 不强 schema(只保证合法 JSON),字段语义由 zod 校验 + retry</td>
+</tr>
+<tr>
+<td><strong>max_tokens 必估算</strong></td>
+<td>基于 zod schema 字段大小估算,<strong>不允许填默认 4096 完事</strong>(防截断风险 + 浪费)</td>
+</tr>
+<tr>
+<td><strong>system prompt 必含示例</strong></td>
+<td>&quot;请以 JSON 格式输出,严格符合以下示例的字段结构&quot; + 示例 JSON,不允许&quot;模型自由发挥结构&quot;</td>
+</tr>
+<tr>
+<td><strong>失败有兜底</strong></td>
+<td>空 content / 截断 / schema 失败一律 retry 1 次,2 次仍败抛错 escalate 给用户</td>
+</tr>
+<tr>
+<td><strong>streaming 区别处理</strong></td>
+<td>JSON mode 流式时中间 chunks 不展示给用户;Writer / Humanizer 自然语言流照常展示</td>
+</tr>
+</tbody></table>
+<h2 id="启用方式-vercel-ai-sdk-6-ai-sdkdeepseek">启用方式 (Vercel AI SDK 6 + @ai-sdk/deepseek)</h2>
+<pre><code class="language-ts">import { deepseek } from &#39;@ai-sdk/deepseek&#39;
+import { generateText } from &#39;ai&#39;
+
+const result = await generateText({
+  model: deepseek(&#39;deepseek-v4-flash&#39;),
+  messages,
+  providerOptions: {
+    deepseek: {
+      response_format: { type: &#39;json_object&#39; },
+    },
+  },
+  maxTokens: &lt;由 schema 估算&gt;,
+})
+</code></pre>
+<p><strong>system prompt 必须模板</strong>:</p>
+<pre><code>你的输出必须是合法的 JSON 对象,严格符合以下示例字段结构。不要在 JSON 之外输出任何文字。
+
+示例:
+{
+  &quot;intent&quot;: &quot;modify_setting&quot;,
+  &quot;mode&quot;: &quot;plan&quot;,
+  &quot;reasoning&quot;: &quot;用户说&#39;把林溪改成女&#39;是改设定意图&quot;
+}
+
+请只输出 JSON 对象,不要 markdown 代码块,不要前后说明。
+</code></pre>
+<p><strong>关键约束</strong>:</p>
+<ul>
+<li>system 或 user prompt <strong>必须含 &quot;json&quot; 字样</strong> (DeepSeek 文档明确要求)</li>
+<li>必须含<strong>示例 JSON</strong> (不让模型自由发挥结构)</li>
+<li>不允许 markdown 代码块包裹 (我们 zod parse 会失败,反例:模型回 <code>```json\n{...}\n```</code>)</li>
+</ul>
+<h2 id="各场景-zod-schema-对照表">各场景 zod schema 对照表</h2>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>Agent / 工具</th>
+<th>model</th>
+<th>maxTokens 估算</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>路由意图</td>
+<td>Router</td>
+<td>flash</td>
+<td>256</td>
+</tr>
+<tr>
+<td>一致性审</td>
+<td>Validator</td>
+<td>pro</td>
+<td>16K (proposals 多时)</td>
+</tr>
+<tr>
+<td>analyzeImpact LLM filter</td>
+<td>Validator (内部)</td>
+<td>flash (per batch)</td>
+<td>2K (5 段一批)</td>
+</tr>
+<tr>
+<td>extractSemanticDelta</td>
+<td>Validator (内部)</td>
+<td>flash</td>
+<td>1K</td>
+</tr>
+<tr>
+<td>节奏报告 (BeatAnalyzer)</td>
+<td>Checker</td>
+<td>flash</td>
+<td>4K</td>
+</tr>
+<tr>
+<td>弧光报告 (ArcTracker)</td>
+<td>Validator</td>
+<td>pro</td>
+<td>4K</td>
+</tr>
+<tr>
+<td>5 persona 仿真</td>
+<td>ReaderPanel</td>
+<td>flash</td>
+<td>8K</td>
+</tr>
+<tr>
+<td>经验提炼</td>
+<td>Reflector</td>
+<td>flash</td>
+<td>2K</td>
+</tr>
+<tr>
+<td>概念抽取</td>
+<td>concept extractor (工具)</td>
+<td>flash</td>
+<td>4K</td>
+</tr>
+</tbody></table>
+<p>详见下面各 schema 章节。</p>
+<h3 id="router-输出">Router 输出</h3>
+<pre><code class="language-ts">import { z } from &#39;zod&#39;
+
+export const RouterOutputSchema = z.object({
+  intent: z.enum([
+    &#39;discuss_question&#39;,     // discuss 模式 - 提问
+    &#39;discuss_search&#39;,       // discuss 模式 - 检索请求
+    &#39;plan_modify&#39;,          // plan 模式 - 改设定
+    &#39;plan_create&#39;,          // plan 模式 - 新增设定
+    &#39;write_chapter&#39;,        // write 模式 - 写新章
+    &#39;write_continue&#39;,       // write 模式 - 续写
+    &#39;unclear&#39;,              // 不明确
+  ]),
+  mode: z.enum([&#39;discuss&#39;, &#39;plan&#39;, &#39;write&#39;]),
+  modeMatchesCurrentMode: z.boolean(),       // 用户当前 mode 与意图是否匹配
+  reasoning: z.string().min(1).max(200),
+})
+
+export type RouterOutput = z.infer&lt;typeof RouterOutputSchema&gt;
+</code></pre>
+<p><strong>maxTokens</strong>: 256(field 数固定 + reasoning ≤ 200 中文 ≈ 200 token)</p>
+<h3 id="validator-一致性审-输出">Validator 一致性审 输出</h3>
+<pre><code class="language-ts">export const ChangeProposalSchema = z.object({
+  anchorId: z.string(),                       // 段锚点 ID (spec/17)
+  targetFile: z.string(),                     // 相对 workspace 的 path
+  needsChange: z.boolean(),
+  proposedText: z.string().optional(),        // needsChange=true 必须给
+  reason: z.string().min(1).max(500),
+  confidence: z.enum([&#39;high&#39;, &#39;medium&#39;, &#39;low&#39;]),
+  cascadeLevel: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  violationType: z.enum([
+    &#39;character_promise&#39;,     // 违反 reader_promises
+    &#39;character_taboo&#39;,       // 违反 taboos
+    &#39;character_value_axis&#39;,  // 违反 value_axes
+    &#39;timeline&#39;,              // 时间线矛盾
+    &#39;relation_state&#39;,        // 关系状态矛盾
+    &#39;concept&#39;,               // 违反 concept (taboo / invariant)
+    &#39;foreshadowing&#39;,         // 伏笔失约
+    &#39;cardinal_rule&#39;,         // 五大网文守则违反 (spec/25)
+    &#39;other&#39;,
+  ]).optional(),
+})
+
+export const ValidatorOutputSchema = z.object({
+  violations: z.array(z.object({
+    type: z.string(),           // 同 violationType
+    anchor: z.string(),         // 段锚点
+    expected: z.string(),       // 应该是什么 (来自 L4)
+    actual: z.string(),         // 实际是什么 (从生成内容)
+    severity: z.enum([&#39;critical&#39;, &#39;major&#39;, &#39;minor&#39;]),
+  })),
+  proposals: z.array(ChangeProposalSchema),
+  cardinalRulesReport: z.object({                // 五大守则检测 (spec/25)
+    goldenChapters: z.object({ violated: z.boolean(), details: z.array(z.string()) }),
+    characterIntegrity: z.object({ violated: z.boolean(), details: z.array(z.string()) }),
+    pacing: z.object({ violated: z.boolean(), details: z.array(z.string()) }),
+    promiseAccountability: z.object({ violated: z.boolean(), details: z.array(z.string()) }),
+    protagonistAgency: z.object({ violated: z.boolean(), details: z.array(z.string()) }),
+  }).optional(),
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 16K(每个 proposal ≈ 200 token,可能 50+ proposals;cardinalRulesReport ≈ 500 token)</p>
+<h3 id="analyzeimpact-llm-filter-spec19-step-3">analyzeImpact LLM filter (spec/19 step 3)</h3>
+<pre><code class="language-ts">export const ImpactFilterCandidateSchema = z.object({
+  anchorId: z.string(),
+  affected: z.boolean(),
+  confidence: z.enum([&#39;high&#39;, &#39;medium&#39;, &#39;low&#39;]),
+  reason: z.string().max(200),
+})
+
+export const ImpactFilterBatchOutputSchema = z.object({
+  candidates: z.array(ImpactFilterCandidateSchema).max(5),  // 每批 5 段
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 2K (5 candidates × ≈ 300 token)</p>
+<p><strong>为什么用 Flash 而不 Pro</strong>: 二次过滤是&quot;段是否真受影响&quot;二元判断,Flash 完全够用;Pro 留给最终 Validator 一致性审。</p>
+<h3 id="extractsemanticdelta-spec19-step-1">extractSemanticDelta (spec/19 step 1)</h3>
+<pre><code class="language-ts">export const SemanticDeltaItemSchema = z.object({
+  field: z.string(),                          // &#39;gender&#39; / &#39;name&#39; / &#39;occupation&#39; / &#39;paragraph[5]&#39; 等
+  before: z.string(),
+  after: z.string(),
+  semanticChange: z.string().max(200),        // &quot;性别从男改女, 涉及称谓 / 人称代词 / 容貌描写&quot;
+  impactDimensions: z.array(z.enum([
+    &#39;identity&#39;, &#39;state&#39;, &#39;relation&#39;, &#39;capability&#39;, &#39;timeline&#39;, &#39;concept&#39;, &#39;narrative&#39;,
+  ])),
+})
+
+export const SemanticDeltaOutputSchema = z.object({
+  delta: z.array(SemanticDeltaItemSchema),
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 1K (典型修改 ≤ 5 个 field, ≈ 200 token/field)</p>
+<h3 id="checker-beatanalyzer-节奏报告">Checker / BeatAnalyzer 节奏报告</h3>
+<pre><code class="language-ts">export const BeatSchema = z.object({
+  anchorId: z.string(),
+  type: z.enum([&#39;hook&#39;, &#39;conflict&#39;, &#39;climax&#39;, &#39;resolution&#39;, &#39;transition&#39;, &#39;description&#39;, &#39;dialogue&#39;]),
+  intensity: z.number().min(0).max(1),         // 情绪强度
+  paceCategory: z.enum([&#39;fast&#39;, &#39;medium&#39;, &#39;slow&#39;]),
+})
+
+export const BeatAnalyzerOutputSchema = z.object({
+  beats: z.array(BeatSchema),
+  pacingScore: z.number().min(0).max(100),
+  hookStrength: z.number().min(0).max(100),     // 黄金三章特别看
+  issues: z.array(z.object({
+    anchor: z.string(),
+    severity: z.enum([&#39;critical&#39;, &#39;major&#39;, &#39;minor&#39;]),
+    type: z.enum([&#39;stall&#39;, &#39;rushed&#39;, &#39;no_hook&#39;, &#39;dialogue_heavy&#39;, &#39;description_heavy&#39;, &#39;side_line_dominant&#39;]),
+    suggestion: z.string().max(200),
+  })),
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 4K</p>
+<h3 id="arctracker-弧光报告">ArcTracker 弧光报告</h3>
+<pre><code class="language-ts">export const ArcTrackerOutputSchema = z.object({
+  characterArcs: z.array(z.object({
+    characterName: z.string(),
+    expectedArc: z.string(),                    // 来自 character.md
+    currentPosition: z.enum([&#39;intro&#39;, &#39;development&#39;, &#39;crisis&#39;, &#39;climax&#39;, &#39;resolution&#39;]),
+    deviation: z.number().min(0).max(1),        // 偏离基线 (0=完美, 1=完全 OOC)
+    issues: z.array(z.string()),
+  })),
+  storyMilestones: z.object({
+    chaptersSinceLast: z.number(),               // 距上次 milestone 章数
+    expectedMaxGap: z.number(),                  // 项目 cardinal-rules 配置
+    overdue: z.boolean(),
+  }),
+  protagonistAgency: z.object({                  // 守则 5: 金手指过度依赖
+    activeRatio: z.number().min(0).max(1),       // 主动决策段比例
+    threshold: z.number(),                       // 配置 (默认 0.3)
+    underThreshold: z.boolean(),
+  }),
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 4K</p>
+<h3 id="readerpanel-5-persona-仿真">ReaderPanel 5 persona 仿真</h3>
+<pre><code class="language-ts">export const PersonaResponseSchema = z.object({
+  personaId: z.enum([&#39;veteran_reader&#39;, &#39;casual_reader&#39;, &#39;rational_reader&#39;, &#39;genre_fan&#39;, &#39;new_reader&#39;]),
+  reaction: z.string().max(500),                 // 阅读到当前章节的反应
+  emotionalArc: z.array(z.enum([&#39;intrigued&#39;, &#39;bored&#39;, &#39;confused&#39;, &#39;satisfied&#39;, &#39;angry&#39;, &#39;amused&#39;])),
+  dropoffRisk: z.number().min(0).max(1),         // 0=完全留住, 1=立刻弃书
+  cardinalRulesFlags: z.array(z.enum([           // 守则违反检测 (spec/25)
+    &#39;golden_chapters_drift&#39;,
+    &#39;character_collapse&#39;,
+    &#39;pacing_stall&#39;,
+    &#39;promise_betrayal&#39;,
+    &#39;system_dependency_overflow&#39;,
+  ])),
+  suggestion: z.string().max(300),
+})
+
+export const ReaderPanelOutputSchema = z.object({
+  personaResponses: z.array(PersonaResponseSchema).length(5),
+  averageDropoffRisk: z.number().min(0).max(1),
+  summary: z.string().max(500),
+  topConcerns: z.array(z.string()).max(5),
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 8K (5 persona × ≈ 1.5K)</p>
+<h3 id="reflector-经验提炼">Reflector 经验提炼</h3>
+<pre><code class="language-ts">export const LearningItemSchema = z.object({
+  insight: z.string().min(1).max(300),
+  evidence: z.string().max(500),
+  scope: z.enum([
+    &#39;style&#39;, &#39;narrative&#39;, &#39;pacing&#39;, &#39;voice&#39;,
+    &#39;worldview&#39;, &#39;character&#39;, &#39;consistency&#39;, &#39;relations&#39;,
+    &#39;cardinal_rule&#39;,                              // 守则违反学习
+    &#39;intent&#39;, &#39;mode&#39;,
+  ]),
+  applicableAgents: z.array(z.enum([
+    &#39;writer&#39;, &#39;router&#39;, &#39;validator&#39;, &#39;checker&#39;, &#39;humanizer&#39;, &#39;reader-panel&#39;,
+  ])).min(1),
+  suggestedWeight: z.number().min(0.5).max(2.0).default(1.0),
+})
+
+export const ReflectorOutputSchema = z.object({
+  learnings: z.array(LearningItemSchema).max(3),  // 每次最多 3 条
+  rootApprovalId: z.string().optional(),          // cascade 链合并时填
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 2K</p>
+<h3 id="concept-extractor-spec16-工具内-llm">concept extractor (spec/16 工具内 LLM)</h3>
+<pre><code class="language-ts">export const ConceptItemSchema = z.object({
+  name: z.string().min(1).max(50),
+  type: z.enum([&#39;rule&#39;, &#39;taboo&#39;, &#39;invariant&#39;, &#39;theme&#39;, &#39;capability&#39;, &#39;cardinal_rule&#39;]),
+  definition: z.string().min(1).max(500),
+  source: z.string(),                              // &#39;worldview/&#39; / &#39;characters/lin.md&#39; / &#39;plot/main.md&#39;
+  refs: z.array(z.string()),                       // anchor IDs 引用了该概念的段
+})
+
+export const ConceptExtractorOutputSchema = z.object({
+  concepts: z.array(ConceptItemSchema),
+})
+</code></pre>
+<p><strong>maxTokens</strong>: 4K</p>
+<h2 id="deepseek-middleware-集成-借鉴-opencode-sessionllmts391-405">DeepSeek middleware 集成 (借鉴 opencode <code>session/llm.ts:391-405</code>)</h2>
+<blockquote>
+<p>opencode 用 <code>wrapLanguageModel + transformParams middleware</code> 注入 DeepSeek round-trip (<code>provider/transform.ts</code>), 而不是在每个 agent 调用里 if-else 处理 reasoning_content / cache_control。<strong>我们采用同一 pattern</strong>: model 实例本身就是包装好的, callJsonAgent 不感知 DeepSeek 特殊性。</p>
+</blockquote>
+<h3 id="抽象-deepseekmiddleware-定义在-spec22-deepseek-适配-middleware">抽象 deepseekMiddleware (定义在 spec/22 §DeepSeek 适配 middleware)</h3>
+<p>spec/22 已定义 <code>deepseekMiddleware: LanguageModelV2Middleware</code>, 负责:</p>
+<ol>
+<li><code>transformParams</code> 阶段: 历史 assistant 消息缺 <code>reasoning_content</code> 时注入空占位</li>
+<li><code>transformParams</code> 阶段: <code>providerOptions.openaiCompatible.cache_control</code> 标记 system 前 2 段 + 末尾 2 条 (依赖 spec/00 §H verify)</li>
+</ol>
+<h3 id="各-model-实例统一包装">各 model 实例统一包装</h3>
+<pre><code class="language-ts">// lib/agents/llm.ts
+import { wrapLanguageModel } from &#39;ai&#39;
+import { createOpenAICompatible } from &#39;@ai-sdk/openai-compatible&#39;
+import { deepseekMiddleware } from &#39;./deepseek-middleware&#39;   // spec/22
+
+const deepseek = createOpenAICompatible({
+  name: &#39;deepseek&#39;,
+  apiKey: process.env.DEEPSEEK_API_KEY!,
+  baseURL: &#39;https://api.deepseek.com/v1&#39;,
+})
+
+export const deepseekProMax = wrapLanguageModel({
+  model: deepseek.languageModel(&#39;deepseek-v4-pro&#39;),
+  middleware: [deepseekMiddleware],
+})
+
+export const deepseekFlash = wrapLanguageModel({
+  model: deepseek.languageModel(&#39;deepseek-v4-flash&#39;),
+  middleware: [deepseekMiddleware],
+})
+</code></pre>
+<p>callJsonAgent 接受这些包装后的 model 实例, 不再自己处理 DeepSeek 特殊字段。</p>
+<h3 id="若-mastra-不接受-wraplanguagemodel-包装">若 Mastra 不接受 wrapLanguageModel 包装</h3>
+<ul>
+<li><strong>方案 A</strong> (优先): callJsonAgent 已经直调 Vercel AI SDK <code>generateText</code>, 不走 Mastra Agent。路径 = 全部走 callJsonAgent (Mastra 仅保留 Memory + Workflow), Writer / Humanizer 这两个 NL 流式 agent 也包一层 callTextAgent (本节扩展) 直接走 streamText。</li>
+<li><strong>方案 B</strong>: 不用 middleware, 在 callJsonAgent 内部手动调 <code>transformParams</code> 等价逻辑, 每次调用前修改 messages。</li>
+</ul>
+<h2 id="失败处理-统一-retry-策略">失败处理 (统一 retry 策略)</h2>
+<pre><code class="language-ts">// lib/agents/json-output.ts
+export async function callJsonAgent&lt;T&gt;({
+  model, messages, schema, maxTokens, label, threadId,
+}: {
+  model: LanguageModel                             // 已经是 wrapLanguageModel 包装后的实例
+  messages: ModelMessage[]
+  schema: z.ZodSchema&lt;T&gt;
+  maxTokens: number
+  label: string                                    // 用于 trace / 错误信息
+  threadId?: string                                // 可选 — 续 thread (subagent task_id 续跑模式, 借 opencode tool/task.ts)
+}): Promise&lt;T&gt; {
+  for (let attempt = 1; attempt &lt;= 2; attempt++) {
+    const result = await generateText({
+      model,                                       // wrapLanguageModel 已注入 deepseekMiddleware
+      messages: attempt === 1 ? messages : [
+        ...messages,
+        { role: &#39;user&#39;, content: &#39;上次返回不合法或为空,请确保返回**非空**且**字段完整**的 JSON 对象,严格符合示例结构。&#39; },
+      ],
+      providerOptions: { deepseek: { response_format: { type: &#39;json_object&#39; } } },
+      maxTokens,
+    })
+
+    // 1. 空 content 检测
+    if (!result.text || result.text.trim() === &#39;&#39;) {
+      if (attempt === 2) throw new JsonOutputError(label, &#39;empty_content_after_retry&#39;)
+      continue
+    }
+
+    // 2. 截断检测 (JSON 中途切断)
+    if (result.finishReason === &#39;length&#39;) {
+      if (attempt === 2) throw new JsonOutputError(label, &#39;truncated_after_retry&#39;, { increase_max_tokens: maxTokens * 2 })
+      continue
+    }
+
+    // 3. JSON parse
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(result.text)
+    } catch {
+      if (attempt === 2) throw new JsonOutputError(label, &#39;invalid_json_after_retry&#39;, { rawText: result.text })
+      continue
+    }
+
+    // 4. zod 校验
+    const validation = schema.safeParse(parsed)
+    if (!validation.success) {
+      if (attempt === 2) throw new JsonOutputError(label, &#39;schema_violation_after_retry&#39;, { issues: validation.error.issues })
+      continue
+    }
+
+    return validation.data
+  }
+  throw new JsonOutputError(label, &#39;unreachable&#39;)
+}
+
+class JsonOutputError extends Error {
+  constructor(public label: string, public kind: string, public details?: unknown) {
+    super(`JSON agent &quot;${label}&quot; failed: ${kind}`)
+  }
+}
+</code></pre>
+<h2 id="escalate-策略-2-次仍败时">escalate 策略 (2 次仍败时)</h2>
+<table>
+<thead>
+<tr>
+<th>失败类型</th>
+<th>UI 表现</th>
+<th>用户可选</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>empty_content_after_retry</code></td>
+<td>toast: &quot;{label} 返回空,请检查网络或重试&quot;</td>
+<td>[重试] / [取消]</td>
+</tr>
+<tr>
+<td><code>truncated_after_retry</code></td>
+<td>toast: &quot;{label} 输出过长被截断&quot;</td>
+<td>[继续 (放宽 max_tokens)] / [取消]</td>
+</tr>
+<tr>
+<td><code>invalid_json_after_retry</code></td>
+<td>toast + 折叠区显示原文</td>
+<td>[复制原文反馈] / [取消]</td>
+</tr>
+<tr>
+<td><code>schema_violation_after_retry</code></td>
+<td>toast + 折叠区显示 zod 错误 + 原文</td>
+<td>[上报 issue] / [取消]</td>
+</tr>
+</tbody></table>
+<p>不允许&quot;silent fallback to 空 result&quot;— 因为这会让 Validator 漏审、Router 错路由,导致一致性事故。</p>
+<h2 id="streaming-模式衔接-与-spec04-协同">streaming 模式衔接 (与 spec/04 协同)</h2>
+<p>JSON mode 在 streaming 时:</p>
+<pre><code class="language-ts">const stream = streamText({ model, messages, providerOptions: { deepseek: { response_format: { type: &#39;json_object&#39; } } }, maxTokens })
+
+let buffer = &#39;&#39;
+for await (const chunk of stream.textStream) {
+  buffer += chunk
+  // 中间 chunks 不展示给用户 (除 Writer / Humanizer 例外)
+  // UI 可显示&quot;正在分析...&quot; spinner
+}
+
+// stream 完成后再 parse
+const parsed = JSON.parse(buffer)
+const validated = schema.parse(parsed)
+</code></pre>
+<p><strong>spec/04 streaming protocol</strong> 要新增 chunk 类型 <code>analyzing</code>,前端识别这种 stream 显示 spinner 而非逐字渲染。</p>
+<h2 id="何时不用-json-mode">何时<strong>不</strong>用 JSON mode</h2>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>Agent</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Writer 写章节</td>
+<td>writer (write 模式)</td>
+<td>章节正文是自然语言,流式逐字给用户</td>
+</tr>
+<tr>
+<td>Humanizer 改写</td>
+<td>humanizer</td>
+<td>改写后文本是自然语言</td>
+</tr>
+<tr>
+<td>discuss 模式回答</td>
+<td>router (discuss)</td>
+<td>用户阅读对话</td>
+</tr>
+<tr>
+<td>compressed_messages summarize</td>
+<td>(后台)</td>
+<td>摘要文本,自然语言最适</td>
+</tr>
+</tbody></table>
+<p>这些场景<strong>不</strong>传 <code>response_format: { type: &#39;json_object&#39; }</code>,正常 streaming 输出文本。</p>
+<h2 id="与-spec03-prompts-的协同">与 spec/03 prompts 的协同</h2>
+<p>spec/03 各 Agent 的 system prompt 模板<strong>必须包含</strong>:</p>
+<ul>
+<li>输出格式声明 (是 JSON 还是自然语言)</li>
+<li>JSON 格式时,示例 JSON + &quot;请只输出 JSON 对象,不要 markdown 代码块,不要前后说明&quot;</li>
+<li>自然语言时,正常 prompt</li>
+</ul>
+<h2 id="测试-与-spec14-对齐">测试 (与 spec/14 对齐)</h2>
+<pre><code class="language-ts">describe(&#39;json output spec&#39;, () =&gt; {
+  it(&#39;Router 路由意图返回合法 JSON 且符合 schema&#39;, () =&gt; { /* ... */ })
+  it(&#39;Validator proposals 字段全填&#39;, () =&gt; { /* ... */ })
+  it(&#39;空 content 自动 retry 1 次&#39;, () =&gt; { /* ... */ })
+  it(&#39;截断检测 (finishReason=length) 自动 retry&#39;, () =&gt; { /* ... */ })
+  it(&#39;zod 失败自动 retry&#39;, () =&gt; { /* ... */ })
+  it(&#39;2 次仍败抛 JsonOutputError&#39;, () =&gt; { /* ... */ })
+  it(&#39;streaming 模式中间 chunks 不渲染给用户&#39;, () =&gt; { /* ... */ })
+})
+</code></pre>
+<h2 id="不解决的问题-待办">不解决的问题 / 待办</h2>
+<ul>
+<li><strong>Streaming 中实时校验中间 JSON</strong>: 目前是流完再 parse;若需要实时(如 ReaderPanel persona 一个一个出),需要 incremental JSON parser (e.g. partial-json) — 当前不做</li>
+<li><strong>schema 自动估算 maxTokens</strong>: 现在手填,有遗漏风险;后续可写一个 <code>estimateMaxTokensFromSchema(schema)</code> 工具</li>
+<li><strong>JSON mode 与 Mastra Memory 的 message 序列化</strong>: Mastra 自动把 assistant content 写进 mastra_messages,JSON 字符串正常存,UI 翻看历史时需要 pretty-print(spec/22 §UI 翻看历史细节)</li>
+</ul>
+  </main>
+</body>
+</html>

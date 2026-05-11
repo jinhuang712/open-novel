@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 05 — 实体 / 概念高亮与跳转 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/05-entity-highlight.html</span>
+</nav>
+<h1 id="spec-05-实体-概念高亮与跳转">Spec 05 — 实体 / 概念高亮与跳转</h1>
+<blockquote>
+<p><strong>W7 升级</strong>: 高亮范围从仅 entity 扩展为 <strong>entity + concept</strong> 双索引。concept 是 worldview 硬规则被抽出来的 pseudo-entity (见 spec/16 §表 3),其 <code>surface_forms</code> 也被注入 AC trie,在正文里高亮以提醒作者&quot;这里命中了某概念,可能是 violation 候选&quot;。</p>
+</blockquote>
+<h2 id="数据流">数据流</h2>
+<pre><code>project.{ /settings, /chapters/* } 改动
+   ↓
+Worker 差量 reindex (spec/17 §差量 reindex):
+  - 段级 anchor diff
+  - dirty 段重扫 entity_refs / concept_refs
+  - dirty 段重算 paragraph_embeddings (异步)
+   ↓
+upsert entities + concepts (index.db)
+   ↓
+广播 &#39;entities:changed&#39; / &#39;concepts:changed&#39; 事件
+   ↓
+Editor 重新构建 AC trie (entity 名 + concept surface_forms 合一) + 触发 plugin update
+   ↓
+Decorations 增量刷新 (按命中类型用不同 class)
+</code></pre>
+<h2 id="ac-trie-构建-entity-concept-双索引">AC trie 构建 (entity + concept 双索引)</h2>
+<pre><code class="language-ts">// lib/editor/aho-corasick.ts
+import AhoCorasick from &#39;ahocorasick&#39;
+
+type Highlightable =
+  | { kind: &#39;entity&#39;; id: string; canonicalName: string; category: string; aliases: string[] }
+  | { kind: &#39;concept&#39;; id: string; title: string; category: string; semantic: string; surfaceForms: string[] }
+
+type HighlightIndex = Map&lt;string, Highlightable&gt;  // 命中字符串 → 来源
+
+export function buildAC(items: Highlightable[]): { ac: AhoCorasick; index: HighlightIndex } {
+  const patterns: string[] = []
+  const index: HighlightIndex = new Map()
+  for (const item of items) {
+    const names = item.kind === &#39;entity&#39;
+      ? [item.canonicalName, ...item.aliases]
+      : item.surfaceForms
+    for (const name of names) {
+      if (!isViableMatch(name)) continue
+      patterns.push(name)
+      // 注: 同一字符串可能既是 entity 别名又是 concept 表面词 (e.g. &quot;怀表&quot; 既是 item entity 又被某概念引用)
+      // 这种情况优先 entity (语义更具体);concept 仅在 entity 未命中时使用
+      const exist = index.get(name)
+      if (!exist || (exist.kind === &#39;concept&#39; &amp;&amp; item.kind === &#39;entity&#39;)) {
+        index.set(name, item)
+      }
+    }
+  }
+  return { ac: new AhoCorasick(patterns), index }
+}
+
+function isViableMatch(name: string): boolean {
+  if (name.length &lt; 2) return false
+  return true
+}
+
+// 调用方:
+//   const entities = await db.entities.list(projectId)
+//   const concepts = await db.concepts.where(status=&#39;active&#39;)
+//   const items: Highlightable[] = [
+//     ...entities.map(e =&gt; ({ kind: &#39;entity&#39;, ...e })),
+//     ...concepts.map(c =&gt; ({ kind: &#39;concept&#39;, ...c })),
+//   ]
+//   const { ac, index } = buildAC(items)
+</code></pre>
+<h2 id="边界裁剪-中文场景">边界裁剪 (中文场景)</h2>
+<p><code>BrunoRB/ahocorasick</code> 默认输出所有重叠匹配。需要后处理:</p>
+<pre><code class="language-ts">type Match = { from: number; to: number; entityId: string }
+
+function postProcess(text: string, rawMatches: AcMatch[], index: EntityIndex): Match[] {
+  // 1. 转成 [from, to] (AC 给的是 [endIndex, [matchedStrs]])
+  const flat = rawMatches.flatMap(([endIdx, strs]) =&gt;
+    strs.map(s =&gt; ({ from: endIdx - s.length + 1, to: endIdx + 1, str: s }))
+  )
+  
+  // 2. 边界检查: 命中前后字符
+  const filtered = flat.filter(m =&gt; isCleanBoundary(text, m.from, m.to, m.str))
+  
+  // 3. 重叠裁剪: 优先保留更长的匹配
+  filtered.sort((a, b) =&gt; (b.to - b.from) - (a.to - a.from))
+  const taken: Match[] = []
+  for (const m of filtered) {
+    if (!overlaps(taken, m)) {
+      taken.push({ from: m.from, to: m.to, entityId: index.get(m.str)!.id })
+    }
+  }
+  
+  return taken.sort((a, b) =&gt; a.from - b.from)
+}
+
+function isCleanBoundary(text: string, from: number, to: number, str: string): boolean {
+  const before = text[from - 1] ?? &#39;\n&#39;
+  const after = text[to] ?? &#39;\n&#39;
+
+  // 中文场景 — Aho-Corasick 默认输出全部子串匹配。需要白名单边界判定避免误命中:
+  // 例: 角色 &quot;李白&quot; 不应命中 &quot;我家的李白菜很好吃&quot;
+
+  // 黑名单: 后接修饰名词扩展 (e.g. &quot;李白菜&quot;)
+  const SUFFIX_BLOCK = [&#39;菜&#39;, &#39;鸟&#39;, &#39;花&#39;, &#39;草&#39;, &#39;酒&#39;, &#39;杯&#39;, &#39;种&#39;]
+  if (SUFFIX_BLOCK.includes(after)) return false
+
+  // 黑名单: 前接修饰使其变成另一词 (e.g. &quot;小刘备&quot; 中 &quot;刘备&quot; 仍命中,但若是别名 &quot;备&quot;,前接&quot;小&quot;应过滤)
+  if (str.length === 1) {
+    const PREFIX_BLOCK = [&#39;小&#39;, &#39;大&#39;, &#39;老&#39;, &#39;阿&#39;]
+    if (PREFIX_BLOCK.includes(before)) return false
+  }
+
+  // 白名单: 前接动作 / 标点 / 句首 (强证据是命名实体)
+  const PREFIX_OK = [&#39;\n&#39;, &#39; &#39;, &#39;。&#39;, &#39;,&#39;, &#39;!&#39;, &#39;?&#39;, &#39;:&#39;, &#39;&quot;&#39;, &#39;&quot;&#39;, &#39;\&#39;&#39;,
+                     &#39;见&#39;, &#39;看&#39;, &#39;听&#39;, &#39;说&#39;, &#39;问&#39;, &#39;答&#39;, &#39;叫&#39;, &#39;是&#39;, &#39;与&#39;, &#39;和&#39;]
+  const SUFFIX_OK = [&#39;\n&#39;, &#39; &#39;, &#39;。&#39;, &#39;,&#39;, &#39;!&#39;, &#39;?&#39;, &#39;:&#39;, &#39;&quot;&#39;, &#39;&quot;&#39;, &#39;\&#39;&#39;,
+                     &#39;说&#39;, &#39;道&#39;, &#39;答&#39;, &#39;问&#39;, &#39;笑&#39;, &#39;想&#39;, &#39;的&#39;, &#39;在&#39;, &#39;又&#39;, &#39;却&#39;, &#39;是&#39;]
+  if (PREFIX_OK.includes(before) || SUFFIX_OK.includes(after)) return true
+
+  // 中间情况: 默认放行,但置信度降低 (UI 可显示淡色)
+  // 真要严控可改为默认 false;先放行,实测 false-positive 后再调
+  return true
+}
+</code></pre>
+<p><strong>调优策略</strong>: 上述 PREFIX/SUFFIX 列表是种子。在 dev console 落一个 <code>falsePositiveLog</code> — 用户 hover 标&quot;误识别&quot;按钮,记录 entity + context 入 SQLite (新表 <code>entity_match_feedback</code>)。每周回看,迭代列表。</p>
+<h2 id="prosemirror-plugin-集成">ProseMirror Plugin 集成</h2>
+<pre><code class="language-ts">// lib/editor/entity-highlight.ts
+import { Plugin, PluginKey } from &#39;prosemirror-state&#39;
+import { Decoration, DecorationSet } from &#39;prosemirror-view&#39;
+
+const key = new PluginKey&lt;DecorationSet&gt;(&#39;entityHighlight&#39;)
+
+export function entityHighlightPlugin(getEntities: () =&gt; Entity[]) {
+  return new Plugin({
+    key,
+    state: {
+      init(_, { doc }) {
+        return computeDecorations(doc, getEntities())
+      },
+      apply(tr, old, _oldState, newState) {
+        const codexChanged = tr.getMeta(&#39;codexChanged&#39;)
+        if (codexChanged) return computeDecorations(tr.doc, getEntities())
+        if (!tr.docChanged) return old
+        // 增量: 映射旧装饰 + 重扫 dirty range
+        const mapped = old.map(tr.mapping, tr.doc)
+        const dirty = computeDirtyRange(tr)
+        return updateInRange(mapped, tr.doc, dirty, getEntities())
+      },
+    },
+    props: {
+      decorations(state) { return key.getState(state) },
+      handleDOMEvents: {
+        click(view, ev) {
+          const target = ev.target as HTMLElement
+          const id = target?.dataset?.entityId
+          if (id) {
+            const rect = target.getBoundingClientRect()
+            window.dispatchEvent(new CustomEvent(&#39;entity:click&#39;, {
+              detail: { id, x: rect.left, y: rect.bottom },
+            }))
+            return true
+          }
+          return false
+        },
+        mouseover(view, ev) {
+          const target = ev.target as HTMLElement
+          const id = target?.dataset?.entityId
+          if (id) scheduleHover(id, ev.clientX, ev.clientY)
+          return false
+        },
+      },
+    },
+  })
+}
+
+function computeDecorations(doc, items) {
+  const text = doc.textContent
+  const { ac, index } = buildAC(items)
+  const matches = postProcess(text, ac.search(text), index)
+  
+  const decos = matches.map(m =&gt; {
+    const { from, to } = textToPmPos(doc, m.from, m.to)
+    const item = index.get(m.matchedText)!
+    if (item.kind === &#39;entity&#39;) {
+      return Decoration.inline(from, to, {
+        class: `entity-mention entity-${item.category}`,
+        &#39;data-entity-id&#39;: item.id,
+        &#39;data-kind&#39;: &#39;entity&#39;,
+      })
+    } else {
+      // concept: 视觉区分 (虚线下划线 + 半透明色)
+      // 若 concept.semantic = &#39;absent&#39; 且本段命中 → 这是 violation,用红色虚线
+      const violationClass = item.semantic === &#39;absent&#39; ? &#39;concept-violation&#39; : &#39;&#39;
+      return Decoration.inline(from, to, {
+        class: `concept-mention concept-${item.category} ${violationClass}`,
+        &#39;data-concept-id&#39;: item.id,
+        &#39;data-kind&#39;: &#39;concept&#39;,
+        &#39;data-semantic&#39;: item.semantic,
+      })
+    }
+  })
+  
+  return DecorationSet.create(doc, decos)
+}
+</code></pre>
+<h2 id="性能数据">性能数据</h2>
+<p>参考目标 (W2/W6 期间用 vitest bench 实测填充,见 spec/14-testing.md):</p>
+<table>
+<thead>
+<tr>
+<th>章节大小</th>
+<th>实体数</th>
+<th>AC trie 构建</th>
+<th>AC 全扫耗时</th>
+<th>增量扫描耗时</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>5K 字</td>
+<td>50</td>
+<td>&lt; 1ms</td>
+<td>&lt; 2ms</td>
+<td>&lt; 1ms</td>
+</tr>
+<tr>
+<td>20K 字</td>
+<td>200</td>
+<td>&lt; 5ms</td>
+<td>&lt; 8ms</td>
+<td>&lt; 2ms</td>
+</tr>
+<tr>
+<td>50K 字</td>
+<td>500</td>
+<td>&lt; 15ms</td>
+<td>&lt; 25ms</td>
+<td>&lt; 3ms (单段变更)</td>
+</tr>
+<tr>
+<td>50K 字</td>
+<td>500</td>
+<td>—</td>
+<td>(Worker 兜底)</td>
+<td>&lt; 5ms 主线程</td>
+</tr>
+</tbody></table>
+<p><strong>W2 末尾必须跑</strong> 一次基准 (<code>tests/unit/ahocorasick.bench.ts</code>),把数据填回此表。文档不允许长期留&quot;待实测&quot;。</p>
+<h2 id="ac-trie-重建策略-新增">AC trie 重建策略 (新增)</h2>
+<blockquote>
+<p>audit 发现:<code>BrunoRB/ahocorasick</code> 不支持增量插入。每改一个角色都要全量重建 trie + 全文重扫,<strong>写设定模式下 Validator cascade 的 reindex 会触发数十次重建</strong>。</p>
+</blockquote>
+<p><strong>降损策略</strong>:</p>
+<ol>
+<li><strong>Codex 变更 debounce 1s</strong>: 用户连续创建/编辑实体时,1s 内的多次&quot;Codex 变了&quot;事件合并为一次重建</li>
+<li><strong>trie 版本号</strong>: <code>entityHighlightPlugin</code> 缓存当前 trie 与对应 entitySetHash;Codex 事件携带新 hash,plugin 比对 hash 不变就不重建</li>
+<li><strong>per-章节 trie 缓存</strong> (W6 优化): 当前章节正文 hash + entity set hash → 计算结果 cache;打开历史章节直接复用</li>
+<li><strong>Worker 兜底</strong>: 章节 &gt;30K 字时 trie 构建 + 全扫扔到 Web Worker (主线程仅 apply Decorations);&lt;30K 主线程同步跑 (避免 Worker 通讯开销)</li>
+</ol>
+<p>如果 W6 实测发现重建仍是瓶颈,<strong>升级路径</strong>: fork BrunoRB/ahocorasick 加入 <code>addPattern(pattern)</code> 增量插入 (Aho-Corasick 算法本身支持增量,只是该库 API 没暴露;扩展约 50 行代码)。</p>
+<h2 id="ime-中文输入法-安全-新增">IME (中文输入法) 安全 (新增)</h2>
+<blockquote>
+<p>audit 发现两个 IME 相关坑,都对中文用户致命:</p>
+<ol>
+<li>ChatBox textarea 中 IME 候选窗口活跃时按 Tab — 直接 preventDefault 切模式会破坏 IME 翻页</li>
+<li>TipTap Decoration 重算与 IME composition 重叠时,Decoration 的 from/to 可能落在 composition pending 区间,导致光标跳或字丢</li>
+</ol>
+</blockquote>
+<h3 id="chatbox-tab-处理">ChatBox Tab 处理</h3>
+<p>ShortcutListener 在每次 <code>keydown</code> 中先检查:</p>
+<pre><code class="language-ts">function onKeyDown(e: KeyboardEvent) {
+  if (e.isComposing || e.keyCode === 229) return    // ← IME composing,放行原生行为
+  // 后续走 normal shortcut 解析
+}
+</code></pre>
+<p><code>isComposing</code> 是 W3C 标准属性,所有现代浏览器支持。<code>keyCode === 229</code> 是 Chrome/Edge 在某些情况的兜底。</p>
+<h3 id="tiptap-decoration-重算">TipTap Decoration 重算</h3>
+<p><code>entityHighlightPlugin.apply(tr, old)</code> 中:</p>
+<pre><code class="language-ts">apply(tr, old, _oldState, newState) {
+  // 跳过 IME composition 中的中间状态 — Decoration 重算等到 composition 结束再做
+  // ProseMirror EditorView 提供 view.composing 属性
+  const view = (newState as any).editorViewRef?.current   // 通过 EditorAdapter 注入
+  if (view?.composing) return old.map(tr.mapping, tr.doc)  // 仅 map 位置,不重新计算
+
+  // 后续走 normal increment / rebuild 路径
+}
+</code></pre>
+<p><code>compositionend</code> 事件触发时 plugin 会自动收到一个新 transaction,届时再做完整 update。</p>
+<h3 id="单测覆盖-spec14">单测覆盖 (spec/14)</h3>
+<ul>
+<li><code>shortcuts.test.ts</code>: composing=true 时 Tab 不切模式</li>
+<li><code>entity-highlight.test.ts</code>: composing 期间 Decoration 不重算 + composition 结束后重算正确</li>
+</ul>
+<h2 id="hover-卡片">Hover 卡片</h2>
+<h3 id="entity-hover">Entity Hover</h3>
+<pre><code class="language-tsx">// components/editor/EntityHoverCard.tsx
+export function EntityHoverCard({ entityId, anchorPos }) {
+  const entity = useEntity(entityId)
+  if (!entity) return null
+  return (
+    &lt;Floating anchor={anchorPos}&gt;
+      &lt;div className=&quot;entity-hover-card&quot;&gt;
+        &lt;div className=&quot;header&quot;&gt;
+          &lt;span className=&quot;category-badge&quot;&gt;{entity.category}&lt;/span&gt;
+          &lt;span className=&quot;name&quot;&gt;{entity.canonicalName}&lt;/span&gt;
+          {entity.aliases.length &gt; 0 &amp;&amp; &lt;span className=&quot;aliases&quot;&gt;({entity.aliases.join(&#39;, &#39;)})&lt;/span&gt;}
+        &lt;/div&gt;
+        &lt;p className=&quot;summary&quot;&gt;{entity.metadata.summary || entity.metadata.background?.slice(0, 80)}&lt;/p&gt;
+        &lt;button onClick={() =&gt; gotoFile(entity.filePath)}&gt;打开 →&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/Floating&gt;
+  )
+}
+</code></pre>
+<h3 id="concept-hover">Concept Hover</h3>
+<pre><code class="language-tsx">// components/editor/ConceptHoverCard.tsx
+export function ConceptHoverCard({ conceptId, anchorPos }) {
+  const concept = useConcept(conceptId)
+  if (!concept) return null
+  const semanticLabel = {
+    absent: &#39;⛔ 此世界不存在&#39;,
+    restricted: &#39;⚠️ 受限&#39;,
+    mandatory: &#39;★ 强制要求&#39;,
+    unique: &#39;◆ 独一无二&#39;,
+    present: &#39;· 普通&#39;,
+  }[concept.semantic]
+  return (
+    &lt;Floating anchor={anchorPos}&gt;
+      &lt;div className={`concept-hover-card concept-${concept.semantic}`}&gt;
+        &lt;div className=&quot;header&quot;&gt;
+          &lt;span className=&quot;category-badge&quot;&gt;{concept.category}&lt;/span&gt;
+          &lt;span className=&quot;name&quot;&gt;{concept.title}&lt;/span&gt;
+          &lt;span className=&quot;semantic&quot;&gt;{semanticLabel}&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;p className=&quot;description&quot;&gt;{concept.description}&lt;/p&gt;
+        {concept.semantic === &#39;absent&#39; &amp;&amp; (
+          &lt;div className=&quot;warning&quot;&gt;⚠ 本段命中此概念表面词,可能违反设定 — 建议改写&lt;/div&gt;
+        )}
+        &lt;button onClick={() =&gt; gotoFile(concept.definedIn)}&gt;打开定义 →&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/Floating&gt;
+  )
+}
+</code></pre>
+<p>入口分发:<code>mouseover</code> event 拿到 <code>data-kind</code> 判 entity / concept,渲染对应 hover card。延迟 100ms 出现,移开 200ms 消失。</p>
+<h2 id="goto-definition-行为">Goto Definition 行为</h2>
+<pre><code class="language-ts">function gotoFile(filePath: string, modifier?: &#39;cmd&#39; | &#39;shift&#39;) {
+  if (modifier === &#39;cmd&#39;) openInFullscreen(filePath)
+  else openInRightSplit(filePath)
+}
+</code></pre>
+<p><code>openInRightSplit</code> 在 Tabs 区域右栏新增一个 tab,主编辑区不动。这是与 VSCode 的&quot;Go to Definition&quot;(默认是同栏) 的关键差异 — 长篇写作要保留上下文。</p>
+<h2 id="backlinks-面板">Backlinks 面板</h2>
+<p><code>components/panels/BacklinksPanel.tsx</code>:</p>
+<pre><code class="language-tsx">export function BacklinksPanel({ filePath }) {
+  const { data } = useSWR(`/api/backlinks?file=${filePath}`, fetcher)
+  return (
+    &lt;div className=&quot;backlinks-panel&quot;&gt;
+      &lt;h3&gt;被 {data?.length ?? 0} 处引用&lt;/h3&gt;
+      {data?.map(bl =&gt; (
+        &lt;div key={bl.id} className=&quot;backlink-row&quot; onClick={() =&gt; goto(bl.source_file, bl.position)}&gt;
+          &lt;div className=&quot;source&quot;&gt;{bl.source_section}&lt;/div&gt;
+          &lt;div className=&quot;snippet&quot;&gt;...{bl.snippet}...&lt;/div&gt;
+        &lt;/div&gt;
+      ))}
+    &lt;/div&gt;
+  )
+}
+</code></pre>
+<h2 id="重命名实体-rename-refactor">重命名实体 (Rename Refactor)</h2>
+<p>右键实体 → &quot;Rename Across Project&quot;:</p>
+<ol>
+<li>弹输入框,输入新名</li>
+<li>后端: 把 entities.canonicalName 改了</li>
+<li>用 references 表找出所有需要替换的位置</li>
+<li>生成 batch ApprovalCard,逐文件展示 diff</li>
+<li>用户批准后逐个写盘</li>
+</ol>
+<h2 id="自动从正文抽取新角色-二期">自动从正文抽取新角色 (二期)</h2>
+<p>打开方式: 右键正文 → &quot;标记为角色&quot; → 弹角色创建对话框,自动填充类型/canonical name/category。</p>
+<p>更激进版本 (二期): NER 自动检测正文中&quot;未登记&quot;的人名,在状态栏提示&quot;发现 3 个未登记角色,是否登记?&quot;。</p>
+<h2 id="concept-violation-实时提示-w7-w9-落地">Concept Violation 实时提示 (W7-W9 落地)</h2>
+<blockquote>
+<p>与 entity highlight 不同的是,concept 高亮带语义判断:concept.semantic = &#39;absent&#39; 时,任何命中即 violation。</p>
+</blockquote>
+<p>UI:</p>
+<ul>
+<li>violation concept 用红色虚线下划线 + 段落左侧 ⚠ icon</li>
+<li>ChatBox 顶部状态栏:&quot;本章命中 N 个 violation 概念,见 [X 段]&quot;</li>
+<li>命令面板 <code>Cmd+Shift+P</code> 提供&quot;修复 violation&quot;快捷动作 → 调 <code>analyzeImpact</code> (spec/19) 把 concept-add delta 当作 trigger,跑一次 cascade</li>
+</ul>
+<p>数据落 <code>concept_refs.is_violation</code> 列(spec/16 §表 4),Validator cascade 直接 SQL 查 violation 行作为候选。</p>
+  </main>
+</body>
+</html>

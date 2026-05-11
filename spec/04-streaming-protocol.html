@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 04 — 流式协议 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/04-streaming-protocol.html</span>
+</nav>
+<h1 id="spec-04-流式协议">Spec 04 — 流式协议</h1>
+<h2 id="协议选型">协议选型</h2>
+<p><strong>SSE (Server-Sent Events)</strong>,通过 Vercel AI SDK 6 的 <code>createAgentUIStreamResponse</code> + 客户端 <code>useChat()</code> 实现,带类型化 UIMessage 流。</p>
+<p>不用 WebSocket 因为:</p>
+<ul>
+<li>LLM 流是单向 (server → client),SSE 自然契合</li>
+<li>HTTP/2 + SSE 天然支持断线重连</li>
+<li>AI SDK 6 已成熟封装</li>
+</ul>
+<h2 id="服务端-route-handler">服务端 Route Handler</h2>
+<p><code>app/api/chat/route.ts</code>:</p>
+<pre><code class="language-ts">import { routerAgent } from &#39;@/lib/agents/router&#39;
+import { createAgentUIStreamResponse } from &#39;ai&#39;
+
+export async function POST(req: Request) {
+  const { messages, projectId, sessionId, mode } = await req.json()
+  
+  return createAgentUIStreamResponse({
+    agent: routerAgent,
+    uiMessages: messages,
+    options: {
+      memory: {
+        thread: `proj:${projectId}:session:${sessionId}`,
+        resource: projectId,
+      },
+      runtimeContext: { projectId, sessionId, mode },
+    },
+    // 把所有事件存档到 traces 表 (异步,不阻塞)
+    onFinish: async ({ messages, response }) =&gt; {
+      await db.traces.archive(projectId, sessionId, response)
+    },
+  })
+}
+</code></pre>
+<h2 id="事件类型-uimessage-parts">事件类型 (UIMessage Parts)</h2>
+<p>每个 UIMessage 的 <code>parts</code> 数组可包含:</p>
+<table>
+<thead>
+<tr>
+<th>Part Type</th>
+<th>含义</th>
+<th>UI 渲染</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>text-delta</code></td>
+<td>增量文本 token (Writer / Humanizer 自然语言流)</td>
+<td>主消息体逐字渲染</td>
+</tr>
+<tr>
+<td><code>reasoning-delta</code></td>
+<td>推理链增量 (Thinking)</td>
+<td>ThinkingPanel 折叠&quot;推理&quot;段</td>
+</tr>
+<tr>
+<td><code>tool-call</code></td>
+<td>调用某工具 (含参数)</td>
+<td>ThinkingPanel 工具节点</td>
+</tr>
+<tr>
+<td><code>tool-result</code></td>
+<td>工具返回值</td>
+<td>工具节点下方折叠</td>
+</tr>
+<tr>
+<td><code>tool-call-needs-approval</code></td>
+<td>待审批工具调用</td>
+<td>渲染 <code>&lt;ApprovalCard&gt;</code></td>
+</tr>
+<tr>
+<td><code>tool-call-approved</code> / <code>rejected</code></td>
+<td>用户决定</td>
+<td>卡片折叠状态变更</td>
+</tr>
+<tr>
+<td><code>agent-handoff-start</code></td>
+<td>切换到子 Agent</td>
+<td>ThinkingPanel 嵌套展开</td>
+</tr>
+<tr>
+<td><code>agent-handoff-end</code></td>
+<td>子 Agent 结束</td>
+<td>嵌套关闭</td>
+</tr>
+<tr>
+<td><code>finish-step</code></td>
+<td>一个 step 结束</td>
+<td>分隔线</td>
+</tr>
+<tr>
+<td><code>error</code></td>
+<td>错误</td>
+<td>红色错误卡</td>
+</tr>
+<tr>
+<td><code>analyzing</code></td>
+<td>JSON mode 流式中: 当前 chunk 是 JSON 片段, 不展示给用户</td>
+<td>ThinkingPanel 显示 spinner + &quot;正在分析...&quot; 文字</td>
+</tr>
+<tr>
+<td><code>json-result</code></td>
+<td>JSON mode 流完整体, 已 zod 校验通过</td>
+<td>按 Agent 类型渲染对应 view (Validator → ChangeProposal 列表; ReaderPanel → 5 persona 评论卡; 等等)</td>
+</tr>
+<tr>
+<td><code>json-retry</code></td>
+<td>JSON 校验失败, 自动 retry</td>
+<td>ThinkingPanel 显示 &quot;重试 N/2&quot; 提示</td>
+</tr>
+<tr>
+<td><code>json-failed</code></td>
+<td>2 次 retry 仍败 (spec/24 §失败处理)</td>
+<td>toast + 折叠区显示原文 + 重试按钮</td>
+</tr>
+</tbody></table>
+<h3 id="json-mode-与-streaming-的衔接-spec24">JSON mode 与 streaming 的衔接 (spec/24)</h3>
+<p><strong>关键约束</strong>: Writer / Humanizer 走自然语言流式 (<code>text-delta</code> 逐字渲染);其他 agent 走 JSON mode,中间 <code>analyzing</code> chunks 不渲染,流完整体后:</p>
+<pre><code class="language-ts">// 服务端
+const stream = streamText({
+  model,
+  messages,
+  providerOptions: ctx.metadata.jsonMode ? { deepseek: { response_format: { type: &#39;json_object&#39; } } } : undefined,
+  maxTokens,
+})
+
+if (ctx.metadata.jsonMode) {
+  // 流式中只 emit &#39;analyzing&#39; (不 emit text-delta)
+  let buffer = &#39;&#39;
+  for await (const chunk of stream.textStream) {
+    buffer += chunk
+    emit({ type: &#39;analyzing&#39;, label: agentName })
+  }
+  // 流完后整体 parse + zod 校验
+  const validated = await parseAndValidate(buffer, agentSchema)
+  emit({ type: &#39;json-result&#39;, agent: agentName, data: validated })
+} else {
+  // 自然语言流: 正常逐字 emit text-delta
+  for await (const chunk of stream.textStream) {
+    emit({ type: &#39;text-delta&#39;, value: chunk })
+  }
+}
+</code></pre>
+<p>ReaderPanel 5 persona 因 JSON 体较大(8K tokens),全部流完再 parse。如有必要,可引入 incremental JSON parser (e.g. <code>partial-json</code>) 让 5 persona 一个一个出现。</p>
+<h2 id="客户端-usechat-钩子">客户端 useChat 钩子</h2>
+<pre><code class="language-ts">&#39;use client&#39;
+import { useChat } from &#39;ai/react&#39;
+
+export function ChatBox() {
+  const { messages, sendMessage, addToolResult, status } = useChat({
+    api: &#39;/api/chat&#39;,
+    body: { projectId, sessionId, mode },
+    onToolCall: async ({ toolCall }) =&gt; {
+      if (toolCall.needsApproval) {
+        // 渲染 ApprovalCard,用户点同意/拒绝后调用 addToolResult
+        // 见 spec/06-approval-flow.md
+      }
+    },
+  })
+  // ...
+}
+</code></pre>
+<h2 id="thinkingpanel-渲染逻辑">ThinkingPanel 渲染逻辑</h2>
+<pre><code class="language-tsx">function ThinkingPanel({ messages }) {
+  return messages.map(msg =&gt;
+    msg.parts.map(part =&gt; {
+      switch (part.type) {
+        case &#39;reasoning-delta&#39;:
+          return &lt;ReasoningStream agent={part.agent} text={part.text} /&gt;
+        case &#39;tool-call&#39;:
+          return &lt;ToolCallNode tool={part.toolName} args={part.args} status={part.status} /&gt;
+        case &#39;tool-result&#39;:
+          return &lt;ToolResultNode result={part.result} /&gt;
+        case &#39;agent-handoff-start&#39;:
+          return &lt;AgentBoundary agent={part.targetAgent} /&gt;
+        case &#39;tool-call-needs-approval&#39;:
+          return &lt;ApprovalCard call={part} /&gt;
+        // ...
+      }
+    })
+  )
+}
+</code></pre>
+<h2 id="中断-取消-浏览器刷新">中断 / 取消 / 浏览器刷新</h2>
+<blockquote>
+<p>audit 发现: &quot;工具调用若已开始则继续完成&quot;过于乐观 — writeSetting 已写一半 (200KB 写到一半) 然后取消,fs 看到截断文件。需要更细粒度。</p>
+</blockquote>
+<h3 id="取消模型">取消模型</h3>
+<pre><code class="language-ts">const { stop } = useChat(...)
+// 用户点&quot;取消&quot;按钮 → stop() → 服务端 AbortSignal 触发 → 流关闭
+</code></pre>
+<p>服务端 <code>createAgentUIStreamResponse</code> (或 audit 后实际 API) 拿到 abort:</p>
+<ol>
+<li><strong>正在跑的 LLM 请求</strong>: 通过底层 fetch AbortController 立刻 cancel (DeepSeek/Gateway 端会终止 token 输出)</li>
+<li><strong>正在跑的工具 execute</strong>: 在 step 边界检查 <code>signal.aborted</code>;<strong>单一原子操作 (一次 fs.rename / 一个 SQLite transaction) 跑完才停</strong>,绝不中断单步</li>
+<li><strong>proposal 类工具</strong> (writeSettingProposal): 如果 proposal 已落 approvals 表 (status=pending),<strong>保留</strong> — 用户可在重启后看到这条 pending,继续审或取消</li>
+<li><strong>stream 状态</strong>: emit 一个 <code>cancelled</code> 事件,客户端 UI 显示&quot;已取消&quot;;trace 文件追加 <code>kind=cancelled</code></li>
+</ol>
+<h3 id="浏览器刷新-崩溃-网络中断">浏览器刷新 / 崩溃 / 网络中断</h3>
+<p><strong>契约</strong>: 刷新 = 抛弃当前 stream,<strong>不</strong>自动续传 LLM 流 (cookbook 上 SSE reconnect 续传依赖 <code>Last-Event-ID</code> 但 AI SDK 各版本支持不一致,不依赖)。</p>
+<p><strong>用户体验</strong>:</p>
+<ul>
+<li>刷新后 ChatBox 历史消息从 Mastra Memory thread 拉回 (memory 是 server 端落盘的,不依赖 stream)</li>
+<li>最后一条若为 <code>partial</code>,UI 标&quot;(已中断)&quot; + 提供&quot;重发&quot;按钮</li>
+<li>已 emit 的 proposal (落 <code>approvals</code> 表) — <code>useApprovals.hydrate()</code> 拉回继续审</li>
+<li>流式中已开始的 fs/db 副作用 — 因为是原子写,不会有半截文件</li>
+</ul>
+<h3 id="tool-call-id-幂等性">tool_call_id 幂等性</h3>
+<p>每个工具调用有唯一 <code>tool_call_id</code>,<strong>所有有副作用的工具的 execute 都查这个 id</strong>:</p>
+<pre><code class="language-ts">execute: async (input, ctx) =&gt; {
+  // 幂等检查: 这次 toolCallId 是否已经处理过
+  const existing = await db.approvals.findByToolCallId(ctx.toolCallId)
+  if (existing) return { kind: &#39;proposal&#39;, approvalId: existing.id, ...existing }   // 同步 idempotent
+
+  // 否则正常处理
+  const approvalId = await db.approvals.insert({ tool_call_id: ctx.toolCallId, /* ... */ })
+  return { kind: &#39;proposal&#39;, approvalId, /* ... */ }
+}
+</code></pre>
+<p><code>approvals.tool_call_id</code> UNIQUE 约束保底,即使 race 也只成一条。</p>
+<h2 id="重连">重连</h2>
+<p>SSE 原生支持浏览器层重连 — 网络抖动短时,EventSource 会自动重新建连。<strong>但我们不依赖服务端续传</strong>: reconnect 后 server 视为新 request,client 拿到的 stream 从空开始;所以前端在 reconnect 之前已收到的 token 保留显示,reconnect 后不再期望 server 续传剩余。</p>
+<p><strong>断线超过 5 秒</strong> UI 直接进入 cancelled 状态,提示用户&quot;已断线,要重发吗?&quot;。</p>
+<h2 id="traces-归档">traces 归档</h2>
+<blockquote>
+<p>audit 发现:<code>onFinish</code> 只在正常结束时写,timeout/error/abort 时 trace 不写。但用户最关心调试的恰好是错误。</p>
+</blockquote>
+<p>trace 不在 <code>onFinish</code> 写,而是 <code>onChunk</code> 同步追加:</p>
+<pre><code class="language-ts">const tracePath = path.join(getProjectDir(projectId), &#39;trace&#39;, `${date}-${sessionId}.jsonl`)
+const traceStream = createWriteStream(tracePath, { flags: &#39;a&#39; })
+
+return createAgentUIStreamResponse({
+  /* ... */
+  onChunk: (chunk) =&gt; traceStream.write(JSON.stringify({ ts: now(), ...chunk }) + &#39;\n&#39;),
+  onFinish: () =&gt; traceStream.end(),
+  onError: (err) =&gt; {
+    traceStream.write(JSON.stringify({ ts: now(), kind: &#39;error&#39;, error: { message: err.message, code: err.code } }) + &#39;\n&#39;)
+    traceStream.end()
+  },
+  onAbort: () =&gt; {
+    traceStream.write(JSON.stringify({ ts: now(), kind: &#39;cancelled&#39; }) + &#39;\n&#39;)
+    traceStream.end()
+  },
+})
+</code></pre>
+<p>JSONL 一行一个事件:</p>
+<pre><code class="language-jsonl">{&quot;ts&quot;:&quot;2026-04-29T12:30:45.123Z&quot;,&quot;kind&quot;:&quot;text-delta&quot;,&quot;agent&quot;:&quot;router&quot;,&quot;text&quot;:&quot;我先看看...&quot;}
+{&quot;ts&quot;:&quot;2026-04-29T12:30:46.001Z&quot;,&quot;kind&quot;:&quot;tool-call&quot;,&quot;agent&quot;:&quot;writer&quot;,&quot;tool&quot;:&quot;readSetting&quot;,&quot;args&quot;:{&quot;path&quot;:&quot;characters/lin.md&quot;}}
+{&quot;ts&quot;:&quot;2026-04-29T12:30:46.234Z&quot;,&quot;kind&quot;:&quot;tool-result&quot;,&quot;result&quot;:{&quot;path&quot;:&quot;...&quot;,&quot;content&quot;:&quot;...&quot;}}
+{&quot;ts&quot;:&quot;2026-04-29T12:30:48.999Z&quot;,&quot;kind&quot;:&quot;error&quot;,&quot;error&quot;:{&quot;message&quot;:&quot;...&quot;,&quot;code&quot;:&quot;MODEL_TIMEOUT&quot;}}
+</code></pre>
+<p><strong>trace 体积治理</strong>:</p>
+<ul>
+<li>单文件 100MB 阈值: Worker 启动 archive — 把 7 天前的 trace 文件按月打包成 <code>trace/archive/{YYYY-MM}.tar.gz</code>,删原文件</li>
+<li>SettingsDialog → 数据管理 → 显示当前 trace 总大小 + 一键清理</li>
+<li>用户可在 SettingsDialog 关 trace (但 debug 体验下降,默认开)</li>
+</ul>
+<p><strong>隐私</strong>: trace 含用户的小说内容 — 首启 OnboardingWizard 明示&quot;诊断 trace 仅本地存,不上传任何服务器&quot; (见 spec/15-onboarding)。</p>
+<h2 id="流式传输优化">流式传输优化</h2>
+<ul>
+<li><strong>Token 合并</strong>: 客户端 100ms 防抖,把多个 text-delta 合并渲染避免 React 频繁重绘</li>
+<li><strong>推理流压缩</strong>: reasoning 段默认折叠,展开才完整渲染</li>
+<li><strong>大量 tool-result</strong>: 工具返回值 &gt;2KB 时折叠,显示 &quot;查看完整结果 (3.2 KB)&quot;</li>
+</ul>
+<h2 id="错误处理">错误处理</h2>
+<p>服务端发送 <code>{ type: &#39;error&#39;, error: { message, code, recoverable, action? } }</code>。客户端按下表反应:</p>
+<table>
+<thead>
+<tr>
+<th>code</th>
+<th>recoverable</th>
+<th>UI 反应</th>
+<th>用户操作</th>
+<th>原始 prompt 保留?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MODEL_TIMEOUT</code></td>
+<td>true</td>
+<td>toast &quot;模型超时,重试中...&quot; + 自动 1 次重试</td>
+<td>静默</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT</code></td>
+<td>true</td>
+<td>toast &quot;限流,N 秒后重试&quot; + 自动重试 (指数退避)</td>
+<td>ChatBox 期间 disabled</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>INVALID_API_KEY</code></td>
+<td>false</td>
+<td>红 banner + 自动弹 SettingsDialog Section 1</td>
+<td>重输 key</td>
+<td>是 (弹回 ChatBox)</td>
+</tr>
+<tr>
+<td><code>INSUFFICIENT_QUOTA</code></td>
+<td>false</td>
+<td>红 banner &quot;DeepSeek 额度不足&quot; + 链接到充值页</td>
+<td>充值后点重试</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>MODEL_DOWN</code></td>
+<td>false</td>
+<td>红 banner &quot;模型不可用,请稍后&quot; + status 页链接</td>
+<td>等待</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>BUDGET_CAP_HIT</code></td>
+<td>false</td>
+<td>红 banner &quot;本月预算已耗尽,请到 Settings 调整&quot;</td>
+<td>改预算 / 等下月</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>TOOL_VALIDATION_FAILED</code></td>
+<td>false</td>
+<td>DebugConsole 红字 + 提示用户检查输入</td>
+<td>重新发 message</td>
+<td>否 (输入有问题)</td>
+</tr>
+<tr>
+<td><code>PATH_ESCAPE</code> / <code>PATH_INVALID</code></td>
+<td>false</td>
+<td>DebugConsole + 红 banner &quot;Agent 试图越权,已阻止&quot;</td>
+<td>安全事件,无须重试</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>LLM_STRUCTURED_FAIL</code></td>
+<td>true</td>
+<td>toast &quot;输出格式异常,降级用默认值&quot;</td>
+<td>静默 (用默认值继续)</td>
+<td>是</td>
+</tr>
+<tr>
+<td><code>CONTENT_FILTERED</code></td>
+<td>false</td>
+<td>红 banner &quot;DeepSeek 安全过滤拒绝了此请求&quot;</td>
+<td>改 prompt 重发</td>
+<td>是</td>
+</tr>
+</tbody></table>
+<p><strong>原始 prompt 保留逻辑</strong>: 错误发生时,client 不清空 ChatBox textarea。用户重发 = 重新点发送按钮即可。</p>
+<p><strong>自动重试限制</strong>: <code>MODEL_TIMEOUT</code> / <code>RATE_LIMIT</code> 仅自动重试 1 次,失败转人工。退避: 1.5s + jitter。</p>
+<p><strong>遥测</strong>: 所有错误都落 trace + DebugConsole §Errors tab。不上报到任何远端。</p>
+<h2 id="长任务进度协议-新增">长任务进度协议 (新增)</h2>
+<blockquote>
+<p>audit 发现:ReaderPanel 5 persona 并行 ≥10s,Validator 全项目扫 ≥30s — 没有进度信号,卡住时用户唯一操作是刷新 (回到刷新→cancelled 路径)。</p>
+</blockquote>
+<p>新增事件类型 <code>progress</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Part Type</th>
+<th>含义</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>progress</code></td>
+<td>长任务的子任务状态</td>
+<td><code>{ taskId, label, current: 3, total: 5, elapsedMs: 4521, status: &#39;running&#39; }</code></td>
+</tr>
+</tbody></table>
+<p><strong>ReaderPanel</strong> 每 persona 完成时 emit 一次 progress:</p>
+<pre><code class="language-jsonl">{&quot;kind&quot;:&quot;progress&quot;,&quot;taskId&quot;:&quot;reader-panel:ch001&quot;,&quot;label&quot;:&quot;追更党&quot;,&quot;current&quot;:1,&quot;total&quot;:5}
+{&quot;kind&quot;:&quot;progress&quot;,&quot;taskId&quot;:&quot;reader-panel:ch001&quot;,&quot;label&quot;:&quot;逻辑控&quot;,&quot;current&quot;:2,&quot;total&quot;:5}
+{&quot;kind&quot;:&quot;progress&quot;,&quot;taskId&quot;:&quot;reader-panel:ch001&quot;,&quot;label&quot;:&quot;情感党&quot;,&quot;current&quot;:3,&quot;total&quot;:5,&quot;status&quot;:&quot;failed&quot;}
+{&quot;kind&quot;:&quot;progress&quot;,&quot;taskId&quot;:&quot;reader-panel:ch001&quot;,&quot;label&quot;:&quot;毒舌读者&quot;,&quot;current&quot;:4,&quot;total&quot;:5}
+{&quot;kind&quot;:&quot;progress&quot;,&quot;taskId&quot;:&quot;reader-panel:ch001&quot;,&quot;label&quot;:&quot;潜水大佬&quot;,&quot;current&quot;:5,&quot;total&quot;:5}
+</code></pre>
+<p><strong>Validator</strong> cascade 扫描时按章节 emit:</p>
+<pre><code class="language-jsonl">{&quot;kind&quot;:&quot;progress&quot;,&quot;taskId&quot;:&quot;validator:scan&quot;,&quot;label&quot;:&quot;扫第 3 章&quot;,&quot;current&quot;:3,&quot;total&quot;:50}
+</code></pre>
+<p><strong>UI</strong>: ChatBox 上方一条进度条 + label,并提供取消按钮 (调 stop()),取消后已完成的 persona 反应保留 (走聚合 placeholder 计算)。</p>
+  </main>
+</body>
+</html>

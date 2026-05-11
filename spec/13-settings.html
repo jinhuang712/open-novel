@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 13 — SettingsDialog 设计 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/13-settings.html</span>
+</nav>
+<h1 id="spec-13-settingsdialog-设计">Spec 13 — SettingsDialog 设计</h1>
+<blockquote>
+<p>替换 plan/07 末尾对 Settings 的草草几行描述。SettingsDialog 是用户与系统全部偏好打交道的唯一入口,本文给出完整设计。</p>
+</blockquote>
+<h2 id="设计目标">设计目标</h2>
+<ul>
+<li><strong>分层清晰</strong>: 全局 (跨项目) vs 项目级 (per project) 严格区分,每个 section 顶部标徽标</li>
+<li><strong>可发现</strong>: 8 个 section 全部可见,不藏功能;但默认折叠以减少噪声</li>
+<li><strong>未保存提醒</strong>: 每个 section 独立 dirty state,顶部 banner 提示哪些未保存</li>
+<li><strong>导入导出</strong>: 设置可整体导出为 json,跨设备迁移友好</li>
+<li><strong>不破坏数据</strong>: 所有修改都 client → API → fs/db,有错误回滚</li>
+</ul>
+<h2 id="整体结构">整体结构</h2>
+<pre><code>┌─ Settings ─────────────────────────────────────────────────┐
+│  🔍 [搜索设置...]                                          │
+├─────────────┬──────────────────────────────────────────────┤
+│ 🔑 API Keys │  ▸ DeepSeek API Key                          │
+│ 🤖 模型分配 │     [********************] [测试连接]        │
+│ ⌨️  快捷键  │     状态: ✓ 已验证                            │
+│ 🎨 风格定制 │                                              │
+│ 👥 读者仿真 │  ▸ Bocha API Key (二期)                      │
+│ 🌐 联网     │     灰显                                     │
+│ 💾 数据管理 │                                              │
+│ ℹ️  关于    │                                              │
+└─────────────┴──────────────────────────────────────────────┘
+   ↑ 左 nav     ↑ 右 pane,显示选中 section
+</code></pre>
+<p>底部:</p>
+<ul>
+<li><code>[取消]</code> <code>[应用]</code> <code>[导出]</code> <code>[导入]</code></li>
+<li>有 dirty section 时 <code>[应用]</code> 高亮 + 显示 &quot;X 个 section 未保存&quot;</li>
+</ul>
+<h2 id="全局-vs-项目级">全局 vs 项目级</h2>
+<p>每个 section 顶部一个明显徽标:</p>
+<table>
+<thead>
+<tr>
+<th>徽标</th>
+<th>含义</th>
+<th>存储位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>🌐 全局</td>
+<td>跨所有项目共享</td>
+<td><code>~/.open-novel/settings.json</code></td>
+</tr>
+<tr>
+<td>📂 项目级</td>
+<td>仅当前项目</td>
+<td><code>~/.open-novel/workspaces/{projectId}/project.json</code></td>
+</tr>
+<tr>
+<td>🔄 混合</td>
+<td>全局默认 + 项目可覆盖</td>
+<td>两处都有,项目覆盖全局</td>
+</tr>
+</tbody></table>
+<h2 id="section-1-api-keys-预算-全局">Section 1: API Keys + 预算 (🌐 全局)</h2>
+<pre><code class="language-yaml">deepseekApiKey: &quot;sk-...&quot;         # 必填
+bochaApiKey: &quot;&quot;                   # 可选,二期
+tavilyApiKey: &quot;&quot;                  # 可选,二期
+
+# 成本天花板 (硬约束)
+budget:
+  monthlyUsd: 50                   # 月度预算 (USD)
+  warnAtUsd: 40                    # 触发警告阈值
+  hardCapBehavior: &quot;block&quot;         # &quot;block&quot; | &quot;warn-only&quot;
+  approvalTimeoutHours: 24         # 审批悬挂超时 (与 spec/06 §审批超时联动)
+</code></pre>
+<p>UI 字段:</p>
+<ul>
+<li>DeepSeek API Key (必填,masked input,旁有 <code>测试连接</code> button)</li>
+<li>Bocha (二期,灰显 + 提示 &quot;Phase 2 enable&quot;)</li>
+<li>Tavily (二期,同上)</li>
+<li><strong>月度预算 (USD)</strong>: 输入框 + 历史用量条形图 (基于 traces 表统计)</li>
+<li><strong>触顶行为</strong>: radio &quot;阻断 (block,推荐)&quot; / &quot;仅提示 (warn-only)&quot;</li>
+<li><strong>审批悬挂超时</strong>: 输入框 (小时),默认 24</li>
+</ul>
+<p>行为:</p>
+<ul>
+<li><code>测试连接</code>: 服务端调一次低成本 endpoint (<code>/v1/models</code>) 验证 key 有效;成功显示 <code>✓ 已验证 (model: &lt;实查后的 id&gt;)</code>,失败显示具体错误</li>
+<li>输入框失焦时自动校验格式 (sk-xxx 长度 ≥ 32)</li>
+<li>保存写入 <code>~/.open-novel/settings.json</code> <code>mode: 0o600</code> (见 spec/09)</li>
+<li><strong>预算实时检查</strong>: 每次发起 LLM 调用前,server 估算 tokens × 单价,累加月内已用 ≥ monthlyUsd 时 <code>hardCapBehavior</code> 决定 reject (&#39;BUDGET_CAP_HIT&#39; 错误,见 spec/04 错误表) 还是仅 toast warning</li>
+</ul>
+<h2 id="section-2-模型分配-混合">Section 2: 模型分配 (🔄 混合)</h2>
+<p>每个 Agent 单独选 Pro / Flash / 自定义模型 ID。</p>
+<pre><code class="language-yaml"># 全局默认
+defaults:
+  router: flash
+  writer: pro
+  checker: flash
+  validator: pro
+  reflector: flash
+  humanizer: pro
+  readerPanel: flash
+  
+# 项目级覆盖 (project.json.modelOverrides)
+overrides:
+  writer: &quot;deepseek/deepseek-v4-pro&quot;     # 显式锁主线
+  checker: &quot;deepseek/deepseek-v4-pro&quot;     # 该项目要求 Checker 也用 Pro 提升节奏分析质量
+</code></pre>
+<p>UI:</p>
+<pre><code>┌─ 模型分配 ────────────────────────────────┐
+│  🔄 全局默认 + 当前项目覆盖                │
+│                                            │
+│  Router      [▼ Flash       ] (默认 Flash) │
+│  Writer      [▼ Pro         ] (默认 Pro)   │
+│  Checker     [▼ Pro     📂  ] (默认 Flash, 项目覆盖)
+│  Validator   [▼ Pro         ]              │
+│  Reflector   [▼ Flash       ]              │
+│  Humanizer   [▼ Pro         ]              │
+│  ReaderPanel [▼ Flash       ]              │
+│                                            │
+│  📊 月度成本估算 (基于过去 30 天用量)        │
+│  Pro:    $X.XX (Y tokens)                   │
+│  Flash:  $X.XX (Y tokens)                   │
+│  Total:  $X.XX                              │
+│                                            │
+│  [重置项目覆盖] [应用全局到项目]             │
+└────────────────────────────────────────────┘
+</code></pre>
+<p>成本估算:从 traces 表统计本项目过去 30 天的 token 消耗,乘以官价。</p>
+<h2 id="section-3-快捷键-全局">Section 3: 快捷键 (🌐 全局)</h2>
+<p>详见 spec/12。这里的 UI:</p>
+<pre><code>┌─ 快捷键 ─────────────────────────────────────────────────┐
+│  上下文    描述                       当前      默认  操作│
+│  chatbox   切换 Agent 模式             Tab       Tab   [改]│
+│  chatbox   反向切换                    Shift+Tab —      [改]│
+│  chatbox   发送消息                    Cmd+Enter —      [改]│
+│  global    打开命令面板                Cmd+Shift+P —    [改]│
+│  global    快速打开文件                Cmd+P     —      [改]│
+│  ...                                                      │
+│                                                          │
+│  [重置全部] [导出键位] [导入键位]                         │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<p>操作:</p>
+<ul>
+<li>单击 <code>[改]</code> → input 进入&quot;按键捕获模式&quot; → 按下新组合 → 显示新绑定 → 提交</li>
+<li>冲突 (同 context + 同 key) → 输入框红色 + 提示 + 阻止提交</li>
+<li>&quot;默认&quot; 列空表示这条用户改过 (默认 = 当前)</li>
+<li><code>重置全部</code> 清空所有 overrides</li>
+</ul>
+<h2 id="section-4-风格定制-项目级">Section 4: 风格定制 (📂 项目级)</h2>
+<pre><code class="language-yaml"># project.json
+genre: &quot;都市重生&quot;
+style: |
+  幽默轻松,节奏快,短句多。
+  对话占比高,内心独白节制。
+  避免书面语,口语优先。
+agentPersonality: |
+  毒舌助理,会主动指出剧情漏洞和懒惰处理。
+exampleCorpusFiles:
+  - &quot;./settings/范文1.md&quot;
+  - &quot;./settings/范文2.md&quot;
+</code></pre>
+<p>UI:</p>
+<ul>
+<li>流派 (下拉: 都市 / 玄幻 / 修仙 / 言情 / 悬疑 / 历史 / 科幻 / 灵异 / 二次元 / 其他)</li>
+<li>风格 (multi-line textarea,字数提示 ≤500)</li>
+<li>Agent 性格 (textarea,≤300 字)</li>
+<li>范文 (file picker,可加多个,显示路径列表)</li>
+</ul>
+<p>注意: <strong>修改这些会让 Reflector 重置该项目的部分 learnings</strong> — 因为风格变了,旧经验可能不再适用。UI 在保存前提示。</p>
+<h2 id="section-5-读者仿真器-叙事引擎触发-项目级">Section 5: 读者仿真器 + 叙事引擎触发 (📂 项目级)</h2>
+<pre><code class="language-yaml"># project.json.readerPanel
+enabled: true
+runOnSave: true                   # 每次 chapter 落盘后自动跑;关闭后仅手动触发
+personas:
+  - id: chase-update
+    enabled: true
+    weight: 1.0
+  - id: logic-purist
+    enabled: true
+    weight: 1.0
+  - id: emotion-driven
+    enabled: false                # 该作者不在乎情感党反馈
+    weight: 0
+  - id: cynic
+    enabled: true
+    weight: 1.5                   # 该作者重视毒舌反馈
+  - id: deep-lurker
+    enabled: true
+    weight: 0.8
+custom:
+  - file: &quot;./personas/my-target.yaml&quot;
+    enabled: true
+    weight: 1.5
+
+# 叙事引擎自动/手动触发
+narrative:
+  beatAnalyzer:
+    runOnSave: true               # 章节落盘后自动跑
+    manualOnly: false              # true 时仅手动按钮触发
+  arcTracker:
+    runOnSave: false               # 默认关 (跨章扫描成本高)
+    runOnNewChapter: true          # 仅在新建章节时跑一次
+    triggerEveryNChapters: 5       # 每 5 章主动跑一次
+</code></pre>
+<p>UI:</p>
+<pre><code>┌─ 读者仿真器 ────────────────────────────────┐
+│  📂 当前项目设置                            │
+│                                              │
+│  整体启用 [✓]  (关掉则章节不跑模拟)           │
+│                                              │
+│  默认 Personas                               │
+│  ┌──────────────────────────────────────┐ │
+│  │ ✓ 追更党      weight [1.0 ▾]          │ │
+│  │ ✓ 逻辑控      weight [1.0 ▾]          │ │
+│  │ ✗ 情感党      weight [0.0 ▾] (已禁用)  │ │
+│  │ ✓ 毒舌读者    weight [1.5 ▾]          │ │
+│  │ ✓ 潜水大佬    weight [0.8 ▾]          │ │
+│  └──────────────────────────────────────┘ │
+│                                              │
+│  自定义 Personas                             │
+│  ┌──────────────────────────────────────┐ │
+│  │ + 我的目标读者 (./personas/my-target) │ │
+│  │   [启用] weight [1.5] [编辑] [删除]    │ │
+│  └──────────────────────────────────────┘ │
+│                                              │
+│  [+ 添加自定义 persona]                       │
+│                                              │
+│  💡 提示: 关闭 ReaderPanel 可省 ~5 个 LLM     │
+│  调用/章节                                    │
+└──────────────────────────────────────────────┘
+</code></pre>
+<h2 id="section-6-联网-全局">Section 6: 联网 (🌐 全局)</h2>
+<pre><code class="language-yaml">network:
+  enabled: false                  # 强制 false
+  defaultProvider: &quot;bocha&quot;        # bocha | tavily | mock
+  bochaWeight: 1.0
+  tavilyWeight: 0.6
+  cacheHours: 24                  # 同 query 缓存
+</code></pre>
+<p>UI: 整体灰显,顶部一条横幅 &quot;🚧 二期开放,当前所有联网工具走 mock 实现&quot;。</p>
+<p>二期开放后界面: 启用 toggle + provider 选择 + 缓存时长 + 限频。</p>
+<h2 id="section-7-数据管理-全局-项目级">Section 7: 数据管理 (🌐 全局 + 📂 项目级)</h2>
+<pre><code>┌─ 数据管理 ──────────────────────────────────────────────┐
+│  🌐 全局                                                 │
+│                                                         │
+│  Workspace 路径: ~/.open-novel/workspaces/               │
+│  [打开 Finder]  [迁移到其他路径]                         │
+│  Trace 总大小: 23 MB  [清理 7 天前 trace]                 │
+│  本月 LLM 用量: $12.4 / $50  [详细按 Agent 拆分]          │
+│                                                         │
+│  ──────────────────────────────────────────────────────  │
+│  📂 当前项目                                             │
+│                                                         │
+│  项目 ID:        proj_zhongsheng_a3f2                   │
+│  名称:          [重生互联网]              [改名]         │
+│  创建时间:       2026-04-29                              │
+│  字数:           42,531                                 │
+│  章节数:         3                                      │
+│  实体数:         12                                     │
+│  审批历史:       18 条 [查看] [清空]                     │
+│  反馈学习:       7 条 [查看] [清空]                      │
+│  Pending 审批:   0 条                                   │
+│                                                         │
+│  [导出项目 (zip)]  [归档 (软删)]  [删除项目]             │
+│                                                         │
+│  ──────────────────────────────────────────────────────  │
+│  归档区 (软删项目,30 天后自动清)                         │
+│   - [样例] 末世修仙          删除 2026-04-15  [恢复]     │
+│                                                         │
+│  ──────────────────────────────────────────────────────  │
+│  ⚠ 危险区域                                              │
+│  [清空所有项目数据] [出厂重置] [重置首启提示]             │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="项目生命周期-ui-flow">项目生命周期 UI flow</h3>
+<p>每个动作的具体行为:</p>
+<table>
+<thead>
+<tr>
+<th>动作</th>
+<th>行为</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>改名</strong></td>
+<td>仅改 project.json.name,<strong>目录名不变</strong> (避免破坏所有引用路径)。UI 显示真实名 + 真实 id</td>
+</tr>
+<tr>
+<td><strong>归档 (软删)</strong></td>
+<td>移到 <code>~/.open-novel/_archive/{projectId}/</code>,UI 隐藏 (但归档区可见);保留 30 天后启动 Worker 自动彻底删</td>
+</tr>
+<tr>
+<td><strong>导出 zip</strong></td>
+<td>打包 <code>proj_xxx.zip</code>,<strong>含 .md + project.json + index.db</strong> (含 narrative_metrics / reader_reports / approvals 这些花了 LLM 钱跑的数据);entity_refs / backlinks 这种纯派生表可在导入时重建</td>
+</tr>
+<tr>
+<td><strong>删除 (硬删)</strong></td>
+<td>二次确认 + 输入项目名字样;先 <code>pool.delete(projectId)</code> close LibSQL,再 fs.rm 项目目录;删 runtime.db 中对应 thread</td>
+</tr>
+<tr>
+<td><strong>导入 zip</strong></td>
+<td>解压到 <code>~/.open-novel/workspaces/{newId}/</code>;若 projectId 冲突生成新 id;导入后 Worker reindex</td>
+</tr>
+<tr>
+<td><strong>恢复归档</strong></td>
+<td>移回 workspaces/,UI 重新可见</td>
+</tr>
+<tr>
+<td><strong>迁移 Workspace 路径</strong></td>
+<td>整体 <code>~/.open-novel/</code> move,settings.json <code>workspaceRoot</code> 字段更新;过程中所有项目 LibSQL 必须先 close</td>
+</tr>
+</tbody></table>
+<h3 id="危险操作的安全闸">危险操作的安全闸</h3>
+<p>危险操作 (清空 / 重置 / 删除项目): <strong>二次确认 + 输入项目名 (或 <code>confirm</code>) 字样才生效</strong>。</p>
+<ul>
+<li>&quot;清空所有项目数据&quot;: 输入字样 <code>delete-all-my-novels</code></li>
+<li>&quot;出厂重置&quot;: 输入字样 <code>reset-factory</code></li>
+<li>&quot;重置首启提示&quot;: 一次确认即可 (只清 onboarding.seenTips,不删数据)</li>
+</ul>
+<p>执行前 server 端再校验一次 (防止 client UI 被绕)。</p>
+<h2 id="section-8-关于-全局">Section 8: 关于 (🌐 全局)</h2>
+<pre><code>┌─ 关于 ──────────────────────────────────────┐
+│  Open Novel v0.1.0                          │
+│  基于 DeepSeek V4 的多 Agent 中文小说自动   │
+│  创作系统                                    │
+│                                              │
+│  仓库:      https://github.com/...           │
+│  文档:      [查看 plan / spec / progress]    │
+│  反馈渠道:  GitHub Issues                    │
+│                                              │
+│  使用的开源:                                  │
+│  - Next.js 15 / React 19 / TypeScript        │
+│  - Mastra 1.x / Vercel AI SDK 6              │
+│  - TipTap / ProseMirror                      │
+│  - Tailwind CSS / shadcn/ui                  │
+│  - LibSQL / 等                                │
+│                                              │
+│  [打开 GitHub]  [打开本地 plan 目录]          │
+└──────────────────────────────────────────────┘
+</code></pre>
+<h2 id="实现关键">实现关键</h2>
+<h3 id="zustand-store">Zustand store</h3>
+<pre><code class="language-ts">// lib/store/settings.ts (扩展现有)
+type SettingsState = {
+  // global
+  deepseekApiKey: string | null
+  defaults: ModelDefaults
+  keybindings: Record&lt;string, string[]&gt;
+  workspaceRoot: string
+  // project (active)
+  activeProjectId: string | null
+  project: ProjectSettings | null
+  // dirty tracking
+  dirtySections: Set&lt;SectionId&gt;
+  // actions
+  load(): Promise&lt;void&gt;
+  saveSection(id: SectionId): Promise&lt;void&gt;
+  saveAll(): Promise&lt;void&gt;
+  importJson(json: string): void
+  exportJson(): string
+}
+</code></pre>
+<h3 id="routes">Routes</h3>
+<ul>
+<li><code>GET /api/settings</code> — 全部全局设置 (无敏感字段;key 只回 <code>hasKey</code>)</li>
+<li><code>POST /api/settings</code> — 写全局设置 (Zod 校验,mode 0o600)</li>
+<li><code>GET /api/projects/{id}/settings</code> — 项目级设置</li>
+<li><code>POST /api/projects/{id}/settings</code> — 写项目级设置</li>
+<li><code>POST /api/keys/test</code> — 测 DeepSeek key 有效性</li>
+</ul>
+<p>所有 routes <code>runtime = &#39;nodejs&#39;</code>。</p>
+<h3 id="持久化文件">持久化文件</h3>
+<pre><code>~/.open-novel/
+├── settings.json                     # 全局设置 (mode 0o600)
+└── workspaces/
+    └── {projectId}/
+        ├── project.json              # 项目级设置 (mode 0o644 — 不含 secret)
+        └── personas/                 # 自定义 reader personas (项目级)
+</code></pre>
+<h3 id="启动流程">启动流程</h3>
+<pre><code>app boot
+   ↓
+GET /api/settings — load global
+   ↓
+若无 deepseek key → 弹 SettingsDialog (Section 1)
+   ↓
+若有 → 用户选项目
+   ↓
+GET /api/projects/{id}/settings — load project
+   ↓
+merge effectiveSettings = global ∪ project (project override)
+   ↓
+注入到 Mastra agents 实例化
+</code></pre>
+<h2 id="学习偏好面板">学习偏好面板</h2>
+<p>ActivityBar [💡] 入口 → 打开 LearningsPanel,展示 <code>learnings</code> 表:</p>
+<pre><code>┌─ 已学到的偏好 ──────────────────────────────────────────┐
+│  [项目 / 全局] [全部 ▼ category]  搜索...                │
+│                                                         │
+│  📂 项目级 (7 条)                                        │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │ ▸ 用户偏好 ≤25 字短句,优先用句号断句            │ │
+│  │   命中: 12 次  weight: 12.5  最近: 3 小时前       │ │
+│  │   [编辑] [⬆️ promote 全局] [删除]                │ │
+│  └──────────────────────────────────────────────────┘ │
+│  ...                                                    │
+│                                                         │
+│  🌐 全局 (3 条)                                          │
+│  ┌──────────────────────────────────────────────────┐ │
+│  │ ▸ 对话场景中尽量少用&#39;XX 地说&#39;                    │ │
+│  │   适用: writer / humanizer  [⬇️ 限定到当前项目]   │ │
+│  └──────────────────────────────────────────────────┘ │
+│                                                         │
+│  📊 本周新增 5 条 [审视]                                  │
+└─────────────────────────────────────────────────────────┘
+</code></pre>
+<p>操作:</p>
+<ul>
+<li><strong>promote 全局</strong>: 项目级 → scope=&#39;global&#39;,跨项目生效。冲突时 (同 insight 已有 global) → 弹合并对话框</li>
+<li><strong>demote 项目</strong>: 全局 → 项目级</li>
+<li><strong>编辑</strong>: 改 insight 文字 + applicable_agents</li>
+<li><strong>删除</strong>: 移到 <code>learnings_archive</code> 表 (软删,可恢复 30 天)</li>
+<li><strong>审视 (本周新增)</strong>: 引导用户走一遍新增的 learnings,确认每条</li>
+</ul>
+<h2 id="不做什么">不做什么</h2>
+<ul>
+<li><strong>不做云同步</strong>: 单设备 localhost,所有设置本地文件即可</li>
+<li><strong>不做 settings profiles</strong>: 不存&quot;工作模式 / 出版模式&quot;两套预设,简化模型</li>
+<li><strong>不做 settings audit log</strong>: 改了什么时候改的不重要,可从文件 mtime 看</li>
+<li><strong>不做 i18n UI 文案</strong>: 仅中文界面;UI 文案集中在 <code>lib/i18n/zh.ts</code> 用 key 组织,二期再加其他语言;<strong>不再硬编码到组件</strong></li>
+</ul>
+  </main>
+</body>
+</html>

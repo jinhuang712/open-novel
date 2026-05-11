@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 23 — Per-agent 上下文契约 (Per-agent Context Contracts) - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/23-context-contracts.html</span>
+</nav>
+<h1 id="spec-23-per-agent-上下文契约-per-agent-context-contracts">Spec 23 — Per-agent 上下文契约 (Per-agent Context Contracts)</h1>
+<blockquote>
+<p>与 <a href="../plan/12-memory-and-context.html">plan/12 §per-agent 上下文契约</a> 对齐 — 这一篇是 <strong>L1 (工作记忆)</strong> 的具体落地。每个 agent 有自己的 context builder,根据职责定义&quot;必装什么 / 不装什么&quot;;一致性所需的全部数据必装,不在限额内做选择。</p>
+</blockquote>
+<h2 id="设计原则">设计原则</h2>
+<table>
+<thead>
+<tr>
+<th>原则</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>一致性 &gt; 一切</strong></td>
+<td>读者最大弃书原因之一是&quot;读到与前文不一致&quot;。该装的必装,不省</td>
+</tr>
+<tr>
+<td><strong>per-agent 契约</strong></td>
+<td>7 个 agent 各自一个 context builder,根据职责装不同数据</td>
+</tr>
+<tr>
+<td><strong>不做 token 预算裁剪</strong></td>
+<td>DeepSeek V4 ctx 1M (spec/00 §C),普通章节场景远不到上限;不允许&quot;省略某段必装项&quot;</td>
+</tr>
+<tr>
+<td><strong>超 800K 警报</strong></td>
+<td>软警报 + 详细诊断,引导用户分卷或调小项目;不允许 silent 砍 retrieve</td>
+</tr>
+<tr>
+<td><strong>不允许 agent 自拼 prompt</strong></td>
+<td>必经 context builder;直接调 streamVNext 是反模式</td>
+</tr>
+<tr>
+<td><strong>JSON 输出走 JSON mode</strong></td>
+<td>见 spec/24,不在本章重复</td>
+</tr>
+</tbody></table>
+<h2 id="共享基础设施">共享基础设施</h2>
+<p>所有 agent context builder 共享:</p>
+<pre><code class="language-ts">// lib/agents/context/base.ts
+export interface BaseContextInput {
+  projectId: string
+  sessionId: string
+  threadId: string
+  userInput: string
+  pendingApprovals: string[]
+  cascadeContext?: { rootApprovalId: string; cascadeLevel: 0 | 1 | 2 | 3 }
+  rejectionFeedback?: string
+}
+
+export interface BaseContextOutput {
+  systemPrompt: string                // 含基础 + agent 特化 + L3 learnings 注入
+  messages: ModelMessage[]            // [system, ...recent_messages, user_input]
+  tokenReport: {
+    system: number
+    retrieve: number
+    messages: number
+    userInput: number
+    total: number
+    estimatedCtxRemaining: number     // 1M - total - max_output_reservation
+  }
+  metadata: {
+    learningsApplied: { id: string; text: string; weight: number; scope: string }[]
+    retrievedKeys: string[]           // 哪些 L4 数据被装入 (entity:lin / chapter:001 / ...)
+    jsonMode: boolean                  // 这次输出是否走 JSON mode
+  }
+}
+
+export async function buildBaseContext(input: BaseContextInput, agentName: string): Promise&lt;{
+  learnings: Learning[]
+  recentMessages: ModelMessage[]
+}&gt; {
+  // 1. L3 learnings 注入 (按 agent scope)
+  const allLearnings = await db.workspace(input.projectId).learnings.find({
+    scope: { in: agentScopes(agentName) },
+    weight: { gte: 0.2 },
+  }).orderBy(&#39;weight&#39;, &#39;desc&#39;).limit(8)
+
+  // 2. cardinal_rule scope 永远保留 top-1 (与 spec/25 + plan/12 一致)
+  const cardinalRuleLearnings = allLearnings.filter(l =&gt; l.scope === &#39;cardinal_rule&#39;)
+  const others = allLearnings.filter(l =&gt; l.scope !== &#39;cardinal_rule&#39;)
+  const learnings = [...cardinalRuleLearnings.slice(0, 1), ...others].slice(0, 8)
+
+  // 3. L2 mastra_messages (lastMessages 30, 见 spec/22)
+  const recentMessages = await mastraMemory.fetchRecent({
+    threadId: input.threadId,
+    limit: settings.mastraMemory.lastMessages,
+  })
+
+  return { learnings, recentMessages }
+}
+
+export function agentScopes(agentName: string): string[] {
+  return {
+    writer: [&#39;style&#39;, &#39;narrative&#39;, &#39;worldview&#39;, &#39;character&#39;, &#39;cardinal_rule&#39;],
+    validator: [&#39;consistency&#39;, &#39;worldview&#39;, &#39;character&#39;, &#39;relations&#39;, &#39;cardinal_rule&#39;],
+    checker: [&#39;style&#39;, &#39;narrative&#39;, &#39;pacing&#39;, &#39;cardinal_rule&#39;],
+    humanizer: [&#39;style&#39;, &#39;voice&#39;],
+    &#39;reader-panel&#39;: [&#39;narrative&#39;, &#39;pacing&#39;, &#39;cardinal_rule&#39;],
+    router: [&#39;intent&#39;, &#39;mode&#39;],
+    reflector: [],                       // Reflector 不读 learnings
+  }[agentName] ?? []
+}
+</code></pre>
+<h2 id="验算与警报-软警报不硬限">验算与警报 (软警报,不硬限)</h2>
+<pre><code class="language-ts">const TOTAL_CTX = 1_000_000                // DeepSeek V4 1M
+const MAX_OUTPUT_RESERVATION = 60_000      // Writer 写章节预留;其他 agent 实际占用更小
+const SOFT_WARN_THRESHOLD = 800_000        // 80% 警报
+
+function checkContextSize(report: TokenReport, agentName: string) {
+  const used = report.total + (agentName === &#39;writer&#39; ? MAX_OUTPUT_RESERVATION : 16_000)
+  if (used &gt; TOTAL_CTX) {
+    throw new ContextOverflowError({
+      agentName,
+      used,
+      ctx: TOTAL_CTX,
+      hint: &#39;项目数据规模已超 1M ctx, 必须分卷或调减 retrieve 范围&#39;,
+      diagnostic: report,
+    })
+  }
+  if (used &gt; SOFT_WARN_THRESHOLD) {
+    logger.warn(&#39;context approaching ctx limit&#39;, { agentName, used, ratio: used / TOTAL_CTX })
+    // UI 上 toast: &quot;本次装配 {ratio}% ctx, 接近上限, 建议查看 prompt 装配诊断&quot;
+  }
+}
+</code></pre>
+<p><strong>关键约束</strong>:</p>
+<ul>
+<li><code>ContextOverflowError</code> 只在<strong>真的超 1M</strong> 时才抛 — 不是&quot;快到了就先砍&quot;。砍是反一致性的</li>
+<li>警报阈值 800K 是 UX 提示,不影响装配决策</li>
+<li>错误抛出时给详细诊断 (各部分占用 + 建议) 让用户决定怎么处理 (分卷 / 缩 retrieve / 排查异常 entity)</li>
+</ul>
+<h2 id="per-agent-契约">per-agent 契约</h2>
+<h3 id="1-writer-write-模式">1. Writer (write 模式)</h3>
+<p><strong>装配目标</strong>: 让 Writer 写出与 L4 完全一致的章节,且不踩五大网文守则。</p>
+<p><strong>必装项</strong> (按 retrieve 顺序):</p>
+<pre><code class="language-ts">async function buildWriterWriteContext(input: WriterInput): Promise&lt;BuildOutput&gt; {
+  const base = await buildBaseContext(input, &#39;writer&#39;)
+
+  // L4 retrieve (调 spec/20 assembleContext + 加守则相关数据)
+  const retrieved = {
+    chapterOutline: await readChapterOutline(input.projectId, input.chapterIndex),
+    previousChapterTail: await readPreviousChapterTail(input.projectId, input.chapterIndex, { paragraphs: 3 }),
+    entityStates: await assembleContext.getEntityStates({
+      projectId: input.projectId,
+      chapterIndex: input.chapterIndex,
+      povCharacters: input.pov,
+    }),
+    activeRelations: await assembleContext.getActiveRelations({
+      projectId: input.projectId,
+      chapterIndex: input.chapterIndex,
+      involvedCharacters: input.pov,
+    }),
+    activeForeshadowings: await assembleContext.getActiveForeshadowings({
+      projectId: input.projectId,
+      includeCriticalOverDeadlineWarning: true,
+    }),
+    recentChapters: await readRecentChapters(input.projectId, input.chapterIndex, { count: 5 }),
+    worldviewFull: await readWorldviewFull(input.projectId),
+    conceptConstraints: await db.concepts.find({ projectId: input.projectId, type: { in: [&#39;taboo&#39;, &#39;invariant&#39;, &#39;cardinal_rule&#39;] } }),
+    chapterArc: await readChapterArc(input.projectId, input.chapterIndex),
+    userExemplars: await readUserExemplars(input.projectId),
+    // 五大守则相关 (spec/25)
+    cardinalRulesConfig: await readCardinalRulesConfig(input.projectId),
+    valueAxesForInvolvedCharacters: await readCharacterValueAxes(input.projectId, input.pov),
+    chaptersSinceLastMilestone: await getChaptersSinceLastMilestone(input.projectId),
+    rollingMainSideRatio: await getRollingMainSideRatio(input.projectId, { window: 10 }),
+    isGoldenChapter: input.chapterIndex &gt;= 1 &amp;&amp; input.chapterIndex &lt;= 3,
+  }
+
+  // System prompt 装配 (spec/03 模板)
+  const systemPrompt = buildWriterSystemPrompt({
+    base: WRITER_BASE_PROMPT,
+    learnings: base.learnings,
+    cardinalRules: retrieved.cardinalRulesConfig,
+    valueAxes: retrieved.valueAxesForInvolvedCharacters,
+    activeForeshadowings: retrieved.activeForeshadowings,
+    isGoldenChapter: retrieved.isGoldenChapter,
+    style: project.style,
+  })
+
+  // assembled context 拼成 retrieve block (system 第二段)
+  const retrievedBlock = formatRetrievedForWriter(retrieved)
+
+  const messages: ModelMessage[] = [
+    { role: &#39;system&#39;, content: systemPrompt },
+    { role: &#39;system&#39;, content: retrievedBlock },
+    { role: &#39;assistant&#39;, content: &#39;&lt;历史摘要&gt;\n...&#39; /* 仅当 compressed_messages 启用 */ },
+    ...base.recentMessages,
+    ...(input.rejectionFeedback ? [{ role: &#39;user&#39; as const, content: `(上次提议被拒, 原因: ${input.rejectionFeedback})` }] : []),
+    { role: &#39;user&#39;, content: input.userInput },
+  ]
+
+  const tokenReport = computeTokenReport(messages, retrieved)
+  checkContextSize(tokenReport, &#39;writer&#39;)
+
+  return { systemPrompt, messages, tokenReport, metadata: { jsonMode: false /* Writer 输出自然语言 */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: 自然语言流式 (不走 JSON mode)
+<strong>maxTokens</strong>: 不显式设(Writer 章节正文流式输出),交给 Mastra 自然结束 (<code>finishReason=&#39;stop&#39;</code>)</p>
+<p><strong>典型 token 占用</strong> (估算):</p>
+<ul>
+<li>chapter outline + previous tail: ≈ 4K</li>
+<li>全 entity 状态 (≈ 30 角色) + relations + timeline: ≈ 50K</li>
+<li>最近 5 章: ≈ 30K</li>
+<li>世界观全文: ≈ 30K</li>
+<li>概念约束 + 章节弧光 + 范文 + 守则: ≈ 30K</li>
+<li>learnings + recent_messages: ≈ 20K</li>
+<li><strong>小计</strong>: ≈ 165K (16% of 1M, 远不接近警报阈值)</li>
+</ul>
+<h3 id="2-validator">2. Validator</h3>
+<p><strong>装配目标</strong>: 找当前 ChangeProposal 与 L4 任何冲突。这是 anti-不一致的兜底 agent,<strong>最该装齐</strong>。</p>
+<p><strong>必装项</strong>:</p>
+<pre><code class="language-ts">async function buildValidatorContext(input: ValidatorInput): Promise&lt;BuildOutput&gt; {
+  const base = await buildBaseContext(input, &#39;validator&#39;)
+
+  const retrieved = {
+    mainProposal: input.changeSet.main,
+    cascadeProposals: input.changeSet.cascade,
+    impactRadius: await analyzeImpact.computeImpactRadius(input.projectId, input.delta),  // spec/19 step 2
+    // 完整 timeline (不只当前时间点)
+    fullEntityTimelines: await db.entityTimeline.findAll({
+      projectId: input.projectId,
+      entityIds: input.affectedEntityIds,
+    }),
+    // 完整 relations history
+    fullRelationsHistory: await db.entityRelations.findAllHistory({
+      projectId: input.projectId,
+      entityIds: input.affectedEntityIds,
+    }),
+    // 命中章节全文 (有 entity_refs/concept_refs 命中的 chapters)
+    affectedChaptersFullText: await readChapters(input.projectId, input.affectedChapterIds),
+    // 概念表全部
+    allConcepts: await db.concepts.find({ projectId: input.projectId }),
+    // 待处理伏笔全部 + 已 resolved 近 N 个
+    foreshadowingsAll: await db.foreshadowings.find({ projectId: input.projectId, status: { in: [&#39;planted&#39;, &#39;resolved_recent_20&#39;] } }),
+    // 世界观全文
+    worldviewFull: await readWorldviewFull(input.projectId),
+    cardinalRulesConfig: await readCardinalRulesConfig(input.projectId),
+  }
+
+  const systemPrompt = buildValidatorSystemPrompt({
+    base: VALIDATOR_BASE_PROMPT,
+    learnings: base.learnings,
+    cardinalRules: retrieved.cardinalRulesConfig,
+  })
+
+  const retrievedBlock = formatRetrievedForValidator(retrieved)
+
+  const messages: ModelMessage[] = [
+    { role: &#39;system&#39;, content: systemPrompt },
+    { role: &#39;system&#39;, content: retrievedBlock },
+    ...base.recentMessages,
+    { role: &#39;user&#39;, content: input.userInput },
+  ]
+
+  const tokenReport = computeTokenReport(messages, retrieved)
+  checkContextSize(tokenReport, &#39;validator&#39;)
+
+  return { systemPrompt, messages, tokenReport, metadata: { jsonMode: true /* Validator 输出 JSON */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: JSON mode (见 spec/24 §Validator 一致性审 输出 schema)
+<strong>maxTokens</strong>: 16K (proposals 多时,见 spec/24)</p>
+<p><strong>典型 token 占用</strong>:</p>
+<ul>
+<li>mainProposal + cascade + impactRadius: ≈ 10K</li>
+<li>full entity timelines + relations history: ≈ 80K</li>
+<li>affected chapters full text: ≈ 60K</li>
+<li>concepts + foreshadowings + worldview + cardinal-rules: ≈ 50K</li>
+<li><strong>小计</strong>: ≈ 200K (20%)</li>
+</ul>
+<h3 id="3-checker-含-beatanalyzer">3. Checker (含 BeatAnalyzer)</h3>
+<p><strong>装配目标</strong>: 检查节奏 / 情绪 / 短句 / 语气是否符合用户偏好,并跑 BeatAnalyzer 节奏报告。</p>
+<p><strong>必装项</strong>:</p>
+<pre><code class="language-ts">async function buildCheckerContext(input: CheckerInput): Promise&lt;BuildOutput&gt; {
+  const base = await buildBaseContext(input, &#39;checker&#39;)
+
+  const retrieved = {
+    currentChapter: input.chapterContent,
+    previousChapters: await readRecentChapters(input.projectId, input.chapterIndex, { count: 8 }),
+    userExemplars: await readUserExemplars(input.projectId),
+    chapterArc: await readChapterArc(input.projectId, input.chapterIndex),
+    cardinalRulesConfig: await readCardinalRulesConfig(input.projectId),
+    isGoldenChapter: input.chapterIndex &gt;= 1 &amp;&amp; input.chapterIndex &lt;= 3,
+  }
+
+  // ... (类似 Writer/Validator 装配)
+
+  return { ..., metadata: { jsonMode: true /* BeatAnalyzer 输出 JSON, spec/24 */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: JSON mode
+<strong>maxTokens</strong>: 4K</p>
+<p><strong>典型 token 占用</strong>: ≈ 60K (10%)</p>
+<h3 id="4-humanizer">4. Humanizer</h3>
+<p><strong>装配目标</strong>: 把生成痕迹改成自然口语;不需要设定。</p>
+<p><strong>必装项</strong>:</p>
+<pre><code class="language-ts">async function buildHumanizerContext(input: HumanizerInput): Promise&lt;BuildOutput&gt; {
+  const base = await buildBaseContext(input, &#39;humanizer&#39;)
+
+  const retrieved = {
+    targetText: input.text,
+    userExemplars: await readUserExemplars(input.projectId),
+    userIdioms: await readUserIdioms(input.projectId),       // 用户口头禅 / 风格约束
+    projectStyle: await readProjectStyle(input.projectId),
+  }
+  // 注意: 不 retrieve entity / relations / timeline / 章节 — Humanizer 不需要
+  // ...
+  return { ..., metadata: { jsonMode: false /* 输出自然语言改写后文本 */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: 自然语言流式
+<strong>maxTokens</strong>: 不显式设</p>
+<p><strong>典型 token 占用</strong>: ≈ 30K (3%, 极简)</p>
+<h3 id="5-readerpanel">5. ReaderPanel</h3>
+<p><strong>装配目标</strong>: 5 persona 站在读者角度反应当前章节,生成风险报告。</p>
+<p><strong>必装项</strong>:</p>
+<pre><code class="language-ts">async function buildReaderPanelContext(input: ReaderPanelInput): Promise&lt;BuildOutput&gt; {
+  const base = await buildBaseContext(input, &#39;reader-panel&#39;)
+
+  const retrieved = {
+    currentChapter: input.chapterContent,
+    personas: await readPersonas(input.projectId),                // 5 persona 配置
+    conceptTaboos: await db.concepts.find({ projectId: input.projectId, type: &#39;taboo&#39; }),
+    cardinalRulesConfig: await readCardinalRulesConfig(input.projectId),
+    activeForeshadowings: await assembleContext.getActiveForeshadowings({
+      projectId: input.projectId,
+      includeCriticalOverDeadlineWarning: true,                   // 守则 4: 期待感兑现
+    }),
+    rollingPacingMetrics: await getRollingPacingMetrics(input.projectId, { window: 10 }),
+    chapterIndex: input.chapterIndex,
+    isGoldenChapter: input.chapterIndex &gt;= 1 &amp;&amp; input.chapterIndex &lt;= 3,
+  }
+
+  return { ..., metadata: { jsonMode: true /* ReaderPanel 输出 JSON, spec/24 */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: JSON mode
+<strong>maxTokens</strong>: 8K</p>
+<p><strong>典型 token 占用</strong>: ≈ 40K (4%)</p>
+<h3 id="6-reflector">6. Reflector</h3>
+<p><strong>装配目标</strong>: 提炼经验,不读项目数据。</p>
+<p><strong>必装项</strong>:</p>
+<pre><code class="language-ts">async function buildReflectorContext(input: ReflectorInput): Promise&lt;BuildOutput&gt; {
+  // Reflector 不调用 buildBaseContext (它不需要 learnings 注入 — 它是 learnings 的写入者)
+  const retrieved = {
+    changeSetFull: input.changeSetFullData,
+    userDecision: input.userDecision,                              // approve / reject / partial / edited
+    userFeedback: input.feedback,
+    existingLearningsInScope: await db.learnings.find({            // 避免重复学习
+      projectId: input.projectId,
+      scope: { in: input.suggestedScopes },
+    }),
+    cascadeChainSiblings: input.cascadeChainSiblingApprovals,      // 同 cascade 链路其他审批
+  }
+
+  // 不装 mastra_messages, 不装 L4 — 纯学习场景
+  const systemPrompt = buildReflectorSystemPrompt(REFLECTOR_BASE_PROMPT, retrieved)
+
+  const messages: ModelMessage[] = [
+    { role: &#39;system&#39;, content: systemPrompt },
+    { role: &#39;user&#39;, content: formatChangeSetForReflector(retrieved) },
+  ]
+
+  return { systemPrompt, messages, tokenReport, metadata: { jsonMode: true /* spec/24 */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: JSON mode
+<strong>maxTokens</strong>: 2K</p>
+<p><strong>典型 token 占用</strong>: ≈ 15K (1.5%, 极简)</p>
+<h3 id="7-router">7. Router</h3>
+<p><strong>装配目标</strong>: 路由意图 + 模式校验,极简上下文。</p>
+<p><strong>必装项</strong>:</p>
+<pre><code class="language-ts">async function buildRouterContext(input: RouterInput): Promise&lt;BuildOutput&gt; {
+  const base = await buildBaseContext(input, &#39;router&#39;)
+
+  // 不 retrieve 任何 L4 — Router 不需要项目数据
+  // 仅用 base.recentMessages (最近 30 条) + 当前 mode + user input
+
+  const systemPrompt = buildRouterSystemPrompt(ROUTER_BASE_PROMPT, base.learnings, input.currentMode)
+
+  const messages: ModelMessage[] = [
+    { role: &#39;system&#39;, content: systemPrompt },
+    ...base.recentMessages.slice(-5),                              // Router 只看最近 5 条够了
+    { role: &#39;user&#39;, content: input.userInput },
+  ]
+
+  return { ..., metadata: { jsonMode: true /* Router 输出 JSON, spec/24 */, ... } }
+}
+</code></pre>
+<p><strong>输出形态</strong>: JSON mode
+<strong>maxTokens</strong>: 256</p>
+<p><strong>典型 token 占用</strong>: ≈ 4K (0.4%)</p>
+<h2 id="装配后的-messages-顺序-固定">装配后的 messages 顺序 (固定)</h2>
+<p>每个 context builder 装出的 messages 数组,顺序统一:</p>
+<pre><code class="language-ts">[
+  { role: &#39;system&#39;, content: systemPrompt },                       // base + agent 特化 + L3 learnings
+  { role: &#39;system&#39;, content: retrievedBlock },                     // L4 retrieve (按 agent 契约)
+  { role: &#39;assistant&#39;, content: &#39;&lt;历史摘要&gt;...&#39; },                  // optional, 仅 compressedMessages.enabled 时
+  ...recentMessages,                                                // L2 mastra_messages 最近 N 条
+  { role: &#39;user&#39;, content: &#39;(上次提议被拒, 原因: ...)&#39; },           // optional rejection
+  { role: &#39;user&#39;, content: userInput },
+]
+</code></pre>
+<h2 id="token-计算实现">token 计算实现</h2>
+<p>用 tiktoken cl100k_base (≈ GPT-4 tokenizer) 估算,加 5% 安全 margin:</p>
+<pre><code class="language-ts">import { encoding_for_model } from &#39;tiktoken&#39;
+const enc = encoding_for_model(&#39;gpt-4&#39;)
+
+export function countTokens(text: string): number {
+  return Math.ceil(enc.encode(text).length * 1.05)        // 5% 安全 margin
+}
+
+export function countMessageTokens(msg: ModelMessage): number {
+  return countTokens(JSON.stringify(msg)) + 4              // OpenAI 公式 overhead
+}
+</code></pre>
+<blockquote>
+<p>⚠ DeepSeek V4 真实 tokenizer 与 GPT-4 略有差异 (中文 token 化更紧),tiktoken 估算误差 ±5%。加 margin 够用,后续切换到 DeepSeek 官方 tokenizer (如提供)。</p>
+</blockquote>
+<h2 id="learnings-注入到-system-prompt">learnings 注入到 system prompt</h2>
+<pre><code class="language-ts">function buildSystemPromptWithLearnings(base: string, learnings: Learning[]): string {
+  if (learnings.length === 0) return base
+
+  const block = learnings
+    .map(l =&gt; `- ${l.text}  (置信度 ${l.weight.toFixed(2)}${l.scope === &#39;cardinal_rule&#39; ? &#39;, 守则&#39; : &#39;&#39;})`)
+    .join(&#39;\n&#39;)
+
+  return `${base}
+
+## 用户偏好与项目经验 (Reflector 沉淀)
+以下经验来自历次审批反馈,优先级由高到低。**遇到冲突时这些经验优先于通用风格**。
+
+${block}`
+}
+</code></pre>
+<p><code>agentScopes(agentName)</code> 详见 <code>lib/agents/context/base.ts</code> (本章顶部代码)。</p>
+<h2 id="调试与遥测">调试与遥测</h2>
+<p>每次 context builder 调用,在 LibSQL 写一条 trace:</p>
+<pre><code class="language-sql">CREATE TABLE prompt_traces (
+  id TEXT PRIMARY KEY,
+  thread_id TEXT,
+  agent_name TEXT,
+  mode TEXT,
+  json_mode INTEGER,                -- bool
+  token_report TEXT,                -- json
+  metadata TEXT,                    -- json (learningsApplied / retrievedKeys / jsonMode / etc.)
+  duration_ms INTEGER,
+  created_at INTEGER
+);
+</code></pre>
+<p>Settings → &quot;Prompt 装配诊断&quot;面板:</p>
+<ul>
+<li>列出最近 50 条 prompt_traces</li>
+<li>点击展开看完整 system prompt + 装配的各部分 token 占比 (饼图)</li>
+<li>&quot;导出 prompt 装配快照&quot; 用于 bug report</li>
+<li>警示色: total &gt; 800K 黄色,&gt; 950K 红色</li>
+</ul>
+<p>(开发期工具,生产可关 — <code>settings.dev.tracePrompts</code>)</p>
+<h2 id="与-mastra-streamvnext-的衔接">与 Mastra streamVNext 的衔接</h2>
+<pre><code class="language-ts">import { streamWithGuard } from &#39;@/lib/agents/memory-guard&#39;
+
+const ctx = await buildWriterWriteContext(input)
+
+const stream = await streamWithGuard(writerAgent, ctx.messages, {
+  memory: { thread: ctx.threadId, resource: projectId },
+  providerOptions: ctx.metadata.jsonMode
+    ? { deepseek: { response_format: { type: &#39;json_object&#39; } } }
+    : undefined,
+  // system 已经在 messages[0] 了, 不再传 system 参数
+})
+
+await db.runtime.prompt_traces.insert({
+  id: ulid(),
+  thread_id: ctx.threadId,
+  agent_name: input.agentName,
+  mode: input.mode,
+  json_mode: ctx.metadata.jsonMode ? 1 : 0,
+  token_report: JSON.stringify(ctx.tokenReport),
+  metadata: JSON.stringify(ctx.metadata),
+  duration_ms: Date.now() - startedAt,
+  created_at: Date.now(),
+})
+</code></pre>
+<p><strong>注意</strong>:<code>streamVNext</code> 时<strong>不</strong>自己再 inject lastMessages — 因为我们已经手工塞 recent_messages 了。具体策略:Mastra <code>lastMessages: 30</code> 配置只用于其他直接调 streamVNext 的场景(若有);通过 context builder 装配的 messages 数组要求 Mastra <strong>不重复 append</strong>。详见 spec/22 §与 Mastra 的衔接细节。</p>
+<h2 id="与-mastra-14x-lastmessages-重复风险">与 Mastra 1.4.x lastMessages 重复风险</h2>
+<blockquote>
+<p>spec/00 audit 项: <code>Memory.options.lastMessages: 30</code> 与 streamVNext 显式传 messages 数组的交互。如果 Mastra 会 dedupe 那 OK;如果会重复 append 30 条历史就要切到 <code>lastMessages: 0</code> + 自己装配。</p>
+</blockquote>
+<p>默认 Mastra 不重复(基于其设计意图),如发现重复则切换。</p>
+<h2 id="与五大守则的协同-spec25">与五大守则的协同 (spec/25)</h2>
+<p>Writer / Validator / Checker / ReaderPanel 的 context builder 都装配了 <code>cardinalRulesConfig</code> + 相关派生数据 (chaptersSinceLastMilestone / valueAxes / activeForeshadowings + 等)。这些数据进入 system prompt 后,模型生成时即&quot;看见&quot;守则约束。</p>
+<p>后续 Validator + ReaderPanel + ArcTracker + BeatAnalyzer 跑检测器,产出 <code>CardinalRulesReport</code> (spec/25 §风险报告输出) 进 ApprovalCard。</p>
+<h2 id="测试-与-spec14-对齐">测试 (与 spec/14 对齐)</h2>
+<pre><code class="language-ts">describe(&#39;per-agent context builders&#39;, () =&gt; {
+  it(&#39;Writer write 模式装配后, total token &lt; 1M&#39;, () =&gt; { /* ... */ })
+  it(&#39;Writer 黄金三章 (1-3) 装配 cardinalRulesConfig + isGoldenChapter=true&#39;, () =&gt; { /* ... */ })
+  it(&#39;Validator 装 full timeline 不漏一个相关 entity&#39;, () =&gt; { /* ... */ })
+  it(&#39;Checker 不装 entity / relations / timeline (它不需要)&#39;, () =&gt; { /* ... */ })
+  it(&#39;Humanizer 不装 entity / relations / timeline (它不需要)&#39;, () =&gt; { /* ... */ })
+  it(&#39;Reflector 不装 mastra_messages (它是写入者)&#39;, () =&gt; { /* ... */ })
+  it(&#39;Router 仅装最近 5 条 messages&#39;, () =&gt; { /* ... */ })
+  it(&#39;总 token &gt; 1M 时抛 ContextOverflowError + 详细诊断&#39;, () =&gt; { /* ... */ })
+  it(&#39;总 token &gt; 800K 时 logger.warn + UI toast&#39;, () =&gt; { /* ... */ })
+  it(&#39;cardinal_rule scope learning top-1 永远保留&#39;, () =&gt; { /* ... */ })
+  it(&#39;jsonMode metadata 标记正确 (Writer/Humanizer false, 其他 true)&#39;, () =&gt; { /* ... */ })
+})
+</code></pre>
+<h2 id="不解决的问题-待办">不解决的问题 / 待办</h2>
+<ul>
+<li><strong>DeepSeek V4 真实 tokenizer</strong>: 默认 tiktoken + 5% margin,实查 (spec/00 §A) 后微调</li>
+<li><strong>Mastra <code>lastMessages</code> 与显式 messages 重复风险</strong>: spec/00 audit 一并核对</li>
+<li><strong>超长章节的 retrieve 实操</strong>: 单章 50K+ 字时 readRecentChapters 5 章可能 250K+,context builder 不裁但要监控;若高频触发警报再开 spec/26 专题</li>
+<li><strong>streaming 中途的 token 监控</strong>: 装配前算 total;若 tool call 后台返回大量数据可能再次接近上限,设计 <code>onToolCall</code> hook 在结果回写前对超大 tool result 做摘要 (W11+)</li>
+<li><strong>多模态 (图)</strong>: 完全不考虑,纯文本</li>
+</ul>
+  </main>
+</body>
+</html>

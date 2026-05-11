@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 21 — 事实查询工具 (queryFacts) - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/21-fact-query.html</span>
+</nav>
+<h1 id="spec-21-事实查询工具-queryfacts">Spec 21 — 事实查询工具 (queryFacts)</h1>
+<blockquote>
+<p>实现 plan/11-knowledge-graph.md L3 工具层第三项。本文档定义 <code>queryFacts</code> 工具签名、4 种查询模式、UI 查询面板、Router 在 discuss 模式下的优先调用策略。</p>
+</blockquote>
+<h2 id="用途">用途</h2>
+<p>作者写作时随时会冒出&quot;事实查询&quot;问题:</p>
+<ul>
+<li>&quot;林川 ch_50 时多大?&quot;</li>
+<li>&quot;林川和王小芳关系演变?他们最后一次见面是哪章?&quot;</li>
+<li>&quot;林川以前对女上司说过什么类似的台词?&quot;</li>
+<li>&quot;这本书提过怀表的所有段落?&quot;</li>
+<li>&quot;ch_005 之前所有提到过北京站的段落?&quot;</li>
+</ul>
+<p>这些都是<strong>事实查询</strong>,有确定答案,不需要 LLM 创造,直接查 SQLite + paragraph_embeddings 即可。<code>queryFacts</code> 工具把这些查询模式标准化,让 Router(discuss 模式)和 UI 查询面板共用。</p>
+<h2 id="设计原则">设计原则</h2>
+<ol>
+<li><strong>不调 LLM</strong> — 4 种核心模式都是 SQL + 向量索引,毫秒响应</li>
+<li><strong>结构化输入,LLM 友好输出</strong> — 让 Router 直接拿结果做答(配合短的 wrapping 即可)</li>
+<li><strong>结果含引用</strong> — 每条结果带 <code>sourcePath</code> + <code>anchorId</code>,UI 可点击跳转</li>
+<li><strong>Discuss 模式优先级</strong> — Router 收到用户问题先尝试解析为 queryFacts,失败再走自由 LLM</li>
+</ol>
+<h2 id="4-种查询模式">4 种查询模式</h2>
+<h3 id="模式-1-entity-at实体在某章节的状态">模式 1 — <code>entity-at</code>:实体在某章节的状态</h3>
+<pre><code>&quot;林川 ch_50 时多大?&quot;
+&quot;王小芳 ch_30 时身份?&quot;
+&quot;主角 ch_100 时在哪个城市?&quot;
+</code></pre>
+<pre><code class="language-ts">type EntityAtQuery = {
+  kind: &#39;entity-at&#39;
+  entityId: string
+  atChapter: string                      // ch_050 (或 &#39;now&#39; = 最新已写章节)
+  attribute?: string                     // 不传则返回所有 attribute
+}
+
+type EntityAtResult = {
+  entityId: string
+  canonicalName: string
+  atChapter: string
+  attributes: Record&lt;string, {
+    value: string
+    source: string                       // &#39;frontmatter&#39; | &#39;narrative&#39; | &#39;user-edit&#39;
+    confidence: number
+    sourcePath: string
+  }&gt;
+}
+</code></pre>
+<p>实现:</p>
+<pre><code class="language-ts">async function queryEntityAt(projectId: string, q: EntityAtQuery): Promise&lt;EntityAtResult&gt; {
+  const entity = await db.entities.get(projectId, q.entityId)
+  if (!entity) throw new ToolValidationError(&#39;ENTITY_NOT_FOUND&#39;, q.entityId)
+
+  const targetCh = q.atChapter === &#39;now&#39; ? await getLatestChapter(projectId) : q.atChapter
+  const attrs = q.attribute ? [q.attribute] : ALL_ATTRIBUTES
+
+  const result: EntityAtResult = {
+    entityId: q.entityId,
+    canonicalName: entity.canonical_name,
+    atChapter: targetCh,
+    attributes: {},
+  }
+
+  for (const attr of attrs) {
+    const row = await db.execute(`
+      SELECT value, source, confidence, declared_in
+      FROM entity_timeline
+      WHERE entity_id = ? AND attribute = ?
+        AND valid_from_chapter &lt;= ?
+        AND (valid_to_chapter IS NULL OR valid_to_chapter &gt; ?)
+      ORDER BY confidence DESC,
+               CASE source WHEN &#39;user-edit&#39; THEN 0 WHEN &#39;frontmatter&#39; THEN 1 ELSE 2 END
+      LIMIT 1
+    `, q.entityId, attr, targetCh, targetCh)
+    if (row[0]) result.attributes[attr] = {
+      value: row[0].value,
+      source: row[0].source,
+      confidence: row[0].confidence,
+      sourcePath: row[0].declared_in,
+    }
+  }
+  return result
+}
+</code></pre>
+<h3 id="模式-2-relations-of实体的所有关系">模式 2 — <code>relations-of</code>:实体的所有关系</h3>
+<pre><code>&quot;林川的关系图&quot;
+&quot;林川 ch_30 时的活跃关系&quot;
+&quot;王老板和林川的关系演变&quot;
+</code></pre>
+<pre><code class="language-ts">type RelationsOfQuery = {
+  kind: &#39;relations-of&#39;
+  entityId: string
+  atChapter?: string                     // 不传 = 全历史时间线
+  withEntityId?: string                  // 仅返回与某 entity 的关系
+  kinds?: string[]                       // 仅特定 kind (e.g. [&#39;mentor&#39;, &#39;enemy&#39;])
+}
+
+type RelationsOfResult = {
+  entityId: string
+  canonicalName: string
+  relations: {
+    sourceId: string
+    targetId: string
+    targetName: string
+    kind: string
+    sinceChapter?: string
+    untilChapter?: string
+    strength: number
+    summary: string
+    evidence: { file: string; anchorId?: string; quote?: string }[]
+  }[]
+  timeline?: { chapter: string; event: string }[]   // 仅 withEntityId 模式: 关系演变事件序
+}
+</code></pre>
+<p>实现:</p>
+<pre><code class="language-ts">async function queryRelationsOf(projectId: string, q: RelationsOfQuery): Promise&lt;RelationsOfResult&gt; {
+  let sql = `
+    SELECT er.*, e2.canonical_name AS target_name
+    FROM entity_relations er
+    JOIN entities e2 ON er.target_id = e2.id
+    WHERE er.source_id = ?
+  `
+  const args: any[] = [q.entityId]
+
+  if (q.atChapter) {
+    sql += ` AND (er.since_chapter IS NULL OR er.since_chapter &lt;= ?)
+            AND (er.until_chapter IS NULL OR er.until_chapter &gt; ?) `
+    args.push(q.atChapter, q.atChapter)
+  }
+  if (q.withEntityId) {
+    sql += ` AND er.target_id = ? `
+    args.push(q.withEntityId)
+  }
+  if (q.kinds &amp;&amp; q.kinds.length &gt; 0) {
+    sql += ` AND er.kind IN (${q.kinds.map(() =&gt; &#39;?&#39;).join(&#39;,&#39;)}) `
+    args.push(...q.kinds)
+  }
+  sql += ` ORDER BY er.confidence DESC, er.strength DESC `
+  const rows = await db.execute(sql, ...args)
+
+  const result: RelationsOfResult = {
+    entityId: q.entityId,
+    canonicalName: (await db.entities.get(projectId, q.entityId)).canonical_name,
+    relations: rows.map(r =&gt; ({
+      sourceId: r.source_id,
+      targetId: r.target_id,
+      targetName: r.target_name,
+      kind: r.kind,
+      sinceChapter: r.since_chapter,
+      untilChapter: r.until_chapter,
+      strength: r.strength,
+      summary: buildRelationSummary(r),
+      evidence: [{ file: r.evidence_file, anchorId: r.evidence_anchor, quote: r.evidence_quote }],
+    })),
+  }
+
+  // 关系演变 timeline: 仅 withEntityId 模式生成
+  if (q.withEntityId) {
+    const events: { chapter: string; event: string }[] = []
+    for (const r of rows) {
+      if (r.since_chapter) events.push({ chapter: r.since_chapter, event: `建立 ${r.kind} 关系 (强度 ${r.strength})` })
+      if (r.until_chapter) events.push({ chapter: r.until_chapter, event: `${r.kind} 关系结束` })
+    }
+    events.sort((a, b) =&gt; a.chapter.localeCompare(b.chapter))
+    result.timeline = events
+  }
+  return result
+}
+</code></pre>
+<h3 id="模式-3-mentions-of实体在文中的所有提及">模式 3 — <code>mentions-of</code>:实体在文中的所有提及</h3>
+<pre><code>&quot;林川在 ch_001-005 内的所有出场段落&quot;
+&quot;怀表(item)的所有提及&quot;
+&quot;北京站这个地点出现过几次&quot;
+</code></pre>
+<pre><code class="language-ts">type MentionsOfQuery = {
+  kind: &#39;mentions-of&#39;
+  entityId: string                       // 或 conceptId (二选一)
+  conceptId?: string
+  inRange?: { from: string; to: string } // chapter range
+  fileGlob?: string                      // &#39;chapters/*&#39; / &#39;settings/characters/*&#39;
+  limit?: number                         // 默认 50
+}
+
+type MentionsOfResult = {
+  totalCount: number                     // 完整命中数 (即使有 limit)
+  mentions: {
+    anchorId: string
+    sourcePath: string
+    headingPath: string
+    snippet: string
+    matchedText: string
+    intraOffset: number
+  }[]
+}
+</code></pre>
+<p>实现:</p>
+<pre><code class="language-ts">async function queryMentionsOf(projectId: string, q: MentionsOfQuery): Promise&lt;MentionsOfResult&gt; {
+  const isEntity = !!q.entityId
+  const table = isEntity ? &#39;entity_refs&#39; : &#39;concept_refs&#39;
+  const fk = isEntity ? &#39;entity_id&#39; : &#39;concept_id&#39;
+  const targetId = isEntity ? q.entityId : q.conceptId
+
+  let sql = `
+    SELECT r.*, pa.heading_path, pa.file_path
+    FROM ${table} r
+    JOIN paragraph_anchors pa ON r.anchor_id = pa.anchor_id
+    WHERE r.${fk} = ? AND pa.deleted_at IS NULL
+  `
+  const args: any[] = [targetId]
+
+  if (q.fileGlob) { sql += ` AND pa.file_path GLOB ? `; args.push(q.fileGlob) }
+  if (q.inRange) {
+    sql += ` AND chapter_within_range(pa.file_path, ?, ?) = 1 `
+    args.push(q.inRange.from, q.inRange.to)
+  }
+
+  // 总数 (count)
+  const [countRow] = await db.execute(`SELECT COUNT(*) AS n FROM (${sql})`, ...args)
+
+  // limit 取详情
+  sql += ` ORDER BY pa.file_path, r.position_from LIMIT ? `
+  args.push(q.limit ?? 50)
+  const rows = await db.execute(sql, ...args)
+
+  return {
+    totalCount: countRow.n,
+    mentions: rows.map(r =&gt; ({
+      anchorId: r.anchor_id,
+      sourcePath: r.file_path,
+      headingPath: r.heading_path ?? &#39;&#39;,
+      snippet: r.snippet,
+      matchedText: r.matched_text,
+      intraOffset: r.intra_paragraph_offset ?? r.position_from,
+    })),
+  }
+}
+</code></pre>
+<h3 id="模式-4-semantic-search语义相似检索">模式 4 — <code>semantic-search</code>:语义相似检索</h3>
+<pre><code>&quot;林川以前对女上司说过什么类似台词?&quot;
+&quot;和这段类似情绪的段落&quot;
+&quot;主角第一次心动的描写&quot;
+</code></pre>
+<pre><code class="language-ts">type SemanticSearchQuery = {
+  kind: &#39;semantic-search&#39;
+  text: string                           // 查询自然语言
+  topK?: number                          // 默认 10
+  filterFile?: string                    // glob
+  excludeAnchors?: string[]
+  minSimilarity?: number                 // 默认 0.6
+}
+
+type SemanticSearchResult = {
+  query: string
+  results: {
+    anchorId: string
+    similarity: number
+    sourcePath: string
+    headingPath: string
+    snippet: string
+  }[]
+}
+</code></pre>
+<p>实现:直接调 spec/18 §<code>semanticSearch</code>。</p>
+<h2 id="工具签名">工具签名</h2>
+<pre><code class="language-ts">// lib/agents/tools/query-facts.ts
+export const queryFacts = tool({
+  description: &#39;事实查询: 实体状态 / 关系 / 提及 / 语义相关。直查索引,不调 LLM&#39;,
+  inputSchema: z.object({
+    query: z.discriminatedUnion(&#39;kind&#39;, [
+      z.object({
+        kind: z.literal(&#39;entity-at&#39;),
+        entityId: z.string(),
+        atChapter: z.string(),
+        attribute: z.string().optional(),
+      }),
+      z.object({
+        kind: z.literal(&#39;relations-of&#39;),
+        entityId: z.string(),
+        atChapter: z.string().optional(),
+        withEntityId: z.string().optional(),
+        kinds: z.array(z.string()).optional(),
+      }),
+      z.object({
+        kind: z.literal(&#39;mentions-of&#39;),
+        entityId: z.string().optional(),
+        conceptId: z.string().optional(),
+        inRange: z.object({ from: z.string(), to: z.string() }).optional(),
+        fileGlob: z.string().optional(),
+        limit: z.number().int().min(1).max(200).default(50),
+      }).refine(q =&gt; q.entityId || q.conceptId, &#39;必须提供 entityId 或 conceptId&#39;),
+      z.object({
+        kind: z.literal(&#39;semantic-search&#39;),
+        text: z.string().min(1),
+        topK: z.number().int().min(1).max(50).default(10),
+        filterFile: z.string().optional(),
+        excludeAnchors: z.array(z.string()).optional(),
+        minSimilarity: z.number().min(0).max(1).default(0.6),
+      }),
+    ]),
+  }),
+  outputSchema: z.discriminatedUnion(&#39;kind&#39;, [
+    /* 4 种结果 schema 各一 */
+  ]),
+  execute: async ({ query }, { projectId }) =&gt; {
+    switch (query.kind) {
+      case &#39;entity-at&#39;: return { kind: &#39;entity-at&#39;, ...await queryEntityAt(projectId, query) }
+      case &#39;relations-of&#39;: return { kind: &#39;relations-of&#39;, ...await queryRelationsOf(projectId, query) }
+      case &#39;mentions-of&#39;: return { kind: &#39;mentions-of&#39;, ...await queryMentionsOf(projectId, query) }
+      case &#39;semantic-search&#39;: return { kind: &#39;semantic-search&#39;, ...await querySemanticSearch(projectId, query) }
+    }
+  },
+})
+</code></pre>
+<p>工具分配 (附录 spec/02):<strong>Router</strong>(discuss 模式)+ <strong>Writer</strong>(写章节时偶尔需要查事实)。</p>
+<h2 id="router-集成-discuss-模式优先级">Router 集成 (Discuss 模式优先级)</h2>
+<p>Router 收到 discuss 模式问题后,先尝试解析为 queryFacts:</p>
+<pre><code class="language-ts">// lib/agents/router/discuss-handler.ts
+export async function handleDiscussMessage(projectId: string, message: string) {
+  // 1. 先尝试结构化解析 (规则 + 短 prompt)
+  const parsed = await tryParseAsFactQuery(message)
+  if (parsed.success) {
+    const result = await queryFacts.execute({ query: parsed.query }, { projectId })
+    return await formatFactResult(result, message)  // LLM 包装为自然语言回答
+  }
+  // 2. 失败 → 走自由 LLM
+  return await freeFormDiscuss(projectId, message)
+}
+
+async function tryParseAsFactQuery(message: string): Promise&lt;{ success: boolean; query?: any }&gt; {
+  // 用 LLM Flash 短 prompt 分类 + 抽参数 (200 token 内)
+  // 二期可加规则前置匹配 (e.g. &quot;X 几岁&quot; → entity-at + attribute=age)
+  const result = await callStructured(&#39;flash&#39;, `
+判定用户问题是否可被以下 4 种模式之一回答 (输出 JSON):
+1. entity-at — 某实体在某章节的状态
+2. relations-of — 某实体的关系
+3. mentions-of — 某实体的所有提及
+4. semantic-search — 语义相似的段落
+
+不能 → { &quot;isFactQuery&quot;: false }
+能 → { &quot;isFactQuery&quot;: true, &quot;kind&quot;: &quot;...&quot;, &quot;params&quot;: {...} }
+
+用户问题: ${message}
+当前最新章节: ${await getLatestChapter(projectId)}
+项目中的实体列表: ${await getEntityListSummary(projectId)}
+  `, factQueryParseSchema, { defaults: { isFactQuery: false } })
+  return result.isFactQuery ? { success: true, query: result } : { success: false }
+}
+</code></pre>
+<p><code>formatFactResult</code> 用 Flash 短 prompt 把结构化结果包成自然语言:</p>
+<pre><code class="language-ts">async function formatFactResult(result: any, originalQuestion: string): Promise&lt;string&gt; {
+  // 简化: 直接 Markdown 格式拼,不调 LLM (可读性已经足够)
+  switch (result.kind) {
+    case &#39;entity-at&#39;: return formatEntityAt(result, originalQuestion)
+    case &#39;relations-of&#39;: return formatRelationsOf(result, originalQuestion)
+    case &#39;mentions-of&#39;: return formatMentionsOf(result, originalQuestion)
+    case &#39;semantic-search&#39;: return formatSemanticSearch(result, originalQuestion)
+  }
+}
+</code></pre>
+<h2 id="ui-查询面板">UI 查询面板</h2>
+<p>新增组件 <code>components/panels/FactQueryPanel.tsx</code>,通过 <code>Cmd+K</code>(命令面板)选 &quot;查询事实&quot; 进入。</p>
+<pre><code>┌─────────────────────────────────────────┐
+│ 查询模式: ◉ 实体状态  ○ 关系  ○ 提及  ○ 语义搜索 │
+├─────────────────────────────────────────┤
+│ 实体: [林川 ▼]                            │
+│ 章节: [ch_050 ▼]                         │
+│ 属性: [全部 ▼]                            │
+│                                         │
+│ [查询]                                   │
+├─────────────────────────────────────────┤
+│ 结果:                                    │
+│  林川 在 ch_050 时:                       │
+│    年龄: 31 岁 (来源: ch_045 § 3, 置信 75) │
+│    位置: 北京 (来源: frontmatter)         │
+│    身份: 副总 (来源: ch_048 § 7, 置信 80)  │
+│    [跳转 ch_045 § 3]                      │
+└─────────────────────────────────────────┘
+</code></pre>
+<p>实现要点:</p>
+<ul>
+<li>4 个模式独立 form,切换显示对应输入</li>
+<li>实体下拉走 <code>db.entities.search</code> (LIKE,二期换为 fuzzy)</li>
+<li>章节下拉自动列出该项目所有章节</li>
+<li>结果区滚动 + 点击 anchorId 跳转编辑器</li>
+</ul>
+<h2 id="性能目标">性能目标</h2>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>数据规模</th>
+<th>目标耗时</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>entity-at</td>
+<td>任意</td>
+<td>&lt; 5ms (单行 SQL)</td>
+</tr>
+<tr>
+<td>relations-of</td>
+<td>50 关系</td>
+<td>&lt; 10ms</td>
+</tr>
+<tr>
+<td>mentions-of</td>
+<td>1000 命中</td>
+<td>&lt; 30ms (含 limit)</td>
+</tr>
+<tr>
+<td>semantic-search</td>
+<td>5K 段全扫</td>
+<td>&lt; 100ms (依赖 spec/18 选型)</td>
+</tr>
+</tbody></table>
+<p>LLM 包装(format / parse)单独 ~200-500ms,但用户感知到的是查询本身。</p>
+<h2 id="与-backlinks-面板对接-spec05">与 backlinks 面板对接 (spec/05)</h2>
+<p>backlinks 面板(&quot;被 N 处引用&quot;)已有,可重构为 queryFacts mentions-of 的特化 UI。当前不必改,二期统一。</p>
+<h2 id="不做什么">不做什么</h2>
+<ul>
+<li><strong>不做 LLM 自由回答</strong> — discuss 模式遇到 fact query 优先走 queryFacts;无法解析才走 LLM。LLM 不应&quot;猜&quot;事实</li>
+<li><strong>不做跨项目查询</strong> — queryFacts 受 projectId 隔离,与 Memory <code>resource</code> 一致</li>
+<li><strong>不做模糊实体匹配</strong> — entityId 必须精确;模糊匹配走前端的 entity selector + AC trie</li>
+<li><strong>不做时间轴自动推理</strong> — entity-at 仅查 entity_timeline 已落库的行,不在线推理&quot;林川 ch_50 时多大 = ch_001 时 28 + (50-1) × 时间步长&quot;。这种推理留给 narrative 抽取 Worker 在写章节时落库</li>
+</ul>
+<h2 id="测试">测试</h2>
+<table>
+<thead>
+<tr>
+<th>测试</th>
+<th>类型</th>
+<th>覆盖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>query-entity-at.test.ts</code></td>
+<td>集成</td>
+<td>多 valid 区间、多 source 仲裁、无数据</td>
+</tr>
+<tr>
+<td><code>query-relations-of.test.ts</code></td>
+<td>集成</td>
+<td>atChapter 过滤、withEntityId、kinds 过滤、timeline 演变</td>
+</tr>
+<tr>
+<td><code>query-mentions-of.test.ts</code></td>
+<td>集成</td>
+<td>inRange / fileGlob / limit / totalCount 准确</td>
+</tr>
+<tr>
+<td><code>query-semantic-search.test.ts</code></td>
+<td>集成</td>
+<td>minSimilarity 过滤、excludeAnchors</td>
+</tr>
+<tr>
+<td><code>discuss-handler.test.ts</code></td>
+<td>集成</td>
+<td>LLM 解析意图正确率;fallback 到自由 LLM</td>
+</tr>
+<tr>
+<td><code>fact-query-panel.test.tsx</code></td>
+<td>组件</td>
+<td>4 模式 form 切换、实体下拉、结果点击跳转</td>
+</tr>
+</tbody></table>
+<h2 id="已决策项">已决策项</h2>
+<p>✅ <strong>Discuss 自由 LLM fallback 路径</strong>: 全部尝试 queryFacts → 解析不成功才走自由 LLM。代价 = 每个 discuss 消息多一次 Flash ~50ms。高频规则匹配模式 (e.g. &quot;X 是谁&quot; / &quot;X 在哪&quot; 等) 后续可加规则前置匹配降本。</p>
+<p>✅ <strong>UI 查询面板形态</strong>: Cmd+K → modal 快进快出。理由 = discuss 是低频高价值操作, modal 不占编辑器空间; 右侧固定面板会侵占已经很挤的写作视口 (spec/12 §快捷键已为 Cmd+K 留位)。若用户高频用 (单 session &gt; 20 次), 提供&quot;固定到右侧&quot;开关。</p>
+  </main>
+</body>
+</html>

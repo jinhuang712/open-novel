@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 15 — 首启引导 (Onboarding) - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/15-onboarding.html</span>
+</nav>
+<h1 id="spec-15-首启引导-onboarding">Spec 15 — 首启引导 (Onboarding)</h1>
+<blockquote>
+<p>文档 audit 发现:README §快速启动只 3 步、plan/07 §初次启动 4 步,<strong>没有真正的 wizard / 样例项目 / 7 Agent + 三模式 + 审批流的图文教程</strong>。新作者用了 30 秒不知道点啥就走了。本文档补齐。</p>
+</blockquote>
+<h2 id="设计目标">设计目标</h2>
+<ul>
+<li><strong>3 分钟内首次产出</strong>: 从启动到看到 AI 生成的第一段世界观,不超过 3 分钟</li>
+<li><strong>不强迫教程</strong>: 老用户能 skip 全部 onboarding,直奔创建项目</li>
+<li><strong>概念渐进</strong>: 7 Agent / 三模式 / 审批流 — 这些一上来就抛会吓跑作者。<strong>用到时才解释,不一次性灌</strong></li>
+<li><strong>样例项目可一键加载</strong>: 有现成的&quot;重生互联网&quot;样例,跑一遍能看完整产品形态</li>
+</ul>
+<h2 id="首启流程-firstrunflow">首启流程 (FirstRunFlow)</h2>
+<pre><code>应用启动
+   ↓
+检测 ~/.open-novel/settings.json
+   ↓
+不存在 (首启) → 进入 OnboardingWizard
+存在 → 跳过 wizard,主界面
+</code></pre>
+<h3 id="onboardingwizard-4-步">OnboardingWizard 4 步</h3>
+<pre><code>┌─ 欢迎到 Open Novel ───────────────────────────────────────┐
+│  Step 1/4: 你是谁?                                        │
+│                                                           │
+│  ○ 已经在番茄写过书的作者                                  │
+│  ○ 想试试 AI 辅助写网文                                    │
+│  ○ 学生 / 业余写作                                         │
+│  ○ 跳过这个 (直接用)                                       │
+│                                                           │
+│              [跳过全部]    [下一步]                        │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>(用户身份不影响功能,但用于 telemetry / 后续推荐节奏 — 仅记录。)</p>
+<pre><code>┌─ Step 2/4: 输入 DeepSeek API Key ──────────────────────────┐
+│                                                           │
+│  Open Novel 用 DeepSeek V4 跑创作。需要你的 API key。       │
+│                                                           │
+│  📋 怎么拿: https://platform.deepseek.com/api_keys          │
+│  💰 成本预估: 写 10 万字小说约消耗 $X (基于 Flash + Pro 混用) │
+│  🔒 Key 仅存于你本地: ~/.open-novel/settings.json          │
+│                                                           │
+│  [_____________________________________] [测试连接]        │
+│                                                           │
+│              [上一步]    [跳过 — 用 Mock LLM]   [下一步]    │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>&quot;跳过 — 用 Mock LLM&quot;: 进入 Mock 模式 (二期实现),让用户先看 UI 再决定是否买 key。当前 Mock 模式仅返回 placeholder 文本,但流程走通。</p>
+<pre><code>┌─ Step 3/4: 创建你的第一个项目 ────────────────────────────┐
+│                                                           │
+│  ○ 加载样例项目 &quot;重生互联网&quot;  (推荐 — 5 分钟看完整流程)      │
+│  ○ 创建空白项目                                            │
+│                                                           │
+│  ─ 创建空白时填:                                            │
+│  项目名:    [______________]                               │
+│  流派:      [▼ 都市重生   ]                                │
+│  风格描述: [幽默轻松,节奏快]                              │
+│  故事种子: [一个程序员重生回 2010 年互联网创业]             │
+│                                                           │
+│              [上一步]   [创建并进入]                        │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<p>加载样例: 把 <code>lib/onboarding/sample-project.zip</code> 解压到 <code>~/.open-novel/workspaces/proj_sample_zhongsheng_xxxx/</code>,自动选中。样例含:</p>
+<ul>
+<li>已生成的 worldview.md / outline.md / 3 个 character.md</li>
+<li>第 1 章已写完 outline + draft (3000 字)</li>
+<li>历史: 5 条审批记录 + 3 条 learnings (展示反馈学习)</li>
+</ul>
+<pre><code>┌─ Step 4/4: 三件事先了解 ───────────────────────────────────┐
+│                                                           │
+│  Open Novel 与 ChatGPT 不同的三件事:                       │
+│                                                           │
+│  1️⃣  三种模式 (右下 ChatBox 顶部)                           │
+│      Discuss = 检索讨论,Plan = 改设定,Write = 写章节       │
+│      📌 焦点在输入框时按 Tab 循环切换                       │
+│                                                           │
+│  2️⃣  AI 不会偷偷改文件                                     │
+│      所有写入都会先弹审批卡 (右下),你点同意才落盘           │
+│                                                           │
+│  3️⃣  设定改了系统会扫所有章节                               │
+│      把主角性别从男改女,系统会列出所有需要同步改的段落      │
+│                                                           │
+│              [明白了,开始写吧]                             │
+└────────────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="主界面渐进式-tooltip">主界面渐进式 Tooltip</h2>
+<p>进主界面后,<strong>第一次出现某种状态时</strong>弹一次性 tooltip (用 react-joyride 或自写):</p>
+<table>
+<thead>
+<tr>
+<th>触发</th>
+<th>tooltip</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>首次焦点 ChatBox</td>
+<td>&quot;试试按 Tab 切换 plan/write/discuss 模式&quot;</td>
+</tr>
+<tr>
+<td>首次出现 ApprovalCard</td>
+<td>&quot;AI 想改文件,先看 diff 再决定&quot;</td>
+</tr>
+<tr>
+<td>首次出现 cascade 警告</td>
+<td>&quot;Validator 帮你扫了相关章节,看看哪些段需要一起改&quot;</td>
+</tr>
+<tr>
+<td>首次切到 plan 模式</td>
+<td>&quot;现在 AI 只会改 settings/,不会动 chapters/&quot;</td>
+</tr>
+<tr>
+<td>首次出现 ReaderPanel 报告</td>
+<td>&quot;这是 5 个虚拟读者的反应,可参考可忽略&quot;</td>
+</tr>
+</tbody></table>
+<p>每条 tooltip 持久化到 <code>~/.open-novel/settings.json</code> 的 <code>seenTips: [&#39;firstChatboxFocus&#39;, ...]</code>,不重复弹。</p>
+<p><code>重置首启提示</code> 按钮在 SettingsDialog → 数据管理 §危险区域。</p>
+<h2 id="样例项目-sample-projectzip">样例项目 (sample-project.zip)</h2>
+<p><code>lib/onboarding/sample-project.zip</code> 内容:</p>
+<pre><code>proj_sample_zhongsheng_xxxx/
+├── project.json
+│   {
+│     &quot;id&quot;: &quot;proj_sample_zhongsheng_xxxx&quot;,
+│     &quot;name&quot;: &quot;[样例] 重生互联网&quot;,
+│     &quot;genre&quot;: &quot;都市重生&quot;,
+│     &quot;style&quot;: &quot;幽默轻松,节奏快,短句多。&quot;,
+│     &quot;agentPersonality&quot;: &quot;毒舌助理...&quot;,
+│     &quot;_isSample&quot;: true                ← 标记,UI 显示 [样例] 徽标
+│   }
+├── settings/
+│   ├── worldview/
+│   │   ├── _index.md
+│   │   ├── geography.md
+│   │   ├── history.md
+│   │   ├── technology.md (~500 字)
+│   │   └── rules.md (~400 字,世界硬规则)
+│   ├── outline/
+│   │   ├── _index.md
+│   │   ├── master.md (~800 字,前 10 章规划)
+│   │   └── volumes/01-rebirth.md
+│   ├── beats.md (~500 字,关键节拍)
+│   ├── characters/
+│   │   ├── lin.md (主角,frontmatter 含 initial_state + relations + reader_promises)
+│   │   ├── wang.md (合伙人)
+│   │   └── xiaomei.md (女主)
+│   ├── locations/
+│   │   └── cities/beijing-2010.md
+│   ├── factions/
+│   │   └── donghai-group.md
+│   ├── foreshadowing/
+│   │   └── 001-pocket-watch.md (展示 dependencies 锚定示例)
+│   ├── timeline/
+│   │   └── era.md
+│   └── relationships/notes/lin-wang.md (展示自定义关系注解)
+├── chapters/
+│   └── 001-重生那一夜/
+│       ├── outline.md
+│       ├── draft.md (~3200 字)
+│       └── meta.json
+└── (无 index.db — 启动时由 Worker 重建)
+</code></pre>
+<p><strong>审批历史 / learnings 也预填</strong> (重建 sql 时一并 seed):</p>
+<ul>
+<li>5 条已审批 history (能看 diff)</li>
+<li>3 条 learnings (能看反馈学习是怎么用的)</li>
+</ul>
+<h2 id="新手指引面板-持续可访问">&quot;新手指引&quot;面板 (持续可访问)</h2>
+<p>ActivityBar 加一个 [📚] 图标 → 打开 GuidancePanel:</p>
+<pre><code>┌─ 新手指引 ──────────────────────────────────────────┐
+│  💡 5 件你应该知道的事                               │
+│                                                     │
+│  ▸ 三模式工作流 (Tab 切换)                          │
+│    Discuss / Plan / Write 各自能做什么 [展开]        │
+│                                                     │
+│  ▸ 审批卡片怎么用                                    │
+│    Y/N/E 快捷键 [展开]                              │
+│                                                     │
+│  ▸ 设定与章节的关系                                  │
+│    为什么改性别会影响后面章节 [展开]                │
+│                                                     │
+│  ▸ 7 Agent 各自的角色                                │
+│    Writer 写 / Checker 看 / Validator 校 [展开]      │
+│                                                     │
+│  ▸ ReaderPanel 是什么                                │
+│    5 个虚拟读者帮你预演 [展开]                       │
+│                                                     │
+│  📺 视频导览 (二期)                                   │
+│  📖 完整文档: https://github.com/.../plan/           │
+└──────────────────────────────────────────────────────┘
+</code></pre>
+<p>每条展开是一段 markdown,内嵌可执行 demo (e.g. &quot;试试现在按 Tab 切到 plan 模式&quot; 后能高亮 ChatBox)。</p>
+<h2 id="错误时的-onboarding-兜底">错误时的 Onboarding 兜底</h2>
+<table>
+<thead>
+<tr>
+<th>错误</th>
+<th>友好提示 + 跳到 Onboarding 入口</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API key 无效</td>
+<td>&quot;DeepSeek key 似乎有问题,要不要看下怎么拿 key?&quot; → Step 2</td>
+</tr>
+<tr>
+<td>没创建过项目就按 Tab</td>
+<td>&quot;ChatBox 在三个模式间切。但你还没有项目,先创建一个?&quot; → Step 3</td>
+</tr>
+<tr>
+<td>ChatBox 空发送</td>
+<td>&quot;试试输入 &#39;帮我生成主角设定&#39;&quot;</td>
+</tr>
+</tbody></table>
+<h2 id="不做什么">不做什么</h2>
+<ul>
+<li><strong>不做强制教程视频</strong>: 文字 + 渐进 tooltip 已够;视频留 v1+</li>
+<li><strong>不做游戏化进度条</strong> (&quot;解锁高级模式&quot; 等): 不是消费产品,作者反感这种</li>
+<li><strong>不做 onboarding 收集详细问卷</strong>: 单设备 localhost,不收集数据</li>
+<li><strong>不做&quot;AI 引导对话&quot;</strong> (e.g. Claude Projects 的 &quot;我帮你设置一下&quot;): 那需要更成熟的对话模型,W12+ 再考虑</li>
+</ul>
+<h2 id="落地里程碑">落地里程碑</h2>
+<table>
+<thead>
+<tr>
+<th>周</th>
+<th>动作</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>W3</td>
+<td>OnboardingWizard 骨架 + Step 1-3</td>
+</tr>
+<tr>
+<td>W4</td>
+<td>Step 4 + 主界面渐进 tooltip 框架</td>
+</tr>
+<tr>
+<td>W5</td>
+<td>Sample project zip + auto-seed (审批 + learnings)</td>
+</tr>
+<tr>
+<td>W7</td>
+<td>GuidancePanel + 错误兜底跳转</td>
+</tr>
+<tr>
+<td>W11</td>
+<td>整体重审 + 文案打磨</td>
+</tr>
+</tbody></table>
+<h2 id="持久化字段-写入-open-novelsettingsjson">持久化字段 (写入 ~/.open-novel/settings.json)</h2>
+<pre><code class="language-yaml">onboarding:
+  completed: true                       # 跑完 wizard
+  identity: &quot;tomato-author&quot;              # Step 1 选项
+  seenTips: [&quot;firstChatboxFocus&quot;, ...]   # 看过的渐进 tooltip
+  sampleLoaded: false                    # 是否加载过样例项目
+</code></pre>
+  </main>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>12 — Agent 记忆与上下文治理 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/12-memory-and-context.html</span>
+</nav>
+<h1 id="12-agent-记忆与上下文治理">12 — Agent 记忆与上下文治理</h1>
+<blockquote>
+<p>这一章补的是&quot;Agent 自身的记忆与每次调用的 prompt 装配&quot;,不是&quot;项目数据的知识图谱&quot; (那是 plan/11)。两者经常被混为一谈,但是不同层。</p>
+</blockquote>
+<h2 id="头等优先级一致性-一切">头等优先级:<strong>一致性 &gt; 一切</strong></h2>
+<p>读者最大的弃书原因之一是&quot;读到与前文不一致的内容,瞬间出戏下头&quot;。所以本章的所有设计都围绕一个目标:<strong>让 Agent 在生成 / 审查时,把&quot;一致性所需的上下文&quot;装齐</strong>。</p>
+<p>DeepSeek V4 (Pro &amp; Flash) 的 ctx 是 <strong>1M tokens</strong>(实查见 spec/00 §C),这意味着:</p>
+<ul>
+<li>普通章节场景下,全设定 + 全相关章节 + 全 entity timeline + 全 relations + 用户范文加起来通常 200K-500K,<strong>远不到 1M</strong></li>
+<li>不再需要&quot;token 预算控制 / 降级链&quot;这种以&quot;省&quot;为骨架的设计 — 它会主动制造一致性漏洞</li>
+<li>取而代之的设计骨架: <strong>每个 agent 各自定义&quot;上下文契约&quot; — 它的职责需要哪些数据,白纸黑字写清楚,该装的必装,不在限额内做选择</strong></li>
+</ul>
+<blockquote>
+<p>⚠ <strong>历史教训</strong>: 在审计前曾把 ctx 假设为 128K,设计了 &quot;6 agent × 7 用途 token 预算表&quot; + &quot;5 级降级链 (砍 messages → 丢 summary → 强裁 retrieve → 砍 learnings)&quot;。这套基于错误数值的设计让 Validator/Writer 在限额下做&quot;该不该装这条历史章节&quot;的取舍 — 这是反一致性的。整套已撤,见 progress/006。</p>
+</blockquote>
+<h2 id="为什么要单独立章">为什么要单独立章</h2>
+<p>之前的设计里 Memory 只有一句:</p>
+<pre><code class="language-ts">const memory = new Memory({ storage: new LibSQLStore({ url: &#39;...&#39; }) })
+</code></pre>
+<p>这是<strong>远远不够的</strong>。一个真实创作场景里,以下问题都没答案:</p>
+<ol>
+<li><strong>对话历史能堆多大?</strong> 长 session 几百条 messages,Mastra 自带 lastMessages 滑窗,但默认值要多大?</li>
+<li><strong>跨进程恢复?</strong> spec/07 状态机持久化了 mode 和 pendingApprovals,但<strong>对话 messages</strong> 在哪里恢复?</li>
+<li><strong>Reflector learnings 怎么注入?</strong> plan/06 写了&quot;top-N 经验注入 system prompt&quot;,但 N 多大、按什么排、是否有 decay,全没定。</li>
+<li><strong>多种记忆怎么分层?</strong> 工作记忆 / 会话记忆 / 项目记忆 / 知识图谱 — 这 4 层各自归谁管,边界在哪?</li>
+<li><strong>每个 agent 装的上下文相同吗?</strong> 不!它们职责不同,需要的数据也不同 — 强行用同一套装配会让 Router 塞一堆它不需要的 entity timeline,Writer 又错过它该装的范文。</li>
+</ol>
+<p>这章给出<strong>四层记忆模型 + per-agent 上下文契约 + 跨进程恢复 + Reflector 注入策略</strong>。</p>
+<h2 id="四层记忆模型">四层记忆模型</h2>
+<pre><code>┌──────────────────────────────────────────────────────────────────┐
+│  L4. 知识图谱 (Knowledge Graph) ★ 一致性的事实源                    │
+│      规模: 全项目所有设定 + 章节 + 段锚 + entity_relations + 概念  │
+│            + foreshadowings + cardinal-rules.json                │
+│      位置: file (md) + LibSQL workspace.db                        │
+│      访问: assembleContext (写) / queryFacts (读) / analyzeImpact │
+│      生命周期: 永久 (项目存在则存在)                                 │
+│      详见: plan/11 + spec/16-21 + spec/25                         │
+└──────────────────────────────────────────────────────────────────┘
+                                 ▲
+                                 │ per-agent 契约 retrieve (按职责)
+                                 │
+┌──────────────────────────────────────────────────────────────────┐
+│  L3. 项目记忆 (Project Memory) — Reflector 沉淀的经验                │
+│      规模: ≤数百条 learnings + reflector_pending 队列              │
+│      位置: LibSQL workspace.db (`learnings` 表)                   │
+│      访问: 各 agent context builder 注入 system prompt              │
+│      生命周期: 跨 session 永久 (用户可手动删除)                      │
+│      详见: plan/06 + spec/22                                      │
+└──────────────────────────────────────────────────────────────────┘
+                                 ▲
+                                 │ inject top-K by scope (按 agent 适用)
+                                 │
+┌──────────────────────────────────────────────────────────────────┐
+│  L2. 会话记忆 (Session Memory) — Mastra Memory thread             │
+│      规模: 单 session 内对话历史 + tool calls                      │
+│      位置: LibSQL runtime.db (Mastra Memory 管的)                  │
+│      访问: 自动 — Agent stream 时 Mastra 拼进 messages              │
+│      生命周期: 单 session (默认 30 天不活动 GC)                      │
+│      可选压缩: 长 session (&gt;200 messages) 时启用 — 默认关             │
+│      详见: spec/22                                                │
+└──────────────────────────────────────────────────────────────────┘
+                                 ▲
+                                 │ append + lastMessages 滑窗
+                                 │
+┌──────────────────────────────────────────────────────────────────┐
+│  L1. 工作记忆 (Working Memory) — 单 turn 内的装配后 prompt         │
+│      规模: 当前 stream 的 system + retrieve + messages + user      │
+│      位置: 内存 (装配后送入 LLM)                                    │
+│      访问: 由各 agent context builder 装配 (spec/23)                │
+│      生命周期: 单次 streamVNext 调用                                │
+│      详见: spec/23 §per-agent 上下文契约                            │
+└──────────────────────────────────────────────────────────────────┘
+</code></pre>
+<p><strong>关键不变性</strong> (在 plan/01 §不变性 锁定为 L13-L15):</p>
+<ul>
+<li><strong>L4 是单一事实源</strong>: L1-L3 任何与 L4 冲突的内容,answer 时以 L4 为准(例:历史 message 里说&quot;林溪是男的&quot;,但 L4 character 已改女,以 L4 为准)</li>
+<li><strong>L3 写入仅 Reflector</strong>: 不允许 LLM 在 stream 中直接 upsert learnings;只有 Reflector 在审批闭环后写入</li>
+<li><strong>L1 装配契约严格写死</strong>: 各 agent 必装项不允许&quot;为节省临时省略&quot; — 1M ctx 给的就是奢侈装齐的本钱</li>
+</ul>
+<h2 id="mastra-memory-的角色边界">Mastra Memory 的角色边界</h2>
+<p>Mastra Memory 只管 <strong>L2 (会话记忆)</strong>:</p>
+<ul>
+<li>✅ thread (<code>proj:X:session:Y</code>) 隔离</li>
+<li>✅ resource (<code>X</code> = projectId) 隔离</li>
+<li>✅ messageHistory 持久化 (LibSQL runtime.db)</li>
+<li>✅ semantic recall (按 embedding 检索老消息) — 默认<strong>关闭</strong> (见 spec/22 §semantic recall 决策)</li>
+<li>❌ <strong>不</strong>管 L3 learnings (那在 workspace.db,我们应用层管)</li>
+<li>❌ <strong>不</strong>管 L4 知识图谱 (那是项目 file + workspace.db)</li>
+<li>❌ <strong>不</strong>管 L1 装配 (我们在 spec/23 自己装配)</li>
+</ul>
+<blockquote>
+<p>Mastra <code>Memory</code> 还有 working memory / scopes 等概念。本项目只用最基础的 thread + resource,其余不开启 — 见 spec/22 §配置决策。</p>
+</blockquote>
+<h2 id="per-agent-上下文契约-核心设计">per-agent 上下文契约 (核心设计)</h2>
+<p>每个 agent 都有自己的 context builder,<strong>根据职责定义&quot;必装什么 / 不装什么&quot;</strong>。这是与之前&quot;统一 buildPromptContext&quot;反转的核心 — 详见 <a href="../spec/23-context-contracts.html">spec/23 §per-agent 上下文契约</a>。</p>
+<p>各 agent 装配概览:</p>
+<table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>关键职责</th>
+<th>必装数据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Writer (write 模式)</strong></td>
+<td>生成章节,与 L4 完全一致</td>
+<td>章节大纲 + 上一章末段 + 全相关 entity 完整状态 + 当前时间点 entity 快照 + 活跃关系 + 待处理伏笔 + 最近 3-5 章原文 + 世界观全文 + 概念约束 (taboo / invariant) + 章节弧光 + 用户范文 + cardinal-rules.json + active critical promises + 涉及角色 value_axes + 距上次 milestone + L3 learnings (style/narrative/worldview/character/cardinal_rule scope)</td>
+</tr>
+<tr>
+<td><strong>Validator</strong></td>
+<td>找当前 ChangeProposal 与 L4 任何冲突</td>
+<td>主修改 + analyzeImpact 候选半径 + 所有相关 entity 完整 timeline + 所有相关 relations 完整 history + 命中章节全文 + 概念表全部 + 待处理伏笔全部 + 已 resolved 伏笔近 N + 世界观全文 + cardinal-rules.json</td>
+</tr>
+<tr>
+<td><strong>Checker</strong></td>
+<td>风格/节奏/情绪审查</td>
+<td>当前章节 + 最近 5-10 章 (风格连贯) + 用户范文 + 章节弧光 + L3 learnings (style/narrative/pacing scope) + cardinal-rules.json</td>
+</tr>
+<tr>
+<td><strong>Humanizer</strong></td>
+<td>去 AI 化 / 文本改写</td>
+<td>当前章节 + 用户范文 + 用户口头禅 + project.json style + L3 learnings (style/voice scope) — 不需要 entity / relations</td>
+</tr>
+<tr>
+<td><strong>ReaderPanel</strong></td>
+<td>5 persona 模拟读者反应</td>
+<td>当前章节 + 5 persona 配置 + 概念约束 (taboo) + cardinal-rules.json + 项目&quot;市场 hits&quot;范文 (可选)</td>
+</tr>
+<tr>
+<td><strong>Reflector</strong></td>
+<td>提炼经验</td>
+<td>这次 ChangeSet 全文 + 用户决议 + 反馈文字 + 已有同 scope learnings (避免重复) — 不读项目数据</td>
+</tr>
+<tr>
+<td><strong>Router</strong></td>
+<td>意图分类 + 模式校验</td>
+<td>用户输入 + 当前 mode + 最近 3-5 条 messages — 极简</td>
+</tr>
+</tbody></table>
+<p>每个 agent 的具体契约 (zod schema + retrieve 顺序 + system prompt 模板) 在 spec/23 落实。</p>
+<p><strong>关键约束</strong>:</p>
+<ul>
+<li>各 agent 必装项<strong>不允许&quot;按 token 预算裁剪&quot;</strong></li>
+<li>如果某 agent 的总装配超出 ctx 上限 (1M),那是<strong>项目数据真的太大</strong>了 — 应该警报 + 让用户做项目分卷,不是悄悄省略</li>
+</ul>
+<h2 id="l2-历史管理-lastmessages-可选压缩">L2 历史管理 (lastMessages + 可选压缩)</h2>
+<ul>
+<li>Mastra <code>lastMessages: 30</code> (1M ctx 下放宽,与之前&quot;为节省 token 卡到 12 条&quot;的旧设计相反)</li>
+<li><code>compressed_messages</code> 表保留(spec/22 设计),但<strong>默认 disabled</strong> — 长 session (&gt;200 messages) 时由用户手动开启</li>
+<li><code>semanticRecall: false</code> (与 spec/18 embedding 选型耦合)</li>
+</ul>
+<p><strong>不做&quot;自动压缩&quot;是因为</strong>:</p>
+<ul>
+<li>1M ctx 下,30 条 messages × 平均 500 token = 15K,远不会挤压</li>
+<li>摘要本身有损,不必要的有损会牺牲一致性</li>
+<li>真到 200 条以上的极长 session,再用户主动触发,不影响主流程</li>
+</ul>
+<h2 id="跨进程恢复">跨进程恢复</h2>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>恢复机制</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L1 工作记忆</td>
+<td>不恢复 (单次 stream 内的纯内存)</td>
+</tr>
+<tr>
+<td>L2 会话记忆</td>
+<td>Mastra Memory 自动恢复 (thread 在 LibSQL runtime.db)</td>
+</tr>
+<tr>
+<td>L3 项目记忆</td>
+<td>LibSQL workspace.db 持久化,启动 <code>Router.boot()</code> 时按 projectId 加载 top-K learnings 进缓存</td>
+</tr>
+<tr>
+<td>L4 知识图谱</td>
+<td>LibSQL workspace.db + file system,按需 retrieve</td>
+</tr>
+<tr>
+<td>状态机</td>
+<td>spec/07 §持久化恢复 (<code>runtime/session.json</code> 恢复 mode + pendingApprovals;不恢复 messages — messages 走 L2)</td>
+</tr>
+</tbody></table>
+<p><strong>协同</strong>: 状态机恢复 + L2 messages 恢复要在同一个 thread。详见 spec/22 §跨进程 hydrate 实操。</p>
+<h2 id="与已有-spec-的边界-引用">与已有 spec 的边界 / 引用</h2>
+<ul>
+<li><strong>plan/02 §多项目隔离 (Memory)</strong>: 浅初始化 → 引用本章 + spec/22</li>
+<li><strong>plan/06 §learnings 表 + Reflector</strong>: L3 数据怎么写。本章约束<strong>怎么读</strong> (top-K 注入 + decay)</li>
+<li><strong>spec/07 §持久化恢复</strong>: 状态机 state — 与 L2 messages 的 thread 关联在 spec/22</li>
+<li><strong>spec/20 assembleContext</strong>: L4 retrieve 的具体实现 — Writer / Validator / Checker / ReaderPanel context builder 都会调它</li>
+<li><strong>spec/21 queryFacts</strong>: L4 read 工具,与 L1-L3 解耦,Agent 在 stream 中按需调</li>
+<li><strong>spec/22</strong>: Mastra Memory 落地 (runtime.db schema / thread/resource lifecycle / GC / streamWithGuard)</li>
+<li><strong>spec/23</strong>: per-agent 上下文契约具体实现 (各 agent context builder + retrieve 顺序)</li>
+<li><strong>spec/24</strong>: JSON 输出规约 — 决定哪些 agent 输出走 JSON mode</li>
+<li><strong>spec/25</strong>: 五大网文守则 — 决定 Writer / Validator / ReaderPanel 必装的额外数据 (cardinal-rules.json + active promises + value_axes + milestone)</li>
+</ul>
+<h2 id="关键参数-默认值可在-settingsdialog-改">关键参数 (默认值,可在 SettingsDialog 改)</h2>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>默认值</th>
+<th>调节范围</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>mastraMemory.lastMessages</code></td>
+<td>30</td>
+<td>12 - 60</td>
+<td>1M ctx 下不需要紧</td>
+</tr>
+<tr>
+<td><code>mastraMemory.semanticRecall</code></td>
+<td><code>false</code></td>
+<td>bool</td>
+<td>默认关</td>
+</tr>
+<tr>
+<td><code>mastraMemory.compressedMessages.enabled</code></td>
+<td><code>false</code></td>
+<td>bool</td>
+<td>默认关;长 session &gt; 200 messages 用户主动开</td>
+</tr>
+<tr>
+<td><code>learnings.topK</code></td>
+<td>8</td>
+<td>4 - 20</td>
+<td>不是为省 token,是为模型注意力 — 注入 30 条经验反而稀释主任务</td>
+</tr>
+<tr>
+<td><code>learnings.weightFloor</code></td>
+<td>0.2</td>
+<td>0.1 - 0.5</td>
+<td>&lt; floor 不注入</td>
+</tr>
+<tr>
+<td><code>learnings.weightDecay</code></td>
+<td>0.95 / 30天</td>
+<td>0.9-1.0</td>
+<td>老经验衰减率</td>
+</tr>
+<tr>
+<td><code>learnings.cardinalRuleProtect</code></td>
+<td><code>true</code></td>
+<td>bool</td>
+<td>scope=&#39;cardinal_rule&#39; 的 top-1 永远不被砍 (spec/25)</td>
+</tr>
+<tr>
+<td><code>thread.gcAfterDays</code></td>
+<td>30</td>
+<td>7-90</td>
+<td>不活动 thread 归档</td>
+</tr>
+</tbody></table>
+<h2 id="与-reflector-的协同-回扣-plan06">与 Reflector 的协同 (回扣 plan/06)</h2>
+<p>Reflector 是 L3 的<strong>唯一写入者</strong>,本章是 L3 的<strong>统一读取规则</strong>:</p>
+<pre><code>审批闭环 → 入队 reflector_pending (按 cascade_group_id)
+       → Reflector 出队 → 提炼 1-3 条 learnings (走 JSON mode, spec/24)
+       → upsert 到 learnings 表
+                                                            ↓
+各 agent context builder (spec/23)
+       → 取 learnings WHERE project_id=X AND scope IN (该 agent 适用) AND weight &gt;= 0.2
+       → ORDER BY weight DESC LIMIT 8
+       → cardinal_rule scope 的 top-1 永远保留 (override 截断)
+       → 注入 system prompt 的&quot;经验&quot;段
+                                                            ↓
+                                          Agent 用经验 + L4 数据生成
+                                                            ↓
+                                          用户审批 → 闭环 → Reflector 调整 weight
+                                                            ↓
+                                                   weight 衰减 (30天 0.95)
+                                                  + 命中加权 (+0.5)
+                                                  + 拒绝/edited (-0.3)
+                                                  + &lt; 0.2 自动归档
+                                                  + cardinal_rule scope 阈值不能 LLM 调降
+</code></pre>
+<p><strong>weight 决策协议</strong>(plan/06 §weight 调整协议 同步):</p>
+<ul>
+<li>初始 1.0</li>
+<li>该 learning 命中且<strong>用户 approve</strong> 不修改 → +0.5</li>
+<li>该 learning 命中但<strong>用户 reject 或大幅 edit</strong> → -0.3</li>
+<li>30 天没命中 → ×0.95 (decay)</li>
+<li>weight &lt; 0.2 自动归档 (移到 <code>learnings_archive</code>,30 天可恢复)</li>
+<li>用户面板可手动 +/-/删</li>
+<li><strong>cardinal_rule scope 例外</strong>: 用户 reject 不降低 weight (那是用户拒绝的&quot;违反守则的写法&quot;,不是拒绝&quot;守则本身&quot;);只有用户在 SettingsDialog 显式调整阈值才生效</li>
+</ul>
+<h2 id="不解决的问题-待办">不解决的问题 / 待办</h2>
+<ul>
+<li><strong>多用户协作</strong>: 本架构纯单机单用户,不考虑两人共享 thread;后续如开放,thread 加 user_id 维度</li>
+<li><strong>跨项目记忆</strong>: 不允许。两个项目的 learnings / messages 严格 resource 隔离 (合规 + 风格防漏)</li>
+<li><strong>embedding 选型未定</strong>: spec/22 §semantic recall 默认关闭,等 spec/18 选型确定后再开</li>
+<li><strong>超大项目分卷</strong>: 极少数项目可能确实超 1M ctx (50万字 + 全设定),需要&quot;分卷加载&quot;策略</li>
+<li><strong>DeepSeek V4 真实 tokenizer 待 spec/00 验证</strong>: 1M 是 token 数,本身有估算误差 (tiktoken vs 真实 tokenizer)</li>
+</ul>
+  </main>
+</body>
+</html>

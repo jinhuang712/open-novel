@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 08 — 去 AI 化 (Humanizer) Pipeline - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/08-de-ai-pipeline.html</span>
+</nav>
+<h1 id="spec-08-去-ai-化-humanizer-pipeline">Spec 08 — 去 AI 化 (Humanizer) Pipeline</h1>
+<h2 id="触发">触发</h2>
+<ul>
+<li>UI: 在某个 chapter draft 文件打开时,顶部按钮&quot;去 AI 化&quot;</li>
+<li>命令面板: <code>Cmd+Shift+P</code> → &quot;Humanize Chapter&quot;</li>
+<li>ChatBox 输入&quot;把第 1 章去 AI 化&quot; → Router 识别 → 委派 Humanizer</li>
+</ul>
+<h2 id="输入">输入</h2>
+<ul>
+<li>当前章节 <code>chapters/{NNN-XX}/draft.md</code> 完整内容 (含 frontmatter)</li>
+<li>风格目标:<ul>
+<li>默认: 番茄热门书风格 (内置一组特征描述)</li>
+<li>用户指定范文: <code>project.exampleCorpusFiles</code> 中的一个或多个</li>
+<li>临时风格: 用户在 ChatBox 给的一句话 (e.g. &quot;再口语化一点,像吐槽&quot;)</li>
+</ul>
+</li>
+</ul>
+<h2 id="多轮重写策略">多轮重写策略</h2>
+<p>每一轮一个独立 LLM 调用,Humanizer 内部串行,产出叠加:</p>
+<h3 id="round-1-断句">Round 1 — 断句</h3>
+<p>prompt 指令:</p>
+<blockquote>
+<p>把所有超过 30 字的长句拆成 ≤25 字的短句。
+保留原意,可调整语序与连接词。
+不要新增信息,不要删除关键内容。
+输出修改后的完整章节正文。</p>
+</blockquote>
+<p>LLM 输出后:</p>
+<ul>
+<li>diff 计算,生成 <code>roundResults[1]</code></li>
+<li>通过率 (修改了 X% 的句子) 进入 round 2</li>
+</ul>
+<h3 id="round-2-口语化">Round 2 — 口语化</h3>
+<p>prompt 指令:</p>
+<blockquote>
+<p>把书面词替换为口语词,但不要过度。
+保留作者的笔触特征。
+替换示例:
+  &quot;由此&quot; → &quot;所以&quot; / &quot;因此&quot; → &quot;所以&quot;
+  &quot;随之&quot; → &quot;然后&quot;
+  &quot;进行&quot; → &quot;做&quot; (如果可以)
+  &quot;目睹&quot; → &quot;看见&quot;
+  &quot;颇为&quot; → &quot;挺&quot;
+不要替换人物对话内容 (对话本身就是口语)。
+输出修改后的完整章节正文。</p>
+</blockquote>
+<h3 id="round-3-节奏">Round 3 — 节奏</h3>
+<p>prompt 指令:</p>
+<blockquote>
+<p>调整段落节奏:</p>
+<ul>
+<li>紧张段加短句切入,营造紧凑感</li>
+<li>缓慢段允许稍长,但不要超过 4 句一段</li>
+<li>段落之间用简短的过渡句
+不要改变剧情、人物、对话内容。
+输出修改后的完整章节正文。</li>
+</ul>
+</blockquote>
+<h3 id="round-4-网络感-可选用户在-settingsdialog-启用">Round 4 — 网络感 (可选,用户在 SettingsDialog 启用)</h3>
+<p>prompt 指令:</p>
+<blockquote>
+<p>适度加入番茄网文常见表达:</p>
+<ul>
+<li>心理活动加入&quot;卧槽&quot; &quot;我去&quot; &quot;tnnd&quot; 等口语词 (但不脏)</li>
+<li>旁白偶尔用&quot;听好了&quot; &quot;你猜怎么着&quot; 之类口吻</li>
+<li>不要每段都加,大约每 3-5 段一处即可
+保留原文的所有信息与剧情。
+输出修改后的完整章节正文。</li>
+</ul>
+</blockquote>
+<h2 id="humanizer-agent-实现">Humanizer Agent 实现</h2>
+<pre><code class="language-ts">// lib/agents/humanizer.ts
+export const humanizerAgent = new Agent({
+  id: &#39;humanizer&#39;,
+  model: &#39;deepseek/deepseek-v4-pro&#39;,
+  instructions: humanizerPrompt,
+  tools: { readChapter, writeChapter },
+})
+
+// 多轮编排
+export async function humanizeChapter(projectId: string, chapterId: string, options: HumanizeOptions) {
+  const original = await readChapter(projectId, chapterId, &#39;draft&#39;)
+  
+  let current = original.content
+  const rounds: RoundResult[] = []
+  
+  for (const round of pickRounds(options)) {
+    const result = await humanizerAgent.generate({
+      prompt: roundPrompts[round],
+      context: { current, style: options.style, examples: options.examples },
+    })
+    rounds.push({ round, before: current, after: result.text })
+    current = result.text
+  }
+  
+  // 通过 writeChapter (needsApproval) 触发审批流
+  await humanizerAgent.runTool(&#39;writeChapter&#39;, {
+    chapterId,
+    section: &#39;draft&#39;,
+    content: current,
+    reason: `去 AI 化:运行轮次 ${rounds.map(r =&gt; r.round).join(&#39;,&#39;)}`,
+  })
+  
+  return { rounds }
+}
+</code></pre>
+<h2 id="approvalcard-展示">ApprovalCard 展示</h2>
+<p>去 AI 化的 ApprovalCard 比普通的丰富:</p>
+<ul>
+<li>多 tab: &quot;整体 diff&quot; / &quot;Round 1&quot; / &quot;Round 2&quot; / &quot;Round 3&quot; / &quot;Round 4&quot;</li>
+<li>每 tab 显示该轮的 before/after</li>
+<li>用户可以选择&quot;接受 round 1+2,跳过 round 3+4&quot;</li>
+<li>接受规则: 只把选中的轮次叠加,最终内容用 writeChapter 写盘</li>
+</ul>
+<h2 id="风格特征提取-用户范文">风格特征提取 (用户范文)</h2>
+<p>如果用户提供了 <code>exampleCorpusFiles</code>,启动时 Humanizer 会跑一次&quot;特征提取&quot;:</p>
+<pre><code>prompt:
+  我提供了 N 篇范文,你的任务是抽取它们共同的语言风格特征。
+  请输出 JSON:
+  {
+    &quot;averageSentenceLength&quot;: 数字,
+    &quot;commonOpeners&quot;: [&quot;接着&quot;, &quot;然后&quot;, ...],
+    &quot;punctuationDensity&quot;: &quot;高 / 中 / 低&quot;,
+    &quot;dialoguePattern&quot;: &quot;...&quot;,
+    &quot;narrativeRhythm&quot;: &quot;...&quot;,
+    &quot;uniqueExpressions&quot;: [...]
+  }
+</code></pre>
+<p>提取的特征缓存到 <code>project.json.styleFeatures</code>,后续每轮 humanize 都注入到 prompt。</p>
+<h2 id="防过度修改">防过度修改</h2>
+<ul>
+<li>diff 比例 &gt;50% 时弹警告: &quot;本次修改超过原文一半,可能偏离原意,确认继续?&quot;</li>
+<li>对话 (引号内的内容) 不被 round 1/3 修改 (prompt 严格指令)</li>
+<li>关键名词 (主角名、地点名) 不被 round 2/4 替换 (用 entity 表 + prompt 提醒)</li>
+</ul>
+<h2 id="测试">测试</h2>
+<ul>
+<li>单测: 每个 round 的 prompt 给定 input,LLM 输出符合预期模式 (sentence length 下降 / 口语词比例上升)</li>
+<li>E2E: 从 ChatBox 触发到 ApprovalCard 出现完整流程</li>
+</ul>
+<h2 id="失败回退">失败回退</h2>
+<ul>
+<li>任意一 round 失败 → 中断,返回已完成轮次的产物,提示&quot;X 轮成功 + Y 轮失败,是否就此审批?&quot;</li>
+<li>全部失败 → 错误卡片,不触发 writeChapter</li>
+</ul>
+<h2 id="与风格定制的关系">与风格定制的关系</h2>
+<ul>
+<li>风格定制 (project.style) 影响<strong>生成时</strong>的写作 (Writer agent)</li>
+<li>去 AI 化 (humanizer) 是<strong>生成后</strong>的二次加工</li>
+<li>两者可叠加: Writer 已遵守 style,humanizer 进一步贴近范文</li>
+</ul>
+  </main>
+</body>
+</html>

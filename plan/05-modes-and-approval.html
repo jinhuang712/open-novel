@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>05 — 三模式与审批流 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/05-modes-and-approval.html</span>
+</nav>
+<h1 id="05-三模式与审批流">05 — 三模式与审批流</h1>
+<h2 id="三种工作模式">三种工作模式</h2>
+<p>模式是<strong>对 Agent 行为的硬约束</strong>,不是 UI 装饰。</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>用户场景</th>
+<th>Agent 可读</th>
+<th>Agent 可写</th>
+<th>典型工具</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Discuss</strong></td>
+<td>检索/对话/不确定</td>
+<td>设定 + 章节 + 历史</td>
+<td>无</td>
+<td>readSetting, readChapter, searchEntities, webSearch</td>
+</tr>
+<tr>
+<td><strong>Plan</strong></td>
+<td>改设定</td>
+<td>设定 + 章节 (参考)</td>
+<td>设定 (审批后)</td>
+<td>+ writeSetting (gated)</td>
+</tr>
+<tr>
+<td><strong>Write</strong></td>
+<td>写章节</td>
+<td>设定 + 章节 + 历史</td>
+<td>章节 (审批后)</td>
+<td>+ writeChapter (gated)</td>
+</tr>
+</tbody></table>
+<p><strong>模式间不可通过 LLM 自行切换</strong>;必须用户显式触发。</p>
+<p>切换路径有两种,效果完全一致:</p>
+<ol>
+<li><strong>点击</strong> ChatBox 顶部的 <code>[Discuss] [Plan] [Write]</code> toggle</li>
+<li><strong>键盘</strong> 在 ChatBox textarea 焦点内按 <code>Tab</code> (循环正向) 或 <code>Shift+Tab</code> (反向)</li>
+</ol>
+<p>Tab 切模式是与主流 LLM chat 工具 (ChatGPT / Claude.ai / Cursor) 一致的预期心智 — Tab 不再插入字面 tab 字符。详见 <a href="../spec/12-shortcuts.html">spec/12-shortcuts.html</a> §ChatBox 上下文。</p>
+<p>模式切换在 <code>await_approval</code> 状态下被状态机阻止 — 此时 Tab 与点击都不生效,UI 显示 toast: &quot;完成审批后才能切模式&quot;。</p>
+<p><code>await_approval</code> 状态下接受新 <code>USER_INPUT</code> 也被阻止 — ChatBox textarea 显示 disabled 灰显 + tooltip &quot;完成或取消上方审批后才能继续输入&quot;。详见 <a href="../spec/07-mode-state-machine.html">spec/07-mode-state-machine.html</a> §USER_INPUT 处理。</p>
+<h2 id="状态机-xstate">状态机 (XState)</h2>
+<pre><code>   ┌──── idle ──── (input) ────► classifying
+   │                                  │
+   │   Router 输出 intent + 校验 mode 一致性
+   │                                  ▼
+   │                       ┌──────────┼──────────┐
+   │                       ▼          ▼          ▼
+   │                   discuss      plan        write
+   │                       │          │           │
+   │                  (read-only)  generate   generate
+   │                       │          │           │
+   │                       │      validate    validate
+   │                       │          │           │
+   │                       │        diff        diff
+   │                       │          │           │
+   │                       │     await_approval await_approval
+   │                       │          │           │
+   │                       │   (approve→persist→reflect)
+   │                       │   (reject + feedback → refine → generate)
+   │                       │          │           │
+   └───────────────────────┴──────────┴───────────┘
+</code></pre>
+<h2 id="审批闸门-human-in-the-loop">审批闸门 (Human-in-the-Loop)</h2>
+<blockquote>
+<p><strong>proposal + 独立 endpoint 模式</strong>: 工具执行时不真正写盘,而是把 proposal 落 <code>approvals</code> 表 (status=pending) 立即返回;Agent loop 看到 proposal 后自然结束 stream;用户审批通过独立 endpoint <code>POST /api/approvals/{id}/resolve</code> 真正落盘。审批悬挂不依赖 stream 长连接。详见 <a href="../spec/06-approval-flow.html">spec/06-approval-flow.html</a>。</p>
+</blockquote>
+<pre><code class="language-ts">export const writeSettingProposal = tool({
+  description: &#39;提议写一个设定文件 (用户审批后才会落盘)&#39;,
+  inputSchema: z.object({ path: z.string(), content: z.string(), reason: z.string() }),
+  execute: async (input, ctx) =&gt; {
+    safeFromProjectRoot(ctx.projectId, `settings/${input.path}`)   // 路径越权防御
+    const approvalId = await db.approvals.insert({ tool_call_id: ctx.toolCallId, /* ... */ status: &#39;pending&#39; })
+    return { kind: &#39;proposal&#39;, approvalId, ...input }
+  },
+})
+</code></pre>
+<p>流程:</p>
+<ol>
+<li>Writer 调 writeSettingProposal → execute <strong>内部跑 cascade 递归 ≤3 轮 (spec/19)</strong> → 落整批 ChangeSet 到 approvals 表 (一行) → 返回 <code>{ kind: &#39;proposal&#39;, approvalId, changeSet }</code></li>
+<li>Agent loop 看到 proposal 立刻 stop (Writer prompt 约定),stream 自然结束</li>
+<li>客户端 <code>onToolCall</code> 拦截 result,push 到 <code>useApprovals</code> store,UI 渲染 <code>&lt;ApprovalCard&gt;</code> (整批 ChangeSet,含影响图谱 + 1-3 级 cascade 勾选)</li>
+<li>用户点&quot;同意勾选项&quot; → <code>POST /api/approvals/{id}/resolve { decision: &#39;approved&#39;, accepted_items: [...], edits: {...} }</code>,后端 transaction 一次写所有 accepted + 落 history group + 入队 reindex</li>
+<li>用户点&quot;拒绝全部+反馈&quot; → <code>POST /api/approvals/{id}/resolve { decision: &#39;rejected&#39;, feedback }</code> → 自动发一条 ChatBox 消息让 Agent 重做</li>
+<li><strong>悬挂超时</strong> = 24 小时 (SettingsDialog 可改);超时后 status=&#39;expired&#39;,不自动拒绝避免 Reflector 学错经验</li>
+</ol>
+<p><strong>Cascade 中断恢复 (整批审之后简化)</strong>: 浏览器关闭时若有 pending 审批,启动时 <code>useApprovals.hydrate()</code> 拉回所有 status=&#39;pending&#39; 的 approval (每个一个完整 ChangeSet) 继续审。每个 approval 行幂等 (status 检查 + transaction 原子性) — 重复点同意不重复落盘,中途崩溃也不会出现&quot;半落地&quot;。</p>
+<h2 id="approvalcard-ui-形态">ApprovalCard UI 形态</h2>
+<pre><code>┌────────────────────────────────────────────────────┐
+│ ✱ Writer 想要修改: characters/lin.md               │
+│ 原因: 用户要求把主角性别改为女                       │
+├────────────────────────────────────────────────────┤
+│ Diff:                                              │
+│   - gender: male                                   │
+│   + gender: female                                 │
+│   - 名字叫&quot;林川&quot;,北漂程序员                        │
+│   + 名字叫&quot;林溪&quot;,北漂程序员                        │
+│ ────────────────────────────────────────────────── │
+│ ⚠ 影响图谱: 8 段 cascade (3 轮内部分析)            │
+│ ☑ 一级 cascade (5 项)  [展开]                      │
+│   ☑ outline.md § 3 (高置信)                        │
+│   ☑ wang.md § &quot;称谓&quot; (高置信)                      │
+│   ☑ ch_001 § 5 (高置信)                            │
+│   ☑ ch_001 § 12 (中置信)                           │
+│   ☐ ch_001 § 18 (低置信 — 默认不勾)                 │
+│ ☑ 二级 cascade (3 项)  [展开]                      │
+│   ☑ ch_003 § 7 (中置信)                            │
+│   ...                                               │
+├────────────────────────────────────────────────────┤
+│ [全选] [全不选] [拒绝全部] [同意勾选 7/8 项 (Y)]    │
+└────────────────────────────────────────────────────┘
+</code></pre>
+<h2 id="cascade-审批-w9-升级-整批审">Cascade 审批 (W9 升级 — 整批审)</h2>
+<blockquote>
+<p>⚠ <strong>关键交互模型</strong>: cascade 递归在审批<strong>前</strong>的内部循环里完成,用户只看一次最终汇总的 ChangeSet。落盘是后端 transaction 一次写所有勾选项 — 不再&quot;主变更落盘 + cascade 各项再 ApprovalCard&quot;。</p>
+</blockquote>
+<pre><code>Writer 出主修改 (in-memory)
+   ↓
+[内部递归 ≤3 轮 (见 plan/06 + spec/19)]
+   - 第 1 轮 analyzeImpact → ChangeProposal[1]
+   - Writer 内部短调用生成 afterText
+   - 第 2 轮 → ChangeProposal[2]
+   - 第 3 轮 → ChangeProposal[3]
+   - 终止 (候选空 / 半径不收缩 / 深度=3)
+   ↓
+汇总 ChangeSet (主修改 + 1-3 级 cascade,含影响图谱)
+   ↓
+**一次** ApprovalCard:
+   - 顶部: 影响图谱 (节点 + 边,按 cascadeLevel 着色)
+   - 主修改一行 (默认勾)
+   - 一级 cascade 折叠组 (高/中置信默认勾,低置信默认不勾)
+   - 二级 cascade 折叠组 (同上)
+   - 三级 cascade 折叠组 (同上)
+   - 每条可手动编辑 / toggle 勾选
+   - 操作: [全选] [全不选] [拒绝全部] [同意勾选 K/N 项]
+   ↓
+用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items[], edits{} }
+   ↓
+后端 transaction 一次落盘所有 accepted (主 + 勾选的 cascade)
+   ↓
+副作用 (差量 reindex / snapshot / history group / Reflector,见 plan/04 §审批通过后的副作用)
+</code></pre>
+<p><strong>不勾选某条 cascade 的语义</strong>: 该 proposal 被显式<strong>搁置</strong>,系统记录但不落盘。后续如果作者写到那段,Validator 会在再下一次 cascade 中重新发现并提议。
+<strong>全部勾不勾选 + reject 全部</strong>: 拒绝整个 ChangeSet,主修改也不落,等于这次修改没发生过。</p>
+<h2 id="拒绝反馈环">拒绝反馈环</h2>
+<p>ApprovalCard 拒绝时<strong>强制要求填反馈</strong>:</p>
+<ul>
+<li>输入框: &quot;为什么拒绝?&quot;</li>
+<li>例: &quot;改性别后语气还是男性化的,口吻没调整&quot;</li>
+<li>Agent 拿到反馈后重新生成,带着拒绝理由进 system prompt</li>
+</ul>
+<h2 id="reflector-在闭环中的位置">Reflector 在闭环中的位置</h2>
+<p>每次审批完成 (无论是 approve 还是 reject):</p>
+<pre><code>{ approval_id, action, target, before, after, decision, feedback?, time_to_decide }
+</code></pre>
+<p>入队给 Reflector,Reflector:</p>
+<ul>
+<li>读最近 N 条审批记录</li>
+<li>提炼 1-3 条 generalizable 经验</li>
+<li>写入 <code>learnings</code> 表 (含 weight,初始 1.0,每次相关命中 +0.5)</li>
+<li>后续生成时 Router 把 top-N 经验注入 system prompt</li>
+</ul>
+<h2 id="审批历史可回溯">审批历史可回溯</h2>
+<p><code>approvals</code> 表保留所有决定。Settings → &quot;审批历史&quot;面板:</p>
+<ul>
+<li>时间倒序列出所有审批</li>
+<li>可以&quot;回退某次审批&quot; (执行反向操作 + 写新一条 history)</li>
+<li>可以&quot;导出审批日志&quot; 帮助调试 prompt</li>
+</ul>
+  </main>
+</body>
+</html>

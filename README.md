@@ -58,6 +58,7 @@ pnpm dev
 ├── README.md                  # 你正在看的这个
 ├── plan/                      # 架构设计 (What / Why)
 ├── spec/                      # 实现细节 (How)
+├── assets/                    # 文档样式与统一资产
 ├── progress/                  # 实施进度 (When / 进展)
 ├── app/                       # Next.js 路由 + API
 ├── components/                # 前端组件
@@ -68,34 +69,46 @@ pnpm dev
 ## 文档导航
 
 ### 设计 (plan/)
-- [01-overview.md](./plan/01-overview.md) — 系统概览与关键决策
-- [02-multi-agent.md](./plan/02-multi-agent.md) — 7 Agent 拓扑与职责
-- [03-editor-layer.md](./plan/03-editor-layer.md) — 编辑器分层与 EditorAdapter
-- [04-storage-model.md](./plan/04-storage-model.md) — md+sql 混合存储模型
-- [05-modes-and-approval.md](./plan/05-modes-and-approval.md) — 三模式与审批流
-- [06-cascade-and-reflection.md](./plan/06-cascade-and-reflection.md) — Cascade 一致性与反馈学习
-- [07-ui-layout.md](./plan/07-ui-layout.md) — 五区 UI 布局
-- [08-tech-stack.md](./plan/08-tech-stack.md) — 技术栈锁定与版本策略
-- [09-narrative-engine.md](./plan/09-narrative-engine.md) — 叙事引擎 (BeatAnalyzer + ArcTracker + 模板库)
-- [10-reader-simulator.md](./plan/10-reader-simulator.md) — 读者仿真器 (5 persona ReaderPanel)
+- [01-overview.html](./plan/01-overview.html) — 系统概览与关键决策
+- [02-multi-agent.html](./plan/02-multi-agent.html) — 7 Agent 拓扑与职责
+- [03-editor-layer.html](./plan/03-editor-layer.html) — 编辑器分层与 EditorAdapter
+- [04-storage-model.html](./plan/04-storage-model.html) — md+sql 混合存储模型
+- [05-modes-and-approval.html](./plan/05-modes-and-approval.html) — 三模式与审批流
+- [06-cascade-and-reflection.html](./plan/06-cascade-and-reflection.html) — Cascade 一致性与反馈学习
+- [07-ui-layout.html](./plan/07-ui-layout.html) — 五区 UI 布局
+- [08-tech-stack.html](./plan/08-tech-stack.html) — 技术栈锁定与版本策略
+- [09-narrative-engine.html](./plan/09-narrative-engine.html) — 叙事引擎 (BeatAnalyzer + ArcTracker + 模板库)
+- [10-reader-simulator.html](./plan/10-reader-simulator.html) — 读者仿真器 (5 persona ReaderPanel)
+- [11-knowledge-graph.html](./plan/11-knowledge-graph.html) — 知识图谱与 cascade / RAG 地基
+- [12-memory-and-context.html](./plan/12-memory-and-context.html) — Agent 记忆与上下文治理
 
 ### 实现 (spec/)
-- [00-version-audit.md](./spec/00-version-audit.md) — **W3 启动前版本审计闸门** (npm 实查 / DeepSeek model id / AI SDK API 形态)
-- [01-storage-schema.md](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范 (含 zod 强校验 / 编码归一化 / WAL / 连接池)
-- [02-agent-tools.md](./spec/02-agent-tools.md) — Agent 工具签名与契约 (含路径越权防御 / 不可信围栏 / 续写协议 / 结构化输出修复)
-- [03-prompts.md](./spec/03-prompts.md) — Agent prompt 模板
-- [04-streaming-protocol.md](./spec/04-streaming-protocol.md) — SSE 事件协议 (含取消/刷新/重连 + 错误 UX 表 + 长任务进度)
-- [05-entity-highlight.md](./spec/05-entity-highlight.md) — 实体高亮与跳转 (含中文边界 / IME 安全 / trie 重建)
-- [06-approval-flow.md](./spec/06-approval-flow.md) — 审批流 (proposal + 独立 endpoint 模式)
-- [07-mode-state-machine.md](./spec/07-mode-state-machine.md) — XState 状态机 (含 USER_INPUT 处理 + cascade queue)
-- [08-de-ai-pipeline.md](./spec/08-de-ai-pipeline.md) — 去 AI 化 pipeline
-- [09-build-and-tooling.md](./spec/09-build-and-tooling.md) — 构建与工具链
-- [10-narrative-engine.md](./spec/10-narrative-engine.md) — 叙事引擎实现 (BeatAnalyzer / ArcTracker / 模板格式)
-- [11-reader-personas.md](./spec/11-reader-personas.md) — 读者 Persona 与 ReaderPanel 实现 (含失败聚合 + persona 安全围栏)
-- [12-shortcuts.md](./spec/12-shortcuts.md) — 快捷键 Registry + CommandRegistry + IME 闸门 + @file 引用 + 撤销栈语义
-- [13-settings.md](./spec/13-settings.md) — SettingsDialog 8 section + 月度预算 + 项目生命周期 + 学习偏好面板
-- [14-testing.md](./spec/14-testing.md) — 测试策略 (vitest / playwright / LLM golden / CI)
-- [15-onboarding.md](./spec/15-onboarding.md) — 首启引导 (4 步 wizard + 渐进 tooltip + 样例项目)
+- [00-version-audit.html](./spec/00-version-audit.html) — **W3 启动前版本审计闸门** (npm 实查 / DeepSeek model id / AI SDK API 形态)
+- [01-storage-schema.html](./spec/01-storage-schema.html) — SQLite schema 与 frontmatter 规范 (含 zod 强校验 / 编码归一化 / WAL / 连接池)
+- [02-agent-tools.html](./spec/02-agent-tools.html) — Agent 工具签名与契约 (含路径越权防御 / 不可信围栏 / 续写协议 / 结构化输出修复)
+- [03-prompts.html](./spec/03-prompts.html) — Agent prompt 模板
+- [04-streaming-protocol.html](./spec/04-streaming-protocol.html) — SSE 事件协议 (含取消/刷新/重连 + 错误 UX 表 + 长任务进度)
+- [05-entity-highlight.html](./spec/05-entity-highlight.html) — 实体高亮与跳转 (含中文边界 / IME 安全 / trie 重建)
+- [06-approval-flow.html](./spec/06-approval-flow.html) — 审批流 (proposal + 独立 endpoint 模式)
+- [07-mode-state-machine.html](./spec/07-mode-state-machine.html) — XState 状态机 (含 USER_INPUT 处理 + cascade queue)
+- [08-de-ai-pipeline.html](./spec/08-de-ai-pipeline.html) — 去 AI 化 pipeline
+- [09-build-and-tooling.html](./spec/09-build-and-tooling.html) — 构建与工具链
+- [10-narrative-engine.html](./spec/10-narrative-engine.html) — 叙事引擎实现 (BeatAnalyzer / ArcTracker / 模板格式)
+- [11-reader-personas.html](./spec/11-reader-personas.html) — 读者 Persona 与 ReaderPanel 实现 (含失败聚合 + persona 安全围栏)
+- [12-shortcuts.html](./spec/12-shortcuts.html) — 快捷键 Registry + CommandRegistry + IME 闸门 + @file 引用 + 撤销栈语义
+- [13-settings.html](./spec/13-settings.html) — SettingsDialog 8 section + 月度预算 + 项目生命周期 + 学习偏好面板
+- [14-testing.html](./spec/14-testing.html) — 测试策略 (vitest / playwright / LLM golden / CI)
+- [15-onboarding.html](./spec/15-onboarding.html) — 首启引导 (4 步 wizard + 渐进 tooltip + 样例项目)
+- [16-knowledge-schema.html](./spec/16-knowledge-schema.html) — 知识图谱 schema 与 frontmatter 升级
+- [17-paragraph-anchors.html](./spec/17-paragraph-anchors.html) — 段级稳定 ID 与差量 reindex
+- [18-embeddings.html](./spec/18-embeddings.html) — 段级 embedding 与语义检索
+- [19-impact-analysis.html](./spec/19-impact-analysis.html) — 影响半径与 cascade 工具
+- [20-context-assembly.html](./spec/20-context-assembly.html) — 上下文装配工具 assembleContext
+- [21-fact-query.html](./spec/21-fact-query.html) — 事实查询工具 queryFacts
+- [22-mastra-memory.html](./spec/22-mastra-memory.html) — Mastra Memory 落地细节
+- [23-context-contracts.html](./spec/23-context-contracts.html) — Per-agent 上下文契约
+- [24-json-output.html](./spec/24-json-output.html) — JSON 结构化输出统一规约
+- [25-cardinal-rules.html](./spec/25-cardinal-rules.html) — 五大网文守则
 
 ### 进度 (progress/)
 - [README.md](./progress/README.md) — 日志索引规则

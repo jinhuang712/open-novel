@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>06 — Cascade 一致性与反馈学习 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>plan/06-cascade-and-reflection.html</span>
+</nav>
+<h1 id="06-cascade-一致性与反馈学习">06 — Cascade 一致性与反馈学习</h1>
+<h2 id="cascade-一致性">Cascade 一致性</h2>
+<h3 id="问题">问题</h3>
+<p>用户的核心痛点之一:<strong>&quot;改了一个角色资料,后面写出来的章节自相矛盾&quot;</strong>。例如把主角性别从男改女后,后续章节里仍然用&quot;兄弟&quot;、&quot;小子&quot;等男性化称谓。</p>
+<h3 id="解决方案-内部递归-cascade-整批审批-w9-升级">解决方案: 内部递归 cascade + 整批审批 (W9 升级)</h3>
+<blockquote>
+<p><strong>W9 重大升级 (见 plan/11-knowledge-graph.md)</strong>: 旧版 cascade 是&quot;现场 LLM 推理影响范围&quot;,已被证实对概念级 / 关系级 / 时间级 / 伏笔级改动全部漏检。新链路改为&quot;先 SQL 出影响半径,再 LLM 二次过滤,递归在审批前内部跑完,整批一次审&quot;。</p>
+<p>⚠ <strong>关键交互模型</strong>: writeSetting / writeChapter <strong>不直接落盘</strong> (proposal-only,见 spec/06)。Cascade 递归全部在审批前的内部循环里完成,用户只看到一次最终汇总的 ChangeSet。</p>
+</blockquote>
+<pre><code>用户发起修改意图 (e.g. &quot;把林川性别改成女性&quot;)
+   │
+   ▼
+Writer 生成主修改 (in-memory,未落盘)
+   │
+   ▼
+[内部递归循环 — 用户不可见]
+   │
+   ├ 第 1 轮 analyzeImpact (基于 main delta,见 spec/19):
+   │   step 1: extractSemanticDelta — frontmatter / 正文 diff → 结构化 delta
+   │   step 2: computeImpactRadius — 纯 SQL 出候选段集
+   │             - entity_refs / concept_refs 命中 (weight=100)
+   │             - 关系上下游 1 跳 (weight=50-90)
+   │             - dependencies 锚点上下游 (weight=70)
+   │             - timeline 区间内引用 (weight=80)
+   │             - 语义相关 (embeddings topK,weight=cos×100)
+   │   step 3: filterByLLM — Pro 批 5 段过滤 → ChangeProposal[1]
+   │
+   ├ Writer 内部短调用: 对每条 needsChange=true 项生成 afterText (内存,未落盘)
+   │
+   ├ 第 2 轮 analyzeImpact (基于第 1 轮 afterText 为新 delta):
+   │   再算 SQL 影响半径 (必须严格收缩,weight 阈值 30→60)
+   │   再 LLM filter → ChangeProposal[2]
+   │
+   ├ 第 3 轮 (若仍有候选,weight 阈值 60→90)
+   │
+   └ 终止条件: 候选空 / 半径不严格收缩 / 深度 = 3 (见 spec/19 §递归终止)
+   │
+   ▼
+汇总 ChangeSet (主修改 + 所有 cascade proposal,含二级)
+   │
+   ▼
+**一次** ApprovalCard 呈现整批:
+   - 顶部影响图谱 (节点 = entity / file / concept,边 = 影响传播)
+   - 每条 proposal 一行 diff (默认展开,可折叠)
+   - 每条 proposal 勾选框 (默认勾)
+   - [全选] [全不选] [一键同意勾选项] [手动编辑某条] [拒绝全部]
+   │
+   ▼
+用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items: [...] }
+   │
+   ▼
+后端 transaction 一次写所有 accepted 文件 (主 + cascade)
+   │
+   ▼
+触发副作用 (见 plan/04 §审批通过后的副作用): 差量 reindex / snapshot / history group / Reflector 入队
+</code></pre>
+<h3 id="validator-analyzeimpact-的关键约束">Validator + analyzeImpact 的关键约束</h3>
+<ul>
+<li><strong>不现场 LLM 推影响范围</strong> — analyzeImpact step 2 的 SQL 已覆盖,LLM 只做二次判断</li>
+<li><strong>递归全部在审批前完成</strong> — 用户审之前所有&quot;二级 / 三级 cascade&quot;已被算出并合入同一 ChangeSet</li>
+<li><strong>绝不静默修改文件</strong> — 任何文件变更必须经过整批 ApprovalCard 用户勾选</li>
+<li><strong>每条 proposal 必须含</strong>: <code>anchorId</code>, <code>targetFile</code>, <code>needsChange</code>, <code>proposedText</code> (needsChange=true 时), <code>reason</code>, <code>confidence</code>, <code>cascadeLevel</code> (1=主 / 2=一级 / 3=二级)</li>
+<li><strong>不确定时 confidence=&#39;low&#39;</strong>,UI 用黄色警告 + 默认不勾选</li>
+<li><strong>needsChange=false 也必须给 reason</strong> (审计需要,展示在影响图谱中作为&quot;已分析但无需改动&quot;)</li>
+</ul>
+<h3 id="性能策略">性能策略</h3>
+<ul>
+<li><del>按章节范围 ±5 章</del> — 已撤,改为 SQL 出完整候选 + weight 排序 + LLM 顶部 50 个分批过滤</li>
+<li><del>entity hash 已审过标记</del> — 已无意义 (LLM 二次过滤本就只对未审段调用)</li>
+<li><del>章节级 word_count + entity_count short-circuit</del> — 改为 anchor diff 短路 (无段变化即跳过)</li>
+<li>新性能保证: SQL 影响半径 &lt; 100ms (5K 段规模),LLM 二次过滤每批 5 段 ~3-5s</li>
+<li><strong>内部递归 ≤ 3 轮典型耗时 15-45s</strong> — UI 在 Writer 出主修改后立刻显示进度 (&quot;正在分析影响范围... 第 1 轮 / 第 2 轮 / 第 3 轮&quot;),作者可看到内部进度但不能干预,直到 ChangeSet 出来</li>
+</ul>
+<h2 id="react-式反馈学习">React 式反馈学习</h2>
+<h3 id="设计动机">设计动机</h3>
+<p>用户希望系统<strong>越用越懂自己</strong>。直接微调模型代价过高 (DeepSeek 暂未开放微调),但我们可以把&quot;经验&quot;持久化为结构化数据,<strong>自动注入到后续生成的 system prompt</strong>,实现廉价但实用的&quot;learning&quot;。</p>
+<h3 id="reflector-触发时机">Reflector 触发时机</h3>
+<p>每次以下事件后入队:</p>
+<ol>
+<li><strong>审批闭环完成</strong> (approve / reject + feedback)</li>
+<li><strong>用户手动编辑了 Agent 生成的内容</strong> (检测到 saved content 与 generated content 的 diff)</li>
+</ol>
+<p><strong>唯一合并规则 — 不是频率上限,而是批次语义</strong>:</p>
+<ul>
+<li><strong>同一 cascade 链路内的 N 项审批合并为 1 次 reflect</strong> — 整批数据丢给 Reflector 一次性提炼,得到的 learnings 质量更高 (上下文完整),不是为省 token</li>
+<li>决定一组审批是否同链路: 它们共享同一个 root <code>approval_id</code> (cascade 提议时的根审批),Worker 端按 root 聚合</li>
+<li>批次窗口: cascade 链全部 resolve (approve/reject/dismiss 全决) 后立即跑;单次审批无 cascade 时直接跑</li>
+</ul>
+<p>入队伪码:</p>
+<pre><code class="language-ts">async function enqueueReflector(projectId: string, sessionId: string, items: ApprovalContext[]) {
+  const rootApprovalId = items[0].cascadeRootApprovalId ?? items[0].approvalId
+  // 同 root 的等齐: 等链路上所有 approval 都 resolved 才入队
+  const allResolved = await db.approvals.allResolved(rootApprovalId)
+  if (!allResolved) {
+    await db.reflectorPending.upsert({ rootApprovalId, projectId, sessionId, items })
+    return  // 等下次 resolve 事件来再 check
+  }
+  const fullBatch = await db.reflectorPending.drain(rootApprovalId)
+  await reflectorQueue.add({ projectId, sessionId, items: fullBatch })
+}
+</code></pre>
+<h3 id="reflector-输入输出">Reflector 输入/输出</h3>
+<p>输入:</p>
+<pre><code class="language-json">{
+  &quot;context&quot;: {
+    &quot;agent&quot;: &quot;writer&quot;,
+    &quot;mode&quot;: &quot;write&quot;,
+    &quot;input&quot;: &quot;...原始 prompt + 上下文...&quot;,
+    &quot;output&quot;: &quot;...Agent 生成的内容...&quot;,
+    &quot;user_decision&quot;: &quot;edited&quot;,
+    &quot;user_final_content&quot;: &quot;...用户改后的内容...&quot;,
+    &quot;feedback_text&quot;: &quot;短句太长,改短了&quot;
+  }
+}
+</code></pre>
+<p>输出 — 走 <a href="../spec/24-json-output.html">DeepSeek JSON mode (spec/24)</a>, zod schema 见 spec/24 §Reflector 经验提炼:</p>
+<pre><code class="language-json">{
+  &quot;learnings&quot;: [
+    {
+      &quot;insight&quot;: &quot;用户偏好≤25字短句,生成时多用句号少用逗号&quot;,
+      &quot;evidence&quot;: &quot;本次将12处长句拆成短句&quot;,
+      &quot;scope&quot;: &quot;style&quot;,
+      &quot;applicableAgents&quot;: [&quot;writer&quot;, &quot;humanizer&quot;],
+      &quot;suggestedWeight&quot;: 1.5
+    },
+    {
+      &quot;insight&quot;: &quot;对话场景中尽量少用&#39;地&#39;字补语&quot;,
+      &quot;evidence&quot;: &quot;用户删除了7处&#39;XX地说&#39;结构&quot;,
+      &quot;scope&quot;: &quot;style&quot;,
+      &quot;applicableAgents&quot;: [&quot;writer&quot;],
+      &quot;suggestedWeight&quot;: 1.0
+    }
+  ],
+  &quot;rootApprovalId&quot;: &quot;ap_xyz&quot;
+}
+</code></pre>
+<p>scope 枚举值 (与 spec/24 一致): <code>style</code>, <code>narrative</code>, <code>pacing</code>, <code>voice</code>, <code>worldview</code>, <code>character</code>, <code>consistency</code>, <code>relations</code>, <code>cardinal_rule</code>, <code>intent</code>, <code>mode</code>。</p>
+<h3 id="learnings-表-schema"><code>learnings</code> 表 schema</h3>
+<pre><code class="language-sql">CREATE TABLE learnings (
+  id INTEGER PRIMARY KEY,
+  project_id TEXT NOT NULL,
+  scope TEXT NOT NULL,                  -- &#39;project&#39; | &#39;global&#39; | &#39;chapter:001&#39;
+  insight TEXT NOT NULL,
+  evidence TEXT,
+  applicable_agents TEXT,                -- JSON array
+  weight REAL NOT NULL DEFAULT 1.0,      -- 命中加权,衰减老化
+  hit_count INTEGER NOT NULL DEFAULT 0,
+  last_hit_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX idx_learnings_scope ON learnings(project_id, scope);
+</code></pre>
+<h3 id="注入策略">注入策略</h3>
+<blockquote>
+<p>注入由 <a href="../spec/23-context-contracts.html">spec/23 §learnings 注入到 system prompt</a> 的 per-agent context builder 统一做,所有 Agent 共享同一逻辑。本节给出 weight 调整与 scope 决策协议。</p>
+</blockquote>
+<p>每次 Agent stream 启动前 (经 context builder):</p>
+<ol>
+<li>按当前 Agent 的 scope 集合查 (见 <a href="../spec/23-context-contracts.html">spec/23 §agentScopes</a>)</li>
+<li><code>WHERE weight &gt;= 0.2</code> (低于 0.2 视为已失效)</li>
+<li>按 <code>weight desc</code> 排序,取 <strong>top-8</strong> (与 plan/12 §关键参数一致 — <strong>不是为省 token,是为模型注意力</strong>:注入 30 条经验反而稀释主任务,top-8 是&quot;用户最强偏好集中,模型注意力不分散&quot;的平衡点)</li>
+<li><strong><code>scope=&#39;cardinal_rule&#39;</code> top-1 永远保留</strong> (无论 weight 排序如何;spec/25 五大守则学习不可被一般经验挤掉)</li>
+<li>拼接为 system prompt section:<pre><code>## 用户偏好与项目经验 (Reflector 沉淀)
+以下经验来自历次审批反馈,优先级由高到低。**遇到冲突时这些经验优先于通用风格**。
+
+- 用户偏好≤25字短句,生成时多用句号少用逗号  (置信度 1.50)
+- 对话场景中尽量少用&#39;地&#39;字补语                 (置信度 1.20, 守则)
+...
+</code></pre>
+</li>
+</ol>
+<h3 id="weight-调整协议">weight 调整协议</h3>
+<table>
+<thead>
+<tr>
+<th>触发</th>
+<th>调整</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>初始入库</td>
+<td>weight = 1.0 (或 Reflector suggestedWeight)</td>
+<td>Reflector 写入时</td>
+</tr>
+<tr>
+<td>该 learning 命中 + 用户 approve 不修改</td>
+<td>+0.5</td>
+<td>经验有效</td>
+</tr>
+<tr>
+<td>该 learning 命中 + 用户 reject 或大幅 edit</td>
+<td>-0.3</td>
+<td>经验失效信号</td>
+</tr>
+<tr>
+<td>30 天没命中</td>
+<td>× 0.95</td>
+<td>自然衰减</td>
+</tr>
+<tr>
+<td>weight &lt; 0.2</td>
+<td>自动归档 → <code>learnings_archive</code></td>
+<td>软删 (30 天可恢复)</td>
+</tr>
+</tbody></table>
+<p><strong><code>scope=&#39;cardinal_rule&#39;</code> 例外</strong>: 用户 reject 不降低 weight (那是用户拒绝的&quot;违反守则的写法&quot;,不是拒绝&quot;守则本身&quot;);只有用户在 SettingsDialog 显式调整阈值才生效 (spec/25)。</p>
+<p>&quot;命中&quot;判定:Reflector 在审批闭环里写 <code>last_hit_at</code> 时,把当时 context builder 装载的 learnings ids 列表关联到该 approval 的 metadata,审批落定后回写 hit_count + weight (见 spec/23 prompt_traces 表)。</p>
+<p>learnings 的用户检视、软删恢复、scope=project / global 切换、promote 合并 dialog 等 UI 与安全机制详见 <a href="../spec/13-settings.html">spec/13-settings.html</a> §学习偏好面板。</p>
+<p>避免一个项目的特殊偏好污染其他风格不同的项目。</p>
+<h2 id="与-llm-微调的对比">与 LLM 微调的对比</h2>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>RAG 经验注入 (本方案)</th>
+<th>模型微调</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启动成本</td>
+<td>0</td>
+<td>数据收集 + 训练 + 部署</td>
+</tr>
+<tr>
+<td>增量学习</td>
+<td>即时</td>
+<td>需重新训练</td>
+</tr>
+<tr>
+<td>可解释</td>
+<td>全可见</td>
+<td>黑盒</td>
+</tr>
+<tr>
+<td>准确度</td>
+<td>中 (受 prompt 长度限制)</td>
+<td>高</td>
+</tr>
+<tr>
+<td>适合场景</td>
+<td>起步 + 长尾</td>
+<td>风格固化期</td>
+</tr>
+</tbody></table>
+<p>当前方案足够。后续如发现某些经验高度重复且稳定,可以 export 成数据集为微调做准备。</p>
+  </main>
+</body>
+</html>

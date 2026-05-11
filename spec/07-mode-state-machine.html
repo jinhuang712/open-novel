@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Spec 07 — 三模式 XState 状态机 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../README.md">README</a>
+  <span>spec/07-mode-state-machine.html</span>
+</nav>
+<h1 id="spec-07-三模式-xstate-状态机">Spec 07 — 三模式 XState 状态机</h1>
+<h2 id="为什么用状态机">为什么用状态机</h2>
+<p>模式间切换 + 审批闸门有不少看不见的边界条件:</p>
+<ul>
+<li>discuss 模式下用户突然想改设定 → 该提示切换还是直接拒绝?</li>
+<li>write 中途冒出一个 cascade 影响设定 → 主流程是否阻塞?</li>
+<li>取消按钮在不同状态下行为不一样</li>
+</ul>
+<p>把这些用 XState 显式画出来,运行时不变性可机器校验。</p>
+<h2 id="state-machine-定义">State Machine 定义</h2>
+<pre><code class="language-ts">// lib/agents/mode-machine.ts
+import { setup, assign } from &#39;xstate&#39;
+
+export const modeMachine = setup({
+  types: {} as {
+    context: {
+      mode: &#39;discuss&#39; | &#39;plan&#39; | &#39;write&#39;
+      currentTask: string | null
+      pendingApprovals: string[]
+      lastError: string | null
+    }
+    events:
+      | { type: &#39;USER_INPUT&#39;; text: string }
+      | { type: &#39;SWITCH_MODE&#39;; mode: &#39;discuss&#39; | &#39;plan&#39; | &#39;write&#39;; source: &#39;click&#39; | &#39;tab&#39; | &#39;shift-tab&#39; | &#39;shortcut&#39; }
+      | { type: &#39;AGENT_DONE&#39;; result: unknown }
+      | { type: &#39;TOOL_NEEDS_APPROVAL&#39;; callId: string }
+      | { type: &#39;APPROVAL_RESOLVED&#39;; callId: string; decision: &#39;approved&#39; | &#39;rejected&#39; }
+      | { type: &#39;CANCEL&#39; }
+      | { type: &#39;ERROR&#39;; message: string }
+  },
+}).createMachine({
+  id: &#39;mode&#39;,
+  initial: &#39;idle&#39;,
+  context: {
+    mode: &#39;discuss&#39;,
+    currentTask: null,
+    pendingApprovals: [],
+    lastError: null,
+  },
+  states: {
+    idle: {
+      on: {
+        USER_INPUT: { target: &#39;classifying&#39; },
+        SWITCH_MODE: { actions: assign({ mode: ({ event }) =&gt; event.mode }) },
+      },
+    },
+    classifying: {
+      // Router 在跑,识别意图
+      on: {
+        AGENT_DONE: [
+          { guard: ({ context }) =&gt; context.mode === &#39;discuss&#39;, target: &#39;discussing&#39; },
+          { guard: ({ context }) =&gt; context.mode === &#39;plan&#39;, target: &#39;planning&#39; },
+          { guard: ({ context }) =&gt; context.mode === &#39;write&#39;, target: &#39;writing&#39; },
+        ],
+        ERROR: { target: &#39;errored&#39;, actions: &#39;recordError&#39; },
+        CANCEL: { target: &#39;idle&#39; },
+      },
+    },
+    discussing: {
+      // 只读,不会触发 needsApproval
+      on: {
+        AGENT_DONE: { target: &#39;idle&#39; },
+        CANCEL: { target: &#39;idle&#39; },
+        ERROR: { target: &#39;errored&#39; },
+      },
+    },
+    planning: {
+      initial: &#39;generating&#39;,
+      states: {
+        generating: {
+          on: {
+            TOOL_NEEDS_APPROVAL: { target: &#39;awaitingApproval&#39; },
+            AGENT_DONE: { target: &#39;#mode.idle&#39; },  // Writer 没要写就直接结束
+          },
+        },
+        awaitingApproval: {
+          on: {
+            APPROVAL_RESOLVED: [
+              { guard: ({ event }) =&gt; event.decision === &#39;approved&#39;, target: &#39;persisting&#39; },
+              { guard: ({ event }) =&gt; event.decision === &#39;rejected&#39;, target: &#39;refining&#39; },
+            ],
+            CANCEL: { target: &#39;#mode.idle&#39; },
+          },
+        },
+        persisting: {
+          // 落盘 + 触发 Validator cascade + Reflector
+          on: {
+            AGENT_DONE: { target: &#39;#mode.idle&#39; },
+            TOOL_NEEDS_APPROVAL: { target: &#39;awaitingApproval&#39; },  // cascade 链
+          },
+        },
+        refining: {
+          // 用户拒绝 + 反馈,Writer 重新生成
+          on: {
+            TOOL_NEEDS_APPROVAL: { target: &#39;awaitingApproval&#39; },
+            AGENT_DONE: { target: &#39;#mode.idle&#39; },
+          },
+        },
+      },
+      on: {
+        SWITCH_MODE: {
+          guard: ({ context }) =&gt; context.pendingApprovals.length === 0,
+          actions: assign({ mode: ({ event }) =&gt; event.mode }),
+          target: &#39;idle&#39;,
+        },
+      },
+    },
+    writing: {
+      // 与 planning 同构,写章节版本
+      initial: &#39;generating&#39;,
+      states: {
+        generating: { /* same as planning.generating */ },
+        awaitingApproval: { /* same */ },
+        persisting: { /* same */ },
+        refining: { /* same */ },
+      },
+    },
+    errored: {
+      on: {
+        USER_INPUT: { target: &#39;classifying&#39; },
+        SWITCH_MODE: { target: &#39;idle&#39; },
+      },
+    },
+  },
+})
+</code></pre>
+<h2 id="不变性-invariants">不变性 (Invariants)</h2>
+<p>机器保证:</p>
+<ol>
+<li><strong>Approval 必须 resolve 才能离开 awaitingApproval</strong> — 防止&quot;流式漏写&quot;</li>
+<li><strong>awaitingApproval 中切换 mode 被禁止</strong> — 无论 SWITCH_MODE.source 是 <code>click</code> / <code>tab</code> / <code>shortcut</code> 都被同等阻止;Tab 触发时 UI 显示 toast: &quot;完成审批后才能切模式&quot;</li>
+<li><strong>awaitingApproval 中接受新 USER_INPUT 被禁止</strong> — ChatBox textarea disabled 灰显 + tooltip &quot;请先审批或取消上方提案&quot;;<code>send</code> 调用直接 reject 不进 stream</li>
+<li><strong>discussing 不会进入 awaitingApproval</strong> — discuss 模式 Agent 不持有 write 工具</li>
+<li><strong>errored 是 sink,只能通过用户输入或切 mode 离开</strong></li>
+<li><strong>cascade 链路串行</strong> — 主 approval 决议后,cascade queue 依次进入 awaitingApproval,不并发</li>
+</ol>
+<h2 id="user-input-处理-新增">USER_INPUT 处理 (新增)</h2>
+<blockquote>
+<p>audit 发现:awaitingApproval 中接受新 USER_INPUT 没建模 — 用户能不能同时回到 ChatBox 发新指令?如果 push 进 currentTask,与 await 残余状态如何 LIFO?</p>
+</blockquote>
+<p>机器在所有非 idle/errored 状态下接收 USER_INPUT 时<strong>默认 reject + emit toast</strong>:</p>
+<pre><code class="language-ts">states: {
+  classifying: {
+    on: {
+      USER_INPUT: {
+        actions: &#39;showBusyToast&#39;,     // toast: &quot;正在分析,请稍候&quot;
+        // 不 transition
+      },
+      // ...
+    },
+  },
+  // similarly for discussing/planning.*/writing.*
+}
+</code></pre>
+<p><strong>例外</strong>: 用户主动按 <code>Esc</code> 触发 CANCEL → 走到 idle 才能接受新 USER_INPUT。这给用户兜底逃生通道,避免被卡死在 await。</p>
+<p><code>Esc</code> 在 awaitingApproval 状态有特殊语义: <strong>不</strong>关闭 ApprovalCard (那是审批 dialog 的&quot;无操作关闭&quot;),而是 emit CANCEL → 落到 idle + 把当前 approval 标 &#39;cancelled&#39; (区别于 expired/rejected)。</p>
+<h2 id="approval-queue-建模-w9-整批审之后简化">Approval Queue 建模 (W9 整批审之后简化)</h2>
+<blockquote>
+<p>⚠ <strong>W9 升级 (见 spec/06 / spec/19)</strong>: cascade 改为审批前内部递归 + 整批审,<strong>单个 ChangeSet 一个 approval 行</strong>,内部 1-3 级 cascade 全在同一 ApprovalCard 勾选 — 不再需要&quot;cascade 各项独立 approval 行&quot;的子项排队建模。</p>
+<p>但<strong>用户跨多次修改</strong>仍可能产生多个 pending ChangeSet (例如 plan 模式连续发起两次修改还没审),需要 FIFO 排队。</p>
+</blockquote>
+<p>context 扩展:</p>
+<pre><code class="language-ts">context: {
+  mode: &#39;discuss&#39; | &#39;plan&#39; | &#39;write&#39;
+  currentTask: string | null
+  pendingApprovals: string[]            // 当前正展示的 approvalId (栈顶,通常长度=1)
+  approvalQueue: string[]               // 后续待审 ChangeSet approvalId 队列 (FIFO)
+  lastError: string | null
+}
+</code></pre>
+<p>每个 approvalId 对应一个完整 ChangeSet(主修改 + 1-3 级 cascade)。<code>APPROVAL_RESOLVED</code> 后,如 approvalQueue 非空,自动从中取下一项 push 到 pendingApprovals,继续 awaitingApproval;空才回 idle。</p>
+<pre><code class="language-ts">APPROVAL_RESOLVED: [
+  {
+    guard: ({ context }) =&gt; context.approvalQueue.length &gt; 0,
+    target: &#39;awaitingApproval&#39;,
+    actions: assign({
+      pendingApprovals: ({ context }) =&gt; [context.approvalQueue[0]],
+      approvalQueue: ({ context }) =&gt; context.approvalQueue.slice(1),
+    }),
+  },
+  { target: &#39;#mode.idle&#39; },
+],
+</code></pre>
+<p><strong>初始化</strong>: writeSettingProposal 后,服务端 <strong>不</strong>再把 cascade 各项展开成独立 approval 行 — 整个 ChangeSet 进<strong>一行</strong>,客户端 <code>useApprovals.hydrate()</code> 时按时间排序的多个 ChangeSet ApprovalCard 推入 <code>approvalQueue</code>(队首进 pendingApprovals,其余排队)。</p>
+<h2 id="sessionjson-与-approvals-表的-source-of-truth-新增">session.json 与 approvals 表的 source-of-truth (新增)</h2>
+<blockquote>
+<p>audit 发现:spec/01 有 approvals 表 (status=pending),spec/07 又有 runtime/session.json 中的 pendingApprovals 数组。两边写入时机若不同步,reload 后会出现表里 pending 但 session 里没的不一致。</p>
+</blockquote>
+<p><strong>契约</strong>: <code>approvals</code> 表是唯一 source of truth。session.json 仅缓存机器 context,启动时:</p>
+<pre><code class="language-ts">async function rehydrateMachine(projectId: string): Promise&lt;MachineState&gt; {
+  const pendingFromDb = await db.approvals.findPending(projectId, { since: now() - 24h })
+  // 丢弃 24h 前的 pending (按 spec/06 §审批超时与悬挂时长)
+  // session.json 仅用于恢复 mode 与 currentTask;pending 数组永远以 db 为准
+  const session = await fs.readFile(&#39;runtime/session.json&#39;).catch(() =&gt; null)
+  return {
+    mode: session?.mode ?? &#39;discuss&#39;,
+    currentTask: session?.currentTask ?? null,
+    pendingApprovals: pendingFromDb.length &gt; 0 ? [pendingFromDb[0].id] : [],
+    approvalQueue: pendingFromDb.slice(1).map(a =&gt; a.id),
+    lastError: null,
+  }
+}
+</code></pre>
+<h2 id="switch-mode-的-source-字段语义">SWITCH_MODE 的 source 字段语义</h2>
+<p><code>SWITCH_MODE.source</code> 用于 UI 反馈与遥测,<strong>不影响</strong>状态机迁移逻辑:</p>
+<ul>
+<li><code>click</code>: 用户点 ChatBox 顶部 toggle (按 mode 名直选,不循环)</li>
+<li><code>tab</code>: 用户在 ChatBox textarea 内按 Tab (循环正向: discuss → plan → write → discuss)</li>
+<li><code>shift-tab</code>: 反向循环</li>
+<li><code>shortcut</code>: 命令面板 (<code>Cmd+Shift+P</code>) 调起的&quot;切到 plan 模式&quot;等命令</li>
+</ul>
+<p>UI 层根据 source 决定动效:</p>
+<ul>
+<li><code>click</code>: 静默切换</li>
+<li><code>tab</code> / <code>shift-tab</code>: toast 短暂显示新模式名 + toggle 高亮飞过</li>
+<li><code>shortcut</code>: 同 click</li>
+</ul>
+<p>ShortcutListener 把 Tab 事件翻译成 SWITCH_MODE 时,先调用 <code>cycleMode(currentMode, reverse=...)</code> 算出 next mode,再 send <code>{ type: &#39;SWITCH_MODE&#39;, mode: next, source: &#39;tab&#39; }</code>。详见 spec/12 §模式循环逻辑。</p>
+<h2 id="react-集成">React 集成</h2>
+<pre><code class="language-ts">// hooks/useModeMachine.ts
+import { useMachine } from &#39;@xstate/react&#39;
+import { modeMachine } from &#39;@/lib/agents/mode-machine&#39;
+
+export function useModeMachine() {
+  const [state, send] = useMachine(modeMachine)
+  return {
+    mode: state.context.mode,
+    isAwaitingApproval: state.matches({ planning: &#39;awaitingApproval&#39; })
+                     || state.matches({ writing: &#39;awaitingApproval&#39; }),
+    isBusy: state.matches(&#39;classifying&#39;) || state.matches(&#39;discussing&#39;)
+         || state.matches(&#39;planning&#39;) || state.matches(&#39;writing&#39;),
+    send,
+  }
+}
+</code></pre>
+<p>ChatBox + ApprovalCard 通过 <code>send(event)</code> 与机器通信。Mode Toggle 按钮在 <code>isAwaitingApproval=true</code> 时禁用并显示 tooltip &quot;完成审批后才能切模式&quot;。</p>
+<h2 id="持久化恢复">持久化恢复</h2>
+<p>会话中断后重启时,从 <code>~/.open-novel/workspaces/{projectId}/runtime/session.json</code> 恢复:</p>
+<pre><code class="language-json">{
+  &quot;machineState&quot;: &quot;planning.awaitingApproval&quot;,
+  &quot;context&quot;: { &quot;mode&quot;: &quot;plan&quot;, &quot;pendingApprovals&quot;: [&quot;call_xxx&quot;], ... },
+  &quot;savedAt&quot;: &quot;2026-04-29T12:30:45Z&quot;
+}
+</code></pre>
+<h2 id="与-mastra-agent-的协同">与 Mastra Agent 的协同</h2>
+<p>Mastra Agent 的 <code>streamVNext</code> 触发的事件 (tool-call / handoff / finish) 通过适配器转成机器的 events:</p>
+<pre><code class="language-ts">const stream = await routerAgent.streamVNext(messages, { /* ... */ })
+for await (const chunk of stream.fullStream) {
+  switch (chunk.type) {
+    case &#39;tool-call&#39;:
+      if (chunk.tool.needsApproval) send({ type: &#39;TOOL_NEEDS_APPROVAL&#39;, callId: chunk.id })
+      break
+    case &#39;finish&#39;:
+      send({ type: &#39;AGENT_DONE&#39;, result: chunk.result })
+      break
+    case &#39;error&#39;:
+      send({ type: &#39;ERROR&#39;, message: chunk.error })
+      break
+  }
+}
+</code></pre>
+<h2 id="测试">测试</h2>
+<p>每条转移要写单测,用 <code>xstate/test</code> 自动化:</p>
+<pre><code class="language-ts">describe(&#39;modeMachine&#39;, () =&gt; {
+  it(&#39;discuss 模式不会进入 awaitingApproval&#39;, () =&gt; { /* ... */ })
+  it(&#39;awaitingApproval 中切 mode 被拒绝&#39;, () =&gt; { /* ... */ })
+  it(&#39;cascade 链路连续多个 awaitingApproval 可正确串行&#39;, () =&gt; { /* ... */ })
+})
+</code></pre>
+  </main>
+</body>
+</html>
