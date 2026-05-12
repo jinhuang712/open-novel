@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/15-onboarding.html</span>
 </nav>
 <h1 id="spec-15-首启引导-onboarding">Spec 15 — 首启引导 (Onboarding)</h1>
@@ -25,77 +25,67 @@
 <li><strong>样例项目可一键加载</strong>: 有现成的&quot;重生互联网&quot;样例,跑一遍能看完整产品形态</li>
 </ul>
 <h2 id="首启流程-firstrunflow">首启流程 (FirstRunFlow)</h2>
-<pre><code>应用启动
-   ↓
-检测 ~/.open-novel/settings.json
-   ↓
-不存在 (首启) → 进入 OnboardingWizard
-存在 → 跳过 wizard,主界面
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  START([应用启动]) --> CHECK["检测 ~/.open-novel/settings.json"]
+  CHECK --> DEC{是否存在?}
+  DEC -->|不存在 (首启)| WIZ[进入 OnboardingWizard]
+  DEC -->|存在| MAIN[跳过 wizard<br/>直接进主界面]
+</pre>
 <h3 id="onboardingwizard-4-步">OnboardingWizard 4 步</h3>
-<pre><code>┌─ 欢迎到 Open Novel ───────────────────────────────────────┐
-│  Step 1/4: 你是谁?                                        │
-│                                                           │
-│  ○ 已经在番茄写过书的作者                                  │
-│  ○ 想试试 AI 辅助写网文                                    │
-│  ○ 学生 / 业余写作                                         │
-│  ○ 跳过这个 (直接用)                                       │
-│                                                           │
-│              [跳过全部]    [下一步]                        │
-└────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  S1["欢迎到 Open Novel<br/>Step 1/4: 你是谁?"]
+  S1 --> O1["已经在番茄写过书的作者"]
+  S1 --> O2["想试试 AI 辅助写网文"]
+  S1 --> O3["学生 / 业余写作"]
+  S1 --> O4["跳过这个 (直接用)"]
+  O1 --> NXT(["下一步, Step 2"])
+  O2 --> NXT
+  O3 --> NXT
+  O4 --> NXT
+  S1 -. "跳过全部" .-> SKIP([跳过 wizard])
+</pre>
 <p>(用户身份不影响功能,但用于 telemetry / 后续推荐节奏 — 仅记录。)</p>
-<pre><code>┌─ Step 2/4: 输入 DeepSeek API Key ──────────────────────────┐
-│                                                           │
-│  Open Novel 用 DeepSeek V4 跑创作。需要你的 API key。       │
-│                                                           │
-│  📋 怎么拿: https://platform.deepseek.com/api_keys          │
-│  💰 成本预估: 写 10 万字小说约消耗 $X (基于 Flash + Pro 混用) │
-│  🔒 Key 仅存于你本地: ~/.open-novel/settings.json          │
-│                                                           │
-│  [_____________________________________] [测试连接]        │
-│                                                           │
-│              [上一步]    [跳过 — 用 Mock LLM]   [下一步]    │
-└────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  S2["Step 2/4: 输入 DeepSeek API Key<br/>Open Novel 用 DeepSeek V4 跑创作"]
+  S2 --> INFO["怎么拿: platform.deepseek.com/api_keys<br/>成本预估: 10 万字约 $X<br/>Key 仅存本地: ~/.open-novel/settings.json"]
+  INFO --> INPUT[/"API Key 输入框"/]
+  INPUT --> TEST{"测试连接"}
+  TEST -->|通过| NXT(["下一步, Step 3"])
+  S2 -. "上一步" .-> PREV([返回 Step 1])
+  S2 -. "跳过 — 用 Mock LLM" .-> MOCK[Mock 模式<br/>placeholder 文本流程走通]
+  MOCK --> NXT
+</pre>
 <p>&quot;跳过 — 用 Mock LLM&quot;: 进入 Mock 模式 (二期实现),让用户先看 UI 再决定是否买 key。当前 Mock 模式仅返回 placeholder 文本,但流程走通。</p>
-<pre><code>┌─ Step 3/4: 创建你的第一个项目 ────────────────────────────┐
-│                                                           │
-│  ○ 加载样例项目 &quot;重生互联网&quot;  (推荐 — 5 分钟看完整流程)      │
-│  ○ 创建空白项目                                            │
-│                                                           │
-│  ─ 创建空白时填:                                            │
-│  项目名:    [______________]                               │
-│  流派:      [▼ 都市重生   ]                                │
-│  风格描述: [幽默轻松,节奏快]                              │
-│  故事种子: [一个程序员重生回 2010 年互联网创业]             │
-│                                                           │
-│              [上一步]   [创建并进入]                        │
-└────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  S3["Step 3/4: 创建你的第一个项目"]
+  S3 --> CHOICE{选项}
+  CHOICE -->|"推荐 (5 分钟看完整流程)"| SAMPLE[加载样例项目<br/>&quot;重生互联网&quot;]
+  CHOICE --> BLANK[创建空白项目]
+  BLANK --> FILL[/"填写表单:<br/>项目名<br/>流派 (下拉: 都市重生 等)<br/>风格描述<br/>故事种子"/]
+  FILL --> CREATE([创建并进入])
+  SAMPLE --> CREATE
+  S3 -. "上一步" .-> PREV([返回 Step 2])
+</pre>
 <p>加载样例: 把 <code>lib/onboarding/sample-project.zip</code> 解压到 <code>~/.open-novel/workspaces/proj_sample_zhongsheng_xxxx/</code>,自动选中。样例含:</p>
 <ul>
 <li>已生成的 worldview.md / outline.md / 3 个 character.md</li>
 <li>第 1 章已写完 outline + draft (3000 字)</li>
 <li>历史: 5 条审批记录 + 3 条 learnings (展示反馈学习)</li>
 </ul>
-<pre><code>┌─ Step 4/4: 三件事先了解 ───────────────────────────────────┐
-│                                                           │
-│  Open Novel 与 ChatGPT 不同的三件事:                       │
-│                                                           │
-│  1️⃣  三种模式 (右下 ChatBox 顶部)                           │
-│      Discuss = 检索讨论,Plan = 改设定,Write = 写章节       │
-│      📌 焦点在输入框时按 Tab 循环切换                       │
-│                                                           │
-│  2️⃣  AI 不会偷偷改文件                                     │
-│      所有写入都会先弹审批卡 (右下),你点同意才落盘           │
-│                                                           │
-│  3️⃣  设定改了系统会扫所有章节                               │
-│      把主角性别从男改女,系统会列出所有需要同步改的段落      │
-│                                                           │
-│              [明白了,开始写吧]                             │
-└────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  S4["Step 4/4: 三件事先了解<br/>Open Novel 与 ChatGPT 不同的三件事"]
+  S4 --> T1["1. 三种模式 (右下 ChatBox 顶部)<br/>Discuss = 检索讨论<br/>Plan = 改设定<br/>Write = 写章节<br/>焦点在输入框时按 Tab 循环切换"]
+  S4 --> T2["2. AI 不会偷偷改文件<br/>所有写入会先弹审批卡<br/>点同意才落盘"]
+  S4 --> T3["3. 设定改了系统会扫所有章节<br/>例: 主角性别男改女<br/>系统列出所有需同步改的段落"]
+  T1 --> DONE([明白了,开始写吧])
+  T2 --> DONE
+  T3 --> DONE
+</pre>
 <h2 id="主界面渐进式-tooltip">主界面渐进式 Tooltip</h2>
 <p>进主界面后,<strong>第一次出现某种状态时</strong>弹一次性 tooltip (用 react-joyride 或自写):</p>
 <table>
@@ -130,48 +120,26 @@
 <p><code>重置首启提示</code> 按钮在 SettingsDialog → 数据管理 §危险区域。</p>
 <h2 id="样例项目-sample-projectzip">样例项目 (sample-project.zip)</h2>
 <p><code>lib/onboarding/sample-project.zip</code> 内容:</p>
-<pre><code>proj_sample_zhongsheng_xxxx/
-├── project.json
-│   {
-│     &quot;id&quot;: &quot;proj_sample_zhongsheng_xxxx&quot;,
-│     &quot;name&quot;: &quot;[样例] 重生互联网&quot;,
-│     &quot;genre&quot;: &quot;都市重生&quot;,
-│     &quot;style&quot;: &quot;幽默轻松,节奏快,短句多。&quot;,
-│     &quot;agentPersonality&quot;: &quot;毒舌助理...&quot;,
-│     &quot;_isSample&quot;: true                ← 标记,UI 显示 [样例] 徽标
-│   }
-├── settings/
-│   ├── worldview/
-│   │   ├── _index.md
-│   │   ├── geography.md
-│   │   ├── history.md
-│   │   ├── technology.md (~500 字)
-│   │   └── rules.md (~400 字,世界硬规则)
-│   ├── outline/
-│   │   ├── _index.md
-│   │   ├── master.md (~800 字,前 10 章规划)
-│   │   └── volumes/01-rebirth.md
-│   ├── beats.md (~500 字,关键节拍)
-│   ├── characters/
-│   │   ├── lin.md (主角,frontmatter 含 initial_state + relations + reader_promises)
-│   │   ├── wang.md (合伙人)
-│   │   └── xiaomei.md (女主)
-│   ├── locations/
-│   │   └── cities/beijing-2010.md
-│   ├── factions/
-│   │   └── donghai-group.md
-│   ├── foreshadowing/
-│   │   └── 001-pocket-watch.md (展示 dependencies 锚定示例)
-│   ├── timeline/
-│   │   └── era.md
-│   └── relationships/notes/lin-wang.md (展示自定义关系注解)
-├── chapters/
-│   └── 001-重生那一夜/
-│       ├── outline.md
-│       ├── draft.md (~3200 字)
-│       └── meta.json
-└── (无 index.db — 启动时由 Worker 重建)
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  ROOT["proj_sample_zhongsheng_xxxx/"]
+  ROOT --> PJ["project.json<br/>id / name=[样例]重生互联网 / genre=都市重生<br/>style / agentPersonality=毒舌助理<br/>_isSample=true (UI 显示样例徽标)"]
+  ROOT --> SET["settings/"]
+  ROOT --> CHS["chapters/"]
+  ROOT --> NOTE["(无 index.db — 启动时由 Worker 重建)"]
+
+  SET --> WV["worldview/<br/>_index / geography / history<br/>technology (~500 字)<br/>rules (~400 字,世界硬规则)"]
+  SET --> OL["outline/<br/>_index / master (~800 字,前 10 章规划)<br/>volumes/01-rebirth.md"]
+  SET --> BE["beats.md (~500 字,关键节拍)"]
+  SET --> CH["characters/<br/>lin.md (主角,含 initial_state + relations + reader_promises)<br/>wang.md (合伙人) / xiaomei.md (女主)"]
+  SET --> LO["locations/<br/>cities/beijing-2010.md"]
+  SET --> FA["factions/<br/>donghai-group.md"]
+  SET --> FO["foreshadowing/<br/>001-pocket-watch.md (dependencies 锚定示例)"]
+  SET --> TL["timeline/<br/>era.md"]
+  SET --> RE["relationships/notes/<br/>lin-wang.md (自定义关系注解)"]
+
+  CHS --> CH1["001-重生那一夜/<br/>outline.md + draft.md (~3200 字) + meta.json"]
+</pre>
 <p><strong>审批历史 / learnings 也预填</strong> (重建 sql 时一并 seed):</p>
 <ul>
 <li>5 条已审批 history (能看 diff)</li>
@@ -179,28 +147,17 @@
 </ul>
 <h2 id="新手指引面板-持续可访问">&quot;新手指引&quot;面板 (持续可访问)</h2>
 <p>ActivityBar 加一个 [📚] 图标 → 打开 GuidancePanel:</p>
-<pre><code>┌─ 新手指引 ──────────────────────────────────────────┐
-│  💡 5 件你应该知道的事                               │
-│                                                     │
-│  ▸ 三模式工作流 (Tab 切换)                          │
-│    Discuss / Plan / Write 各自能做什么 [展开]        │
-│                                                     │
-│  ▸ 审批卡片怎么用                                    │
-│    Y/N/E 快捷键 [展开]                              │
-│                                                     │
-│  ▸ 设定与章节的关系                                  │
-│    为什么改性别会影响后面章节 [展开]                │
-│                                                     │
-│  ▸ 7 Agent 各自的角色                                │
-│    Writer 写 / Checker 看 / Validator 校 [展开]      │
-│                                                     │
-│  ▸ ReaderPanel 是什么                                │
-│    5 个虚拟读者帮你预演 [展开]                       │
-│                                                     │
-│  📺 视频导览 (二期)                                   │
-│  📖 完整文档: https://github.com/.../plan/           │
-└──────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  PANEL["新手指引面板<br/>5 件你应该知道的事"]
+  PANEL --> G1["三模式工作流 (Tab 切换)<br/>Discuss / Plan / Write 各自能做什么"]
+  PANEL --> G2["审批卡片怎么用<br/>Y/N/E 快捷键"]
+  PANEL --> G3["设定与章节的关系<br/>为什么改性别会影响后面章节"]
+  PANEL --> G4["7 Agent 各自的角色<br/>Writer 写 / Checker 看 / Validator 校"]
+  PANEL --> G5["ReaderPanel 是什么<br/>5 个虚拟读者帮你预演"]
+  PANEL -.-> V["视频导览 (二期)"]
+  PANEL -.-> DOC["完整文档<br/>github.com/.../plan/"]
+</pre>
 <p>每条展开是一段 markdown,内嵌可执行 demo (e.g. &quot;试试现在按 Tab 切到 plan 模式&quot; 后能高亮 ChatBox)。</p>
 <h2 id="错误时的-onboarding-兜底">错误时的 Onboarding 兜底</h2>
 <table>

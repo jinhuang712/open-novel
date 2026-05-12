@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/18-embeddings.html</span>
 </nav>
 <h1 id="spec-18-段级-embedding-与语义检索">Spec 18 — 段级 Embedding 与语义检索</h1>
@@ -317,13 +317,19 @@ CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vss0(embedding(1024));
 <h3 id="与-entity-refs-concept-refs-双索引互补">与 entity_refs / concept_refs 双索引互补</h3>
 <p>embeddings 解决&quot;语义相关&quot;(同义、近义),entity_refs / concept_refs 解决&quot;显式提及&quot;。assembleContext 工具的 retrieve 链路同时用两类索引,合并去重(详见 spec/20)。</p>
 <h3 id="与-paragraph-anchors-的-lifecycle-联动">与 paragraph_anchors 的 lifecycle 联动</h3>
-<pre><code>anchor unchanged → embedding 不动
-anchor modified  → enqueueParagraphRescan → reembedAnchor
-anchor rewritten → 旧 anchor 软删 → CASCADE 删 paragraph_embeddings 行 (FK ON DELETE CASCADE)
-                   新 anchor → reembedAnchor
-anchor deleted   → 同 rewritten 后半 (软删 anchor → embedding 一并 cascade 删)
-anchor added     → reembedAnchor
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  EVT{anchor 事件}
+  EVT -->|unchanged| U[embedding 不动]
+  EVT -->|modified| M["enqueueParagraphRescan"]
+  M --> M2[reembedAnchor]
+  EVT -->|rewritten| RW1["旧 anchor 软删"]
+  RW1 --> RW2["CASCADE 删 paragraph_embeddings 行<br/>(FK ON DELETE CASCADE)"]
+  RW2 --> RW3[新 anchor]
+  RW3 --> RW4[reembedAnchor]
+  EVT -->|deleted| DEL["软删 anchor<br/>embedding 一并 cascade 删"]
+  EVT -->|added| ADD[reembedAnchor]
+</pre>
 <p>软删 anchor (deleted_at != NULL) 是否保留 embedding?</p>
 <ul>
 <li>保留 (deleted_at != NULL 时不参与检索,但供&quot;恢复&quot;路径)</li>

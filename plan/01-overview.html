@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/01-overview.html</span>
 </nav>
 <h1 id="01-系统概览">01 — 系统概览</h1>
@@ -24,81 +24,56 @@
 5. 同时维护多个项目,互不污染
 </code></pre>
 <h2 id="7-agent-拓扑-mastra-agentnetwork">7 Agent 拓扑 (Mastra <code>AgentNetwork</code>)</h2>
-<pre><code>                  ┌─────────────────┐
-                  │  User (ChatBox) │
-                  └────────┬────────┘
-                           │  prompt + mode
-                           ▼
-                  ┌─────────────────┐
-                  │  Router (Flash) │ ← 模式分流 + 意图识别
-                  └────────┬────────┘
-            ┌──────────────┼──────────────┐
-            ▼              ▼              ▼
-       ┌────────┐   ┌──────────────┐    ┌────────────┐
-       │ Writer │   │   Checker    │    │  Validator │
-       │ (Pro)  │   │   (Flash)    │    │   (Pro)    │
-       │  吐字  │   │ +叙事引擎子能力│    │   一致性   │
-       └────┬───┘   └──────┬───────┘    └──────┬─────┘
-            │              │ (BeatAnalyzer /          │
-            │              │  ArcTracker / 模板库)     │
-            │              │                          │
-            └─────┬────────┴──────────┬───────┬───────┘
-                  ▼                   ▼       ▼
-       ┌─────────────────┐    ┌──────────┐ ┌──────────────┐
-       │  ReaderPanel    │    │Reflector │ │  Humanizer   │
-       │  (Flash, NEW)   │    │ (Flash)  │ │    (Pro)     │
-       │  5 persona 仿真 │    │  反思    │ │   去 AI 化   │
-       └─────────────────┘    └──────────┘ └──────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  U([User ChatBox]) -->|prompt + mode| R[Router Flash<br/>模式分流 + 意图识别]
+  R --> W[Writer Pro<br/>吐字]
+  R --> C[Checker Flash<br/>+ 叙事引擎子能力]
+  R --> V[Validator Pro<br/>一致性]
+  C -. BeatAnalyzer / ArcTracker / 模板库 .-> C
+  W --> RP[ReaderPanel Flash NEW<br/>5 persona 仿真]
+  W --> RF[Reflector Flash<br/>反思]
+  W --> H[Humanizer Pro<br/>去 AI 化]
+  C --> RP
+  C --> RF
+  C --> H
+  V --> RP
+  V --> RF
+  V --> H
+</pre>
 <p>详见: <a href="./02-multi-agent.html">02-multi-agent.html</a> (Agent 详解) / <a href="./09-narrative-engine.html">09-narrative-engine.html</a> (叙事引擎) / <a href="./10-reader-simulator.html">10-reader-simulator.html</a> (读者仿真器) / <a href="./11-knowledge-graph.html">11-knowledge-graph.html</a> (知识图谱:cascade + RAG 真正可工作的地基) / <a href="./12-memory-and-context.html">12-memory-and-context.html</a> (Agent 记忆四层 + per-agent 上下文契约 + 一致性优先);spec 入口见 <a href="../spec/24-json-output.html">spec/24-json-output.html</a> (JSON 结构化输出统一规约) + <a href="../spec/25-cardinal-rules.html">spec/25-cardinal-rules.html</a> (五大网文守则)。</p>
 <h2 id="数据流概览">数据流概览</h2>
-<pre><code>ChatBox 输入
-   │
-   ▼
-Router 路由 (识别 mode = discuss | plan | write)
-   │
-   ├─ discuss → 优先 queryFacts (spec/21) 直查 SQL → 命中即答
-   │             (未命中 fallback 自由 LLM,RAG 设定 read-only;无落盘)
-   │
-   ├─ plan → Writer 生成主修改 (in-memory,proposal-only,不落盘)
-   │           ↓
-   │      Validator 调 analyzeImpact (spec/19):
-   │        [内部递归 ≤3 轮,用户不可见,纯内存]
-   │          - 第 1 轮: extractSemanticDelta + SQL 影响半径 + LLM filter → ChangeProposal[1]
-   │          - Writer 内部短调用生成 afterText
-   │          - 第 2 轮: 同上,基于第 1 轮 afterText,半径严格收缩
-   │          - 第 3 轮: 同上
-   │          - 终止: 候选空 / 半径不收缩 / 深度=3
-   │           ↓
-   │      汇总 ChangeSet (主修改 + 1-3 级 cascade + 影响图谱)
-   │           ↓
-   │      **一次** ApprovalCard:用户勾选 + 编辑 + 一键同意/部分同意/拒绝
-   │           ↓ (用户 approve)
-   │      后端 transaction 一次写所有 accepted 文件
-   │           ↓
-   │      副作用: 差量 anchor reindex + 知识图谱表 upsert + snapshot + history group
-   │           ↓
-   │      Reflector 按 cascade 链路批次合并入队
-   │
-   └─ write → Writer Context Builder (spec/23) 装配:
-   │            assembleContext (spec/20) — entity 状态 + 活跃关系 + 待处理伏笔 + 最近章节 + 语义相关 + 世界观 + 概念约束
-   │            + 守则相关 (spec/25): cardinal-rules.json + active critical promises + character value_axes + milestone cadence + rolling pacing metrics + isGoldenChapter
-   │           ↓
-   │       生成章节 (in-memory,proposal-only,自然语言流式)
-   │           ↓
-   │      并行检测 (各走 JSON mode, spec/24):
-   │        - Checker (Flash) 风格审 + BeatAnalyzer + 守则 1/3/5 检测
-   │        - Validator (Pro) 一致性审 + ArcTracker + analyzeImpact + 守则 2/4 检测
-   │        - ReaderPanel (Flash×5) 5 persona 仿真 + 守则 1-5 综合二审 → ChapterRiskReport
-   │           ↓
-   │      汇总 ChangeSet (章节正文 + cascade 修改) + CardinalRulesReport (spec/25)
-   │           ↓
-   │      **一次** ApprovalCard:
-   │        - 守则 critical 风险存在 → 强制勾&quot;明知违反仍通过&quot;才能 approve
-   │        - blocking violation (已过 deadline 的 critical promise) → 完全禁用 approve
-   │           ↓
-   │      用户决议 → 后端 transaction 一次写 → 副作用 (含 reindex + Reflector 学 cardinal_rule scope)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  IN([ChatBox 输入]) --> RT["Router 路由<br/>识别 mode = discuss / plan / write"]
+  RT --> MD{mode}
+  MD -->|discuss| D1["优先 queryFacts spec/21<br/>直查 SQL 命中即答"]
+  D1 --> D2["未命中 fallback 自由 LLM<br/>RAG 设定 read-only 无落盘"]
+
+  MD -->|plan| P1["Writer 生成主修改<br/>in-memory proposal-only 不落盘"]
+  P1 --> P2["Validator analyzeImpact spec/19<br/>内部递归 1-3 轮"]
+  P2 --> P2a["第 1 轮: extractSemanticDelta<br/>+ SQL 影响半径 + LLM filter<br/>ChangeProposal 1"]
+  P2a --> P2b["Writer 内部短调用生成 afterText"]
+  P2b --> P2c["第 2 / 第 3 轮 同上<br/>半径严格收缩"]
+  P2c --> P2d["终止: 候选空 / 半径不收缩 / 深度=3"]
+  P2d --> P3["汇总 ChangeSet<br/>主修改 + 1-3 级 cascade + 影响图谱"]
+  P3 --> P4["一次 ApprovalCard<br/>勾选 + 编辑 + 一键同意/部分同意/拒绝"]
+  P4 -->|approve| P5["后端 transaction 一次写所有 accepted 文件"]
+  P5 --> P6["副作用<br/>差量 anchor reindex + 知识图谱表 upsert<br/>+ snapshot + history group"]
+  P6 --> P7["Reflector 按 cascade 链路批次合并入队"]
+
+  MD -->|write| W1["Writer Context Builder spec/23 装配:<br/>assembleContext spec/20 — entity 状态 + 活跃关系<br/>+ 待处理伏笔 + 最近章节 + 语义相关 + 世界观 + 概念约束<br/>+ 守则相关 spec/25 — cardinal-rules.json + active critical promises<br/>+ character value_axes + milestone cadence + rolling pacing metrics + isGoldenChapter"]
+  W1 --> W2["生成章节<br/>in-memory proposal-only 自然语言流式"]
+  W2 --> W3["并行检测 各走 JSON mode spec/24"]
+  W3 --> W3a["Checker Flash<br/>风格审 + BeatAnalyzer + 守则 1/3/5"]
+  W3 --> W3b["Validator Pro<br/>一致性审 + ArcTracker + analyzeImpact + 守则 2/4"]
+  W3 --> W3c["ReaderPanel Flash x5<br/>5 persona 仿真 + 守则 1-5 综合二审<br/>ChapterRiskReport"]
+  W3a --> W4["汇总 ChangeSet 章节正文 + cascade 修改<br/>+ CardinalRulesReport spec/25"]
+  W3b --> W4
+  W3c --> W4
+  W4 --> W5["一次 ApprovalCard<br/>critical 风险: 强制勾 明知违反仍通过 才能 approve<br/>blocking violation 已过 deadline 完全禁用 approve"]
+  W5 --> W6["用户决议<br/>后端 transaction 一次写<br/>副作用 含 reindex + Reflector 学 cardinal_rule scope"]
+</pre>
 <p><strong>关键不变性 (跨流程)</strong>:</p>
 <ul>
 <li>所有 stream 必经 <a href="../spec/23-context-contracts.html">per-agent context builder (spec/23)</a>, 不允许 agent 自拼 prompt</li>

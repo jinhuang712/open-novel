@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/03-prompts.html</span>
 </nav>
 <h1 id="spec-03-agent-prompt-模板">Spec 03 — Agent Prompt 模板</h1>
@@ -19,20 +19,28 @@
 <blockquote>
 <p>opencode 主动让 system prompt 头部不变以命中 anthropic / openai cache (<code>session/llm.ts:124-128</code>)。我们借同一思路: 每个 agent prompt <strong>拆为两段</strong>, 配合 spec/22 §DeepSeek 适配 middleware §3 cache_control 标记策略, 让 stable 段稳定命中 prompt cache (依赖 spec/00 §H verify)。</p>
 </blockquote>
-<pre><code>system message[0] = stable header (永不变, 标 cache_control)
-  ├─ Agent 角色与目标 (片段 1)
-  ├─ 五大网文绝对守则文本 (spec/25, 全 agent 共享, 几 KB)
-  ├─ 不可信内容围栏 (片段 7)
-  └─ 输出形态声明 + JSON 示例 (片段 8)
+<pre class="mermaid">
+flowchart TD
+  subgraph STABLE ["system message[0]: stable header (永不变, 标 cache_control)"]
+    direction TB
+    S1["片段 1: Agent 角色与目标"]
+    S2["五大网文绝对守则文本<br/>spec/25, 全 agent 共享, 几 KB"]
+    S3["片段 7: 不可信内容围栏"]
+    S4["片段 8: 输出形态声明 + JSON 示例"]
+  end
 
-system message[1] = dynamic body (本次调用拼装, 不标 cache_control)
-  ├─ 项目上下文 (片段 2, project.json 字段)
-  ├─ 当前模式约束 (片段 3)
-  ├─ 用户偏好经验注入 (片段 4, learnings 表)
-  ├─ Agent 专用指令 (片段 5)
-  ├─ 工具调用约束 (片段 6)
-  └─ 当前章节 / cascade / approval 上下文 (来自 spec/23 per-agent context builder)
-</code></pre>
+  subgraph DYNAMIC ["system message[1]: dynamic body (本次调用拼装, 不标 cache_control)"]
+    direction TB
+    D1["片段 2: 项目上下文<br/>project.json 字段"]
+    D2["片段 3: 当前模式约束"]
+    D3["片段 4: 用户偏好经验注入<br/>learnings 表"]
+    D4["片段 5: Agent 专用指令"]
+    D5["片段 6: 工具调用约束"]
+    D6["当前章节 / cascade / approval 上下文<br/>来自 spec/23 per-agent context builder"]
+  end
+
+  STABLE --> DYNAMIC
+</pre>
 <p><strong>标记规则</strong> (spec/22 §3 cache_control):</p>
 <ul>
 <li>system[0] 标 <code>cache_control: { type: &quot;ephemeral&quot; }</code> (前 2 段中的第 1 段)</li>

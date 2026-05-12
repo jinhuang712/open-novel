@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Open Novel — 文档索引</title>
+  <link rel="stylesheet" href="./assets/docs.css">
+  <style>
+    body { padding: 0; background: var(--bg); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 240px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    /* ── 侧栏 ── */
+    .sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      padding: 28px 22px;
+      background: var(--paper);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+    .sidebar h1 {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      font-size: 18px;
+    }
+    .sidebar .tagline {
+      margin: 4px 0 22px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .sidebar nav { display: grid; gap: 1px; }
+    .sidebar nav .group-label {
+      margin: 14px 0 4px;
+      padding: 0 8px;
+      color: var(--text);
+      font-weight: 650;
+      font-size: 11px;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+    }
+    .sidebar nav .group-label:first-child { margin-top: 0; }
+    .sidebar nav a {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding: 5px 8px;
+      border-radius: 4px;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 13px;
+      transition: background .1s ease;
+    }
+    .sidebar nav a:hover {
+      background: var(--code-bg);
+      color: var(--accent-strong);
+    }
+    .sidebar nav a .anchor-num {
+      flex-shrink: 0;
+      width: 20px;
+      color: var(--accent-strong);
+      font-variant-numeric: tabular-nums;
+      font-weight: 650;
+      font-size: 12px;
+    }
+    .sidebar nav a.spec .anchor-num { color: var(--blue); }
+    .sidebar nav a.progress .anchor-num { color: var(--gold); }
+    #source {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── 主区 ── */
+    .main {
+      padding: 0 28px 60px;
+      max-width: 1100px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      padding: 18px 0 12px;
+      background: var(--bg);
+    }
+    .topbar .wrap {
+      position: relative;
+    }
+    .topbar input {
+      width: 100%;
+      padding: 11px 16px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font: inherit;
+      font-size: 14.5px;
+      color: var(--text);
+    }
+    .topbar input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(29, 111, 104, 0.12);
+    }
+    .topbar .hint {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 11.5px;
+      pointer-events: none;
+    }
+    .topbar input:focus + .hint { opacity: 0; }
+
+    /* ── Section ── */
+    .section {
+      margin-top: 26px;
+      scroll-margin-top: 70px;
+    }
+    .section[hidden] { display: none; }
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      padding: 0 8px 8px;
+      border-bottom: 2px solid var(--border);
+    }
+    .section-header h2 {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      font-size: 13px;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: var(--accent-strong);
+    }
+    .section.spec .section-header h2 { color: var(--blue); }
+    .section.progress .section-header h2 { color: var(--gold); }
+    .section-header .label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .section-header .count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── 行 ── */
+    .grid {
+      display: grid;
+      grid-template-columns: 44px minmax(160px, max-content) minmax(0, 1fr) auto;
+      column-gap: 16px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: subgrid;
+      grid-column: 1 / -1;
+      align-items: baseline;
+      padding: 9px 8px;
+      border-bottom: 1px solid #ebe3d4;
+      text-decoration: none;
+      color: inherit;
+      transition: background .1s ease;
+    }
+    .row:last-child { border-bottom: 0; }
+    .row:hover { background: #fbf6ec; }
+    .row.is-focus {
+      background: #eef4f1;
+      box-shadow: inset 3px 0 0 var(--accent);
+    }
+    .section.spec .row.is-focus { box-shadow: inset 3px 0 0 var(--blue); }
+    .section.progress .row.is-focus { box-shadow: inset 3px 0 0 var(--gold); }
+
+    .row .num {
+      color: var(--accent-strong);
+      font-weight: 700;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.5px;
+    }
+    .section.spec .row .num { color: var(--blue); }
+    .section.progress .row .num { color: var(--gold); }
+
+    .row .title {
+      font-weight: 650;
+      font-size: 14.5px;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .row .desc {
+      color: var(--muted);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .row .path {
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      font-size: 11.5px;
+      opacity: 0;
+      transition: opacity .12s;
+    }
+    .row:hover .path,
+    .row.is-focus .path {
+      opacity: 1;
+    }
+
+    mark {
+      background: rgba(154, 106, 23, 0.18);
+      color: inherit;
+      padding: 0 1px;
+      border-radius: 2px;
+    }
+
+    .empty {
+      margin-top: 32px;
+      padding: 26px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+      background: var(--paper);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+    }
+    .empty[hidden] { display: none; }
+
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      padding: 3px 9px;
+      background: var(--code-bg);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 11.5px;
+    }
+    .source-badge.live { color: var(--green); }
+    .source-badge.live::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 999px;
+    }
+
+    kbd {
+      display: inline-block;
+      padding: 1px 5px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 3px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      font-size: 10.5px;
+      color: var(--text);
+    }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar {
+        position: static;
+        height: auto;
+        max-height: 280px;
+        padding: 16px 18px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+        overflow-y: auto;
+      }
+      .sidebar h1 { font-size: 16px; }
+      .sidebar .tagline { margin-bottom: 14px; }
+      #source { display: none; }
+      .main { padding: 0 18px 40px; }
+      .grid { display: block; }
+      .row {
+        grid-template-columns: 38px minmax(0, 1fr);
+        column-gap: 12px;
+        row-gap: 2px;
+      }
+      .row .title { grid-column: 2; }
+      .row .desc {
+        grid-column: 2;
+        white-space: normal;
+      }
+      .row .path { display: none; }
+      .topbar .hint { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Open Novel</h1>
+      <p class="tagline">文档索引 · POC</p>
+      <nav id="toc"></nav>
+      <div id="source"></div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="wrap">
+          <input id="q" type="search" autofocus autocomplete="off" placeholder="过滤 (例: agent · storage · prompt · cascade · embedding)…">
+          <span class="hint"><kbd>/</kbd> 聚焦 · <kbd>↑↓</kbd> 选择 · <kbd>↵</kbd> 打开</span>
+        </div>
+      </div>
+
+      <div id="docs"></div>
+
+      <p class="empty" id="empty" hidden>没有匹配的文档。试试 <code>agent</code> · <code>storage</code> · <code>cascade</code></p>
+    </main>
+  </div>
+
+  <script>
+    // ── 数据：所有文档元信息集中在这里 ──
+    // 格式: [id, href, title, desc, extraKeys?]
+    // 加新文档：往对应 items 里塞一行；同时同步 README.md「文档导航」段
+    const DATA = [
+      { kind: 'plan', title: 'Plan', label: '架构设计 (What / Why)', items: [
+        ['01', './plan/01-overview.html',                '系统概览',        '系统概览与关键决策'],
+        ['02', './plan/02-multi-agent.html',             '多 Agent 拓扑',   '7 Agent 拓扑与职责', 'router writer checker validator reflector humanizer reader'],
+        ['03', './plan/03-editor-layer.html',            '编辑器层',        '编辑器分层与 EditorAdapter', 'tiptap'],
+        ['04', './plan/04-storage-model.html',           '存储模型',        'md+sql 混合存储模型', 'frontmatter sqlite'],
+        ['05', './plan/05-modes-and-approval.html',      '模式与审批',      '三模式与审批流', 'discuss plan write approval'],
+        ['06', './plan/06-cascade-and-reflection.html',  'Cascade 与反思',  'Cascade 一致性与反馈学习'],
+        ['07', './plan/07-ui-layout.html',               'UI 布局',         '五区 UI 布局'],
+        ['08', './plan/08-tech-stack.html',              '技术栈',          '技术栈锁定与版本策略', 'next mastra deepseek'],
+        ['09', './plan/09-narrative-engine.html',        '叙事引擎',        'BeatAnalyzer + ArcTracker + 模板库'],
+        ['10', './plan/10-reader-simulator.html',        '读者仿真器',      '5 persona ReaderPanel'],
+        ['11', './plan/11-knowledge-graph.html',         '知识图谱',        '知识图谱与 cascade / RAG 地基'],
+        ['12', './plan/12-memory-and-context.html',      '记忆与上下文',    'Agent 记忆与上下文治理'],
+      ]},
+      { kind: 'spec', title: 'Spec', label: '实现细节 (How)', items: [
+        ['00', './spec/00-version-audit.html',           '版本审计',        'W3 启动前版本审计闸门 (npm 实查 / DeepSeek model id / AI SDK API 形态)'],
+        ['01', './spec/01-storage-schema.html',          '存储 schema',     'SQLite schema 与 frontmatter 规范 (zod 强校验 / 编码归一 / WAL / 连接池)'],
+        ['02', './spec/02-agent-tools.html',             'Agent 工具',      '工具签名与契约 (越权防御 / 不可信围栏 / 续写协议 / 结构化输出修复)'],
+        ['03', './spec/03-prompts.html',                 'Prompts',         'Agent prompt 模板'],
+        ['04', './spec/04-streaming-protocol.html',      '流式协议',        'SSE 事件协议 (取消/刷新/重连 + 错误 UX 表 + 长任务进度)', 'sse'],
+        ['05', './spec/05-entity-highlight.html',        '实体高亮',        '实体高亮与跳转 (中文边界 / IME 安全 / trie 重建)'],
+        ['06', './spec/06-approval-flow.html',           '审批流',          'proposal + 独立 endpoint 模式'],
+        ['07', './spec/07-mode-state-machine.html',      '模式状态机',      'XState 状态机 (USER_INPUT 处理 + cascade queue)', 'xstate'],
+        ['08', './spec/08-de-ai-pipeline.html',          '去 AI 化 pipeline','去 AI 化 pipeline', 'humanizer'],
+        ['09', './spec/09-build-and-tooling.html',       '构建与工具链',    '构建与工具链', 'lint ci'],
+        ['10', './spec/10-narrative-engine.html',        '叙事引擎实现',    'BeatAnalyzer / ArcTracker / 模板格式'],
+        ['11', './spec/11-reader-personas.html',         '读者 Persona',    'ReaderPanel 实现 (失败聚合 + persona 安全围栏)'],
+        ['12', './spec/12-shortcuts.html',               '快捷键',          'Registry + CommandRegistry + IME 闸门 + @file 引用 + 撤销栈语义'],
+        ['13', './spec/13-settings.html',                'Settings',        'SettingsDialog 8 section + 月度预算 + 项目生命周期 + 学习偏好面板'],
+        ['14', './spec/14-testing.html',                 '测试策略',        'vitest / playwright / LLM golden / CI'],
+        ['15', './spec/15-onboarding.html',              'Onboarding',      '首启引导 (4 步 wizard + 渐进 tooltip + 样例项目)'],
+        ['16', './spec/16-knowledge-schema.html',        '知识图谱 schema', '知识图谱 schema 与 frontmatter 升级'],
+        ['17', './spec/17-paragraph-anchors.html',       '段落锚点',        '段级稳定 ID 与差量 reindex'],
+        ['18', './spec/18-embeddings.html',              'Embeddings',      '段级 embedding 与语义检索', 'vector'],
+        ['19', './spec/19-impact-analysis.html',         '影响分析',        '影响半径与 cascade 工具'],
+        ['20', './spec/20-context-assembly.html',        '上下文装配',      '上下文装配工具 assembleContext'],
+        ['21', './spec/21-fact-query.html',              '事实查询',        '事实查询工具 queryFacts'],
+        ['22', './spec/22-mastra-memory.html',           'Mastra Memory',   'Mastra Memory 落地细节'],
+        ['23', './spec/23-context-contracts.html',       '上下文契约',      'Per-agent 上下文契约'],
+        ['24', './spec/24-json-output.html',             'JSON 输出',       'JSON 结构化输出统一规约', 'zod'],
+        ['25', './spec/25-cardinal-rules.html',          '五大守则',        '五大网文守则'],
+      ]},
+      { kind: 'progress', title: 'Progress', label: '实施进度 (When)', items: [
+        ['',    './progress/README.md',                  'README',          '日志索引规则与模板'],
+        ['000', './progress/000-init.md',                '项目启动',        '项目启动记录'],
+        ['001', './progress/001-scaffolding.md',         'Scaffolding',     'W2 期 (起始计划 / 收尾 retro)'],
+        ['002', './progress/002-narrative-reader.md',    '叙事 + 读者仿真器','战略升级: 纳入叙事引擎 + 读者仿真器'],
+        ['003', './progress/003-shortcuts-and-settings.md','快捷键 + Settings','UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计'],
+        ['004', './progress/004-docs-hardening.md',      '文档审计加固',    'W3 启动前 day-1 blocker 排查 + 32 个补丁'],
+        ['005', './progress/005-knowledge-graph.md',     '知识图谱专攻',    'cascade + RAG 真正可工作的地基'],
+        ['006', './progress/006-memory-and-context.md',  '记忆 / 上下文 / JSON / 守则', '一致性优先重设计'],
+        ['007', './progress/007-opencode-borrowings.md', 'opencode 借鉴落地', 'opencode 借鉴 + TODO closure'],
+      ]},
+    ];
+
+    // ── DOM 引用 ──
+    const tocEl = document.getElementById('toc');
+    const docsEl = document.getElementById('docs');
+    const input = document.getElementById('q');
+    const empty = document.getElementById('empty');
+    const sourceEl = document.getElementById('source');
+
+    // ── HTML 转义 ──
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[c]));
+    }
+
+    // ── 渲染侧栏 TOC ──
+    tocEl.innerHTML = DATA.map((sec) => `
+      <div class="group-label">${esc(sec.title)} <span style="float:right; color:var(--muted); font-weight:400; font-size:11px;">${sec.items.length}</span></div>
+      ${sec.items.map(([id, href, title]) => `
+        <a class="${sec.kind}" href="${esc(href)}">
+          <span class="anchor-num">${esc(id || '★')}</span>
+          <span>${esc(title)}</span>
+        </a>
+      `).join('')}
+    `).join('');
+
+    // ── 渲染主区 ──
+    docsEl.innerHTML = DATA.map((sec) => `
+      <section class="section ${sec.kind}" id="${sec.kind}" data-kind="${sec.kind}">
+        <header class="section-header">
+          <h2>${esc(sec.kind)}/</h2>
+          <span class="label">— ${esc(sec.label)}</span>
+          <span class="count" data-count></span>
+        </header>
+        <div class="grid">
+          ${sec.items.map(([id, href, title, desc, extra]) => {
+            const keys = [id, title, desc, extra || ''].join(' ').toLowerCase();
+            const path = href.replace(/^\.\//, '');
+            return `
+              <a class="row" href="${esc(href)}" data-href="${esc(href)}" data-keys="${esc(keys)}">
+                <span class="num">${esc(id || '★')}</span>
+                <span class="title">${esc(title)}</span>
+                <span class="desc">${esc(desc)}</span>
+                <span class="path">${esc(path)}</span>
+              </a>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `).join('');
+
+    const sections = Array.from(docsEl.querySelectorAll('.section'));
+    const rows = Array.from(docsEl.querySelectorAll('.row'));
+
+    // ── 计数 ──
+    function updateCounts() {
+      let totalVisible = 0;
+      sections.forEach((sec) => {
+        const visible = sec.querySelectorAll('.row:not([hidden])').length;
+        const countEl = sec.querySelector('[data-count]');
+        if (countEl) countEl.textContent = visible + ' 篇';
+        sec.hidden = visible === 0;
+        totalVisible += visible;
+      });
+      empty.hidden = totalVisible > 0;
+    }
+
+    // ── 过滤 ──
+    let focusIdx = -1;
+    function applyFilter(raw) {
+      const q = raw.trim().toLowerCase();
+      const terms = q ? q.split(/\s+/).filter(Boolean) : [];
+      rows.forEach((row) => {
+        if (!terms.length) {
+          row.hidden = false;
+        } else {
+          const hay = row.dataset.keys;
+          row.hidden = !terms.every((t) => hay.includes(t));
+        }
+      });
+      updateCounts();
+
+      rows.forEach((r) => r.classList.remove('is-focus'));
+      focusIdx = -1;
+      if (q) {
+        const first = docsEl.querySelector('.row:not([hidden])');
+        if (first) {
+          first.classList.add('is-focus');
+          focusIdx = rows.indexOf(first);
+        }
+      }
+    }
+
+    function visibleRows() {
+      return rows.filter((r) => !r.hidden);
+    }
+
+    function moveFocus(delta) {
+      const vis = visibleRows();
+      if (!vis.length) return;
+      let cur = rows[focusIdx];
+      let idx = cur && !cur.hidden ? vis.indexOf(cur) : -1;
+      idx = idx === -1 ? (delta > 0 ? 0 : vis.length - 1) : Math.min(Math.max(idx + delta, 0), vis.length - 1);
+      rows.forEach((r) => r.classList.remove('is-focus'));
+      vis[idx].classList.add('is-focus');
+      focusIdx = rows.indexOf(vis[idx]);
+      vis[idx].scrollIntoView({ block: 'nearest' });
+    }
+
+    input.addEventListener('input', (e) => applyFilter(e.target.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (input.value) { input.value = ''; applyFilter(''); }
+        else input.blur();
+        e.preventDefault();
+      } else if (e.key === 'Enter') {
+        const focus = rows[focusIdx];
+        const target = (focus && !focus.hidden) ? focus : docsEl.querySelector('.row:not([hidden])');
+        if (target) window.location.href = target.getAttribute('href');
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown') {
+        moveFocus(1); e.preventDefault();
+      } else if (e.key === 'ArrowUp') {
+        moveFocus(-1); e.preventDefault();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.target === input) return;
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      if (e.key === '/' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      }
+    });
+
+    updateCounts();
+    sourceEl.innerHTML = '<span class="source-badge">数据: 内嵌</span>';
+
+    // ── 动态同步：从 README.md 解析「文档导航」段，覆盖描述 ──
+    // 仅当通过 http(s) 打开时生效；file:// 下 fetch 同目录文件会被浏览器拦截
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      fetch('./README.md', { cache: 'no-cache' })
+        .then((r) => r.ok ? r.text() : Promise.reject(r.status))
+        .then((md) => {
+          // 提取 - [name](path) — desc  形式 (中文 — 或英文 -- 都兼容)
+          const re = /^\s*-\s*\[([^\]]+)\]\(([^)]+)\)\s*[—\-–]\s*(.+?)\s*$/gm;
+          const map = new Map();
+          let m;
+          while ((m = re.exec(md)) !== null) {
+            let desc = m[3]
+              .replace(/\*\*([^*]+)\*\*/g, '$1')
+              .replace(/`([^`]+)`/g, '$1');
+            map.set(m[2], desc);
+          }
+          let touched = 0;
+          rows.forEach((row) => {
+            const href = row.getAttribute('data-href');
+            if (map.has(href)) {
+              const desc = map.get(href);
+              const descEl = row.querySelector('.desc');
+              if (descEl && descEl.textContent !== desc) {
+                descEl.textContent = desc;
+                // 同步 search index
+                const id = row.querySelector('.num').textContent;
+                const title = row.querySelector('.title').textContent;
+                row.dataset.keys = (id + ' ' + title + ' ' + desc).toLowerCase();
+                touched++;
+              }
+            }
+          });
+          sourceEl.innerHTML = `<span class="source-badge live">数据: README.md · 同步 ${touched} 条</span>`;
+        })
+        .catch(() => {
+          sourceEl.innerHTML = '<span class="source-badge">数据: 内嵌 (README fetch 失败)</span>';
+        });
+    } else {
+      sourceEl.innerHTML = '<span class="source-badge">数据: 内嵌 (file://)</span>';
+    }
+  </script>
+</body>
+</html>

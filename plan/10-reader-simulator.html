@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/10-reader-simulator.html</span>
 </nav>
 <h1 id="10-读者仿真器-readerpanel">10 — 读者仿真器 (ReaderPanel)</h1>
@@ -105,36 +105,46 @@
 </code></pre>
 <p>ReaderPanel 是守则 1/2/3/4/5 的<strong>二审 agent</strong>(主检测在 Validator + Checker + ArcTracker 的算法层;ReaderPanel 是从读者主观感受角度看&quot;这章会不会让人弃书&quot;)。两层都报警 = 这章风险极大;只一层报警 = 警惕但不阻断。聚合规则在 <a href="../spec/25-cardinal-rules.html">spec/25 §ApprovalCard 集成</a>。</p>
 <h2 id="触发时机">触发时机</h2>
-<pre><code>write 模式: Writer 生成章节
-   ↓
-Checker (含叙事引擎子能力)
-   ↓
-Validator (一致性)
-   ↓
-**ReaderPanel (本模块) ← 在 ApprovalCard 之前**
-   ↓
-ApprovalCard (含 ChapterRiskReport)
-   ↓ 作者决定: ship / 改 / 重写
-   ↓
-落盘 + Reflector 提炼经验
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  S([write 模式: Writer 生成章节]) --> C[Checker<br/>含叙事引擎子能力]
+  C --> V[Validator<br/>一致性]
+  V --> RP[ReaderPanel 本模块<br/>在 ApprovalCard 之前]
+  RP --> AC[ApprovalCard<br/>含 ChapterRiskReport]
+  AC --> D{作者决定}
+  D -->|ship| Save[落盘 + Reflector 提炼经验]
+  D -->|改| Save
+  D -->|重写| C
+  style RP fill:#fef6e4,stroke:#d9a23a
+</pre>
 <p>ReaderPanel 输出<strong>不是闸门</strong>(<code>needsApproval: false</code>)。它在 ApprovalCard 里以&quot;读者预演&quot;卡片形式展示,作者可参考可忽略。</p>
 <h2 id="ui-形态">UI 形态</h2>
 <p>ApprovalCard 增加一栏 <strong>章节风险报告</strong>:</p>
-<pre><code>┌─ 章节风险报告 ────────────────────────────────────┐
-│  整体留存预测: 68/100  (推荐: minor-tweak)          │
-│                                                     │
-│  ⚠ 多人标记的风险:                                  │
-│    • &quot;AI 味&quot; (2/5 标) - 第 3 段长句过密               │
-│    • &quot;节奏拖&quot; (3/5 标) - 第 5-7 段铺垫过长            │
-│                                                     │
-│  ✨ 多人标记的亮点:                                  │
-│    • &quot;钩子强&quot; (5/5 标) - 章末悬念到位                 │
-│    • &quot;爽点&quot; (4/5 标) - 第 4 段反击桥段                │
-│                                                     │
-│  [展开 5 个读者反馈] [跳过] [按风险点修改]           │
-└─────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph CARD["章节风险报告"]
+    direction TB
+    HEAD["整体留存预测: 68/100  (推荐: minor-tweak)"]:::head
+    subgraph RISK["多人标记的风险"]
+      direction TB
+      R1["'AI 味' (2/5 标) - 第 3 段长句过密"]
+      R2["'节奏拖' (3/5 标) - 第 5-7 段铺垫过长"]
+    end
+    subgraph WIN["多人标记的亮点"]
+      direction TB
+      W1["'钩子强' (5/5 标) - 章末悬念到位"]
+      W2["'爽点' (4/5 标) - 第 4 段反击桥段"]
+    end
+    BTN["[展开 5 个读者反馈] [跳过] [按风险点修改]"]:::btn
+  end
+  HEAD --> RISK
+  RISK --> WIN
+  WIN --> BTN
+  classDef head fill:#eef,stroke:#88a
+  classDef btn fill:#f6f6f9,stroke:#bbb
+  style RISK fill:#fbe5e5,stroke:#c33
+  style WIN fill:#e5fbe5,stroke:#3a3
+</pre>
 <p>展开后能看到每个 persona 的完整 <code>naturalLanguageReaction</code> (像逐条读者评论)。</p>
 <h2 id="自定义-persona">自定义 Persona</h2>
 <p>用户可以在 SettingsDialog → &quot;读者仿真器&quot; tab 添加自定义 persona:</p>

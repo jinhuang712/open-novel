@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/16-knowledge-schema.html</span>
 </nav>
 <h1 id="spec-16-知识图谱-schema">Spec 16 — 知识图谱 Schema</h1>
@@ -227,22 +227,16 @@ CREATE INDEX idx_concepts_status ON concepts(status);
 <li><code>unique</code> — 独一无二 (e.g. 只有主角能用某能力)</li>
 </ul>
 <h3 id="概念抽取流程">概念抽取流程</h3>
-<pre><code>worldview/rules.md 落盘
-   ↓
-reindex Worker 入队 concept-extraction job
-   ↓
-LLM Flash 跑 spec/16 §concept-extractor prompt:
-   &quot;从这段文字中提取所有&#39;世界硬规则&#39;(影响后续创作的硬性约束):
-    每条输出 { title, surface_forms, semantic, category, description }&quot;
-   ↓
-返回候选 concepts (status=&#39;reviewing&#39;)
-   ↓
-SettingsDialog → 概念审视面板 (新)
-  | 候选 | 类别 | 语义 | 表面词 | [接受] [拒绝] [改] |
-   ↓
-用户接受 → status=&#39;active&#39; + 入 concepts 表 + concept_refs 全文重扫
-用户拒绝 → status=&#39;archived&#39; (留底防重复抽)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  SAVE([worldview/rules.md 落盘]) --> Q[reindex Worker 入队<br/>concept-extraction job]
+  Q --> LLM["LLM Flash 跑 concept-extractor prompt<br/>提取所有 '世界硬规则' (影响后续创作的硬性约束)<br/>每条输出 {title, surface_forms, semantic, category, description}"]
+  LLM --> CAND["返回候选 concepts<br/>status='reviewing'"]
+  CAND --> PANEL["SettingsDialog, 概念审视面板<br/>候选 / 类别 / 语义 / 表面词 + 接受 / 拒绝 / 改"]
+  PANEL --> ACCEPT{用户决策}
+  ACCEPT -->|接受| OK["status='active'<br/>入 concepts 表<br/>concept_refs 全文重扫"]
+  ACCEPT -->|拒绝| NO["status='archived'<br/>(留底防重复抽)"]
+</pre>
 <h3 id="concept-extractor-prompt-libconceptspromptsextractormd">concept-extractor prompt (<code>lib/concepts/prompts/extractor.md</code>)</h3>
 <pre><code class="language-markdown">你是 Open Novel 概念抽取器。任务:从世界观/设定文本中提取**会影响后续章节创作的硬规则**。
 
@@ -658,10 +652,12 @@ export async function checkPlanLock(projectId: string): Promise&lt;LockState&gt;
 CREATE INDEX idx_snap_project ON setting_snapshots(project_id, created_at DESC);
 </code></pre>
 <p>snapshot_dir 内容:</p>
-<pre><code>.snapshots/{projectId}/{ts}/
-├── settings/                   # 完整 settings/ 拷贝
-└── manifest.json               # { changed_files, agent, reason }
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  ROOT[".snapshots/{projectId}/{ts}/"]
+  ROOT --> S["settings/<br/>(完整 settings/ 拷贝)"]
+  ROOT --> M["manifest.json<br/>{changed_files, agent, reason}"]
+</pre>
 <p>UI: SettingsDialog → 历史快照面板,显示时间轴 + 每条 [还原] 按钮(走 ApprovalCard 让用户审一次完整 diff 再覆盖)。</p>
 <p>清理: 每周后台 Worker 删 expires_at &lt; now 的 snapshot;手动 promote = expires_at += 90 days。</p>
 <h2 id="l4-治理-派生文件守卫">L4 治理 — 派生文件守卫</h2>

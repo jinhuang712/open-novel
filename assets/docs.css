@@ -39,13 +39,22 @@ body {
 }
 
 .doc {
-  width: min(100%, 980px);
+  width: min(100%, 1240px);
   margin: 0 auto;
   padding: 44px 52px 56px;
   background: var(--paper);
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: var(--shadow);
+}
+
+.doc table {
+  width: calc(100% + 104px);
+  max-width: calc(100% + 104px);
+  margin-left: -52px;
+  margin-right: -52px;
+  padding: 0 52px;
+  box-sizing: border-box;
 }
 
 .doc-meta {
@@ -162,6 +171,30 @@ pre code {
   color: inherit;
   border-radius: 0;
   font-size: 0.9em;
+}
+
+.mermaid,
+pre.mermaid {
+  display: block;
+  margin: 28px 0;
+  padding: 22px 18px;
+  background: #fbf8f0;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+  overflow-x: auto;
+  font-family: inherit;
+}
+
+.mermaid:not([data-processed]) {
+  visibility: hidden;
+  min-height: 80px;
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
 }
 
 .doc-tree,

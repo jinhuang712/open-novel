@@ -10,18 +10,28 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/14-testing.html</span>
 </nav>
 <h1 id="spec-14-测试策略">Spec 14 — 测试策略</h1>
 <h2 id="测试金字塔">测试金字塔</h2>
-<pre><code>    ▲ E2E (Playwright)            少量 (核心 user flow,可选)
-    ─────────────────
-    ▲ 集成 (vitest + msw)         中量 (Route Handlers + Mastra agent + 工具流)
-    ─────────────────────
-    ▲ 单元 (vitest)              大量 (lib/* 纯函数 + state machine + reducer)
-    ─────────────────────────
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  subgraph PYRAMID["测试金字塔"]
+    direction TB
+    subgraph TOP["顶层"]
+      E2E["E2E (Playwright)<br/>少量 — 核心 user flow,可选"]
+    end
+    subgraph MID["中层"]
+      INT["集成 (vitest + msw)<br/>中量 — Route Handlers + Mastra agent + 工具流"]
+    end
+    subgraph BOT["底层"]
+      UNIT["单元 (vitest)<br/>大量 — lib/* 纯函数 + state machine + reducer"]
+    end
+    TOP --> MID
+    MID --> BOT
+  end
+</pre>
 <h2 id="framework-选型">Framework 选型</h2>
 <table>
 <thead>
@@ -70,40 +80,33 @@
 </tr>
 </tbody></table>
 <h2 id="文件分布">文件分布</h2>
-<pre><code>.
-├── vitest.config.ts                  # 单测/集成测配置
-├── playwright.config.ts              # E2E 配置 (W11+)
-├── tests/
-│   ├── unit/
-│   │   ├── shortcuts.test.ts
-│   │   ├── modes.test.ts
-│   │   ├── modeMachine.test.ts
-│   │   ├── ahocorasick.test.ts
-│   │   ├── ahocorasick.bench.ts
-│   │   ├── frontmatter-schema.test.ts
-│   │   └── path-traversal.test.ts
-│   ├── integration/
-│   │   ├── api-keys.test.ts
-│   │   ├── api-files.test.ts
-│   │   ├── api-chat.test.ts
-│   │   ├── approval-flow.test.ts
-│   │   └── cascade-resume.test.ts
-│   ├── e2e/                          # W11+ 才补
-│   │   ├── boot-and-settings.spec.ts
-│   │   ├── plan-mode.spec.ts
-│   │   └── write-mode.spec.ts
-│   ├── fixtures/                     # 共用 mock 数据
-│   │   ├── projects/
-│   │   ├── chapters/
-│   │   └── llm-responses/
-│   └── golden/                       # LLM 输出 snapshot
-│       ├── beat-analyzer/
-│       ├── reader-panel/
-│       └── writer/
-└── .github/workflows/
-    ├── ci.yml                         # PR 时跑 typecheck/lint/build/test
-    └── nightly-llm.yml                # nightly 跑真实 LLM golden (有成本)
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  ROOT["项目根"]
+  ROOT --> VC["vitest.config.ts<br/>单测/集成测配置"]
+  ROOT --> PC["playwright.config.ts<br/>E2E 配置 (W11+)"]
+  ROOT --> TESTS["tests/"]
+  ROOT --> WF[".github/workflows/"]
+
+  TESTS --> UT["unit/"]
+  TESTS --> IT["integration/"]
+  TESTS --> ET["e2e/ (W11+ 才补)"]
+  TESTS --> FX["fixtures/ 共用 mock 数据"]
+  TESTS --> GD["golden/ LLM 输出 snapshot"]
+
+  UT --> UT1["shortcuts.test.ts<br/>modes.test.ts<br/>modeMachine.test.ts<br/>ahocorasick.test.ts<br/>ahocorasick.bench.ts<br/>frontmatter-schema.test.ts<br/>path-traversal.test.ts"]
+
+  IT --> IT1["api-keys.test.ts<br/>api-files.test.ts<br/>api-chat.test.ts<br/>approval-flow.test.ts<br/>cascade-resume.test.ts"]
+
+  ET --> ET1["boot-and-settings.spec.ts<br/>plan-mode.spec.ts<br/>write-mode.spec.ts"]
+
+  FX --> FX1["projects/<br/>chapters/<br/>llm-responses/"]
+
+  GD --> GD1["beat-analyzer/<br/>reader-panel/<br/>writer/"]
+
+  WF --> WF1["ci.yml — PR 时跑 typecheck/lint/build/test"]
+  WF --> WF2["nightly-llm.yml — nightly 跑真实 LLM golden (有成本)"]
+</pre>
 <h2 id="单测-must-have-清单-按-w-落地">单测 must-have 清单 (按 W 落地)</h2>
 <h3 id="w2-末尾">W2 末尾</h3>
 <ul>

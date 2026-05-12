@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/17-paragraph-anchors.html</span>
 </nav>
 <h1 id="spec-17-段级稳定-id-与差量-reindex">Spec 17 — 段级稳定 ID 与差量 reindex</h1>
@@ -110,25 +110,25 @@ CREATE INDEX idx_anchors_double_link ON paragraph_anchors(prev_anchor, next_anch
 </code></pre>
 <h2 id="差量-reindex-流程">差量 reindex 流程</h2>
 <h3 id="触发时机">触发时机</h3>
-<pre><code>writeSetting / writeChapter 落盘
-   ↓
-reindex Worker 取该 file
-   ↓
-读旧的 paragraph_anchors (WHERE file_path = X AND deleted_at IS NULL)
-   ↓
-按 splitParagraphs(新内容) 算新段集
-   ↓
-diff 算法 (见下) 判:
-   - 哪些 anchor 不变 (未改)
-   - 哪些 anchor 内容微调 (signature 同 但 content_hash 不同)
-   - 哪些 anchor 删除 (旧的找不到对应)
-   - 哪些 anchor 新增 (新内容没对应旧 anchor)
-   - 哪些 anchor 是&quot;重写&quot; (旧 anchor 失效 + 邻接相同 + 新位置内容近似)
-   ↓
-对各类做对应处理 (见下)
-   ↓
-广播 &#39;anchors:changed&#39; 事件 → 下游 (entity_refs / concept_refs / embeddings / dependencies) 各自处理
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  SAVE([writeSetting / writeChapter 落盘]) --> W[reindex Worker 取该 file]
+  W --> OLD["读旧的 paragraph_anchors<br/>WHERE file_path = X AND deleted_at IS NULL"]
+  OLD --> SPLIT["按 splitParagraphs(新内容) 算新段集"]
+  SPLIT --> DIFF[diff 算法判 5 类]
+  DIFF --> U[unchanged: anchor 不变]
+  DIFF --> M["modified: 内容微调<br/>(signature 同, content_hash 不同)"]
+  DIFF --> D[deleted: 旧的找不到对应]
+  DIFF --> A[added: 新内容无对应旧 anchor]
+  DIFF --> R["rewritten: 旧失效 + 邻接相同<br/>+ 新位置内容近似"]
+  U --> APPLY[对各类做对应处理]
+  M --> APPLY
+  D --> APPLY
+  A --> APPLY
+  R --> APPLY
+  APPLY --> BC["广播 'anchors:changed' 事件"]
+  BC --> DS["下游各自处理:<br/>entity_refs / concept_refs<br/>embeddings / dependencies"]
+</pre>
 <h3 id="diff-算法">diff 算法</h3>
 <pre><code class="language-ts">// lib/storage/anchor-diff.ts
 type DiffResult = {

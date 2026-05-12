@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/09-build-and-tooling.html</span>
 </nav>
 <h1 id="spec-09-构建与工具链">Spec 09 — 构建与工具链</h1>
@@ -37,23 +37,24 @@
 <p><code>pnpm dlx shadcn@latest init</code> 会从 <code>ui.shadcn.com</code> 拉模板,<strong>同样会被 SSL 拦截</strong>。我们的对策:<strong>手写所有 shadcn 组件</strong>,只保留 <code>components.json</code> 元数据让未来本地有网时可以 <code>add</code>。</p>
 <p>各组件按官方 New York 风格的 RSC + Tailwind v4 形态实现,版本与 React 19 / Tailwind v4 / Radix UI 保持兼容。</p>
 <h2 id="项目结构常量">项目结构常量</h2>
-<pre><code>/Users/jin.huang/dev/projects/open-novel/
-├── package.json              # 单包,声明 type=module
-├── pnpm-workspace.yaml       # 单成员工作区,留 monorepo 余地
-├── pnpm-lock.yaml            # 入仓
-├── tsconfig.json             # ES2022 + Bundler resolution + paths @/*
-├── next.config.ts            # serverExternalPackages 声明 mastra
-├── postcss.config.mjs        # Tailwind v4 PostCSS plugin
-├── components.json           # shadcn 元数据
-├── .eslintrc.json            # next/core-web-vitals
-├── .env.example              # 占位说明 (key 走 UI 不走 env)
-├── .gitignore                # 含 node_modules/.next/workspaces/*.db
-├── next-env.d.ts             # Next 自动生成,**入库** (Next 文档要求)
-├── app/                      # Next.js App Router
-├── components/               # UI 组件
-├── lib/                      # 业务代码
-└── public/                   # 静态资源
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  ROOT(["open-novel/"]) --> PKG["package.json<br/>单包,type=module"]
+  ROOT --> WS["pnpm-workspace.yaml<br/>单成员工作区,留 monorepo 余地"]
+  ROOT --> LOCK["pnpm-lock.yaml<br/>入仓"]
+  ROOT --> TSC["tsconfig.json<br/>ES2022 + Bundler resolution + paths @/*"]
+  ROOT --> NEXTC["next.config.ts<br/>serverExternalPackages 声明 mastra"]
+  ROOT --> POST["postcss.config.mjs<br/>Tailwind v4 PostCSS plugin"]
+  ROOT --> CMP["components.json<br/>shadcn 元数据"]
+  ROOT --> ES[".eslintrc.json<br/>next/core-web-vitals"]
+  ROOT --> ENV[".env.example<br/>占位说明 (key 走 UI 不走 env)"]
+  ROOT --> GI[".gitignore<br/>含 node_modules / .next / workspaces / *.db"]
+  ROOT --> NED["next-env.d.ts<br/>Next 自动生成,入库 (Next 文档要求)"]
+  ROOT --> APP(["app/<br/>Next.js App Router"])
+  ROOT --> CMPS(["components/<br/>UI 组件"])
+  ROOT --> LIB(["lib/<br/>业务代码"])
+  ROOT --> PUB(["public/<br/>静态资源"])
+</pre>
 <p>用户数据在 <code>~/.open-novel/</code>,<strong>绝不</strong>进项目仓库 (<code>.gitignore</code> 兜底 <code>/workspaces/</code> <code>*.db</code>)。</p>
 <h2 id="typescript-配置要点">TypeScript 配置要点</h2>
 <pre><code class="language-jsonc">{

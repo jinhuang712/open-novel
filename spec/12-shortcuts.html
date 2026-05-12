@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/12-shortcuts.html</span>
 </nav>
 <h1 id="spec-12-快捷键-registry-与上下文化绑定">Spec 12 — 快捷键 Registry 与上下文化绑定</h1>
@@ -435,19 +435,19 @@ export function useShortcutListener() {
 <p>启动时 merge: <code>effective = defaultKeys ∪ overrides</code>。同 id 的 overrides <strong>覆盖</strong> 默认 (而不是追加)。</p>
 <h3 id="冲突检测">冲突检测</h3>
 <p>UI 在 SettingsDialog → 快捷键 tab 显示:</p>
-<pre><code>┌─ 快捷键 ─────────────────────────────────────────────┐
-│ 上下文    描述                  当前绑定   默认  操作 │
-│ chatbox   切换 Agent 模式        Tab      Tab    [改] │
-│ chatbox   反向切换               Shift+Tab Shift+Tab  │
-│ chatbox   发送消息               Cmd+Enter Cmd+Enter  │
-│ ...                                                  │
-│                                                      │
-│ ⚠ 冲突: editor.acceptSuggestion 与 chat.cycleMode    │
-│        都绑定 Tab — 但上下文不同,实际无冲突         │
-│                                                      │
-│ [重置全部] [导出] [导入]                              │
-└──────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph SC["快捷键 设置面板"]
+    H["上下文 | 描述 | 当前绑定 | 默认 | 操作"]
+    R1["chatbox | 切换 Agent 模式 | Tab | Tab | [改]"]
+    R2["chatbox | 反向切换 | Shift+Tab | Shift+Tab"]
+    R3["chatbox | 发送消息 | Cmd+Enter | Cmd+Enter"]
+    R4["..."]
+    W["冲突: editor.acceptSuggestion 与 chat.cycleMode<br/>都绑定 Tab — 但上下文不同,实际无冲突"]
+    A["[重置全部] [导出] [导入]"]
+    H --- R1 --- R2 --- R3 --- R4 --- W --- A
+  end
+</pre>
 <p>冲突算法:</p>
 <ul>
 <li>同 context + 同 key + 不同 id → <strong>真冲突</strong>,红色高亮 + 阻止保存</li>
@@ -528,18 +528,20 @@ export function cycleMode(cur: Mode, reverse = false): Mode {
 </code></pre>
 <p><code>ShortcutRegistry</code> 自动从 CommandRegistry 派生 (筛选有 <code>defaultKeys</code> 的)。</p>
 <h3 id="命令面板-ui">命令面板 UI</h3>
-<pre><code>┌─ 命令面板 ─────────────────────────────────────┐
-│  🔍 切换                                        │
-│  &gt; 切换 Agent 模式 (discuss/plan/write)   Tab    │
-│    切换批注                                Cmd+/ │
-│    切换 Console                            Cmd+` │
-│    切换 dark mode                          —     │ ← 无快捷键也能搜到
-│                                                 │
-│    最近用过:                                    │
-│      创建项目 (5 分钟前)                         │
-│      导出当前项目                                │
-└─────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph CP["命令面板"]
+    Q["搜索: 切换"]
+    H1["切换 Agent 模式 (discuss/plan/write) — Tab"]
+    H2["切换批注 — Cmd+/"]
+    H3["切换 Console — Cmd+`"]
+    H4["切换 dark mode — (无快捷键也能搜到)"]
+    R["最近用过"]
+    R1["创建项目 (5 分钟前)"]
+    R2["导出当前项目"]
+    Q --- H1 --- H2 --- H3 --- H4 --- R --- R1 --- R2
+  end
+</pre>
 <p>回车执行 handler。<code>when</code> 返回 false 的命令不出现 (e.g. &quot;审批 cascade 全部&quot; 仅在有 cascade 时可见)。</p>
 <h3 id="命令清单">命令清单</h3>
 <table>

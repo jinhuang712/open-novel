@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/04-storage-model.html</span>
 </nav>
 <h1 id="04-存储模型">04 — 存储模型</h1>
@@ -23,99 +23,49 @@
 <li><strong>关注点分离 — 产物 vs 过程</strong> (借鉴 opencode <code>session/session.sql.ts</code>): <strong>用户产物</strong>走 Markdown (chapter.md / character.md / outline.md / cardinal-rules.json 等, file tree view 可见可编辑可 git 跟踪); <strong>运行时过程数据</strong>走 SQLite (LLM 调用日志 / tool retry 记录 / token 用量 / JSON parse 失败 / cascade 路径 / etc, 给开发者调试用)。两者数据库分开 (<code>index.db</code> for 产物索引, <code>session_history.db</code> for 过程数据), 避免写入并发冲突且语义清晰。</li>
 </ul>
 <h2 id="存储位置">存储位置</h2>
-<pre><code>~/.open-novel/
-├── runtime.db                       # Mastra Memory 全局会话 (跨项目)
-├── settings.json                    # API keys / 用户偏好 (UI 修改)
-├── .snapshots/                      # 设定快照 (见 spec/16 §Snapshot)
-│   └── {projectId}/{timestamp}/
-└── workspaces/
-    ├── proj_重生互联网_a3f2/
-    │   ├── project.json
-    │   ├── settings/
-    │   │   ├── worldview/                       # ← 拆目录
-    │   │   │   ├── _index.md                    # 摘要 + 子文件列表 (供 LLM 快读)
-    │   │   │   ├── geography.md                 # 地理总论
-    │   │   │   ├── history.md                   # 历史脉络
-    │   │   │   ├── politics.md                  # 政治格局
-    │   │   │   ├── economy.md                   # 经济体系
-    │   │   │   ├── technology.md                # 科技 / 工业 (现代 / 科幻必备)
-    │   │   │   ├── culture.md                   # 风俗 / 民族 / 语言
-    │   │   │   ├── religion.md                  # 信仰 / 神系
-    │   │   │   └── rules.md                     # 世界硬规则 (e.g. &quot;此世界没有手机&quot;)
-    │   │   ├── outline/                         # ← 拆目录
-    │   │   │   ├── _index.md                    # 总纲 + 卷列表
-    │   │   │   ├── master.md                    # 全书一句话 / 三幕结构 / 总爽点节奏
-    │   │   │   ├── volumes/                     # 卷大纲
-    │   │   │   │   ├── 01-rebirth.md            # 第一卷
-    │   │   │   │   └── 02-startup.md            # 第二卷
-    │   │   │   └── chapter-outlines/            # 章节大纲索引 (内容仍在 chapters/{id}/outline.md)
-    │   │   │       └── _registry.md             # 章节-卷映射
-    │   │   ├── beats.md                         # 节拍设计 (兼容,不拆)
-    │   │   ├── characters/
-    │   │   │   ├── lin.md
-    │   │   │   └── wang.md
-    │   │   ├── factions/                        # ← 新 (阵营)
-    │   │   │   ├── _index.md
-    │   │   │   ├── donghai-group.md
-    │   │   │   └── chaoting.md
-    │   │   ├── organizations/                   # ← 新 (公司 / 门派 / 公会 / 政府,与 faction 不同维)
-    │   │   │   ├── _index.md
-    │   │   │   └── {id}.md
-    │   │   ├── locations/                       # ← 新 (替代 places)
-    │   │   │   ├── _index.md
-    │   │   │   ├── regions/                     # 大区
-    │   │   │   ├── cities/                      # 城市
-    │   │   │   ├── buildings/                   # 建筑
-    │   │   │   └── landmarks/                   # 地标
-    │   │   ├── items/                           # ← 新 (重要物品 / 法宝 / 信物)
-    │   │   │   ├── _index.md
-    │   │   │   └── {id}.md
-    │   │   ├── events/                          # ← 新 (历史事件 + 故事内关键事件)
-    │   │   │   ├── _index.md
-    │   │   │   └── {id}.md
-    │   │   ├── timeline/                        # ← 新
-    │   │   │   ├── _index.md
-    │   │   │   ├── era.md                       # 纪年体系 (大宇宙背景)
-    │   │   │   ├── story-clock.md               # 故事内时间推进 (绑章节)
-    │   │   │   └── character-ages.md            # 派生 — 由 entity_timeline 表生成
-    │   │   ├── relationships/                   # ← 新
-    │   │   │   ├── _index.md
-    │   │   │   ├── _matrix.md                   # 派生 — 由 entity_relations 表生成
-    │   │   │   └── notes/                       # 用户对某关系的注解
-    │   │   │       └── {id}.md
-    │   │   ├── story-lines/                     # ← 新
-    │   │   │   ├── _index.md
-    │   │   │   ├── main.md                      # 主线
-    │   │   │   └── subplots/                    # 支线
-    │   │   │       └── {id}.md
-    │   │   ├── foreshadowing/                   # ← 新 (预埋伏笔)
-    │   │   │   ├── _index.md
-    │   │   │   └── {id}.md                      # 单条伏笔: 埋点 / 收割点 / 状态
-    │   │   ├── chapter-arcs/                    # ← 新 (按弧划分章节段落)
-    │   │   │   ├── _index.md
-    │   │   │   └── {id}.md                      # e.g. 前世篇 ch_001-040
-    │   │   ├── power-system/                    # ← 新 (流派相关,仅玄幻 / 修仙 / 系统流用)
-    │   │   │   ├── _index.md
-    │   │   │   ├── overview.md
-    │   │   │   ├── tiers.md                     # 等阶
-    │   │   │   ├── techniques.md                # 功法 / 招式
-    │   │   │   └── artifacts.md                 # 法宝体系
-    │   │   ├── glossary/                        # ← 新 (术语 / 黑话 / 设定专有名词)
-    │   │   │   └── _index.md                    # 单文件即可,术语 ≤ 几百条
-    │   │   ├── taboos.md                        # ← 新 (作者明确&quot;绝对不能写&quot;)
-    │   │   ├── themes.md                        # ← 新 (主题 / 核心矛盾 / 价值观)
-    │   │   └── reader-promises.md               # ← 新 (已对读者立的旗 / 承诺)
-    │   ├── chapters/
-    │   │   └── 001-重生那一夜/
-    │   │       ├── outline.md
-    │   │       ├── draft.md
-    │   │       └── meta.json
-    │   ├── index.db                 # SQLite per-project (含 7 张新表,见 spec/16-18)
-    │   └── trace/
-    │       └── 2026-04-29-session-abc.jsonl
-    └── proj_末世修仙_b7c1/
-        └── ...
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  ROOT["~/.open-novel/"]
+  ROOT --> RT["runtime.db<br/>Mastra Memory 全局会话 跨项目"]
+  ROOT --> ST["settings.json<br/>API keys + 用户偏好 UI 修改"]
+  ROOT --> SN[".snapshots/<br/>设定快照 spec/16 Snapshot<br/>{projectId}/{timestamp}/"]
+  ROOT --> WS["workspaces/"]
+  WS --> P1["proj_重生互联网_a3f2/"]
+  WS --> PN["proj_末世修仙_b7c1/ ..."]
+
+  P1 --> PJ["project.json"]
+  P1 --> SET["settings/"]
+  P1 --> CHS["chapters/"]
+  P1 --> IDX["index.db<br/>SQLite per-project<br/>含 7 张新表 spec/16-18"]
+  P1 --> TR["trace/<br/>2026-04-29-session-abc.jsonl"]
+
+  CHS --> CH1["001-重生那一夜/<br/>outline.md + draft.md + meta.json"]
+
+  subgraph SETTINGS["settings/"]
+    direction TB
+    SET_WV["worldview/<br/>_index + geography + history + politics<br/>+ economy + technology + culture + religion + rules"]
+    SET_OL["outline/<br/>_index + master + volumes/ + chapter-outlines/_registry"]
+    SET_BE["beats.md 节拍设计"]
+    SET_CH["characters/<br/>lin.md + wang.md ..."]
+    SET_FA["factions/ 阵营<br/>_index + donghai-group + chaoting"]
+    SET_OR["organizations/ 公司/门派/公会/政府<br/>_index + {id}.md"]
+    SET_LO["locations/ 替代 places<br/>_index + regions/ + cities/ + buildings/ + landmarks/"]
+    SET_IT["items/ 重要物品/法宝/信物<br/>_index + {id}.md"]
+    SET_EV["events/ 历史事件 + 关键事件<br/>_index + {id}.md"]
+    SET_TL["timeline/<br/>_index + era + story-clock + character-ages 派生"]
+    SET_RE["relationships/<br/>_index + _matrix 派生 + notes/{id}"]
+    SET_SL["story-lines/<br/>_index + main + subplots/{id}"]
+    SET_FO["foreshadowing/ 预埋伏笔<br/>_index + {id}.md"]
+    SET_CA["chapter-arcs/ 按弧划分<br/>_index + {id}.md"]
+    SET_PS["power-system/ 玄幻/修仙/系统流<br/>_index + overview + tiers + techniques + artifacts"]
+    SET_GL["glossary/ 术语/黑话<br/>_index 单文件"]
+    SET_TB["taboos.md 绝对不能写"]
+    SET_TH["themes.md 主题/核心矛盾/价值观"]
+    SET_RP["reader-promises.md 已对读者立的旗"]
+  end
+
+  SET --> SETTINGS
+</pre>
 <h3 id="目录设计要点">目录设计要点</h3>
 <ol>
 <li><strong>每个目录有 <code>_index.md</code></strong> — 给 LLM 快速读&quot;这个目录里有什么 + 一句话摘要&quot;,不必扫整个目录。结构:<pre><code class="language-yaml">---
@@ -323,10 +273,12 @@ updated_at: ...
 <p>借鉴 opencode <code>session/session.sql.ts</code> + drizzle 的 SQLite 单文件持久化模式。<strong>与 <code>index.db</code> 严格分库</strong>, 因为产物索引和过程数据语义截然不同(前者面向 LLM 检索 + 用户文件浏览, 后者面向开发者调试 + 性能监控), 混在一起会让备份策略 / 写入并发 / schema migration 都更难。</p>
 </blockquote>
 <h3 id="路径">路径</h3>
-<pre><code>~/.open-novel/workspaces/{projectId}/
-├── index.db                    # 产物索引 (上文)
-└── session_history.db          # 运行时过程 (本节)
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  P["~/.open-novel/workspaces/{projectId}/"]
+  P --> A["index.db<br/>产物索引 上文"]
+  P --> B["session_history.db<br/>运行时过程 本节"]
+</pre>
 <h3 id="schema-drizzle-migration-006-session-historyts">Schema (drizzle migration <code>006-session-history.ts</code>)</h3>
 <pre><code class="language-sql">-- LLM 调用日志 (每次 callJsonAgent / streamText 一行)
 CREATE TABLE llm_calls (
@@ -453,28 +405,20 @@ CREATE TABLE prompt_cache_stats (
 <blockquote>
 <p>⚠ <strong>关键交互模型</strong>: <code>writeSetting</code> / <code>writeChapter</code> 是 <strong>proposal-only</strong> 工具 (见 spec/06),<strong>不直接落盘</strong>。从用户输入到磁盘改变,中间隔着完整的 cascade 内部递归 + 用户审批两道闸:</p>
 </blockquote>
-<pre><code>用户在 plan 模式发起意图
-   ↓
-Writer 出主修改 (in-memory)
-   ↓
-[内部递归循环 — 用户不可见,无任何落盘]
-   ├ 第 1 轮 analyzeImpact (基于 main delta) → ChangeProposal[1]
-   ├ Writer 内部对 needsChange=true 项生成 afterText (内存)
-   ├ 第 2 轮 analyzeImpact (基于第 1 轮 afterText) → ChangeProposal[2]
-   └ ... ≤3 轮,半径单调下降 + weight 阈值递增 (见 spec/19)
-   ↓ 递归终止
-汇总 ChangeSet (主修改 + 所有 cascade proposal,含二级)
-   ↓
-**一次** ApprovalCard 呈现整批:
-  - 顶部影响图谱 (节点 = entity / file,边 = 影响传播)
-  - 每条 proposal 一行 diff (默认全展开,可折叠)
-  - 每条 proposal 有勾选框 (默认勾)
-  - [全选] [全不选] [一键同意勾选项] [手动编辑某条] [拒绝全部]
-   ↓
-用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items: [...] }
-   ↓
-**↓ 此处才开始落盘 ↓**
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  U([用户在 plan 模式发起意图]) --> W1[Writer 出主修改 in-memory]
+  W1 --> LOOP["内部递归循环<br/>用户不可见 无任何落盘"]
+  LOOP --> R1["第 1 轮 analyzeImpact 基于 main delta<br/>ChangeProposal 1"]
+  R1 --> RA["Writer 内部对 needsChange=true 项<br/>生成 afterText 内存"]
+  RA --> R2["第 2 轮 analyzeImpact 基于第 1 轮 afterText<br/>ChangeProposal 2"]
+  R2 --> RN["... 1-3 轮 半径单调下降<br/>weight 阈值递增 spec/19"]
+  RN --> END["递归终止"]
+  END --> CS["汇总 ChangeSet<br/>主修改 + 所有 cascade proposal 含二级"]
+  CS --> AC["一次 ApprovalCard 呈现整批<br/>顶部影响图谱 节点=entity/file 边=影响传播<br/>每条 proposal 一行 diff 默认全展开 可折叠<br/>每条 proposal 有勾选框 默认勾<br/>全选 / 全不选 / 一键同意勾选项 / 手动编辑某条 / 拒绝全部"]
+  AC --> US["用户决定<br/>POST /api/approvals/{id}/resolve<br/>decision + accepted_items"]
+  US ==> DISK([此处才开始落盘])
+</pre>
 <p>下一节列的&quot;副作用&quot;只在 approve 通过后触发,不是 cascade 的源头。</p>
 <h2 id="审批通过后的副作用">审批通过后的副作用</h2>
 <p>每次 ApprovalCard 整批 approve 通过后,后端 <code>POST /api/approvals/{id}/resolve</code> 在一个 SQLite transaction 内:</p>

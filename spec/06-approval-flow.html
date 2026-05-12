@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/06-approval-flow.html</span>
 </nav>
 <h1 id="spec-06-审批流-human-in-the-loop">Spec 06 — 审批流 (Human-in-the-Loop)</h1>
@@ -20,36 +20,21 @@
 <h2 id="设计">设计</h2>
 <p>把&quot;工具调用挂起 → 用户审 → 决议&quot;的链路标准化。<strong>核心思路</strong> (cookbook 模式): 服务端工具不直接 <code>execute</code>,而是 emit tool-call;客户端 <code>onToolCall</code> 拦截 → 渲染 ApprovalCard → <code>addToolResult({ toolCallId, output })</code> 注入决议;Agent loop 读取 output 决定继续流程或重做。</p>
 <h2 id="流程时序">流程时序</h2>
-<pre><code>[Agent]                       [Server]                    [Client]
-   │                             │                            │
-   │  emit tool-call             │                            │
-   │  (with needsApproval=true)  │                            │
-   ├────────────────────────────►│                            │
-   │                             │  SSE: tool-call-needs-     │
-   │                             │      approval              │
-   │                             ├───────────────────────────►│
-   │                             │                            │
-   │                             │              onToolCall    │
-   │                             │              拦截,渲染     │
-   │                             │              &lt;ApprovalCard&gt;│
-   │                             │                            │
-   │                             │              用户点&quot;同意&quot;  │
-   │                             │                            │
-   │                             │  POST /api/tool-result     │
-   │                             │  { toolCallId, output }    │
-   │                             │◄───────────────────────────┤
-   │                             │                            │
-   │  resume execute()           │                            │
-   │◄────────────────────────────┤                            │
-   │                             │                            │
-   │  emit tool-result           │                            │
-   ├────────────────────────────►│                            │
-   │                             │  SSE: tool-result          │
-   │                             ├───────────────────────────►│
-   │                             │                            │
-   │  continue agent loop        │                            │
-   │                             │                            │
-</code></pre>
+<pre class="mermaid">
+sequenceDiagram
+  participant A as Agent
+  participant S as Server
+  participant C as Client
+  A->>S: emit tool-call (with needsApproval=true)
+  S->>C: SSE: tool-call-needs-approval
+  Note over C: onToolCall 拦截<br/>渲染 ApprovalCard
+  Note over C: 用户点 "同意"
+  C->>S: POST /api/tool-result<br/>{ toolCallId, output }
+  S->>A: resume execute()
+  A->>S: emit tool-result
+  S->>C: SSE: tool-result
+  Note over A: continue agent loop
+</pre>
 <h2 id="服务端实现-cookbook-模式-w9-内部-cascade-递归">服务端实现 (cookbook 模式 + W9 内部 cascade 递归)</h2>
 <p>需要审批的工具<strong>不直接执行 fs/db 副作用</strong>,而是先在内部跑完 cascade 递归 (spec/19),把整批 ChangeSet 落 <code>approvals</code> 表后返回 proposal 给客户端:</p>
 <pre><code class="language-ts">import { tool } from &#39;ai&#39;
@@ -622,19 +607,15 @@ export class DoomLoopDetector {
 </ul>
 <h3 id="升级到用户的-ui-表现">升级到用户的 UI 表现</h3>
 <p><code>escalate</code> 时不直接抛 error, 而是把 cascade 流程<strong>暂停在审批入口</strong>, 在 ApprovalCard 顶部显示橙色警告条:</p>
-<pre><code>┌──────────────────────────────────────────────┐
-│ ⚠ Writer 与 Validator 似乎陷入循环             │
-│ Writer 已重写 3 次但产物高度相似, Validator    │
-│ 反复拒绝。请人工裁定:                          │
-│   • 我手改 → 进入 chapter editor                │
-│   • 强制 approve 第 3 版 → 跳过 Validator        │
-│   • 放弃本章 → 删除草稿                         │
-│ Validator 拒绝原因 (3 次累计):                  │
-│   1. 林溪在第 47 章变成女主角后, 称谓&quot;哥&quot;未改   │
-│   2. 林溪称谓&quot;哥&quot;未改                          │
-│   3. 称谓&quot;哥&quot;出现 3 次未改                      │
-└──────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  WARN["Writer 与 Validator 似乎陷入循环<br/>Writer 已重写 3 次但产物高度相似<br/>Validator 反复拒绝, 请人工裁定"]
+  WARN --> ACT{用户选择}
+  ACT --> A1[/"我手改: 进入 chapter editor"/]
+  ACT --> A2[/"强制 approve 第 3 版: 跳过 Validator"/]
+  ACT --> A3[/"放弃本章: 删除草稿"/]
+  WARN -.-> REASONS["Validator 拒绝原因 (3 次累计)<br/>1. 林溪在第 47 章变成女主角后, 称谓'哥'未改<br/>2. 林溪称谓'哥'未改<br/>3. 称谓'哥'出现 3 次未改"]
+</pre>
 <p>(三个动作对应 spec/05 §modes-and-approval 的标准动作, 加 &quot;强制 approve 跳过 Validator&quot; 一个新动作)</p>
 <h3 id="与-spec22-subagent-task-id-续跑-的协同">与 spec/22 §subagent task_id 续跑 的协同</h3>
 <p>opencode <code>tool/task.ts</code> 的 <code>task_id</code> 续跑模式: Validator 拒绝后 Writer 重生成应<strong>续上原 threadId</strong> 而不是开新会话, 让 Mastra lastMessages=30 能让 Writer 看到&quot;我刚才被拒了&quot;。这是 doom-loop 检测能不能起作用的前提 — 如果每次重生成都是空白上下文, Writer 当然会一直输出同一个东西。</p>

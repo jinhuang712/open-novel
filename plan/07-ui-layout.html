@@ -10,30 +10,45 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/07-ui-layout.html</span>
 </nav>
 <h1 id="07-ui-布局">07 — UI 布局</h1>
 <h2 id="目标">目标</h2>
 <p>仿 VSCode 的 IDE 形态,把&quot;小说创作&quot;等同于&quot;代码编辑&quot;,让作者用熟悉的范式工作。</p>
 <h2 id="五区布局-用户提供的设计稿">五区布局 (用户提供的设计稿)</h2>
-<pre><code>┌────────────────────────────────────────────────────────────────────┐
-│ Tabs                                                                │  ← 顶栏
-├────┬──────────┬──────────────────────────────────┬────────────────┤
-│    │          │                                  │ ThinkingPanel  │
-│ A  │ FileTree │  Editor (TipTap)                 │  - 推理流式滚动 │
-│ c  │          │                                  │  - 工具调用日志 │
-│ t  │          │                                  │  - 子 Agent 切换│
-│ i  │          │                                  │                │
-│ v  │          │                                  ├────────────────┤
-│ i  │          │                                  │ ChatBox        │
-│ t  │          │                                  │  - mode 切换    │
-│ y  │          │                                  │  - 输入区       │
-│    │          ├──────────────────────────────────┤  - 发送按钮     │
-│    │          │ DebugConsole / 其他面板          │                │
-│    │          │                                  │                │
-└────┴──────────┴──────────────────────────────────┴────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph TOP["Tabs (顶栏)"]
+    direction LR
+    T1[Tab 1]:::tab
+    T2[Tab 2]:::tab
+    T3[+]:::tab
+  end
+  subgraph BODY[ ]
+    direction LR
+    AB["ActivityBar<br/>(48px)"]:::ab
+    FT["FileTree<br/>(240px)"]:::ft
+    subgraph MID["Editor + Console (弹性)"]
+      direction TB
+      ED["Editor (TipTap)"]:::ed
+      DC["DebugConsole / 其他面板<br/>(默认收起, Cmd+`)"]:::dc
+    end
+    subgraph RIGHT["右侧 Panel (400px, 可折叠)"]
+      direction TB
+      TP["ThinkingPanel<br/>推理流式滚动<br/>工具调用日志<br/>子 Agent 切换"]:::tp
+      CB["ChatBox<br/>mode 切换 / 输入区 / 发送"]:::cb
+    end
+  end
+  TOP --> BODY
+  classDef tab fill:#eef,stroke:#88a,color:#000
+  classDef ab fill:#222,stroke:#666,color:#fff
+  classDef ft fill:#f6f6f9,stroke:#88a
+  classDef ed fill:#fff,stroke:#88a
+  classDef dc fill:#f0f0f3,stroke:#88a
+  classDef tp fill:#f5fbe5,stroke:#9b3
+  classDef cb fill:#e5f3fb,stroke:#39b
+</pre>
 <table>
 <thead>
 <tr>
@@ -87,19 +102,21 @@
 <li>右侧 Panel: 默认 400px,可拖宽,可整体收起</li>
 </ul>
 <h2 id="activitybar-项目">ActivityBar 项目</h2>
-<pre><code>[📋] 大纲              → settings/outline/*, beats.md
-[👥] 角色设定           → settings/characters/*.md
-[🌍] 世界观             → settings/worldview/* (geography / history / politics / rules / ...)
-[🏛] 阵营/组织           → settings/factions/*, organizations/*
-[📍] 地点              → settings/locations/{regions,cities,buildings,landmarks}/*
-[📦] 道具/事件          → settings/items/*, events/*
-[🕒] 时间线/弧线         → settings/timeline/*, chapter-arcs/*
-[🔗] 关系/伏笔          → settings/relationships/*, foreshadowing/*, story-lines/*
-[📖] 章节              → chapters/*
-[🔍] 查询面板           → queryFacts (entity-at / relations / mentions / semantic)
-[💡] 已学到的偏好        → learnings 表展示与编辑
-[⚙️] 设置              → API keys, 模型选择, 风格等
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  A1["[大纲]"] --> AT1["settings/outline/*, beats.md"]
+  A2["[角色设定]"] --> AT2["settings/characters/*.md"]
+  A3["[世界观]"] --> AT3["settings/worldview/*<br/>(geography / history / politics / rules / ...)"]
+  A4["[阵营/组织]"] --> AT4["settings/factions/*, organizations/*"]
+  A5["[地点]"] --> AT5["settings/locations/{regions,cities,buildings,landmarks}/*"]
+  A6["[道具/事件]"] --> AT6["settings/items/*, events/*"]
+  A7["[时间线/弧线]"] --> AT7["settings/timeline/*, chapter-arcs/*"]
+  A8["[关系/伏笔]"] --> AT8["settings/relationships/*, foreshadowing/*, story-lines/*"]
+  A9["[章节]"] --> AT9["chapters/*"]
+  A10["[查询面板]"] --> AT10["queryFacts<br/>(entity-at / relations / mentions / semantic)"]
+  A11["[已学到的偏好]"] --> AT11["learnings 表展示与编辑"]
+  A12["[设置]"] --> AT12["API keys, 模型选择, 风格等"]
+</pre>
 <blockquote>
 <p>实际 UI 不必每个目录一个 ActivityBar 项 — 高频项 (角色 / 世界观 / 章节) 优先,其他可折叠到 &quot;更多设定&quot; 二级菜单。具体取舍 W6 实测后调。</p>
 </blockquote>
@@ -122,27 +139,34 @@
 </ul>
 <h2 id="thinkingpanel">ThinkingPanel</h2>
 <p>实时流式渲染所有 SSE 事件:</p>
-<pre><code>┌─ Router (Flash) [12:30:45] ────────────────────────
-│  分析: 用户在 plan 模式,请求修改主角性别
-│  决策: 委派 Writer + Validator (并行)
-│
-├─ Writer (Pro) [12:30:46] ────────────────────────
-│  ▷ 调用 readSetting(&#39;characters/lin.md&#39;)
-│    ◀ 返回 (1234 字)
-│  ▷ 生成 diff...
-│    ◀ 流式输出 (3 段)
-│  ▷ 调用 writeSetting (需审批)
-│    ⏸ 等待用户审批
-│
-├─ Validator (Pro) [12:30:47] ─────────────────────
-│  ▷ 扫描 outline.md...
-│    ⚠ 发现 3 处性别引用冲突
-│  ▷ 扫描 chapters/...
-│    ⚠ 发现 5 处冲突
-│  ◀ cascadeChanges (8)
-│
-└─────────────────────────────────────────────────
-</code></pre>
+<pre class="mermaid">
+sequenceDiagram
+  participant U as User
+  participant R as Router (Flash)
+  participant W as Writer (Pro)
+  participant V as Validator (Pro)
+  participant FS as 文件 / 设定
+  Note over R: [12:30:45]
+  U->>R: plan 模式 请求修改主角性别
+  R->>R: 分析: 用户意图<br/>决策: 委派 Writer + Validator (并行)
+  par 并行分发
+    R->>W: 委派 (Pro)
+  and
+    R->>V: 委派 (Pro)
+  end
+  Note over W: [12:30:46]
+  W->>FS: readSetting('characters/lin.md')
+  FS-->>W: 返回 1234 字
+  W->>W: 生成 diff (流式 3 段)
+  W->>U: writeSetting (需审批)
+  Note over W: 等待用户审批
+  Note over V: [12:30:47]
+  V->>FS: 扫描 outline.md
+  FS-->>V: 发现 3 处性别引用冲突
+  V->>FS: 扫描 chapters/*
+  FS-->>V: 发现 5 处冲突
+  V-->>U: cascadeChanges (8)
+</pre>
 <ul>
 <li>折叠/展开</li>
 <li>每个 Agent 一种主题色</li>
@@ -162,12 +186,18 @@
 </ul>
 <h3 id="长任务进度条">长任务进度条</h3>
 <p>ChatBox 顶部 mode toggle 下方,<strong>当 server 推 progress 事件时</strong>显示一条进度条:</p>
-<pre><code>┌─────────────────────────────────────┐
-│ [Discuss] [Plan] [Write]   ⏸ 取消    │
-│ ▰▰▰▰▱▱▱▱▱▱  3/5  毒舌读者           │
-│ ReaderPanel · 4.5 秒                  │
-└─────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph BAR["ChatBox 顶部"]
+    direction TB
+    M["[Discuss] [Plan] [Write]    取消按钮"]:::mode
+    P["进度条 3/5  毒舌读者"]:::prog
+    L["ReaderPanel · 4.5 秒"]:::label
+  end
+  classDef mode fill:#eef,stroke:#88a
+  classDef prog fill:#fef6e4,stroke:#d9a23a
+  classDef label fill:#f6f6f9,stroke:#bbb,color:#666
+</pre>
 <ul>
 <li>取消按钮直接 stop() — 已完成的 persona 反应保留 (按 spec/11 §聚合算法的 ≥3 成功才出 recommendation)</li>
 <li>progress 事件协议见 spec/04 §长任务进度协议</li>

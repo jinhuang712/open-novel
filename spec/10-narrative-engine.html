@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/10-narrative-engine.html</span>
 </nav>
 <h1 id="spec-10-叙事引擎实现">Spec 10 — 叙事引擎实现</h1>
@@ -25,23 +25,24 @@
 <p>拆分理由 (为什么 ArcTracker 不归 Checker) 见 plan/09 §归属与边界。</p>
 </blockquote>
 <h2 id="文件分布">文件分布</h2>
-<pre><code>lib/narrative/
-├── index.ts                       # 对外导出
-├── beat-analyzer.ts               # BeatAnalyzer 实现
-├── arc-tracker.ts                 # ArcTracker 实现
-├── templates/
-│   ├── README.md                  # 模板使用说明
-│   ├── three-act.md               # 三幕剧
-│   ├── hero-journey.md            # 英雄之旅
-│   ├── chinese-classic.md         # 起承转合
-│   ├── fantome-3-chapters.md      # 番茄黄金三章
-│   └── _registry.ts               # 模板注册表
-├── prompts/
-│   ├── beat-analyzer.md
-│   ├── arc-tracker.md
-│   └── apply-template.md
-└── schemas.ts                      # zod schemas (BeatReport / ArcReport / Template)
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  ROOT(["lib/narrative/"]) --> IDX["index.ts<br/>对外导出"]
+  ROOT --> BA["beat-analyzer.ts<br/>BeatAnalyzer 实现"]
+  ROOT --> AT["arc-tracker.ts<br/>ArcTracker 实现"]
+  ROOT --> TPL(["templates/"])
+  ROOT --> PR(["prompts/"])
+  ROOT --> SCH["schemas.ts<br/>zod schemas (BeatReport / ArcReport / Template)"]
+  TPL --> TRM["README.md<br/>模板使用说明"]
+  TPL --> T3A["three-act.md<br/>三幕剧"]
+  TPL --> THJ["hero-journey.md<br/>英雄之旅"]
+  TPL --> TCC["chinese-classic.md<br/>起承转合"]
+  TPL --> TF3["fantome-3-chapters.md<br/>番茄黄金三章"]
+  TPL --> TRG["_registry.ts<br/>模板注册表"]
+  PR --> PBA["beat-analyzer.md"]
+  PR --> PAT["arc-tracker.md"]
+  PR --> PAP["apply-template.md"]
+</pre>
 <h2 id="beatanalyzer">BeatAnalyzer</h2>
 <h3 id="tool-签名">Tool 签名</h3>
 <pre><code class="language-ts">// lib/narrative/beat-analyzer.ts

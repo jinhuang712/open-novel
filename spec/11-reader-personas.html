@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/11-reader-personas.html</span>
 </nav>
 <h1 id="spec-11-读者-persona-与-readerpanel-实现">Spec 11 — 读者 Persona 与 ReaderPanel 实现</h1>
@@ -31,20 +31,19 @@
 </ol>
 <p><strong>二期改进路径</strong>: 引入&quot;读者类型&quot;中性命名 (e.g. &quot;节奏关注型&quot; &quot;细节关注型&quot; &quot;情感关注型&quot;),把性别/年龄从 prompt 移到 metadata 的&quot;参考标签&quot;。当前不动,因为名字&quot;追更党/情感党/毒舌读者&quot;在中文网文圈是行话,对作者来说是即时可识别的概念,改名反而失去用户友好性。</p>
 <h2 id="文件分布">文件分布</h2>
-<pre><code>lib/agents/
-└── reader-panel.ts                # ReaderPanel Agent 定义
-
-lib/personas/
-├── index.ts                       # 对外导出 personas + 校验逻辑
-├── _builtin/
-│   ├── chase-update.md            # 追更党 prompt
-│   ├── logic-purist.md            # 逻辑控
-│   ├── emotion-driven.md          # 情感党
-│   ├── cynic.md                   # 毒舌读者
-│   └── deep-lurker.md             # 潜水大佬
-├── schemas.ts                     # PersonaReaction / ChapterRiskReport zod
-└── loader.ts                      # 加载 builtin + 用户自定义 yaml
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  AG(["lib/agents/"]) --> RP["reader-panel.ts<br/>ReaderPanel Agent 定义"]
+  PS(["lib/personas/"]) --> IDX["index.ts<br/>对外导出 personas + 校验逻辑"]
+  PS --> BLT(["_builtin/"])
+  PS --> SCH["schemas.ts<br/>PersonaReaction / ChapterRiskReport zod"]
+  PS --> LDR["loader.ts<br/>加载 builtin + 用户自定义 yaml"]
+  BLT --> CU["chase-update.md<br/>追更党 prompt"]
+  BLT --> LP["logic-purist.md<br/>逻辑控"]
+  BLT --> ED["emotion-driven.md<br/>情感党"]
+  BLT --> CY["cynic.md<br/>毒舌读者"]
+  BLT --> DL["deep-lurker.md<br/>潜水大佬"]
+</pre>
 <h2 id="readerpanel-agent-定义">ReaderPanel Agent 定义</h2>
 <pre><code class="language-ts">// lib/agents/reader-panel.ts
 import { Agent } from &#39;@mastra/core/agent&#39;
@@ -356,11 +355,14 @@ async function callPersona(persona: Persona, chapter: Chapter): Promise&lt;Perso
 }
 </code></pre>
 <p>UI 在 RiskReport 卡片顶部:</p>
-<pre><code>┌────────────────────────────────────────────────────┐
-│ 整体留存预测: 68/100  (推荐: minor-tweak)            │
-│ 5 个读者中 3 个完成,2 个失败 [重试失败的]             │
-└────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph RR["RiskReport 卡片顶部"]
+    L1["整体留存预测: 68/100 (推荐 minor-tweak)"]
+    L2["5 个读者中 3 个完成,2 个失败 [重试失败的]"]
+    L1 --- L2
+  end
+</pre>
 <h2 id="sqlite-schema-追加">SQLite Schema 追加</h2>
 <pre><code class="language-sql">CREATE TABLE reader_reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

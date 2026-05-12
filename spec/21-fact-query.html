@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/21-fact-query.html</span>
 </nav>
 <h1 id="spec-21-事实查询工具-queryfacts">Spec 21 — 事实查询工具 (queryFacts)</h1>
@@ -372,23 +372,18 @@ async function tryParseAsFactQuery(message: string): Promise&lt;{ success: boole
 </code></pre>
 <h2 id="ui-查询面板">UI 查询面板</h2>
 <p>新增组件 <code>components/panels/FactQueryPanel.tsx</code>,通过 <code>Cmd+K</code>(命令面板)选 &quot;查询事实&quot; 进入。</p>
-<pre><code>┌─────────────────────────────────────────┐
-│ 查询模式: ◉ 实体状态  ○ 关系  ○ 提及  ○ 语义搜索 │
-├─────────────────────────────────────────┤
-│ 实体: [林川 ▼]                            │
-│ 章节: [ch_050 ▼]                         │
-│ 属性: [全部 ▼]                            │
-│                                         │
-│ [查询]                                   │
-├─────────────────────────────────────────┤
-│ 结果:                                    │
-│  林川 在 ch_050 时:                       │
-│    年龄: 31 岁 (来源: ch_045 § 3, 置信 75) │
-│    位置: 北京 (来源: frontmatter)         │
-│    身份: 副总 (来源: ch_048 § 7, 置信 80)  │
-│    [跳转 ch_045 § 3]                      │
-└─────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  subgraph PANEL ["FactQueryPanel (Cmd+K 唤出)"]
+    direction TB
+    MODE["查询模式 (radio): 实体状态 | 关系 | 提及 | 语义搜索"]
+    FORM["输入区<br/>实体: 林川<br/>章节: ch_050<br/>属性: 全部"]
+    BTN[/"[查询] 按钮"/]
+    RESULT["结果区<br/>林川 在 ch_050 时:<br/>年龄 31 岁 来源 ch_045 §3 置信 75<br/>位置 北京 来源 frontmatter<br/>身份 副总 来源 ch_048 §7 置信 80"]
+    JUMP[/"[跳转 ch_045 §3] 锚点跳转"/]
+    MODE --> FORM --> BTN --> RESULT --> JUMP
+  end
+</pre>
 <p>实现要点:</p>
 <ul>
 <li>4 个模式独立 form,切换显示对应输入</li>

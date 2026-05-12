@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/05-entity-highlight.html</span>
 </nav>
 <h1 id="spec-05-实体-概念高亮与跳转">Spec 05 — 实体 / 概念高亮与跳转</h1>
@@ -18,21 +18,14 @@
 <p><strong>W7 升级</strong>: 高亮范围从仅 entity 扩展为 <strong>entity + concept</strong> 双索引。concept 是 worldview 硬规则被抽出来的 pseudo-entity (见 spec/16 §表 3),其 <code>surface_forms</code> 也被注入 AC trie,在正文里高亮以提醒作者&quot;这里命中了某概念,可能是 violation 候选&quot;。</p>
 </blockquote>
 <h2 id="数据流">数据流</h2>
-<pre><code>project.{ /settings, /chapters/* } 改动
-   ↓
-Worker 差量 reindex (spec/17 §差量 reindex):
-  - 段级 anchor diff
-  - dirty 段重扫 entity_refs / concept_refs
-  - dirty 段重算 paragraph_embeddings (异步)
-   ↓
-upsert entities + concepts (index.db)
-   ↓
-广播 &#39;entities:changed&#39; / &#39;concepts:changed&#39; 事件
-   ↓
-Editor 重新构建 AC trie (entity 名 + concept surface_forms 合一) + 触发 plugin update
-   ↓
-Decorations 增量刷新 (按命中类型用不同 class)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  CHANGE(["project.{settings, chapters/*} 改动"]) --> REINDEX["Worker 差量 reindex (spec/17 §差量 reindex)<br/>段级 anchor diff<br/>dirty 段重扫 entity_refs / concept_refs<br/>dirty 段重算 paragraph_embeddings (异步)"]
+  REINDEX --> UPSERT["upsert entities + concepts<br/>index.db"]
+  UPSERT --> BC["广播 'entities:changed'<br/>'concepts:changed' 事件"]
+  BC --> AC["Editor 重新构建 AC trie<br/>entity 名 + concept surface_forms 合一<br/>触发 plugin update"]
+  AC --> DECO(["Decorations 增量刷新<br/>按命中类型用不同 class"])
+</pre>
 <h2 id="ac-trie-构建-entity-concept-双索引">AC trie 构建 (entity + concept 双索引)</h2>
 <pre><code class="language-ts">// lib/editor/aho-corasick.ts
 import AhoCorasick from &#39;ahocorasick&#39;

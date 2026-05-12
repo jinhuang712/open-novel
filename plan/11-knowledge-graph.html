@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/11-knowledge-graph.html</span>
 </nav>
 <h1 id="11-知识图谱让牵一发动全身和边写边查真正可工作">11 — 知识图谱:让&quot;牵一发动全身&quot;和&quot;边写边查&quot;真正可工作</h1>
@@ -20,16 +20,13 @@
 <h2 id="为什么要有这一层">为什么要有这一层</h2>
 <h3 id="现状的薄弱audit-分析见-progress005">现状的薄弱(audit 分析,见 progress/005)</h3>
 <p>当前 cascade 与 entity 索引的真实运作:</p>
-<pre><code>writeSetting 落盘 (e.g. 改 lin.gender = female)
-   ↓
-Validator 查 entities 表 → 找 lin 的 entity_id
-   ↓
-查 entity_refs 表 → WHERE entity_id = char_lin → source_file 列表
-   ↓
-对每个 source_file 抽相关段 → LLM 逐段判 &quot;是否与 lin.gender=female 矛盾&quot;
-   ↓
-输出 ChangeProposal[]
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  W([writeSetting 落盘<br/>例: 改 lin.gender = female]) --> V1[Validator 查 entities 表<br/>找 lin 的 entity_id]
+  V1 --> V2["查 entity_refs 表<br/>WHERE entity_id = char_lin<br/>得 source_file 列表"]
+  V2 --> V3["对每个 source_file 抽相关段<br/>LLM 逐段判 'lin.gender=female 是否矛盾'"]
+  V3 --> CP[输出 ChangeProposal 数组]
+</pre>
 <p><strong>这个机制只能 cover &quot;实体属性单字段改动 + 实体显式提及&quot; 的场景</strong>。下面这些场景全部漏检:</p>
 <table>
 <thead>
@@ -74,93 +71,109 @@ Validator 查 entities 表 → 找 lin 的 entity_id
 <h3 id="一句话总结">一句话总结</h3>
 <p>当前是&quot;实体属性 + 显式提及&quot; 一阶图;真实长篇网文需要&quot;实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义&quot;六维图。<strong>不补上这一层,所谓的 cascade 和 RAG 都是表面 demo</strong>。</p>
 <h2 id="总体架构-4-层">总体架构 (4 层)</h2>
-<pre><code>┌────────────────────────────────────────────────────────────┐
-│ L4 治理层 (Workflow)                                        │
-│  - Plan inconsistency lock (有未决 cascade 时禁 write)      │
-│  - Setting Lint (孤儿 entity / 循环 relation / 失效锚点)    │
-│  - Snapshot (重大设定改动自动备份)                          │
-│  - 派生文件守卫 (派生视图只读 + reindex 覆盖警告)           │
-└────────────────────────────────────────────────────────────┘
-                             ▲
-┌────────────────────────────────────────────────────────────┐
-│ L3 工具层 (Agent 接入,见 spec/19-21)                       │
-│  - assembleContext  (Writer 写章节前调,自动 retrieve)       │
-│  - analyzeImpact    (Validator 收 setting diff 后调)        │
-│  - queryFacts       (作者主动查 / Router 转发)              │
-└────────────────────────────────────────────────────────────┘
-                             ▲
-┌────────────────────────────────────────────────────────────┐
-│ L2 算法层 (Index Pipeline,见 spec/17-19)                   │
-│  - 段级稳定 ID (paragraph anchors)                          │
-│  - 段级 embedding (语义检索)                                │
-│  - 概念抽取 (LLM 跑 worldview/rules → concepts 表)          │
-│  - 影响半径计算器 (纯 SQL 出候选,不调 LLM)                 │
-│  - 差量 reindex (只重算 dirty 段)                           │
-└────────────────────────────────────────────────────────────┘
-                             ▲
-┌────────────────────────────────────────────────────────────┐
-│ L1 数据层 (Schema 增强,见 spec/16)                         │
-│  - entity_relations  (双向语义关系: 师徒/敌友/上下级/...)   │
-│  - entity_timeline   (随章节变化的属性: age/location/...)   │
-│  - concepts + concept_refs (worldview 硬规则当 pseudo-entity)│
-│  - dependencies      (foreshadowing / callback / 跨文件锚定) │
-│  - paragraph_anchors (段级稳定 ID)                          │
-│  - paragraph_embeddings (段级向量索引)                      │
-│  + character.md frontmatter 升级 (initial_state/relations/  │
-│    reader_promises/taboos)                                  │
-└────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart BT
+  subgraph L1["L1 数据层 (Schema 增强, 见 spec/16)"]
+    direction TB
+    L1A["entity_relations<br/>双向语义关系: 师徒/敌友/上下级/..."]
+    L1B["entity_timeline<br/>随章节变化的属性: age/location/..."]
+    L1C["concepts + concept_refs<br/>worldview 硬规则当 pseudo-entity"]
+    L1D["dependencies<br/>foreshadowing / callback / 跨文件锚定"]
+    L1E["paragraph_anchors (段级稳定 ID)"]
+    L1F["paragraph_embeddings (段级向量索引)"]
+    L1G["character.md frontmatter 升级<br/>initial_state/relations/reader_promises/taboos"]
+  end
+  subgraph L2["L2 算法层 (Index Pipeline, 见 spec/17-19)"]
+    direction TB
+    L2A["段级稳定 ID (paragraph anchors)"]
+    L2B["段级 embedding (语义检索)"]
+    L2C["概念抽取 (LLM 跑 worldview/rules concepts 表)"]
+    L2D["影响半径计算器 (纯 SQL 出候选, 不调 LLM)"]
+    L2E["差量 reindex (只重算 dirty 段)"]
+  end
+  subgraph L3["L3 工具层 (Agent 接入, 见 spec/19-21)"]
+    direction TB
+    L3A["assembleContext<br/>Writer 写章节前调, 自动 retrieve"]
+    L3B["analyzeImpact<br/>Validator 收 setting diff 后调"]
+    L3C["queryFacts<br/>作者主动查 / Router 转发"]
+  end
+  subgraph L4["L4 治理层 (Workflow)"]
+    direction TB
+    L4A["Plan inconsistency lock<br/>有未决 cascade 时禁 write"]
+    L4B["Setting Lint<br/>孤儿 entity / 循环 relation / 失效锚点"]
+    L4C["Snapshot (重大设定改动自动备份)"]
+    L4D["派生文件守卫<br/>派生视图只读 + reindex 覆盖警告"]
+  end
+  L1 --> L2 --> L3 --> L4
+</pre>
 <h2 id="核心数据流改造">核心数据流改造</h2>
 <h3 id="cascade-改造-写设定时">Cascade 改造 (写设定时)</h3>
-<pre><code>旧:
-  writeSetting → Validator 取 entity_refs → 全段送 LLM 心证 → ChangeProposal[]
-
-新:
-  writeSetting → analyzeImpact (spec/19)
-   │  step 1: LLM 抽 semantic delta (`lin.gender: male → female`)
-   │  step 2: 纯 SQL 查影响半径 (entity_refs ∪ relations 上下游 ∪
-   │          events 参与 ∪ concept_refs ∪ dependencies)
-   │  step 3: LLM 二次过滤 (逐段判这段是否真的受影响 + 给修改建议)
-   │  step 4: 输出 ChangeProposal[] + 影响图谱 (UI 用)
-   └→ 用户审 → 接受 → Writer 重写 → 触发递归一次
-                                  ↑
-                       (单层递归,防止环;详见 spec/19 §递归终止)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  subgraph OLD["旧"]
+    direction LR
+    O1[writeSetting] --> O2[Validator 取 entity_refs]
+    O2 --> O3[全段送 LLM 心证]
+    O3 --> O4[ChangeProposal 数组]
+  end
+  subgraph NEW["新"]
+    direction TB
+    N1[writeSetting] --> N2[analyzeImpact spec/19]
+    N2 --> N3["step 1: LLM 抽 semantic delta<br/>lin.gender: male -- female"]
+    N3 --> N4["step 2: 纯 SQL 查影响半径<br/>entity_refs ∪ relations 上下游<br/>∪ events 参与 ∪ concept_refs ∪ dependencies"]
+    N4 --> N5["step 3: LLM 二次过滤<br/>逐段判是否真受影响 + 给修改建议"]
+    N5 --> N6["step 4: 输出 ChangeProposal 数组<br/>+ 影响图谱 (UI 用)"]
+    N6 --> N7[用户审]
+    N7 --> N8[接受]
+    N8 --> N9[Writer 重写]
+    N9 -. 单层递归 防止环 .-> N2
+  end
+  OLD ~~~ NEW
+</pre>
 <p>L2 §影响半径计算器 取代了 plan/06 的&quot;按章节范围 ±5&quot;治标策略。<strong>作者改任何 setting,系统能给出</strong>完整、确定、毫秒级的候选影响列表**,LLM 仅做&quot;是不是真受影响&quot;的二次判断。</p>
 <h3 id="context-assembly-改造-写章节时">Context Assembly 改造 (写章节时)</h3>
-<pre><code>旧:
-  Writer prompt = system + project.style + outline + referenced_entities (人工选)
-  → 漏 / 爆 token 二选一
-
-新:
-  Writer 接到 chapterId + outline
-   ↓
-  调 assembleContext (spec/20)
-   │  step 1: 从 outline NER 抽出涉及的 entities
-   │  step 2: timeline.snapshotAt(entity, chapterId)  → 取该角色到本章的最新状态
-   │  step 3: relations.activeAt(entities, chapterId) → 取本章时间点活跃关系
-   │  step 4: dependencies.pendingFor(chapterId) → 取本章应当回收/埋设的伏笔
-   │  step 5: embeddings.search(outline, topK=5) → 语义最相关的历史段
-   │  step 6: 按 token 预算裁剪 → 拼成 context block
-   └→ 喂回 Writer prompt
-   ↓
-  Writer 拿到完整 context 写章节,不再&quot;半瞎&quot;
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  subgraph OLD["旧"]
+    direction TB
+    O1["Writer prompt =<br/>system + project.style + outline<br/>+ referenced_entities (人工选)"]
+    O1 --> O2[漏 / 爆 token 二选一]
+  end
+  subgraph NEW["新"]
+    direction TB
+    N1[Writer 接到 chapterId + outline] --> N2[调 assembleContext spec/20]
+    N2 --> S1["step 1: 从 outline NER 抽出涉及的 entities"]
+    S1 --> S2["step 2: timeline.snapshotAt(entity, chapterId)<br/>取角色到本章的最新状态"]
+    S2 --> S3["step 3: relations.activeAt(entities, chapterId)<br/>取本章时间点活跃关系"]
+    S3 --> S4["step 4: dependencies.pendingFor(chapterId)<br/>取本章应当回收/埋设的伏笔"]
+    S4 --> S5["step 5: embeddings.search(outline, topK=5)<br/>语义最相关的历史段"]
+    S5 --> S6["step 6: 按 token 预算裁剪 拼成 context block"]
+    S6 --> N3[喂回 Writer prompt]
+    N3 --> N4["Writer 拿到完整 context 写章节<br/>不再'半瞎'"]
+  end
+  OLD ~~~ NEW
+</pre>
 <p>token 预算控制详见 spec/20。</p>
 <h3 id="边写边查改造-作者主动查">边写边查改造 (作者主动查)</h3>
-<pre><code>旧:
-  entity highlight + hover 卡 (spec/05) — 只能跳实体文件全文
-  backlinks 面板 — 只显示&quot;被 N 处引用&quot;
-
-新:
-  + queryFacts 工具 (spec/21):
-    - &quot;林川 ch_50 时多大&quot; → entity-at 查询 → 直查 timeline 表
-    - &quot;林川和王小芳关系演变&quot; → relations-of 查询 → 时间排序输出
-    - &quot;林川对女上司说过什么类似台词&quot; → semantic-search → embeddings 检索
-    - &quot;ch_005 之前提到过怀表的所有段落&quot; → mentions-of 查询 + 范围过滤
-  + UI 查询面板 (Cmd+K → query-facts 模式) 直接出结果,不走 LLM
-  + Router 在 discuss 模式自动调 queryFacts,把&quot;事实查询&quot;和&quot;自由对话&quot;分开
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  subgraph OLD["旧"]
+    direction TB
+    O1["entity highlight + hover 卡 (spec/05)<br/>只能跳实体文件全文"]
+    O2["backlinks 面板<br/>只显示'被 N 处引用'"]
+  end
+  subgraph NEW["新"]
+    direction TB
+    QF["queryFacts 工具 (spec/21)"]
+    QF --> Q1["林川 ch_50 时多大<br/>entity-at 查询 直查 timeline 表"]
+    QF --> Q2["林川和王小芳关系演变<br/>relations-of 查询 时间排序输出"]
+    QF --> Q3["林川对女上司说过什么类似台词<br/>semantic-search embeddings 检索"]
+    QF --> Q4["ch_005 之前提到过怀表的所有段落<br/>mentions-of 查询 + 范围过滤"]
+    UI["UI 查询面板 (Cmd+K query-facts 模式)<br/>直接出结果, 不走 LLM"]
+    RT["Router 在 discuss 模式自动调 queryFacts<br/>事实查询 / 自由对话 分开"]
+  end
+  OLD ~~~ NEW
+</pre>
 <h2 id="与现有架构的对接">与现有架构的对接</h2>
 <table>
 <thead>

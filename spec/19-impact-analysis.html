@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/19-impact-analysis.html</span>
 </nav>
 <h1 id="spec-19-影响半径与-cascade-工具-analyzeimpact">Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact)</h1>
@@ -28,58 +28,43 @@
 <blockquote>
 <p>⚠ <strong>关键交互模型</strong>: 整个 cascade 递归在 <strong>审批之前</strong> 的内部循环里完成。Writer 生成主修改 (in-memory),<code>analyzeImpact</code> 内部递归 ≤3 层把所有 cascade proposal 算清楚,<strong>汇总成一个 ChangeSet 一次审</strong>。用户审完后才落盘。任何&quot;先落盘 → 再触发 cascade&quot;或&quot;逐项 ApprovalCard&quot;的设计都是错的。</p>
 </blockquote>
-<pre><code>Writer agent 出主修改 (in-memory)
-   ↓
-Validator agent execute → 调 analyzeImpact 工具,传入 main delta
-   ↓
-[analyzeImpact 内部递归循环]
-   │
-   ├ 第 1 轮 (轮次记 round=1, weightFloor=30):
-   │   step 1: extractSemanticDelta(main delta) — LLM Flash 抽结构化 delta
-   │            (entity-attribute / relation-add / concept-add / paragraph-rewrite ...)
-   │   step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)
-   │            - entity_refs / concept_refs (weight=100)
-   │            - 关系上下游 1 跳 (weight=50-90)
-   │            - dependencies 锚点上下游 (weight=70)
-   │            - timeline 区间内引用 (weight=80)
-   │            - embeddings 语义相关 topK (weight=cos×100)
-   │   step 3: filterByLLM — Pro 批 5 段 → ChangeProposal[round=1]
-   │
-   ├ Writer 内部短调用: 对每条 needsChange=true 的 proposal 生成 afterText (in-memory)
-   │
-   ├ 第 2 轮 (round=2, weightFloor=60):
-   │   step 1: extractSemanticDelta(round=1 的 afterText 集合) — 把这些当作新 delta
-   │   step 2: computeImpactRadius — 必须严格收缩 (候选 ⊆ 第 1 轮剩余)
-   │   step 3: filterByLLM → ChangeProposal[round=2]
-   │
-   ├ Writer 内部短调用 (round=2 afterText)
-   │
-   ├ 第 3 轮 (round=3, weightFloor=90)... 同上
-   │
-   └ 终止 — 任一条件成立即停:
-        a. 候选段集为空
-        b. 半径未严格收缩 (currSet 不是 prevSet 子集 / |currSet| ≥ |prevSet|)
-        c. round = 3
-   │
-   ↓
-汇总 ChangeSet:
-   - 主修改 (cascadeLevel=0,Writer 原始输出)
-   - 第 1 轮 ChangeProposal[] (cascadeLevel=1)
-   - 第 2 轮 ChangeProposal[] (cascadeLevel=2)
-   - 第 3 轮 ChangeProposal[] (cascadeLevel=3)
-   - 影响图谱 (节点 = entity / file / concept,边 = 影响传播,标 cascadeLevel)
-   ↓
-analyzeImpact 工具返回 → Validator agent 把 ChangeSet 提交给 ApprovalCard
-   ↓
-**一次** ApprovalCard 呈现整批 (见 spec/06):
-   用户勾选 + 一键同意 / 部分同意 / 拒绝
-   ↓
-用户 approve → POST /api/approvals/{id}/resolve
-   ↓
-后端 transaction 一次落盘所有 accepted 文件
-   ↓
-落盘副作用 (差量 reindex / snapshot / history group / Reflector;见 plan/04)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  W0([Writer agent 出主修改 in-memory]) --> V[Validator agent execute<br/>调 analyzeImpact 工具,传入 main delta]
+  V --> LOOP["analyzeImpact 内部递归循环"]
+
+  subgraph R1["第 1 轮 (round=1, weightFloor=30)"]
+    direction TB
+    R1S1["step 1: extractSemanticDelta(main delta)<br/>LLM Flash 抽结构化 delta<br/>(entity-attribute / relation-add / concept-add / paragraph-rewrite ...)"]
+    R1S2["step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)<br/>entity_refs / concept_refs (weight=100)<br/>关系上下游 1 跳 (weight=50-90)<br/>dependencies 锚点上下游 (weight=70)<br/>timeline 区间内引用 (weight=80)<br/>embeddings 语义相关 topK (weight=cos×100)"]
+    R1S3["step 3: filterByLLM — Pro 批 5 段<br/>ChangeProposal[round=1]"]
+    R1S1 --> R1S2 --> R1S3
+  end
+
+  LOOP --> R1
+  R1 --> WS1["Writer 内部短调用<br/>对每条 needsChange=true proposal 生成 afterText (in-memory)"]
+
+  subgraph R2["第 2 轮 (round=2, weightFloor=60)"]
+    direction TB
+    R2S1["step 1: extractSemanticDelta(round=1 afterText 集合)"]
+    R2S2["step 2: computeImpactRadius — 必须严格收缩<br/>(候选 ⊆ 第 1 轮剩余)"]
+    R2S3["step 3: filterByLLM, ChangeProposal[round=2]"]
+    R2S1 --> R2S2 --> R2S3
+  end
+
+  WS1 --> R2
+  R2 --> WS2[Writer 内部短调用 round=2 afterText]
+  WS2 --> R3["第 3 轮 (round=3, weightFloor=90) 同上"]
+
+  R3 --> TERM{"终止 — 任一成立即停:<br/>a. 候选段集为空<br/>b. 半径未严格收缩<br/>c. round = 3"}
+
+  TERM --> SUM["汇总 ChangeSet:<br/>主修改 (cascadeLevel=0)<br/>第 1 轮 ChangeProposal (cascadeLevel=1)<br/>第 2 轮 ChangeProposal (cascadeLevel=2)<br/>第 3 轮 ChangeProposal (cascadeLevel=3)<br/>影响图谱 (节点 + 边,标 cascadeLevel)"]
+  SUM --> RET[analyzeImpact 工具返回<br/>Validator agent 提交给 ApprovalCard]
+  RET --> AC["ApprovalCard 一次呈现整批<br/>用户勾选 + 一键同意 / 部分同意 / 拒绝"]
+  AC --> APR["用户 approve<br/>POST /api/approvals/{id}/resolve"]
+  APR --> COMMIT[后端 transaction<br/>一次落盘所有 accepted 文件]
+  COMMIT --> SIDE["落盘副作用<br/>差量 reindex / snapshot<br/>history group / Reflector"]
+</pre>
 <p><strong>Writer 内部短调用</strong> 是新加的概念 — 它不走完整的 chat / streaming,直接调 Writer agent 的 generate 模式 (无审批,因为产物只在内存),输入 <code>(原 anchor 文本, proposal.proposedText 或 LLM 第 3 步给的修改建议)</code>,输出 <code>afterText</code>。这次调用本身<strong>不</strong>触发任何工具(包括嵌套 analyzeImpact),纯文本生成,~1-3s。</p>
 <h2 id="step-1-semantic-delta-抽取">Step 1 — Semantic Delta 抽取</h2>
 <pre><code class="language-ts">// lib/impact/delta-extractor.ts
@@ -510,23 +495,26 @@ export const analyzeImpact = tool({
 <blockquote>
 <p>注: 递归发生在 analyzeImpact 工具的<strong>单次调用</strong>内部,不是用户跨多个 ApprovalCard 的多次审批。用户只看到一次 ApprovalCard,内部已经迭代到稳态。</p>
 </blockquote>
-<pre><code>analyzeImpact 工具入口 (传入 main delta)
-   ↓
-round = 1, weightFloor = 30
-   ↓
-loop:
-   computeImpactRadius(weightFloor) → 出候选
-   if 候选空: break
-   filterByLLM(候选) → ChangeProposal[round]
-   if needsChange=true 的 proposal 数 = 0: break (LLM 判全部不需要改)
-   Writer 内部短调用 → 各 proposal 生成 afterText (in-memory)
-   round += 1
-   if round &gt; 3: break
-   weightFloor += 30                              # 30 → 60 → 90
-   nextDelta = 把 afterText 集合算成 paragraph-rewrite + concept-* delta
-   if 半径不严格收缩 (currSet 不是 prevSet 子集 / |currSet| ≥ |prevSet|): break
-   delta = nextDelta; continue
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  IN([analyzeImpact 工具入口<br/>传入 main delta]) --> INIT["round = 1, weightFloor = 30"]
+  INIT --> CIR["computeImpactRadius(weightFloor)<br/>出候选"]
+  CIR --> CHK1{候选空?}
+  CHK1 -->|是| END([break])
+  CHK1 -->|否| FLT["filterByLLM(候选)<br/>ChangeProposal[round]"]
+  FLT --> CHK2{"needsChange=true<br/>proposal 数 = 0?"}
+  CHK2 -->|是 LLM 判全部不需改| END
+  CHK2 -->|否| WSC["Writer 内部短调用<br/>各 proposal 生成 afterText (in-memory)"]
+  WSC --> INC["round += 1"]
+  INC --> CHK3{"round > 3?"}
+  CHK3 -->|是| END
+  CHK3 -->|否| WF["weightFloor += 30<br/>(30 / 60 / 90)"]
+  WF --> NEXT["nextDelta = 把 afterText 集合<br/>算成 paragraph-rewrite + concept-* delta"]
+  NEXT --> CHK4{"半径不严格收缩?<br/>(currSet 不是 prevSet 子集<br/>或 |currSet| ≥ |prevSet|)"}
+  CHK4 -->|是| END
+  CHK4 -->|否| LOOP["delta = nextDelta<br/>continue"]
+  LOOP --> CIR
+</pre>
 <p><strong>实现伪码</strong>:</p>
 <pre><code class="language-ts">async function runCascadeRecursion(
   projectId: string,

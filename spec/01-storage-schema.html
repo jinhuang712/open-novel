@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/01-storage-schema.html</span>
 </nav>
 <h1 id="spec-01-存储-schema">Spec 01 — 存储 Schema</h1>
@@ -18,42 +18,49 @@
 <blockquote>
 <p><strong>W7 升级</strong>: settings/ 目录大幅拆分,详见 plan/04 §存储位置 + plan/11-knowledge-graph.md。本节只列顶层结构,详细子目录看 plan/04。</p>
 </blockquote>
-<pre><code>~/.open-novel/
-├── runtime.db                        # Mastra Memory 跨项目会话
-├── settings.json                     # 全局设置 (API key 等)
-├── .snapshots/{projectId}/{ts}/      # 设定快照 (见 spec/16 §Snapshot)
-└── workspaces/
-    └── {projectId}/                  # projectId = `proj_{slug}_{shortId}` (e.g. proj_zhongsheng_a3f2)
-        ├── project.json
-        ├── settings/                 # 详细子目录见 plan/04 §存储位置
-        │   ├── worldview/            # 拆目录 (geography/history/politics/economy/technology/culture/religion/rules)
-        │   ├── outline/              # 拆目录 (master + volumes/* + chapter-outlines/_registry)
-        │   ├── characters/{id}.md
-        │   ├── factions/{id}.md
-        │   ├── organizations/{id}.md
-        │   ├── locations/{regions,cities,buildings,landmarks}/{id}.md
-        │   ├── items/{id}.md
-        │   ├── events/{id}.md
-        │   ├── timeline/{era,story-clock,character-ages}.md
-        │   ├── relationships/{_matrix.md, notes/{id}.md}    # _matrix.md 为派生
-        │   ├── story-lines/{main.md, subplots/{id}.md}
-        │   ├── foreshadowing/{id}.md
-        │   ├── chapter-arcs/{id}.md
-        │   ├── power-system/{overview,tiers,techniques,artifacts}.md
-        │   ├── glossary/_index.md
-        │   ├── beats.md
-        │   ├── taboos.md
-        │   ├── themes.md
-        │   └── reader-promises.md
-        ├── chapters/
-        │   └── {NNN-{slug}}/
-        │       ├── outline.md
-        │       ├── draft.md
-        │       └── meta.json
-        ├── index.db                  # SQLite per-project (基础 + 知识图谱表,见下)
-        └── trace/
-            └── {YYYY-MM-DD}-{sessionId}.jsonl
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  ROOT(["~/.open-novel/"]) --> RUNTIME["runtime.db<br/>Mastra Memory 跨项目会话"]
+  ROOT --> GSET["settings.json<br/>全局设置 (API key 等)"]
+  ROOT --> SNAP["'.snapshots/{projectId}/{ts}/'<br/>设定快照 (spec/16 §Snapshot)"]
+  ROOT --> WS["workspaces/"]
+  WS --> PROJ["'{projectId}/'<br/>proj_{slug}_{shortId}"]
+  PROJ --> PJSON["project.json"]
+  PROJ --> SETTINGS["settings/<br/>详细子目录见 plan/04"]
+  PROJ --> CHAPTERS["chapters/"]
+  PROJ --> IDB["index.db<br/>SQLite per-project"]
+  PROJ --> TRACE["trace/<br/>'{YYYY-MM-DD}-{sessionId}.jsonl'"]
+
+  subgraph SET ["settings/ 子目录"]
+    direction TB
+    S1["worldview/<br/>geography / history / politics / economy<br/>technology / culture / religion / rules"]
+    S2["outline/<br/>master + volumes/* + chapter-outlines/_registry"]
+    S3["characters/{id}.md"]
+    S4["factions/{id}.md"]
+    S5["organizations/{id}.md"]
+    S6["locations/<br/>regions / cities / buildings / landmarks"]
+    S7["items/{id}.md"]
+    S8["events/{id}.md"]
+    S9["timeline/<br/>era / story-clock / character-ages"]
+    S10["relationships/<br/>_matrix.md (派生) + notes/{id}.md"]
+    S11["story-lines/<br/>main.md + subplots/{id}.md"]
+    S12["foreshadowing/{id}.md"]
+    S13["chapter-arcs/{id}.md"]
+    S14["power-system/<br/>overview / tiers / techniques / artifacts"]
+    S15["glossary/_index.md"]
+    S16["beats.md / taboos.md / themes.md<br/>reader-promises.md"]
+  end
+  SETTINGS -.-> SET
+
+  subgraph CHAP ["chapters/ 子目录"]
+    direction TB
+    C1["'{NNN-{slug}}/'"]
+    C1 --> C2["outline.md"]
+    C1 --> C3["draft.md"]
+    C1 --> C4["meta.json"]
+  end
+  CHAPTERS -.-> CHAP
+</pre>
 <p>文件命名规则:</p>
 <ul>
 <li><code>projectId</code>: 5-32 字符,<code>/^proj_[a-z0-9-]{1,24}_[a-f0-9]{4}$/</code></li>
@@ -562,19 +569,23 @@ CREATE INDEX idx_refs_anchor ON entity_refs(anchor_id);
 <p>取代旧&quot;全文件 DELETE+INSERT&quot; 模式,详见 spec/17 §差量 reindex 流程。</p>
 </blockquote>
 <p>每次 <code>writeSetting</code> / <code>writeChapter</code> 落盘后,Worker 入队:</p>
-<pre><code>读取旧 paragraph_anchors → splitParagraphs(新内容) → diffAnchors
-   ↓
-按 (unchanged / modified / rewritten / deleted / added) 分支处理:
-   unchanged  → 不动
-   modified   → UPDATE anchor + entity_refs 该 anchor 重扫 + embedding 重算
-   rewritten  → 软删旧 anchor + 新 anchor + dependencies / entity_relations / entity_timeline 锚点迁移
-   deleted    → 软删 anchor + dependencies 标 broken (lint 报警)
-   added      → 新 anchor + 全套下游
-   ↓
-重新编织 prev_anchor / next_anchor 双链
-   ↓
-broadcast &#39;anchors:changed&#39; → 下游订阅者刷新
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  START(["读取旧 paragraph_anchors"]) --> SPLIT["splitParagraphs(新内容)"]
+  SPLIT --> DIFF["diffAnchors"]
+  DIFF --> BRANCH{anchor 状态}
+  BRANCH -->|unchanged| U["不动"]
+  BRANCH -->|modified| M["UPDATE anchor<br/>+ entity_refs 该 anchor 重扫<br/>+ embedding 重算"]
+  BRANCH -->|rewritten| R["软删旧 anchor + 新 anchor<br/>+ dependencies / entity_relations<br/>+ entity_timeline 锚点迁移"]
+  BRANCH -->|deleted| D["软删 anchor<br/>+ dependencies 标 broken<br/>(lint 报警)"]
+  BRANCH -->|added| A["新 anchor + 全套下游"]
+  U --> WEAVE["重新编织 prev_anchor / next_anchor 双链"]
+  M --> WEAVE
+  R --> WEAVE
+  D --> WEAVE
+  A --> WEAVE
+  WEAVE --> BC(["broadcast 'anchors:changed'<br/>下游订阅者刷新"])
+</pre>
 <p><strong>事务原子性</strong>: 单文件 reindex 在一个 SQLite transaction 内提交;失败 rollback + 落 <code>reindex_failures</code> 表(spec/17 §失败回滚)。</p>
   </main>
 </body>

@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/25-cardinal-rules.html</span>
 </nav>
 <h1 id="spec-25-五大网文守则-cardinal-rules">Spec 25 — 五大网文守则 (Cardinal Rules)</h1>
@@ -643,33 +643,24 @@ async function calculateGoldenFingerDensity(chapters: Chapter[]) {
 })
 </code></pre>
 <h2 id="approvalcard-集成">ApprovalCard 集成</h2>
-<pre><code>┌──────────────────────────────────────────────────────────────┐
-│ Writer 想写第 23 章 (字数 4823)                                │
-├──────────────────────────────────────────────────────────────┤
-│ Diff: ... (章节正文)                                          │
-├──────────────────────────────────────────────────────────────┤
-│ ⚠ 五大守则风险报告:                                            │
-│                                                              │
-│ 🔴 critical (1):                                             │
-│   人设崩坏: &quot;林溪&quot; 违反 reader_promise &#39;杀伐果断&#39;              │
-│      段 ch_023#§5 表现为&quot;瞻前顾后地不忍下手&quot;, value_axis(对敌) │
-│      实际 0.32 vs baseline 0.85, 偏离 0.53 (阈值 0.4)        │
-│                                                              │
-│ 🟡 major (2):                                                │
-│   节奏崩盘: 距上次 milestone (第 18 章&quot;突破金丹&quot;) 已 5 章无新 │
-│      milestone (阈值 5);若本章不推进进度建议加 milestone      │
-│   期待感: critical promise &quot;三年之约&quot; 距 deadline 仅 7 章, │
-│      最近 5 章未触及该承诺                                   │
-│                                                              │
-│ 🟠 warn (1):                                                 │
-│   金手指: 滚动 10 章系统奖励段比例 32% (阈值 30%)             │
-│                                                              │
-│ ────────────────────────────────────────────                 │
-│ ☐ 我已阅读上述风险,明知违反仍通过 (critical 必勾)             │
-│ ────────────────────────────────────────────                 │
-│ [拒绝 + 反馈] [同意章节 (Y)]                                  │
-└──────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  subgraph CARD ["ApprovalCard (审批卡片)"]
+    direction TB
+    HEAD["Writer 想写第 23 章 (字数 4823)"]
+    DIFF["Diff: ... (章节正文)"]
+    subgraph RISK ["五大守则风险报告"]
+      direction TB
+      CRIT["critical (1)<br/>人设崩坏: 林溪违反 reader_promise '杀伐果断'<br/>段 ch_023#§5 瞻前顾后不忍下手<br/>value_axis 对敌 实际 0.32 vs baseline 0.85 偏离 0.53 阈值 0.4"]
+      MAJ["major (2)<br/>节奏崩盘: 距上次 milestone (第 18 章 突破金丹) 已 5 章无新 milestone<br/>期待感: critical promise '三年之约' 距 deadline 仅 7 章, 最近 5 章未触及"]
+      WARN["warn (1)<br/>金手指: 滚动 10 章系统奖励段比例 32% 阈值 30%"]
+      CRIT --> MAJ --> WARN
+    end
+    CHECK{{"我已阅读上述风险, 明知违反仍通过<br/>critical 必勾 checkbox"}}
+    ACTION["[拒绝 + 反馈]    [同意章节 (Y)]"]
+    HEAD --> DIFF --> RISK --> CHECK --> ACTION
+  end
+</pre>
 <p><strong>关键 UI 约束</strong>:</p>
 <ul>
 <li><code>critical</code> 数 ≥ 1 时,&quot;同意&quot;按钮<strong>强制要求勾&quot;明知违反仍通过&quot;</strong> checkbox(防 silent commit)</li>

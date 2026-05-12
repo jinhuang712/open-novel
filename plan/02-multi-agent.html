@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/02-multi-agent.html</span>
 </nav>
 <h1 id="02-多-agent-拓扑">02 — 多 Agent 拓扑</h1>
@@ -171,44 +171,43 @@
 <p>Mastra 的 <code>AgentNetwork</code> 让 Router 把下游 Agent 当作工具调用 (<code>agents-as-tools</code> 模式)。</p>
 <h2 id="agent-间协作流程">Agent 间协作流程</h2>
 <h3 id="plan-模式-生成修改设定">Plan 模式 (生成/修改设定)</h3>
-<pre><code>Router → (decide: 调用 Writer)
-Writer → 生成 worldview.md draft (含 frontmatter)
-Writer → 调 writeSetting tool (needsApproval=true)
-        ↓
-        AI SDK 挂起 → 前端渲染 ApprovalCard (含 diff)
-        ↓ (用户点同意)
-        addToolResult({ output: &#39;approved&#39; }) 让流继续
-        ↓
-        实际落盘 + index.db.entities 刷新
-        ↓
-Validator → 自动并行检查: 这个新 worldview 与现存所有 character.md 是否冲突?
-       └─ 若冲突: 把冲突列表回喂 Router
-              ↓
-              Router 提议追加 cascade 修改 (依然走 Writer + needsApproval 链路)
-        ↓
-Reflector → 取本轮 (Writer 输出 + 用户最终决定),提炼 1-3 条经验,写入 learnings
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  R([Router 决策: 调用 Writer]) --> W1[Writer 生成 worldview.md draft<br/>含 frontmatter]
+  W1 --> W2[Writer 调 writeSetting tool<br/>needsApproval=true]
+  W2 --> AI[AI SDK 挂起]
+  AI --> AC[前端渲染 ApprovalCard 含 diff]
+  AC -->|用户点同意| AT["addToolResult output:'approved'<br/>让流继续"]
+  AT --> DISK[实际落盘<br/>+ index.db.entities 刷新]
+  DISK --> V{Validator 并行检查<br/>新 worldview vs character.md}
+  V -->|无冲突| RF[Reflector 提炼 1-3 条经验<br/>写入 learnings]
+  V -->|有冲突| BACK[冲突列表回喂 Router]
+  BACK --> CASCADE[Router 追加 cascade 修改<br/>走 Writer + needsApproval]
+  CASCADE --> RF
+</pre>
 <h3 id="write-模式-生成章节正文">Write 模式 (生成章节正文)</h3>
-<pre><code>Router → 委派 Writer
-Writer → 读 settings/* + chapter outline + 历史章节
-Writer → 流式生成正文 (逐段 emit)
-        ↓ (流式过程中)
-Checker → 并行审风格 (轻量 prompt,只看最近 1000 字)
-Validator → 并行扫一致性 (重点查角色行为、地点、时间是否冲突)
-        ↓ (writer 完成后)
-若 narrative.beatAnalyzer.runOnSave (默认 true) → Checker 跑 BeatAnalyzer
-若 narrative.arcTracker.runOnNewChapter (默认 true) → Validator 跑 ArcTracker (本章涉及角色)
-若 Checker / Validator 提出修改建议 → Writer 自我重写一次 (≤1 次,避免循环)
-        ↓
-若 readerPanel.runOnSave (默认 true) → 5 persona 并行 → ChapterRiskReport
-        ↓
-最终 → writeChapterProposal (落 approvals 表,见 spec/06)
-        ↓
-ApprovalCard (展示完整章节 + 叙事报告 + 风险报告 + Validator cascade)
-        ↓ 用户同意 → POST /api/approvals/{id}/resolve → 落盘 + reindex
-        ↓
-Reflector 入队 (本批 cascade 合一次,≤5/会话,见 plan/06)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  R([Router 委派 Writer]) --> W1[Writer 读 settings/* + chapter outline + 历史章节]
+  W1 --> W2[Writer 流式生成正文 逐段 emit]
+  W2 -. 流式过程中并行 .-> C[Checker 审风格<br/>仅看最近 1000 字]
+  W2 -. 流式过程中并行 .-> V[Validator 扫一致性<br/>角色 / 地点 / 时间]
+  C --> DONE{Writer 完成}
+  V --> DONE
+  DONE -->|beatAnalyzer.runOnSave| BA[Checker → BeatAnalyzer]
+  DONE -->|arcTracker.runOnNewChapter| AT[Validator → ArcTracker 本章涉及角色]
+  BA --> REW{Checker / Validator<br/>提出修改建议?}
+  AT --> REW
+  REW -->|是| RW[Writer 自我重写 ≤1 次<br/>避免循环]
+  REW -->|否| RP{readerPanel.runOnSave?}
+  RW --> RP
+  RP -->|是| RPR[5 persona 并行<br/>→ ChapterRiskReport]
+  RP -->|否| PROP[writeChapterProposal<br/>落 approvals 表 见 spec/06]
+  RPR --> PROP
+  PROP --> APR[ApprovalCard<br/>完整章节 + 叙事报告 + 风险 + cascade]
+  APR -->|用户同意| RES["POST /api/approvals/id/resolve<br/>落盘 + reindex"]
+  RES --> RFL[Reflector 入队<br/>本批 cascade 合一次 ≤5/会话]
+</pre>
 <p>各自动触发的开关均在 SettingsDialog → Section 5 (读者仿真器 + 叙事引擎),用户可关闭节省成本。</p>
 <p>注意 ReaderPanel 是<strong>非闸门</strong>输出 — 信号挂在 ApprovalCard 内,作者可参考可忽略。</p>
 <h3 id="discuss-模式">Discuss 模式</h3>

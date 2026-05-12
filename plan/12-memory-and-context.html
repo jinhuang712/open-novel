@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/12-memory-and-context.html</span>
 </nav>
 <h1 id="12-agent-记忆与上下文治理">12 — Agent 记忆与上下文治理</h1>
@@ -42,50 +42,45 @@
 </ol>
 <p>这章给出<strong>四层记忆模型 + per-agent 上下文契约 + 跨进程恢复 + Reflector 注入策略</strong>。</p>
 <h2 id="四层记忆模型">四层记忆模型</h2>
-<pre><code>┌──────────────────────────────────────────────────────────────────┐
-│  L4. 知识图谱 (Knowledge Graph) ★ 一致性的事实源                    │
-│      规模: 全项目所有设定 + 章节 + 段锚 + entity_relations + 概念  │
-│            + foreshadowings + cardinal-rules.json                │
-│      位置: file (md) + LibSQL workspace.db                        │
-│      访问: assembleContext (写) / queryFacts (读) / analyzeImpact │
-│      生命周期: 永久 (项目存在则存在)                                 │
-│      详见: plan/11 + spec/16-21 + spec/25                         │
-└──────────────────────────────────────────────────────────────────┘
-                                 ▲
-                                 │ per-agent 契约 retrieve (按职责)
-                                 │
-┌──────────────────────────────────────────────────────────────────┐
-│  L3. 项目记忆 (Project Memory) — Reflector 沉淀的经验                │
-│      规模: ≤数百条 learnings + reflector_pending 队列              │
-│      位置: LibSQL workspace.db (`learnings` 表)                   │
-│      访问: 各 agent context builder 注入 system prompt              │
-│      生命周期: 跨 session 永久 (用户可手动删除)                      │
-│      详见: plan/06 + spec/22                                      │
-└──────────────────────────────────────────────────────────────────┘
-                                 ▲
-                                 │ inject top-K by scope (按 agent 适用)
-                                 │
-┌──────────────────────────────────────────────────────────────────┐
-│  L2. 会话记忆 (Session Memory) — Mastra Memory thread             │
-│      规模: 单 session 内对话历史 + tool calls                      │
-│      位置: LibSQL runtime.db (Mastra Memory 管的)                  │
-│      访问: 自动 — Agent stream 时 Mastra 拼进 messages              │
-│      生命周期: 单 session (默认 30 天不活动 GC)                      │
-│      可选压缩: 长 session (&gt;200 messages) 时启用 — 默认关             │
-│      详见: spec/22                                                │
-└──────────────────────────────────────────────────────────────────┘
-                                 ▲
-                                 │ append + lastMessages 滑窗
-                                 │
-┌──────────────────────────────────────────────────────────────────┐
-│  L1. 工作记忆 (Working Memory) — 单 turn 内的装配后 prompt         │
-│      规模: 当前 stream 的 system + retrieve + messages + user      │
-│      位置: 内存 (装配后送入 LLM)                                    │
-│      访问: 由各 agent context builder 装配 (spec/23)                │
-│      生命周期: 单次 streamVNext 调用                                │
-│      详见: spec/23 §per-agent 上下文契约                            │
-└──────────────────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart BT
+  subgraph L1["L1. 工作记忆 (Working Memory) — 单 turn 内装配后 prompt"]
+    direction TB
+    L1A["规模: 当前 stream 的 system + retrieve + messages + user"]
+    L1B["位置: 内存 (装配后送入 LLM)"]
+    L1C["访问: 由各 agent context builder 装配 (spec/23)"]
+    L1D["生命周期: 单次 streamVNext 调用"]
+    L1E["详见: spec/23 per-agent 上下文契约"]
+  end
+  subgraph L2["L2. 会话记忆 (Session Memory) — Mastra Memory thread"]
+    direction TB
+    L2A["规模: 单 session 内对话历史 + tool calls"]
+    L2B["位置: LibSQL runtime.db (Mastra Memory 管)"]
+    L2C["访问: 自动 — Agent stream 时 Mastra 拼进 messages"]
+    L2D["生命周期: 单 session (默认 30 天不活动 GC)"]
+    L2E["可选压缩: 长 session 200+ messages 启用, 默认关"]
+    L2F["详见: spec/22"]
+  end
+  subgraph L3["L3. 项目记忆 (Project Memory) — Reflector 沉淀的经验"]
+    direction TB
+    L3A["规模: ≤数百条 learnings + reflector_pending 队列"]
+    L3B["位置: LibSQL workspace.db (learnings 表)"]
+    L3C["访问: 各 agent context builder 注入 system prompt"]
+    L3D["生命周期: 跨 session 永久 (用户可手动删除)"]
+    L3E["详见: plan/06 + spec/22"]
+  end
+  subgraph L4["L4. 知识图谱 (Knowledge Graph) — 一致性的事实源"]
+    direction TB
+    L4A["规模: 全项目设定 + 章节 + 段锚 + entity_relations<br/>+ 概念 + foreshadowings + cardinal-rules.json"]
+    L4B["位置: file (md) + LibSQL workspace.db"]
+    L4C["访问: assembleContext 写 / queryFacts 读 / analyzeImpact"]
+    L4D["生命周期: 永久 (项目存在则存在)"]
+    L4E["详见: plan/11 + spec/16-21 + spec/25"]
+  end
+  L1 -. "append + lastMessages 滑窗" .-> L2
+  L2 -. "inject top-K by scope (按 agent 适用)" .-> L3
+  L3 -. "per-agent 契约 retrieve (按职责)" .-> L4
+</pre>
 <p><strong>关键不变性</strong> (在 plan/01 §不变性 锁定为 L13-L15):</p>
 <ul>
 <li><strong>L4 是单一事实源</strong>: L1-L3 任何与 L4 冲突的内容,answer 时以 L4 为准(例:历史 message 里说&quot;林溪是男的&quot;,但 L4 character 已改女,以 L4 为准)</li>
@@ -274,26 +269,24 @@
 </tbody></table>
 <h2 id="与-reflector-的协同-回扣-plan06">与 Reflector 的协同 (回扣 plan/06)</h2>
 <p>Reflector 是 L3 的<strong>唯一写入者</strong>,本章是 L3 的<strong>统一读取规则</strong>:</p>
-<pre><code>审批闭环 → 入队 reflector_pending (按 cascade_group_id)
-       → Reflector 出队 → 提炼 1-3 条 learnings (走 JSON mode, spec/24)
-       → upsert 到 learnings 表
-                                                            ↓
-各 agent context builder (spec/23)
-       → 取 learnings WHERE project_id=X AND scope IN (该 agent 适用) AND weight &gt;= 0.2
-       → ORDER BY weight DESC LIMIT 8
-       → cardinal_rule scope 的 top-1 永远保留 (override 截断)
-       → 注入 system prompt 的&quot;经验&quot;段
-                                                            ↓
-                                          Agent 用经验 + L4 数据生成
-                                                            ↓
-                                          用户审批 → 闭环 → Reflector 调整 weight
-                                                            ↓
-                                                   weight 衰减 (30天 0.95)
-                                                  + 命中加权 (+0.5)
-                                                  + 拒绝/edited (-0.3)
-                                                  + &lt; 0.2 自动归档
-                                                  + cardinal_rule scope 阈值不能 LLM 调降
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  A([审批闭环]) --> B[入队 reflector_pending<br/>按 cascade_group_id]
+  B --> C[Reflector 出队]
+  C --> D[提炼 1-3 条 learnings<br/>走 JSON mode, spec/24]
+  D --> E[upsert 到 learnings 表]
+  E --> F["各 agent context builder (spec/23)"]
+  F --> G["取 learnings WHERE project_id=X<br/>AND scope IN 该 agent 适用<br/>AND weight ≥ 0.2"]
+  G --> H["ORDER BY weight DESC LIMIT 8"]
+  H --> I["cardinal_rule scope 的 top-1 永远保留<br/>(override 截断)"]
+  I --> J[注入 system prompt 的'经验'段]
+  J --> K[Agent 用经验 + L4 数据生成]
+  K --> L[用户审批]
+  L --> M[闭环]
+  M --> N[Reflector 调整 weight]
+  N --> O["weight 衰减 30 天 ×0.95<br/>+ 命中加权 +0.5<br/>+ 拒绝/edited -0.3<br/>+ 小于 0.2 自动归档<br/>+ cardinal_rule scope 阈值不能 LLM 调降"]
+  O -. 下一轮 .-> A
+</pre>
 <p><strong>weight 决策协议</strong>(plan/06 §weight 调整协议 同步):</p>
 <ul>
 <li>初始 1.0</li>

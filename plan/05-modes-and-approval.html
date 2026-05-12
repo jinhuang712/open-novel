@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>plan/05-modes-and-approval.html</span>
 </nav>
 <h1 id="05-三模式与审批流">05 — 三模式与审批流</h1>
@@ -58,27 +58,38 @@
 <p>模式切换在 <code>await_approval</code> 状态下被状态机阻止 — 此时 Tab 与点击都不生效,UI 显示 toast: &quot;完成审批后才能切模式&quot;。</p>
 <p><code>await_approval</code> 状态下接受新 <code>USER_INPUT</code> 也被阻止 — ChatBox textarea 显示 disabled 灰显 + tooltip &quot;完成或取消上方审批后才能继续输入&quot;。详见 <a href="../spec/07-mode-state-machine.html">spec/07-mode-state-machine.html</a> §USER_INPUT 处理。</p>
 <h2 id="状态机-xstate">状态机 (XState)</h2>
-<pre><code>   ┌──── idle ──── (input) ────► classifying
-   │                                  │
-   │   Router 输出 intent + 校验 mode 一致性
-   │                                  ▼
-   │                       ┌──────────┼──────────┐
-   │                       ▼          ▼          ▼
-   │                   discuss      plan        write
-   │                       │          │           │
-   │                  (read-only)  generate   generate
-   │                       │          │           │
-   │                       │      validate    validate
-   │                       │          │           │
-   │                       │        diff        diff
-   │                       │          │           │
-   │                       │     await_approval await_approval
-   │                       │          │           │
-   │                       │   (approve→persist→reflect)
-   │                       │   (reject + feedback → refine → generate)
-   │                       │          │           │
-   └───────────────────────┴──────────┴───────────┘
-</code></pre>
+<pre class="mermaid">
+stateDiagram-v2
+  [*] --> idle
+  idle --> classifying: input
+  classifying --> discuss: Router 输出 intent<br/>+ 校验 mode 一致性
+  classifying --> plan: 同上
+  classifying --> write: 同上
+
+  discuss: discuss (read-only)
+  discuss --> idle
+
+  state plan {
+    [*] --> plan_generate
+    plan_generate --> plan_validate
+    plan_validate --> plan_diff
+    plan_diff --> plan_await: await_approval
+    plan_await --> [*]: approve<br/>persist + reflect
+    plan_await --> plan_generate: reject + feedback<br/>refine
+  }
+
+  state write {
+    [*] --> write_generate
+    write_generate --> write_validate
+    write_validate --> write_diff
+    write_diff --> write_await: await_approval
+    write_await --> [*]: approve<br/>persist + reflect
+    write_await --> write_generate: reject + feedback<br/>refine
+  }
+
+  plan --> idle
+  write --> idle
+</pre>
 <h2 id="审批闸门-human-in-the-loop">审批闸门 (Human-in-the-Loop)</h2>
 <blockquote>
 <p><strong>proposal + 独立 endpoint 模式</strong>: 工具执行时不真正写盘,而是把 proposal 落 <code>approvals</code> 表 (status=pending) 立即返回;Agent loop 看到 proposal 后自然结束 stream;用户审批通过独立 endpoint <code>POST /api/approvals/{id}/resolve</code> 真正落盘。审批悬挂不依赖 stream 长连接。详见 <a href="../spec/06-approval-flow.html">spec/06-approval-flow.html</a>。</p>
@@ -104,60 +115,49 @@
 </ol>
 <p><strong>Cascade 中断恢复 (整批审之后简化)</strong>: 浏览器关闭时若有 pending 审批,启动时 <code>useApprovals.hydrate()</code> 拉回所有 status=&#39;pending&#39; 的 approval (每个一个完整 ChangeSet) 继续审。每个 approval 行幂等 (status 检查 + transaction 原子性) — 重复点同意不重复落盘,中途崩溃也不会出现&quot;半落地&quot;。</p>
 <h2 id="approvalcard-ui-形态">ApprovalCard UI 形态</h2>
-<pre><code>┌────────────────────────────────────────────────────┐
-│ ✱ Writer 想要修改: characters/lin.md               │
-│ 原因: 用户要求把主角性别改为女                       │
-├────────────────────────────────────────────────────┤
-│ Diff:                                              │
-│   - gender: male                                   │
-│   + gender: female                                 │
-│   - 名字叫&quot;林川&quot;,北漂程序员                        │
-│   + 名字叫&quot;林溪&quot;,北漂程序员                        │
-│ ────────────────────────────────────────────────── │
-│ ⚠ 影响图谱: 8 段 cascade (3 轮内部分析)            │
-│ ☑ 一级 cascade (5 项)  [展开]                      │
-│   ☑ outline.md § 3 (高置信)                        │
-│   ☑ wang.md § &quot;称谓&quot; (高置信)                      │
-│   ☑ ch_001 § 5 (高置信)                            │
-│   ☑ ch_001 § 12 (中置信)                           │
-│   ☐ ch_001 § 18 (低置信 — 默认不勾)                 │
-│ ☑ 二级 cascade (3 项)  [展开]                      │
-│   ☑ ch_003 § 7 (中置信)                            │
-│   ...                                               │
-├────────────────────────────────────────────────────┤
-│ [全选] [全不选] [拒绝全部] [同意勾选 7/8 项 (Y)]    │
-└────────────────────────────────────────────────────┘
-</code></pre>
+<pre class="mermaid">
+flowchart TB
+  subgraph CARD["ApprovalCard"]
+    direction TB
+    HDR["Writer 想要修改: characters/lin.md<br/>原因: 用户要求把主角性别改为女"]
+    DIFF["Diff:<br/>- gender: male<br/>+ gender: female<br/>- 名字叫 林川 北漂程序员<br/>+ 名字叫 林溪 北漂程序员"]
+    IMP["影响图谱: 8 段 cascade 3 轮内部分析"]
+    subgraph L1["一级 cascade 5 项 展开"]
+      direction TB
+      L1a["[x] outline.md 段 3 高置信"]
+      L1b["[x] wang.md 称谓 高置信"]
+      L1c["[x] ch_001 段 5 高置信"]
+      L1d["[x] ch_001 段 12 中置信"]
+      L1e["[ ] ch_001 段 18 低置信 默认不勾"]
+    end
+    subgraph L2["二级 cascade 3 项 展开"]
+      direction TB
+      L2a["[x] ch_003 段 7 中置信"]
+      L2b["..."]
+    end
+    ACT["全选 | 全不选 | 拒绝全部 | 同意勾选 7/8 项 Y"]
+
+    HDR --> DIFF --> IMP --> L1 --> L2 --> ACT
+  end
+</pre>
 <h2 id="cascade-审批-w9-升级-整批审">Cascade 审批 (W9 升级 — 整批审)</h2>
 <blockquote>
 <p>⚠ <strong>关键交互模型</strong>: cascade 递归在审批<strong>前</strong>的内部循环里完成,用户只看一次最终汇总的 ChangeSet。落盘是后端 transaction 一次写所有勾选项 — 不再&quot;主变更落盘 + cascade 各项再 ApprovalCard&quot;。</p>
 </blockquote>
-<pre><code>Writer 出主修改 (in-memory)
-   ↓
-[内部递归 ≤3 轮 (见 plan/06 + spec/19)]
-   - 第 1 轮 analyzeImpact → ChangeProposal[1]
-   - Writer 内部短调用生成 afterText
-   - 第 2 轮 → ChangeProposal[2]
-   - 第 3 轮 → ChangeProposal[3]
-   - 终止 (候选空 / 半径不收缩 / 深度=3)
-   ↓
-汇总 ChangeSet (主修改 + 1-3 级 cascade,含影响图谱)
-   ↓
-**一次** ApprovalCard:
-   - 顶部: 影响图谱 (节点 + 边,按 cascadeLevel 着色)
-   - 主修改一行 (默认勾)
-   - 一级 cascade 折叠组 (高/中置信默认勾,低置信默认不勾)
-   - 二级 cascade 折叠组 (同上)
-   - 三级 cascade 折叠组 (同上)
-   - 每条可手动编辑 / toggle 勾选
-   - 操作: [全选] [全不选] [拒绝全部] [同意勾选 K/N 项]
-   ↓
-用户决定 → POST /api/approvals/{id}/resolve { decision, accepted_items[], edits{} }
-   ↓
-后端 transaction 一次落盘所有 accepted (主 + 勾选的 cascade)
-   ↓
-副作用 (差量 reindex / snapshot / history group / Reflector,见 plan/04 §审批通过后的副作用)
-</code></pre>
+<pre class="mermaid">
+flowchart TD
+  W1([Writer 出主修改 in-memory]) --> LOOP["内部递归 1-3 轮 plan/06 + spec/19"]
+  LOOP --> R1["第 1 轮 analyzeImpact<br/>ChangeProposal 1"]
+  R1 --> RA["Writer 内部短调用生成 afterText"]
+  RA --> R2["第 2 轮<br/>ChangeProposal 2"]
+  R2 --> R3["第 3 轮<br/>ChangeProposal 3"]
+  R3 --> END["终止 候选空 / 半径不收缩 / 深度=3"]
+  END --> CS["汇总 ChangeSet<br/>主修改 + 1-3 级 cascade 含影响图谱"]
+  CS --> AC["一次 ApprovalCard:<br/>顶部 影响图谱 节点+边 按 cascadeLevel 着色<br/>主修改一行 默认勾<br/>一级 cascade 折叠组 高/中置信默认勾 低置信默认不勾<br/>二级 cascade 折叠组 同上<br/>三级 cascade 折叠组 同上<br/>每条可手动编辑 / toggle 勾选<br/>操作 全选 / 全不选 / 拒绝全部 / 同意勾选 K/N 项"]
+  AC --> US["用户决定<br/>POST /api/approvals/{id}/resolve<br/>decision + accepted_items + edits"]
+  US --> DISK["后端 transaction 一次落盘所有 accepted<br/>主 + 勾选的 cascade"]
+  DISK --> SE["副作用<br/>差量 reindex / snapshot / history group / Reflector<br/>plan/04 审批通过后的副作用"]
+</pre>
 <p><strong>不勾选某条 cascade 的语义</strong>: 该 proposal 被显式<strong>搁置</strong>,系统记录但不落盘。后续如果作者写到那段,Validator 会在再下一次 cascade 中重新发现并提议。
 <strong>全部勾不勾选 + reject 全部</strong>: 拒绝整个 ChangeSet,主修改也不落,等于这次修改没发生过。</p>
 <h2 id="拒绝反馈环">拒绝反馈环</h2>

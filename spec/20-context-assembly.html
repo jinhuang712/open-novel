@@ -10,7 +10,7 @@
 <body>
   <main class="doc">
 <nav class="doc-meta" aria-label="Document metadata">
-  <a href="../README.md">README</a>
+  <a href="../index.html">&larr; Index</a>
   <span>spec/20-context-assembly.html</span>
 </nav>
 <h1 id="spec-20-上下文装配工具-assemblecontext">Spec 20 — 上下文装配工具 (assembleContext)</h1>
@@ -25,30 +25,25 @@
 <li><strong>不替决策</strong> — 装配工具只 retrieve,不评判&quot;应该怎么写&quot;。Writer 看到 context 后自己判</li>
 </ol>
 <h2 id="工作链路">工作链路</h2>
-<pre><code>Writer 接到任务 (chapterId + outline + 用户 prompt)
-   ↓
-调 assembleContext({ chapterId, outline, includeKinds, tokenBudget })
-   ↓
-step 1: 从 outline NER 抽涉及的 entity (复用 entity-highlight AC trie + LLM 备用)
-   ↓
-step 2: 对每个 entity 取 timeline.snapshotAt(chapterId) - 角色到本章的最新状态
-   ↓
-step 3: relations.activeAt(entities, chapterId) - 本章时间点活跃关系
-   ↓
-step 4: dependencies.pendingFor(chapterId) - 应当回收 / 埋设的伏笔
-   ↓
-step 5: previousChaptersOf(entities) - 涉及角色的最近 K 个章节段
-   ↓
-step 6: embeddings.search(outline, topK=10) - 语义最相关历史段
-   ↓
-step 7: relevantWorldview(entities, locations) - 涉及的世界观片段
-   ↓
-step 8: pickActiveConcepts(chapterId) - 本章应遵守的硬规则 (concept.semantic ∈ {absent, restricted, mandatory})
-   ↓
-step 9: tokenBudget allocator - 按优先级分配预算,丢弃低优部分
-   ↓
-返回 ContextBundle
-</code></pre>
+<pre class="mermaid">
+flowchart LR
+  IN([Writer 接到任务<br/>chapterId + outline + 用户 prompt]) --> CALL["调 assembleContext<br/>chapterId, outline, includeKinds, tokenBudget"]
+  CALL --> ASM
+  subgraph ASM [装配 step 1-9]
+    direction TB
+    S1[step 1: 从 outline NER 抽 entity<br/>AC trie + LLM 备用]
+    S2[step 2: timeline.snapshotAt<br/>角色到本章的最新状态]
+    S3[step 3: relations.activeAt<br/>本章时间点活跃关系]
+    S4[step 4: dependencies.pendingFor<br/>应当回收/埋设的伏笔]
+    S5[step 5: previousChaptersOf<br/>涉及角色的最近 K 个章节段]
+    S6[step 6: embeddings.search<br/>语义最相关历史段 topK=10]
+    S7[step 7: relevantWorldview<br/>涉及的世界观片段]
+    S8["step 8: pickActiveConcepts<br/>本章硬规则 absent/restricted/mandatory"]
+    S9[step 9: tokenBudget allocator<br/>按优先级分配预算]
+    S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> S8 --> S9
+  end
+  ASM --> OUT([返回 ContextBundle])
+</pre>
 <h2 id="工具签名">工具签名</h2>
 <pre><code class="language-ts">// lib/agents/tools/assemble-context.ts
 import { tool } from &#39;ai&#39;
