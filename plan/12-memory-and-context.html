@@ -64,7 +64,7 @@ flowchart BT
   subgraph L3["L3. 项目记忆 (Project Memory) — Reflector 沉淀的经验"]
     direction TB
     L3A["规模: ≤数百条 learnings + reflector_pending 队列"]
-    L3B["位置: LibSQL workspace.db (learnings 表)"]
+    L3B["位置: LibSQL index.db (learnings 表)"]
     L3C["访问: 各 agent context builder 注入 system prompt"]
     L3D["生命周期: 跨 session 永久 (用户可手动删除)"]
     L3E["详见: plan/06 + spec/22"]
@@ -72,7 +72,7 @@ flowchart BT
   subgraph L4["L4. 知识图谱 (Knowledge Graph) — 一致性的事实源"]
     direction TB
     L4A["规模: 全项目设定 + 章节 + 段锚 + entity_relations<br/>+ 概念 + foreshadowings + cardinal-rules.json"]
-    L4B["位置: file (md) + LibSQL workspace.db"]
+    L4B["位置: file (md) + LibSQL index.db"]
     L4C["访问: assembleContext 写 / queryFacts 读 / analyzeImpact"]
     L4D["生命周期: 永久 (项目存在则存在)"]
     L4E["详见: plan/11 + spec/16-21 + spec/25"]
@@ -94,8 +94,8 @@ flowchart BT
 <li>✅ resource (<code>X</code> = projectId) 隔离</li>
 <li>✅ messageHistory 持久化 (LibSQL runtime.db)</li>
 <li>✅ semantic recall (按 embedding 检索老消息) — 默认<strong>关闭</strong> (见 spec/22 §semantic recall 决策)</li>
-<li>❌ <strong>不</strong>管 L3 learnings (那在 workspace.db,我们应用层管)</li>
-<li>❌ <strong>不</strong>管 L4 知识图谱 (那是项目 file + workspace.db)</li>
+<li>❌ <strong>不</strong>管 L3 learnings (那在 index.db,我们应用层管)</li>
+<li>❌ <strong>不</strong>管 L4 知识图谱 (那是项目 file + index.db)</li>
 <li>❌ <strong>不</strong>管 L1 装配 (我们在 spec/23 自己装配)</li>
 </ul>
 <blockquote>
@@ -184,11 +184,11 @@ flowchart BT
 </tr>
 <tr>
 <td>L3 项目记忆</td>
-<td>LibSQL workspace.db 持久化,启动 <code>Router.boot()</code> 时按 projectId 加载 top-K learnings 进缓存</td>
+<td>LibSQL index.db 持久化,启动 <code>Router.boot()</code> 时按 projectId 加载 top-K learnings 进缓存</td>
 </tr>
 <tr>
 <td>L4 知识图谱</td>
-<td>LibSQL workspace.db + file system,按需 retrieve</td>
+<td>LibSQL index.db + file system,按需 retrieve</td>
 </tr>
 <tr>
 <td>状态机</td>

@@ -298,8 +298,8 @@ CREATE INDEX idx_traces_session ON traces(session_id);
 <p>每次 <code>writeSetting</code> / <code>writeChapter</code> 落盘后异步执行:</p>
 <ol>
 <li>解析 frontmatter → upsert 到 <code>entities</code> (若 type ∈ {character, place, item, org})</li>
-<li>解析正文 → 用 AC trie 扫所有实体 → 重写 <code>references</code> (DELETE + INSERT for source_file)</li>
-<li>用 references 推导 backlinks (反向)</li>
+<li>解析正文 → 用 AC trie 扫所有实体 → 重写 <code>entity_refs</code> (DELETE WHERE source_file = X → INSERT 新命中)</li>
+<li>从 entity_refs 推导 backlinks (反向)</li>
 <li>写一条 <code>history</code> 记录</li>
 </ol>
 <p>整个过程在 Worker 中执行,不阻塞 UI。</p>
@@ -564,29 +564,10 @@ ALTER TABLE entity_refs ADD COLUMN intra_paragraph_offset INTEGER;  -- 段内字
 CREATE INDEX idx_refs_anchor ON entity_refs(anchor_id);
 </code></pre>
 <p>迁移脚本 (<code>004-paragraph-anchors.ts</code>) 重扫所有现有 entity_refs,按 file_path + position_from 反查所属 anchor,populate 新两列。<code>concept_refs</code> 在 spec/16 表创建时已含此结构,无需 ALTER。</p>
-<h2 id="索引刷新流程-w7-升级-差量">索引刷新流程 (W7 升级 — 差量)</h2>
+<h2 id="索引刷新流程-w7-升级">索引刷新流程 (W7 升级)</h2>
 <blockquote>
-<p>取代旧&quot;全文件 DELETE+INSERT&quot; 模式,详见 spec/17 §差量 reindex 流程。</p>
+<p>W7 引入 paragraph_anchors (spec/17) 后, <code>entity_refs</code> 的 reindex 策略不变: 始终 DELETE WHERE source_file = X + AC trie 全部重扫。文件级全量扫对 entity_refs 而言足够廉价且正确, 不依赖不稳定的 anchor diff。paragraph_anchors 的维护与 embeddings 的差量更新见 spec/17 和 spec/18, 不在此处重复。</p>
 </blockquote>
-<p>每次 <code>writeSetting</code> / <code>writeChapter</code> 落盘后,Worker 入队:</p>
-<pre class="mermaid">
-flowchart TD
-  START(["读取旧 paragraph_anchors"]) --> SPLIT["splitParagraphs(新内容)"]
-  SPLIT --> DIFF["diffAnchors"]
-  DIFF --> BRANCH{anchor 状态}
-  BRANCH -->|unchanged| U["不动"]
-  BRANCH -->|modified| M["UPDATE anchor<br/>+ entity_refs 该 anchor 重扫<br/>+ embedding 重算"]
-  BRANCH -->|rewritten| R["软删旧 anchor + 新 anchor<br/>+ dependencies / entity_relations<br/>+ entity_timeline 锚点迁移"]
-  BRANCH -->|deleted| D["软删 anchor<br/>+ dependencies 标 broken<br/>(lint 报警)"]
-  BRANCH -->|added| A["新 anchor + 全套下游"]
-  U --> WEAVE["重新编织 prev_anchor / next_anchor 双链"]
-  M --> WEAVE
-  R --> WEAVE
-  D --> WEAVE
-  A --> WEAVE
-  WEAVE --> BC(["broadcast 'anchors:changed'<br/>下游订阅者刷新"])
-</pre>
-<p><strong>事务原子性</strong>: 单文件 reindex 在一个 SQLite transaction 内提交;失败 rollback + 落 <code>reindex_failures</code> 表(spec/17 §失败回滚)。</p>
   </main>
 </body>
 </html>

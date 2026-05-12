@@ -262,7 +262,7 @@ await generateText({
 <p><strong>关键决策汇总</strong>:</p>
 <ul>
 <li>runtime.db = Mastra Memory 全部 thread + messages (跨项目共享单文件,逻辑用 thread/resource 隔离)</li>
-<li>workspace.db = 每项目一文件,项目数据 (chapters / settings / learnings / approvals / paragraph_anchors / ...) — 与 runtime.db 严格不混</li>
+<li>index.db = 每项目一文件,项目数据 (chapters / settings / learnings / approvals / paragraph_anchors / ...) — 与 runtime.db 严格不混</li>
 <li>所有 Agent stream 必经 <code>streamWithGuard</code> (memory-guard) 验证 thread/resource projectId 一致 — 直接调 <code>streamVNext</code> lint 报错</li>
 <li>所有 prompt 装配必经 per-agent context builder (spec/23) — Agent 自拼 prompt 是反模式</li>
 </ul>

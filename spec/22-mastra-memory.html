@@ -34,8 +34,8 @@
 <td>Mastra 自动 schema</td>
 </tr>
 <tr>
-<td><code>workspace.db</code></td>
-<td><code>~/.open-novel/workspaces/{projectId}/workspace.db</code></td>
+<td><code>index.db</code></td>
+<td><code>~/.open-novel/workspaces/{projectId}/index.db</code></td>
 <td>项目数据: chapters, settings, entities, relations, learnings, approvals, history, dependencies, paragraph_anchors, paragraph_embeddings, concepts, concept_refs, foreshadowings</td>
 <td>应用层 (见 spec/01)</td>
 </tr>
@@ -49,7 +49,7 @@
 <p><strong>关键边界</strong>:</p>
 <ul>
 <li><code>runtime.db</code> 是 <strong>跨项目共享</strong>(单文件)但<strong>逻辑隔离</strong>: thread 名字带 projectId,resource 字段也带 projectId。Mastra <code>Memory</code> 内部按 resource filter。</li>
-<li><code>workspace.db</code> 是 <strong>每项目一文件</strong> (LRU(3) 连接池,见 plan/04)。两个 db 不混。</li>
+<li><code>index.db</code> 是 <strong>每项目一文件</strong> (LRU(3) 连接池,见 plan/04)。两个 db 不混。</li>
 <li>唯一例外: <strong>spec/07 状态机</strong> 的 session.json 是文件 (<code>~/.open-novel/workspaces/{X}/runtime/session.json</code>),不进任何 db。</li>
 </ul>
 <h2 id="mastra-memory-自带-schema-本项目关注的最小子集">Mastra Memory 自带 schema (本项目关注的最小子集)</h2>
@@ -364,7 +364,7 @@ export async function compressOldMessages(threadId: string, projectId: string) {
 <tr>
 <td>存储</td>
 <td>runtime.db <code>compressed_messages</code> 表</td>
-<td>workspace.db <code>volume_summaries</code> 表 (项目级)</td>
+<td>index.db <code>volume_summaries</code> 表 (项目级)</td>
 </tr>
 <tr>
 <td>注入位置</td>
@@ -372,7 +372,7 @@ export async function compressOldMessages(threadId: string, projectId: string) {
 <td>spec/23 各 agent context builder 的&quot;长期上下文&quot;段 (与最近 N 章原文并列)</td>
 </tr>
 </tbody></table>
-<h3 id="volume-summaries-表-workspacedb"><code>volume_summaries</code> 表 (workspace.db)</h3>
+<h3 id="volume-summaries-表-indexdb"><code>volume_summaries</code> 表 (index.db)</h3>
 <pre><code class="language-sql">CREATE TABLE volume_summaries (
   id TEXT PRIMARY KEY,
   volume_index INTEGER NOT NULL,                    -- 第几卷 (与 chapter.volume 对齐)
@@ -502,7 +502,7 @@ export async function rehydrateProjectContext(projectId: string) {
 </tr>
 </tbody></table>
 <p><strong>与 PRUNE_PROTECTED_TOOLS 对应</strong>: opencode 把 <code>[&quot;skill&quot;]</code> tool 的输出永远不 prune (因为 skill 内容是上下文核心)。我们的对应永久保留集 = <code>[&quot;cardinalRulesReport&quot;]</code> + <code>[&quot;volumeSummary&quot;]</code> (这两个是后续生成的根锚)。</p>
-<h3 id="表设计-workspacedb">表设计 (workspace.db)</h3>
+<h3 id="表设计-indexdb">表设计 (index.db)</h3>
 <pre><code class="language-sql">ALTER TABLE chapter_tool_runs ADD COLUMN pruned_at INTEGER;        -- prune 时间戳, NULL = 未 prune
 ALTER TABLE chapter_tool_runs ADD COLUMN pruned_summary TEXT;       -- prune 后保留的摘要 (cardinalRulesReport.summary 等)
 
@@ -573,9 +573,9 @@ export async function rehydrateSession(projectId: string): Promise&lt;Rehydrated
 <li>状态机的 events (USER_INPUT / SWITCH_MODE / ...) 同时也是 mastra_messages 的写入触发点</li>
 </ul>
 <h2 id="learnings-的注入plan06-plan12-与-reflector-协同">learnings 的注入(plan/06 + plan/12 §与 Reflector 协同)</h2>
-<p>learnings 在 <code>workspace.db</code>,<strong>不</strong>在 mastra_messages 里。注入是装配阶段做的,不是 Memory 自动:</p>
+<p>learnings 在 <code>index.db</code>,<strong>不</strong>在 mastra_messages 里。注入是装配阶段做的,不是 Memory 自动:</p>
 <pre><code class="language-ts">// 在 spec/23 各 agent context builder 内部:
-const learnings = await db.workspace(projectId).learnings.find({
+const learnings = await db.project(projectId).learnings.find({
   scope: { in: agentScopes(agentName) },           // 见 spec/23
   weight: { gte: 0.2 },
 }).orderBy(&#39;weight&#39;, &#39;desc&#39;).limit(8)
