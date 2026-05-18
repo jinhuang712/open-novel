@@ -111,12 +111,15 @@ pnpm dev
 - [25-cardinal-rules.html](./spec/25-cardinal-rules.html) — 五大网文守则
 
 ### 进度 (progress/)
-- [README.md](./progress/README.md) — 日志索引规则
-- [000-init.md](./progress/000-init.md) — 项目启动记录
-- [001-scaffolding.md](./progress/001-scaffolding.md) — W2 期 (起始计划 / 收尾 retro)
-- [002-narrative-reader.md](./progress/002-narrative-reader.md) — 战略升级: 纳入叙事引擎 + 读者仿真器
-- [003-shortcuts-and-settings.md](./progress/003-shortcuts-and-settings.md) — UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计
-- [004-docs-hardening.md](./progress/004-docs-hardening.md) — 文档审计加固 (W3 启动前的 day-1 blocker 排查 + 32 个补丁)
+- [README](./progress/README.html) — 日志索引规则
+- [000-init](./progress/000-init.html) — 项目启动记录
+- [001-scaffolding](./progress/001-scaffolding.html) — W2 期 (起始计划 / 收尾 retro)
+- [002-narrative-reader](./progress/002-narrative-reader.html) — 战略升级: 纳入叙事引擎 + 读者仿真器
+- [003-shortcuts-and-settings](./progress/003-shortcuts-and-settings.html) — UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计
+- [004-docs-hardening](./progress/004-docs-hardening.html) — 文档审计加固 (W3 启动前的 day-1 blocker 排查 + 32 个补丁)
+- [005-knowledge-graph](./progress/005-knowledge-graph.html) — 知识图谱专攻 (cascade + RAG 真正可工作的地基)
+- [006-memory-and-context](./progress/006-memory-and-context.html) — 记忆 / 上下文 / JSON / 守则 一致性优先重设计
+- [007-opencode-borrowings](./progress/007-opencode-borrowings.html) — opencode 借鉴落地 + TODO closure
 
 ## 开发约定
 

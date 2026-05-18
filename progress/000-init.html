@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>000 — 项目启动: 文档骨架 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../index.html">&larr; Index</a>
+  <span>progress/000-init.html</span>
+</nav>
+<h1>000 — 项目启动: 文档骨架</h1>
+<p><strong>日期</strong>: 2026-04-29
+<strong>周次</strong>: W1
+<strong>主要 Owner</strong>: <a href="mailto:jin.huang@klook.com">jin.huang@klook.com</a></p>
+<h2>本期目标</h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> 完成需求澄清 (与 AI 协作多轮对齐)</li>
+<li><input checked="" disabled="" type="checkbox"> 调研多 Agent JS 框架 (Mastra vs AI SDK vs LangGraph.js vs OpenAI Agents SDK)</li>
+<li><input checked="" disabled="" type="checkbox"> 调研主流 AI 应用的联网搜索方案 (DeepSeek / Doubao / ChatGPT / Claude / opencode / OpenHands / Sudowrite / NovelCrafter)</li>
+<li><input checked="" disabled="" type="checkbox"> 调研 TipTap + ProseMirror Decorations 实现实体高亮的方案</li>
+<li><input checked="" disabled="" type="checkbox"> 输出项目级 plan/ 目录 (7 个架构文档)</li>
+<li><input checked="" disabled="" type="checkbox"> 输出项目级 spec/ 目录 (8 个实现细节文档)</li>
+<li><input checked="" disabled="" type="checkbox"> 输出 README.md</li>
+<li><input checked="" disabled="" type="checkbox"> git init + 首次 commit</li>
+</ul>
+<h2>实际完成</h2>
+<p>✅ 全部完成。本期产出:</p>
+<ul>
+<li><code>README.md</code> — 项目总览、快速启动、文档导航</li>
+<li><code>plan/01-overview.md</code> — 系统概览与关键决策</li>
+<li><code>plan/02-multi-agent.md</code> — 6 Agent 拓扑与职责</li>
+<li><code>plan/03-editor-layer.md</code> — 编辑器分层与 EditorAdapter</li>
+<li><code>plan/04-storage-model.md</code> — md+sql 混合存储模型</li>
+<li><code>plan/05-modes-and-approval.md</code> — 三模式与审批流</li>
+<li><code>plan/06-cascade-and-reflection.md</code> — Cascade 一致性与反馈学习</li>
+<li><code>plan/07-ui-layout.md</code> — 五区 UI 布局</li>
+<li><code>spec/01-storage-schema.md</code> — SQLite schema 与 frontmatter 规范</li>
+<li><code>spec/02-agent-tools.md</code> — Agent 工具签名与契约</li>
+<li><code>spec/03-prompts.md</code> — Agent prompt 模板</li>
+<li><code>spec/04-streaming-protocol.md</code> — SSE 事件协议</li>
+<li><code>spec/05-entity-highlight.md</code> — 实体高亮与跳转</li>
+<li><code>spec/06-approval-flow.md</code> — 审批流接入 needsApproval</li>
+<li><code>spec/07-mode-state-machine.md</code> — XState 状态机</li>
+<li><code>spec/08-de-ai-pipeline.md</code> — 去 AI 化 pipeline</li>
+</ul>
+<h2>关键决策</h2>
+<table>
+<thead>
+<tr>
+<th>决策</th>
+<th>选择</th>
+<th>关键理由</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>应用架构</td>
+<td>Next.js 15 单仓</td>
+<td>POC 起步快,SSE 一等公民</td>
+</tr>
+<tr>
+<td>Agent 框架</td>
+<td>Mastra 1.x on Vercel AI SDK 6</td>
+<td><code>Memory</code> thread+resource 隔离;<code>AgentNetwork</code> LLM 路由;<code>needsApproval</code></td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>DeepSeek V4 Pro/Flash</td>
+<td>Pro 跑创作,Flash 跑路由/检查;Vercel AI Gateway 一站接入</td>
+</tr>
+<tr>
+<td>编辑器</td>
+<td>TipTap + 自定义 ProseMirror Decorations + Aho-Corasick</td>
+<td>不用 <code>Mention</code> 节点;参考 fork <code>prosemirror-link-plugin</code></td>
+</tr>
+<tr>
+<td>存储</td>
+<td><code>~/.open-novel/workspaces/{projectId}/</code> 内 .md + LibSQL</td>
+<td>内容人类可读;索引/历史 sql 不可见</td>
+</tr>
+<tr>
+<td>联网</td>
+<td>POC 阶段仅接口预留 + Mock</td>
+<td>二期接 Bocha 中文主 + Tavily 英文兜底,MCP sidecar 形态</td>
+</tr>
+<tr>
+<td>三模式</td>
+<td>XState 状态机</td>
+<td>discuss/plan/write 严格闸门</td>
+</tr>
+<tr>
+<td>审批</td>
+<td>AI SDK 6 <code>needsApproval</code></td>
+<td>写入操作必须用户审,拒绝带反馈</td>
+</tr>
+<tr>
+<td>反馈学习</td>
+<td>Reflector + learnings 表 + RAG 注入</td>
+<td>廉价但实用,无需微调</td>
+</tr>
+</tbody></table>
+<h2>关键调研发现</h2>
+<ol>
+<li><strong>Mastra 1.x</strong> (Jan 2026 release) 在多 Agent + Memory + 流式输出三方面比 plain AI SDK 6 更好用,但 SOC 2 暂无 (POC localhost 不影响)。</li>
+<li><strong>opencode + OpenHands</strong> 是开源 Agent 联网最规范的两个参考项目,都用 MCP 抽离搜索能力。我们二期借鉴。</li>
+<li><strong>TipTap <code>Mention</code> 节点不适合&quot;已写就的名字识别&quot;场景</strong> — 它是 atomic 显式标记节点。社区 (TipTap discussion #2295) 推荐用 <code>addProseMirrorPlugins</code> + Decorations。</li>
+<li><strong>NovelCrafter Codex</strong> 的 UX (canonical name + aliases + 大小写敏感开关 + exclusion list + mention heatmap) 接近最佳实践,直接借鉴。</li>
+<li><strong>番茄小说 (ByteDance)</strong> 已要求 AI 生成内容必须披露 (2025 年 9 月新规),所以引用追溯不仅是 UX,还是合规需求 (二期联网时尤其重要)。</li>
+</ol>
+<h2>下期计划 (W2)</h2>
+<ul>
+<li>Next.js 15 项目骨架 (<code>pnpm create next-app</code>)</li>
+<li>安装核心依赖: TipTap, Mastra, Vercel AI SDK 6, @ai-sdk/deepseek, XState, Zustand, Tailwind, shadcn/ui, react-resizable-panels</li>
+<li>实现 AppShell 五区布局 (空壳)</li>
+<li>实现 EditorAdapter 接口 + TipTap 空实现 (能加载 .md)</li>
+<li>实现 SettingsDialog (API key 持久化到 <code>~/.open-novel/settings.json</code>)</li>
+<li>占位的 ChatBox + ThinkingPanel (硬编码消息)</li>
+<li>W2 commit: <code>feat: vscode-like shell + editor adapter</code></li>
+</ul>
+<h2>已知风险</h2>
+<ul>
+<li>Mastra 1.x API 仍在迭代,2026 Q2 可能再有 minor break — 缓解: 锁版本 + agent-core 包封装</li>
+<li>DeepSeek V4 Vercel Gateway 可用性不确定 — 备选: 直连 DeepSeek API + <code>@ai-sdk/openai-compatible</code></li>
+<li>TipTap + 长章节性能 — 缓解: Worker 兜底已设计</li>
+</ul>
+<h2>关联 commit</h2>
+<ul>
+<li><code>cdc626d</code> init: scaffolding &amp; docs (W1)</li>
+</ul>
+<h2>Retro 注 (2026-04-30 追加)</h2>
+<ul>
+<li><strong>Agent 数量</strong>: 本日志记的 &quot;6 Agent 拓扑&quot; 在 progress/002-narrative-reader (战略升级) 后扩到 7 (新增 ReaderPanel)。最新拓扑见 plan/01 §7 Agent 拓扑</li>
+<li><strong>时间表</strong>: 原计划 ~12 周;002 升级后 ~14 周;004 docs 加固未变更代码工作量,仍按 14 周</li>
+<li><strong>W1 spec 集</strong>: 当时仅 8 个 spec,后续 W2 docs 期扩到 13;004 docs 加固再扩到 16 (新增 spec/00 spec/14 spec/15)</li>
+</ul>
+  </main>
+</body>
+</html>

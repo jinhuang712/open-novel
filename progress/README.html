@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress 日志 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../index.html">&larr; Index</a>
+  <span>progress/README.html</span>
+</nav>
+<h1>Progress 日志</h1>
+<p>记录每周/每个里程碑的实施进展。每次显著迭代必须在这里追加一条。</p>
+<h2>命名规则</h2>
+<pre><code>NNN-{slug}.md
+</code></pre>
+<ul>
+<li><code>NNN</code>: 三位数字,从 000 起,递增</li>
+<li><code>slug</code>: 简短英文标识 (init / scaffolding / agent-loop / etc.)</li>
+</ul>
+<p>例:</p>
+<ul>
+<li><code>000-init.md</code> — 项目启动</li>
+<li><code>001-scaffolding.md</code> — Next.js 骨架</li>
+<li><code>002-storage-layer.md</code> — 存储层</li>
+<li>...</li>
+</ul>
+<h2>单条进度日志模板</h2>
+<pre><code class="language-markdown"># NNN — 标题
+
+**日期**: YYYY-MM-DD
+**周次**: WX
+**主要 Owner**: 自己
+
+## 本期目标
+- [ ] 任务 1
+- [ ] 任务 2
+
+## 实际完成
+- ✅ 已完成 1
+- ⏸ 部分完成 (50%): 详细说明
+- ❌ 未完成 / 遇到阻塞: 详细说明
+
+## 关键决策
+列出本期做出的非显然技术决策与原因。
+
+## 下期计划
+- 下一步要做的事
+- 已知风险
+
+## 关联 commit
+- `&lt;sha&gt;` 一句话描述
+</code></pre>
+<h2>索引</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>标题</th>
+<th>日期</th>
+<th>周</th>
+<th>起始 commit</th>
+<th>retro commit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>000</td>
+<td>项目启动: 文档骨架</td>
+<td>2026-04-29</td>
+<td>W1</td>
+<td><code>cdc626d</code></td>
+<td>(合一)</td>
+</tr>
+<tr>
+<td>001</td>
+<td>W2: VSCode-Like Shell + EditorAdapter 骨架</td>
+<td>2026-04-29 起</td>
+<td>W2</td>
+<td>(待)</td>
+<td>(W2 收尾)</td>
+</tr>
+<tr>
+<td>002</td>
+<td>战略升级: 纳入叙事引擎 + 读者仿真器</td>
+<td>2026-04-30</td>
+<td>跨期 (W9-W10)</td>
+<td>(本期 docs commit)</td>
+<td>(W9/W10 收尾各自)</td>
+</tr>
+<tr>
+<td>003</td>
+<td>UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计</td>
+<td>2026-04-30</td>
+<td>跨期 (W2-W3)</td>
+<td>(本期 docs commit)</td>
+<td>(W2/W3 收尾各自)</td>
+</tr>
+<tr>
+<td>004</td>
+<td>文档审计加固 (9 严重 + 23 中等 + 3 新 spec + drift 修正)</td>
+<td>2026-04-30</td>
+<td>跨期 (W2 末尾,W3 启动前必清)</td>
+<td>(本期 docs commit)</td>
+<td>(W3 day-1 跑 spec/00 后追加)</td>
+</tr>
+<tr>
+<td>005</td>
+<td>知识图谱专攻 (cascade + RAG 真正可工作的地基: 1 plan + 6 spec + 5 同步;W7-W10 重排)</td>
+<td>2026-05-06</td>
+<td>跨期 (W2 末尾,W7-W10 落地前)</td>
+<td>(本期 docs commit)</td>
+<td>(W10 收尾)</td>
+</tr>
+<tr>
+<td>006</td>
+<td>记忆 / 上下文 / JSON 输出 / 五大守则 一致性优先重设计 (5 反馈点 → 6 commit tree: T1-T6;1 plan + 5 新 spec + 14 同步)</td>
+<td>2026-05-06</td>
+<td>跨期 (W2 末尾,W3-W11 落地前)</td>
+<td><code>5c6f8a7</code> (T1) → 本批末 (T6)</td>
+<td>(W11 收尾)</td>
+</tr>
+<tr>
+<td>007</td>
+<td>opencode 借鉴落地 + TODO closure (T1-T9: spec/00 audit / 混合分档 / 卷级摘要 / tool truncate / middleware / doom-loop / SQLite + 反馈表 / TODO 关闭 / 进度)</td>
+<td>2026-05-07</td>
+<td>跨期 (W2 末尾,W3-W11 落地前)</td>
+<td><code>5da548b</code> (T1) → 本批末 (T9)</td>
+<td>(W11 收尾)</td>
+</tr>
+</tbody></table>
+<p>(后续每条 entry 自动追加到此表)</p>
+  </main>
+</body>
+</html>

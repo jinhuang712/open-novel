@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>007 — opencode 借鉴落地 + TODO closure - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../index.html">&larr; Index</a>
+  <span>progress/007-opencode-borrowings.html</span>
+</nav>
+<h1>007 — opencode 借鉴落地 + TODO closure</h1>
+<p><strong>日期</strong>: 2026-05-07
+<strong>周次</strong>: 跨期 (W2 末尾, W3-W11 落地前)
+<strong>主要 Owner</strong>: 自己</p>
+<h2>本期目标</h2>
+<ul>
+<li><input checked="" disabled="" type="checkbox"> 调研 sst/opencode (开源 AI coding agent CLI), 输出&quot;对 open-novel 的设计启发&quot;分析报告</li>
+<li><input checked="" disabled="" type="checkbox"> 把可借鉴的 7 个具体改动落地到 plan / spec (T1-T7)</li>
+<li><input checked="" disabled="" type="checkbox"> 关闭 plan / spec 内累积的&quot;待决策&quot;TODO (spec/18 / spec/20 / spec/21 / spec/01 反馈表 schema) (T8)</li>
+<li><input checked="" disabled="" type="checkbox"> 撰写本期 retro 日志 + 更新 progress/README.md 索引 (T9)</li>
+</ul>
+<h2>实际完成</h2>
+<h3>✅ 调研产出: <code>.claude/plans/reactive-hatching-flute.md</code></h3>
+<p>分析 opencode 6 个维度, 标记&quot;借鉴 / 已自有 / 不适用&quot;:</p>
+<ul>
+<li>Agent 设计与编排: 借 mode 三态 / 内部任务 hidden agent / doom-loop 检测 / subagent task_id 续跑</li>
+<li>上下文管理: 借锚定摘要 / prune-compact 分层 / compaction 当 checkpoint / prompt cache 头部稳定</li>
+<li>DeepSeek 适配: 借 reasoning_content 占位 / cache_control 标记 / variant=max / middleware 模式</li>
+<li>资源利用: 借 tool 输出 truncate / SQLite 单文件持久化 / plugin trigger 钩子</li>
+<li>整体架构: 借 Permission ruleset 思路 (但<strong>撤回 cardinal-rules override</strong> — 与&quot;绝对不可违反&quot;哲学矛盾)</li>
+<li>不借: ReAct 主循环 / Effect-TS 全栈 / 文件操作工具 / OpenTelemetry / SKILL.md 全面引入</li>
+</ul>
+<h3>✅ 7 个落地 commit 树 (T1-T7) + 1 个 TODO closure (T8)</h3>
+<table>
+<thead>
+<tr>
+<th>commit</th>
+<th>改动</th>
+<th>关键洞见</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>5da548b</code> T1</td>
+<td>spec/00 §C 模型守约 + §H/I/J 新增 3 项 audit</td>
+<td>禁 fallback v3/-reasoner; cache_control / Mastra middleware / embedding 都需 W3-W8 verify</td>
+</tr>
+<tr>
+<td><code>3f66dc7</code> T2</td>
+<td>plan/02 加 mode + reasoningEffort 列; plan/09 同步</td>
+<td>(随后被 T2 修正覆盖, 见下)</td>
+</tr>
+<tr>
+<td><code>c8c415e</code> T2 修正</td>
+<td>混合分档 Pro+max / Flash+default</td>
+<td>用户纠正&quot;全 max&quot;理解错误; Flash 上 max 抹平成本优势</td>
+</tr>
+<tr>
+<td><code>c217881</code> T3</td>
+<td>spec/22 DeepSeek middleware + 卷级锚定摘要 + tool 输出 prune</td>
+<td>解决 50+ 章 1M ctx 也吃紧的根本问题; 借 opencode compaction.ts 锚点累积模板</td>
+</tr>
+<tr>
+<td><code>cd4ad4b</code> T4</td>
+<td>spec/02 工具输出 truncate + 6 个 hidden 内部 agent</td>
+<td>TOOL_OUTPUT_MAX_CHARS=2000; HIDDEN_AGENT_REGISTRY 统一封装 callJsonAgent</td>
+</tr>
+<tr>
+<td><code>91466ed</code> T5</td>
+<td>spec/24 callJsonAgent 用 wrapLanguageModel + deepseekMiddleware</td>
+<td>DeepSeek 特殊性透明化, agent 调用不感知</td>
+</tr>
+<tr>
+<td><code>56ae0bf</code> T6</td>
+<td>spec/06 doom-loop 检测</td>
+<td>同 chapter 连续 3 次 Writer 输出相似度 ≥ 0.9 → escalate; 借 opencode processor.ts:351-374</td>
+</tr>
+<tr>
+<td><code>edc4296</code> T7</td>
+<td>spec/03 prompt stable+dynamic; plan/04 session_history.db; spec/01 反馈表 schema</td>
+<td>关注点分离: 产物=Markdown, 过程=SQLite</td>
+</tr>
+<tr>
+<td><code>c7e2f89</code> T8</td>
+<td>spec/18+20+21 TODO 关闭</td>
+<td>BGE-M3 锁定, token 用估算, Worldview 全量, Discuss=queryFacts→LLM, UI=Cmd+K modal</td>
+</tr>
+</tbody></table>
+<h3>✅ 用户反馈点 (5 项, 都已对应处理)</h3>
+<ol>
+<li><strong>&quot;writer既要正文又要planning, 是否风格混淆?&quot;</strong> (plan/02 inline TODO) → T2 加段落说明: per-agent context builder 注入模式标记 + stable header 分模式指令; POC 单 Writer + 模式注入区分, 实测出现混淆则 W7+ 拆 SettingsAuthor + ChapterWriter</li>
+<li><strong>&quot;全都用 max&quot;</strong> (混合分档误解) → T2 修正: Pro+max / Flash+default 二档, Flash 上 max 抹平成本优势</li>
+<li><strong>&quot;file tree view&quot;</strong> (用户担心 SQLite 影响 file tree) → T7 plan/04 §设计原则 显式写&quot;产物=Markdown / 过程=SQLite&quot;关注点分离, 用户文件浏览不变</li>
+<li><strong>&quot;cardinal-rules override 没懂&quot;</strong> (P1 提议) → 撤回, plan 文件 §五 标&quot;撤回条款&quot;, 与&quot;绝对不可违反&quot;哲学矛盾</li>
+<li><strong>&quot;plan/spec 留了一些我的 todo&quot;</strong> → T8 批量 closure: spec/18 / spec/20 / spec/21 / spec/01 narrative_feedback / spec/01 entity_match_feedback</li>
+</ol>
+<h2>关键决策</h2>
+<h3>opencode 借鉴的取舍逻辑</h3>
+<p>不是逐条照搬, 而是按&quot;我们项目的核心约束&quot;过滤:</p>
+<ul>
+<li><strong>一致性 &gt; 效率</strong>: opencode 大量优化是 token / latency 导向 (compaction 自动触发 / prune 自动清), 我们 1M ctx 下不缺 token, 借的更多是&quot;如何在长跨度里保持一致&quot; (锚定摘要 / checkpoint rehydrate / volume_summary)</li>
+<li><strong>多 agent cascade ≠ ReAct</strong>: opencode 主循环是开放推理 (LLM 决定下一步), 我们是固定 cascade (Writer → Checker → Validator → ...)。三态 (continue/compact/stop) 不适用, 但 doom-loop 检测和 subagent 派发模式适用</li>
+<li><strong>DeepSeek-only</strong>: opencode 的多 provider 抽象 90% 不需要, 但 DeepSeek 特殊适配 (reasoning_content 占位 / cache_control / V4 max variant) 要全盘吸收</li>
+</ul>
+<h3>关注点分离 — 产物 vs 过程 (T7 核心)</h3>
+<p>之前用户在 SQLite 决策时担心&quot;file tree view 还能用吗&quot;, 这暴露了我设计文档里没明确这条原则:</p>
+<ul>
+<li><strong>产物 (Markdown)</strong>: chapter.md / character.md / cardinal-rules.json — 用户面向, 走 git, 走 file tree</li>
+<li><strong>过程 (SQLite)</strong>: llm_calls / json_retries / chapter_tool_runs / doom_loop_events — 开发者面向, 走 session_history.db, 用户不感知</li>
+</ul>
+<p>两个数据库严格分库, 写入并发 / schema migration / 备份策略都更清晰。</p>
+<h3>混合分档的成本理性 (T2 修正)</h3>
+<p>最初我把&quot;用户拍板成本可接受 → 全部 max&quot;理解为字面全部, 用户纠正后才意识到:</p>
+<ul>
+<li>Pro+max 投入到长输出 + 质量核心 (Writer / Validator / Humanizer) = 投入有回报</li>
+<li>Flash+default 给短输出 (Router / Checker / Reflector / ReaderPanel) = 用 Flash 的低成本优势</li>
+<li>Flash+max 同价位升 Pro 更划算 — 这是反直觉的, 但确实如此</li>
+</ul>
+<p>教训: 当用户说&quot;成本可接受&quot;时不要简单粗暴全开最贵档, 要按 agent 价值-成本比分档。</p>
+<h3>TODO closure 的 W11 评估条件统一为&quot;规模触发&quot;</h3>
+<p>T8 关闭的 5 个待决策项, 升级条件全部基于&quot;项目规模&quot; (worldview &gt; 200K token / 单 session &gt; 20 次 discuss / 单 model 切换 &gt; 1000 段重算) 而非&quot;性能 / 成本驱动&quot;。这与 plan/01 不变性 L13 一致性优先一致 — 只有规模真到了某个阈值, &quot;智能选择 / 优化&quot;才有价值; 之前优化反而引入错误源。</p>
+<h2>下期计划</h2>
+<h3>短期 (W3 day-1 spec/00 audit 跑实查)</h3>
+<ul>
+<li><input disabled="" type="checkbox"> §A npm 包真实最新版本 (mastra 1.4.x / @ai-sdk/deepseek 2.0.x / 等)</li>
+<li><input disabled="" type="checkbox"> §B AI SDK 6 needsApproval API 形态 (cookbook 模式 vs 一等字段)</li>
+<li><input disabled="" type="checkbox"> §H DeepSeek prompt cache 真实支持 (cache_control 字段是否被服务端识别)</li>
+<li><input disabled="" type="checkbox"> §I Mastra wrapLanguageModel + middleware 暴露情况 (T3 / T5 假设的前提)</li>
+<li><input disabled="" type="checkbox"> §J embedding provider verify 留待 W8 day-1</li>
+</ul>
+<h3>中期 (W3-W11 实施 T1-T7 设计)</h3>
+<p>按 plan/11 落地里程碑:</p>
+<ul>
+<li>W3-W6: 实施 T2 (agent mode + reasoningEffort) + T4 (hidden agents) + T7 (session_history.db)</li>
+<li>W6-W8: 实施 T3 (DeepSeek middleware + cache_control) + T5 (callJsonAgent) + T6 (doom-loop)</li>
+<li>W7+: 实施 T7 (prompt stable + dynamic 拆段, 配合 cache_control)</li>
+<li>W11: 实施 T3 卷级锚定摘要 + checkpoint rehydrate + tool 输出 prune (依赖前面跑通 + 真有 50+ 章数据)</li>
+</ul>
+<h3>已知风险</h3>
+<ul>
+<li><strong>Mastra 不支持 wrapLanguageModel</strong>: T5 fallback A/B 已写明 (绕过 Mastra Agent 直接 streamText), 但 fallback 选哪条未定 — W3 §I verify 后回写 spec/24 + spec/22</li>
+<li><strong>DeepSeek prompt cache 字段不被服务端识别</strong>: T3 cache_control 标记策略降级为&quot;仅头部稳定排布&quot;, 不阻塞功能但 token 成本上升 — W3 §H verify</li>
+<li><strong>doom-loop 相似度阈值 0.9 经验值</strong>: W3+ 真跑起来后视实测调整, 太严格会无效 escalate 干扰用户, 太宽松会无限循环烧 token</li>
+</ul>
+<h2>关联 commit</h2>
+<ul>
+<li><code>5da548b</code> T1 — spec/00 DeepSeek 模型守约 + 3 项新 audit</li>
+<li><code>3f66dc7</code> T2 (被 c8c415e 修正覆盖)</li>
+<li><code>c8c415e</code> T2 修正 — 混合分档 Pro+max / Flash+default</li>
+<li><code>c217881</code> T3 — spec/22 DeepSeek middleware + 卷级锚定摘要 + tool 输出 prune</li>
+<li><code>cd4ad4b</code> T4 — spec/02 tool 输出 truncate + Hidden 内部 Agent 类别</li>
+<li><code>91466ed</code> T5 — spec/24 callJsonAgent 用 wrapLanguageModel + deepseekMiddleware</li>
+<li><code>56ae0bf</code> T6 — spec/06 Validator-Writer doom-loop 检测</li>
+<li><code>edc4296</code> T7 — spec/03 prompt 拆段 + plan/04 SQLite session_history + spec/01 反馈表 schema</li>
+<li><code>c7e2f89</code> T8 — spec/18 + spec/20 + spec/21 TODO closure</li>
+<li><code>(本 commit)</code> T9 — progress/007 + progress/README 索引追加</li>
+</ul>
+  </main>
+</body>
+</html>

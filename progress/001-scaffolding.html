@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>001 — W2: VSCode-Like Shell + EditorAdapter 骨架 - Open Novel</title>
+  <link rel="stylesheet" href="../assets/docs.css">
+  <script src="../assets/docs-enhance.js" defer></script>
+</head>
+<body>
+  <main class="doc">
+<nav class="doc-meta" aria-label="Document metadata">
+  <a href="../index.html">&larr; Index</a>
+  <span>progress/001-scaffolding.html</span>
+</nav>
+<h1>001 — W2: VSCode-Like Shell + EditorAdapter 骨架</h1>
+<p><strong>日期</strong>: 2026-04-29 起
+<strong>周次</strong>: W2
+<strong>主要 Owner</strong>: <a href="mailto:jin.huang@klook.com">jin.huang@klook.com</a>
+<strong>状态</strong>: 进行中</p>
+<blockquote>
+<p>本条目按 docs-before-code 双 commit 规则于 W2 期前置。后续在末尾追加&quot;实际完成 / 偏差 / 教训&quot;作为 retro。</p>
+</blockquote>
+<h2>本期目标</h2>
+<p>把项目从纯文档骨架推进到一个<strong>可以 <code>pnpm dev</code> 启动的 Web 应用</strong>:</p>
+<ul>
+<li>Next.js 15 + React 19 + Tailwind v4 + shadcn/ui 项目骨架</li>
+<li>VSCode 风五区可拖拽布局空壳</li>
+<li>EditorAdapter 接口 + TipTap stub (能加载一个 .md 显示并编辑)</li>
+<li>SettingsDialog (持久化 DeepSeek API key 到 <code>~/.open-novel/settings.json</code>)</li>
+<li>占位的 ChatBox / ThinkingPanel / DebugConsole / ApprovalCard</li>
+<li>Mastra / AI SDK 6 包<strong>装但不接线</strong> (W3 接线)</li>
+</ul>
+<p>不在本期: 实际 Agent / Mastra 调用 / XState 状态机 / 实体高亮算法 / SQLite 索引层。</p>
+<h2>范围 (sub-commit 级别拆分)</h2>
+<p>W2 拆成 6 个独立 commit,每个可独立 <code>git bisect</code> 回退,且都附带 plan/spec 章节背书。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>commit</th>
+<th>类型</th>
+<th>plan/spec 依据</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><code>chore: nextjs 15 scaffold (manual config)</code></td>
+<td>code</td>
+<td>plan/08 §锁定的库版本, spec/09 §项目结构常量</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>chore: tailwind 4 + shadcn/ui init</code></td>
+<td>code</td>
+<td>plan/08 §Tailwind v4 vs v3, spec/09 §Tailwind v4 配置</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>feat: vscode-like five-region shell (resizable, empty)</code></td>
+<td>code</td>
+<td>plan/07 §五区布局</td>
+</tr>
+<tr>
+<td>3.5</td>
+<td><code>docs(plan): bump tiptap to 3.x in editor-layer</code></td>
+<td>docs</td>
+<td>(本身就是 docs)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>feat: editor adapter + tiptap stub (loads .md)</code></td>
+<td>code</td>
+<td>plan/03 §TipTap 实现要点, spec/05 §TipTap 集成</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>feat: settings dialog + api key persistence</code></td>
+<td>code</td>
+<td>plan/07 §SettingsDialog, spec/09 §文件路径治理</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>注: 上述每个 code commit <strong>理应</strong>先有对应的 docs commit;实际 commit 1 (324173c) 因初次理解偏差被先动了代码,本 docs commit 是补救——把 W2 期的 plan/spec 一次性补齐。后续 commit 2~5 严格走双 commit 节奏。</p>
+</blockquote>
+<h2>关键决策 (基于 Plan agent 调研)</h2>
+<ol>
+<li><strong>保持 Next.js 15 LTS,不切 v16</strong> — LTS 到 2026-10,覆盖整个 POC 周期</li>
+<li><strong>Tailwind v4</strong> (而非 3.4) — 与 shadcn 最新模板一致,@theme inline + CSS 变量</li>
+<li><strong>TipTap 3.x</strong> (修正 plan/03 的 &quot;TipTap 2.x&quot; drift) — v2/v3 在我们的调用面兼容</li>
+<li><strong><code>serverExternalPackages</code> 提前固化在 commit 1</strong> — 即使 Mastra 还没装,先把约定立起来</li>
+<li><strong>SSL 拦截下不依赖 corepack/shadcn-CLI</strong> — npm 强装 pnpm + 手写 shadcn 组件</li>
+<li><strong>6 个独立 sub-commit 不 squash</strong> — 用户已确认 (见 W2 plan §8 已确认项)</li>
+<li><strong>plan/03 修正 TipTap 版本作为独立 docs commit (3.5)</strong> — 用户已确认</li>
+</ol>
+<h2>风险与缓解</h2>
+<table>
+<thead>
+<tr>
+<th>风险</th>
+<th>缓解</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tailwind v4 vs v3 教程混乱</td>
+<td>严格遵循 plan/08 §Tailwind v4 vs v3 描述;若 v4 阻塞 &gt;1h 降到 3.4</td>
+</tr>
+<tr>
+<td>Mastra native 包打包失败</td>
+<td>commit 1 先配 <code>serverExternalPackages</code>,即使 W2 不接线</td>
+</tr>
+<tr>
+<td>TipTap SSR 报警</td>
+<td><code>&#39;use client&#39;</code> 全套 + <code>immediatelyRender: false</code></td>
+</tr>
+<tr>
+<td>LibSQL 路径默认值 bug (#4507)</td>
+<td><code>lib/storage/paths.ts</code> 强制 <code>os.homedir()</code> + 显式 <code>file:</code> URL</td>
+</tr>
+<tr>
+<td>企业 SSL 拦截外网工具下载</td>
+<td>npm 强装 pnpm 已绕过;shadcn 手写组件已绕过</td>
+</tr>
+</tbody></table>
+<h2>验收脚本 (每个 sub-commit 后跑)</h2>
+<p>每个 code commit 后必须本地通过:</p>
+<pre><code class="language-bash">pnpm typecheck
+pnpm build      # commit 5 之前可能不必每次都跑,但 commit 2 / 5 必跑
+</code></pre>
+<p>W2 整体收尾跑完整脚本,见 <code>.claude/plans/deepseek-v4-playful-quail.md</code> §W2-§5。</p>
+<h2>下期预告 (W3)</h2>
+<ul>
+<li>Mastra 1.x 实例化 + globalThis 缓存模式落地</li>
+<li>LibSQL 索引层 (<code>lib/storage/db.ts</code> + schema migrations)</li>
+<li>Router agent + Discuss 模式 + 流式输出 (<code>/api/chat</code>)</li>
+<li>三模式 XState 状态机</li>
+<li>API key 在 server 端读 → 注入 Mastra agent 配置</li>
+</ul>
+<hr>
+<h2>实际完成 / 偏差 / 教训 (W2 retro,期末再追加)</h2>
+<blockquote>
+<p>本节在 W2 全部 sub-commit 完成后追加。</p>
+</blockquote>
+  </main>
+</body>
+</html>
