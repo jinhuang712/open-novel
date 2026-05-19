@@ -484,7 +484,7 @@ export function cycleMode(cur: Mode, reverse = false): Mode {
   return MODES[next]
 }
 </code></pre>
-<p>注意: 模式切换在 await_approval 状态下被状态机阻止 (见 spec/07-mode-state-machine.md)。这种情况下:</p>
+<p>注意: 模式切换在 await_approval 状态下被状态机阻止 (见 spec/07-mode-state-machine.html)。这种情况下:</p>
 <ul>
 <li>Tab 按下后,Listener 检测到 modeMachine 在 awaitingApproval,<strong>不</strong>触发切换,且显示 toast: &quot;完成审批后才能切模式&quot;</li>
 <li>shortcut handler 内部 guard: <code>if (modeMachine.matches({...awaitingApproval})) showToast(...);  return</code></li>

@@ -207,7 +207,7 @@ function computeDecorations(doc, items) {
 }
 </code></pre>
 <h2 id="性能数据">性能数据</h2>
-<p>参考目标 (W2/W6 期间用 vitest bench 实测填充,见 spec/14-testing.md):</p>
+<p>参考目标 (W2/W6 期间用 vitest bench 实测填充,见 spec/14-testing.html):</p>
 <table>
 <thead>
 <tr>
@@ -374,7 +374,7 @@ export function ConceptHoverCard({ conceptId, anchorPos }) {
 <ol>
 <li>弹输入框,输入新名</li>
 <li>后端: 把 entities.canonicalName 改了</li>
-<li>用 references 表找出所有需要替换的位置</li>
+<li>用 entity_refs 表找出所有需要替换的位置</li>
 <li>生成 batch ApprovalCard,逐文件展示 diff</li>
 <li>用户批准后逐个写盘</li>
 </ol>

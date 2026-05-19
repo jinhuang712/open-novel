@@ -15,7 +15,7 @@
 </nav>
 <h1 id="spec-17-段级稳定-id-与差量-reindex">Spec 17 — 段级稳定 ID 与差量 reindex</h1>
 <blockquote>
-<p>实现 plan/11-knowledge-graph.md L2 算法层第一项。本文档定义段锚点 (paragraph anchor) 的稳定 ID 算法、<code>paragraph_anchors</code> 表使用、差量 reindex 流程,以及段移动 / 重命名 / 拆分 / 合并的稳定性追踪策略。</p>
+<p>实现 plan/11-knowledge-graph.html L2 算法层第一项。本文档定义段锚点 (paragraph anchor) 的稳定 ID 算法、<code>paragraph_anchors</code> 表使用、差量 reindex 流程,以及段移动 / 重命名 / 拆分 / 合并的稳定性追踪策略。</p>
 </blockquote>
 <h2 id="为什么要段级-id">为什么要段级 ID</h2>
 <p>当前 reindex 颗粒度是<strong>文件级</strong>(spec/01 §索引刷新流程: 解析 frontmatter → 全文重扫 entity_refs)。这在长篇场景下三个致命缺陷:</p>

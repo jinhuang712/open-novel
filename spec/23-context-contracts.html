@@ -527,7 +527,7 @@ await db.runtime.prompt_traces.insert({
 <ul>
 <li><strong>DeepSeek V4 真实 tokenizer</strong>: 默认 tiktoken + 5% margin,实查 (spec/00 §A) 后微调</li>
 <li><strong>Mastra <code>lastMessages</code> 与显式 messages 重复风险</strong>: spec/00 audit 一并核对</li>
-<li><strong>超长章节的 retrieve 实操</strong>: 单章 50K+ 字时 readRecentChapters 5 章可能 250K+,context builder 不裁但要监控;若高频触发警报再开 spec/26 专题</li>
+<li><strong>超长章节的 retrieve 实操</strong>: 单章 50K+ 字时 readRecentChapters 5 章可能 250K+,context builder 不裁但要监控;若高频触发警报再单开专题</li>
 <li><strong>streaming 中途的 token 监控</strong>: 装配前算 total;若 tool call 后台返回大量数据可能再次接近上限,设计 <code>onToolCall</code> hook 在结果回写前对超大 tool result 做摘要 (W11+)</li>
 <li><strong>多模态 (图)</strong>: 完全不考虑,纯文本</li>
 </ul>

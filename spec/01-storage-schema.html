@@ -16,7 +16,7 @@
 <h1 id="spec-01-存储-schema">Spec 01 — 存储 Schema</h1>
 <h2 id="文件系统约定">文件系统约定</h2>
 <blockquote>
-<p><strong>W7 升级</strong>: settings/ 目录大幅拆分,详见 plan/04 §存储位置 + plan/11-knowledge-graph.md。本节只列顶层结构,详细子目录看 plan/04。</p>
+<p><strong>W7 升级</strong>: settings/ 目录大幅拆分,详见 plan/04 §存储位置 + plan/11-knowledge-graph.html。本节只列顶层结构,详细子目录看 plan/04。</p>
 </blockquote>
 <pre class="mermaid">
 flowchart TD
@@ -420,7 +420,7 @@ export async function closeAll() {
 <p><strong>项目切换时</strong>: 显式调 <code>pool.delete(oldProjectId)</code> + <code>pool.get(newProjectId)</code>。<strong>项目删除时</strong>: <code>pool.delete()</code> 后再删目录。</p>
 <h2 id="知识图谱表-w7-新增完整-schema-见-spec16-18">知识图谱表 (W7 新增,完整 schema 见 spec/16-18)</h2>
 <blockquote>
-<p>实现 plan/11-knowledge-graph.md L1 数据层。本节仅占位列出表名 + 用途,完整 SQL / index / FK / 迁移见对应 spec。</p>
+<p>实现 plan/11-knowledge-graph.html L1 数据层。本节仅占位列出表名 + 用途,完整 SQL / index / FK / 迁移见对应 spec。</p>
 </blockquote>
 <table>
 <thead>

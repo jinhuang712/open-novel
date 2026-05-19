@@ -15,7 +15,7 @@
 </nav>
 <h1 id="spec-10-叙事引擎实现">Spec 10 — 叙事引擎实现</h1>
 <blockquote>
-<p>实现 plan/09-narrative-engine.md 描述的三个能力模块。</p>
+<p>实现 plan/09-narrative-engine.html 描述的三个能力模块。</p>
 <p><strong>Agent 归属</strong>:</p>
 <ul>
 <li><code>analyzeNarrative</code> (BeatAnalyzer) → <strong>Checker</strong> 工具集 (Flash,章内)</li>
@@ -249,7 +249,7 @@ export const trackArc = tool({
     const valueAxes = character.frontmatter.value_axes ?? {}
     const intelligenceAxis = character.frontmatter.intelligence_axis
     const chapters = await listChaptersUpTo(projectId, upToChapter)
-    const mentions = await db.references.findByEntity(projectId, characterId)
+    const mentions = await db.entity_refs.findByEntity(projectId, characterId)
     // 走 callJsonAgent (spec/24, JSON mode + zod + retry, Pro 模型)
     const report = await callJsonAgent({
       label: &#39;arc-tracker&#39;,
@@ -367,7 +367,7 @@ export const templates: Record&lt;string, string&gt; = {
 </code></pre>
 <p>Writer 在生成大纲时,如检测到用户 prompt 中含&quot;用 X 结构&quot;或显式调用 applyTemplate,把模板内容塞进 context。</p>
 <h2 id="sqlite-schema-追加">SQLite Schema 追加</h2>
-<p>附在 spec/01-storage-schema.md 的 <code>index.db</code> 表组里:</p>
+<p>附在 spec/01-storage-schema.html 的 <code>index.db</code> 表组里:</p>
 <pre><code class="language-sql">CREATE TABLE narrative_metrics (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL,                   -- &#39;beat&#39; | &#39;arc&#39;
