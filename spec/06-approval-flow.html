@@ -171,7 +171,7 @@ CREATE INDEX idx_history_cgroup ON history(cascade_group_id);
 <p><strong>为什么独立 endpoint 而不在 stream 内执行</strong>:</p>
 <ol>
 <li>审批悬挂期间 stream 早超时关闭 (Node ~5min,Edge 30s),不能依赖 stream 还活着</li>
-<li>独立 endpoint 幂等 (status=&#39;pending&#39; 检查) — 多 tab / 重连场景下重复点击不重复落盘</li>
+<li>独立 endpoint 幂等 (status=&#39;pending&#39; 检查) — 浏览器重连 / 关闭重开场景下重复点击不重复落盘</li>
 <li>与 Agent loop 解耦 — 用户审完 30 分钟后才点同意也合法</li>
 </ol>
 <h2 id="客户端-ui-拦截">客户端 UI 拦截</h2>
@@ -415,34 +415,74 @@ export const useApprovals = create&lt;{
 }))
 </code></pre>
 <p>UI 显示<strong>第一个</strong> (按时间),其他角标提示。</p>
-<h2 id="cascade-中断恢复-w9-整批审之后简化">Cascade 中断恢复 (W9 整批审之后简化)</h2>
+<h2 id="turn-取消语义">Turn 取消语义 (chat box 顶部 [取消本次对话] 按钮)</h2>
 <blockquote>
-<p>audit 发现:旧版 cascade 5 项审到第 3 项时关闭浏览器,部分落盘 + 部分未审 — 怎么恢复?
-整批审之后,这个问题大幅简化:<strong>整批要么全落,要么全不落</strong> (transaction 原子性),不再存在&quot;半落地&quot;状态。</p>
+<p>设计原则: <strong>用户可随时取消 — 一旦取消, 当前 turn 内所有已落盘 changes 全部 revert</strong>。turn 是 transactional checkpoint, 不是 action 是 turn 整体。</p>
 </blockquote>
-<p><strong>机制</strong>:</p>
-<ol>
-<li>一个 ChangeSet = 一行 <code>approvals</code> (status=pending),浏览器关闭时这行仍在</li>
-<li>浏览器启动时 ChatBox 调 <code>useApprovals.hydrate()</code> — 拉所有 <code>status=&#39;pending&#39;</code> 的 approvals</li>
-<li>UI 在右下角显示 banner: &quot;上次有 N 个未决的 ChangeSet,要继续吗?&quot; → 点击展开队列</li>
-<li>每个 ChangeSet 渲染为完整 ApprovalCard (含影响图谱 + 整批 cascade),用户可继续审</li>
-<li>因为整批落盘是 transaction,如果中途用户改主意了,直接 reject 整批不留任何痕迹</li>
-</ol>
-<p><strong>多 ChangeSet 排队</strong>: 用户可能在不同时间点发起多次修改,产生多个 pending approvals。pending queue 仍保留 (Zustand store),但每个 entry 是一个完整 ChangeSet 而非 cascade 中的某一项。UI 显示<strong>第一个</strong>,其他角标 +N。
-5. 主 approval 已落盘 + cascade 第 3 项 pending 的状态是合法 (设定主变更已生效;cascade 是连带建议,可全过/部分过)</p>
-<p><strong>幂等性</strong>: <code>POST /api/approvals/{id}/resolve</code> 检查 <code>status === &#39;pending&#39;</code>,非 pending 直接 409 — 重复点同意不重复落盘。</p>
-<h2 id="审批超时与悬挂时长-新增">审批超时与悬挂时长 (新增)</h2>
-<blockquote>
-<p>audit 发现:用户审批 30 分钟不点,SSE 早死,Agent loop 行为黑盒。</p>
-</blockquote>
-<p><strong>契约</strong>:</p>
+<p>用户每次输入 → Router 输出 <code>actions[]</code> → cascade 控制器顺序执行 → 一个或多个 ApprovalCard。整个过程是<strong>一个 user_turn</strong> (见 spec/01 §user_turns 表), chat box 顶部常驻 <strong>[取消本次对话]</strong> 按钮直到该 turn 进入 <code>done</code> / <code>cancelled</code> 终态。</p>
+<p><strong>各 action 决议规则</strong>:</p>
 <ul>
-<li><code>approvals.created_at</code> 后超过 <strong>24 小时</strong> 仍 <code>pending</code> → 启动时把 status 自动改为 <code>expired</code></li>
-<li>expired 的 approval 不会被恢复出来,UI 上落到&quot;审批历史&quot; §过期记录中,可手动复活 (重新跑 Agent 生成)</li>
-<li>不做&quot;自动拒绝&quot; — 用户可能只是出门,自动拒绝会触发 Reflector 学错经验</li>
-<li>24 小时阈值可在 SettingsDialog → 数据管理改</li>
+<li>ApprovalCard <strong>[同意]</strong>: 该 action 落盘 (走本文 §服务端实现 transaction); 下一 action 开始</li>
+<li>ApprovalCard <strong>[拒绝]</strong>: 该 action 跳过, 不落盘; 下一 action 仍继续 (turn 不中断)</li>
+<li>chat box <strong>[取消本次对话]</strong> 按钮: 整 turn 中止 — 已落盘 action <strong>逆序 revert</strong>, 未跑 action 直接丢弃</li>
 </ul>
-<p><strong>stream 端</strong>: Mastra Agent 调 writeSettingProposal 后 prompt 显式 stop。stream 在 30s 内自然结束 (proposal emit 完即收尾),不长留挂起。所以 stream 超时不再是问题。</p>
+<h3 id="取消时各时刻的行为">取消时各时刻的行为</h3>
+<table>
+<thead>
+<tr><th>时刻</th><th>已落盘 actions</th><th>取消后</th></tr>
+</thead>
+<tbody>
+<tr><td>Router 还在跑</td><td>无</td><td>中断 Router 调用, turn.status='cancelled', 无 revert</td></tr>
+<tr><td>action[0] cascade 跑中 (ApprovalCard 未弹)</td><td>无</td><td>丢弃 in-memory cascade 状态, turn.status='cancelled', 无 revert</td></tr>
+<tr><td>action[0] ApprovalCard 弹出但未决议</td><td>无</td><td>关闭 ApprovalCard, 同上, 无 revert</td></tr>
+<tr><td>action[0] 已 approve 落盘, action[1] cascade 跑中</td><td>action[0]</td><td>revert action[0] (按 cascade_group_id 倒序), 丢 in-memory cascade, turn.status='cancelled'</td></tr>
+<tr><td>action[0]/[1] 都 approve 落盘, action[2] 在跑</td><td>action[0], action[1]</td><td>逆序 revert action[1] → action[0] (同一 transaction), turn.status='cancelled'</td></tr>
+<tr><td>所有 actions 都决议完, turn.status='done'</td><td>所有 approved</td><td>[取消本次对话] <strong>按钮置灰</strong> — 用户改走 §撤销 单条回退</td></tr>
+</tbody></table>
+<h3 id="rollbackturn-实现">rollbackTurn 实现</h3>
+<pre><code class="language-ts">// app/api/turns/[id]/cancel/route.ts
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+  const turn = await db.userTurns.get(params.id)
+  if (!turn) return new Response(JSON.stringify({ error: &#39;not_found&#39; }), { status: 404 })
+  if (turn.status === &#39;done&#39; || turn.status === &#39;cancelled&#39;) {
+    return new Response(JSON.stringify({ error: &#39;terminal_state&#39; }), { status: 409 })
+  }
+
+  // 1. 中断 cascade 控制器内存状态 (取消 in-flight Router / cascade / Writer 短调用)
+  await cascadeController.abortTurn(turn.id)
+
+  // 2. 查所有该 turn 内 approved 的 approvals (按 created_at 倒序)
+  const approvedApprovals = await db.approvals.findApprovedByTurn(turn.id, { orderDesc: true })
+
+  // 3. 单 transaction 内逐个 rollback — 利用现有 cascade_group_id 链
+  await db.transaction(async (tx) =&gt; {
+    for (const approval of approvedApprovals) {
+      await rollbackApproval(tx, approval.id)        // 见本文 §撤销, 反写 history.before
+    }
+    await tx.userTurns.update(turn.id, {
+      status: &#39;cancelled&#39;,
+      cancelled_at: Date.now(),
+      reverted_approval_count: approvedApprovals.length,
+    })
+  })
+
+  // 4. transaction 外: 副作用入队 (reindex 反向 / snapshot / Reflector 不跑取消 turn)
+  for (const approval of approvedApprovals) {
+    const files = collectAffectedFiles(JSON.parse(approval.change_set), JSON.parse(approval.accepted_items))
+    for (const f of files) await reindexQueue.add(turn.project_id, f)
+  }
+
+  return Response.json({ ok: true, reverted: approvedApprovals.length })
+}
+</code></pre>
+<p><strong>history trace 保留</strong>: rollbackApproval 不删 history 表中 approve 时写的行, 而是<strong>追加</strong>一行 <code>action='cascade_revert'</code> 标注同一 <code>cascade_group_id</code>。Settings → 审批历史 里能看到 "这个 turn 试过又取消了, 内容是 X" — 创作者复盘有价值, 不被抹掉。</p>
+<h3 id="幂等-跨进程恢复">幂等 + 跨进程恢复</h3>
+<ul>
+<li><strong>幂等</strong>: <code>POST /api/turns/{id}/cancel</code> 检查 <code>turn.status NOT IN ('done', 'cancelled')</code>, 否则 409</li>
+<li><strong>浏览器关闭 → 重开</strong>: rehydrate 时按 <code>user_turns.status IN ('running', 'awaiting_approval')</code> 拉所有 in-flight turn, UI 在 chat box 上方 banner 列出 — 用户选择"继续审"或"取消本次对话"。<strong>不再自动 expired</strong> (旧版 24h 机制删除); turn 永远 pending 直到用户显式决议</li>
+<li><strong>ApprovalCard pending 行为</strong>: <code>POST /api/approvals/{id}/resolve</code> 仍幂等 (status='pending' check), 但不再判 expired</li>
+</ul>
+<p><strong>stream 端</strong>: Mastra Agent 调 writeSettingProposal 后 prompt 显式 stop。stream 在 30s 内自然结束 (proposal emit 完即收尾),不长留挂起。stream 超时不是问题, turn 持久化也不依赖 stream。</p>
 <h2 id="cascade-大批量审-新增">Cascade 大批量审 (新增)</h2>
 <blockquote>
 <p>audit 发现:100+ cascade 改动需要分页吗?用户能&quot;全选/反选/全过&quot;吗?</p>
@@ -530,16 +570,47 @@ export const useApprovals = create&lt;{
 </code></pre>
 <p>Reflector 异步消费 (Worker),不阻塞主链路。</p>
 <h2 id="撤销">撤销</h2>
-<p><code>approvals</code> 表支持回退:</p>
-<pre><code class="language-ts">async function rollbackApproval(approvalId) {
-  const record = await db.approvals.get(approvalId)
-  const history = await db.history.findByApproval(approvalId)
-  if (!history.before) throw new Error(&#39;无回退基准&#39;)
-  await fs.writeFile(history.target, history.before)
-  await db.history.add(/* 反向操作 */)
+<p><code>approvals</code> 表支持<strong>单条回退</strong>和<strong>整 turn 回退</strong>两种粒度。整 turn 回退由 §Turn 取消语义 触发, 内部循环调下面这个 <code>rollbackApproval</code>:</p>
+<pre><code class="language-ts">// lib/storage/rollback.ts
+async function rollbackApproval(tx: Transaction, approvalId: string) {
+  const approval = await tx.approvals.get(approvalId)
+  if (!approval || approval.status !== &#39;approved&#39;) {
+    throw new Error(`approval ${approvalId} not approved, cannot rollback`)
+  }
+  const historyRows = await tx.history.findByApproval(approvalId)        // 一个 approval 多条 history (主 + cascade)
+  if (historyRows.length === 0) throw new Error(&#39;无回退基准&#39;)
+
+  // 按 cascade_level 倒序回退 (先 cascade 后主修改, 避免 dangling reference)
+  const sorted = historyRows.sort((a, b) =&gt; b.cascade_level - a.cascade_level)
+  for (const h of sorted) {
+    if (h.before === null) {
+      // before=null = 新建文件, 回退 = 删除
+      await fs.unlink(h.target).catch(() =&gt; {})
+    } else {
+      await fs.writeFile(h.target + &#39;.tmp&#39;, h.before)
+      await fs.rename(h.target + &#39;.tmp&#39;, h.target)
+    }
+    // 追加一行反向 history, 保留原 cascade_group_id 链, 便于审批历史显示
+    await tx.history.add(approval.projectId, {
+      action: h.action === &#39;write_setting&#39; ? &#39;revert_setting&#39; : &#39;cascade_revert&#39;,
+      target: h.target,
+      before: h.after,                                                     // 反向: 之前的 after 现在是 before
+      after: h.before,                                                     // 反向: 之前的 before 现在是 after
+      cascade_group_id: h.cascade_group_id,                                // 保留链
+      reverted_from_history_id: h.id,                                      // 反向引用原 history
+      cascade_level: h.cascade_level,
+      agent: &#39;system-rollback&#39;,
+    })
+  }
+  await tx.approvals.update(approvalId, { status: &#39;reverted&#39; })
 }
 </code></pre>
-<p>UI 路径: Settings → 审批历史 → 选某条 → &quot;回退&quot;。</p>
+<p><strong>UI 路径</strong>:</p>
+<ul>
+<li><strong>单条回退</strong>: Settings → 审批历史 → 选某条 approved → "回退" 按钮 → 调 <code>POST /api/approvals/{id}/rollback</code></li>
+<li><strong>整 turn 回退</strong>: chat box 顶部 [取消本次对话] (turn 未完结时) 或 Settings → 审批历史 → 按 turn_id 分组 → "回退整个 turn" (turn 已完结时)</li>
+</ul>
+<p><strong>派生视图守卫</strong> (plan/01 inv L10): rollbackApproval 写 fs 前必须检查 <code>h.target</code> 对应文件 frontmatter <code>derived: true</code> — 若是, 跳过 fs.writeFile (派生文件由 reindex 重生成, 不应手工回退)。</p>
 <h2 id="安全防护">安全防护</h2>
 <ul>
 <li><strong>input schema 严格</strong> (Zod 校验失败 → 自动拒绝,不进入审批)</li>

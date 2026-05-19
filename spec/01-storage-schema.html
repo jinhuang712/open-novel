@@ -268,21 +268,53 @@ CREATE INDEX idx_history_target ON history(target);
 );
 CREATE INDEX idx_learnings_scope ON learnings(scope);
 </code></pre>
+<h3 id="user-turns">user_turns (用户对话 turn 级状态, 见 spec/06 §Turn 取消语义)</h3>
+<pre><code class="language-sql">CREATE TABLE user_turns (
+  id TEXT PRIMARY KEY,                       -- ulid
+  session_id TEXT NOT NULL,                  -- 关联 Mastra thread proj:X:session:Y 的 session 部分
+  user_input TEXT NOT NULL,                  -- 用户原话 (Reflector 训练用)
+  router_actions TEXT NOT NULL,              -- JSON: Router 输出的 actions[] (见 plan/02 §路由策略)
+  current_action_index INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL,                      -- 'running' | 'awaiting_approval' | 'done' | 'cancelled'
+  reverted_approval_count INTEGER,           -- cancelled 时记录 revert 了几条 approved approvals
+  created_at INTEGER NOT NULL,               -- unix ms
+  completed_at INTEGER,                      -- done / cancelled 时间戳
+  cancelled_at INTEGER
+);
+CREATE INDEX idx_user_turns_session ON user_turns(session_id, created_at DESC);
+CREATE INDEX idx_user_turns_active ON user_turns(status) WHERE status IN (&#39;running&#39;, &#39;awaiting_approval&#39;);
+</code></pre>
+<p><strong>语义</strong>:</p>
+<ul>
+<li>每次用户在 chat box 敲 enter 创建一行, Router 输出 <code>actions[]</code> 后填 <code>router_actions</code></li>
+<li>cascade 控制器顺序执行 actions, 每完成一个 action 递增 <code>current_action_index</code></li>
+<li>遇到需审批 action → status='awaiting_approval', 用户决议后回 'running' 跑下一个</li>
+<li>所有 actions 决议完 → status='done', <code>completed_at</code> 填时间</li>
+<li>用户点 [取消本次对话] → 走 spec/06 §rollbackTurn → status='cancelled', <code>cancelled_at</code> 填时间, <code>reverted_approval_count</code> 记录回退条数</li>
+<li>rehydrate 时按 <code>status IN ('running', 'awaiting_approval')</code> 拉所有 in-flight turn 恢复 UI</li>
+</ul>
 <h3 id="approvals">approvals</h3>
 <pre><code class="language-sql">CREATE TABLE approvals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
+  turn_id TEXT NOT NULL REFERENCES user_turns(id),   -- 归属 turn (新增 — 用于 rollbackTurn)
   tool_call_id TEXT NOT NULL UNIQUE,
   agent TEXT NOT NULL,
   tool_name TEXT NOT NULL,
   payload TEXT NOT NULL,              -- JSON
   diff TEXT,                          -- pre-rendered diff for audit
-  status TEXT NOT NULL,               -- pending | approved | rejected | edited
+  change_set TEXT,                    -- JSON: 整批 ChangeSet (main + cascade[] + graph + metadata), spec/06
+  accepted_items TEXT,                -- JSON array of accepted proposal ids (resolve 时填)
+  status TEXT NOT NULL,               -- pending | approved | rejected | edited | reverted
   user_feedback TEXT,                 -- 拒绝时的反馈
   decided_at TEXT,
   created_at TEXT NOT NULL
 );
 CREATE INDEX idx_approvals_status ON approvals(status);
+CREATE INDEX idx_approvals_turn ON approvals(turn_id);
 </code></pre>
+<blockquote>
+<p><strong>schema 演进</strong>: <code>turn_id</code> / <code>change_set</code> / <code>accepted_items</code> 是 W9+ 加的列 (spec/06 整批审 + Turn 取消语义), 旧 <code>payload</code> / <code>diff</code> 列保留兼容。<code>status='reverted'</code> 是 W9+ 新值, 由 <code>rollbackApproval</code> 写入 (见 spec/06 §撤销)。</p>
+</blockquote>
 <h3 id="traces-流式日志归档可选-ingest-自-jsonl">traces (流式日志归档,可选 ingest 自 JSONL)</h3>
 <pre><code class="language-sql">CREATE TABLE traces (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

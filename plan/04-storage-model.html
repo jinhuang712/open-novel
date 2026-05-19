@@ -52,7 +52,7 @@ flowchart LR
     SET_LO["locations/ 替代 places<br/>_index + regions/ + cities/ + buildings/ + landmarks/"]
     SET_IT["items/ 重要物品/法宝/信物<br/>_index + {id}.md"]
     SET_EV["events/ 历史事件 + 关键事件<br/>_index + {id}.md"]
-    SET_TL["timeline/<br/>_index + era + story-clock + character-ages 派生"]
+    SET_TL["timeline/<br/>_index + era + story-clock + _character-ages 派生"]
     SET_RE["relationships/<br/>_index + _matrix 派生 + notes/{id}"]
     SET_SL["story-lines/<br/>_index + main + subplots/{id}"]
     SET_FO["foreshadowing/ 预埋伏笔<br/>_index + {id}.md"]
@@ -68,7 +68,8 @@ flowchart LR
 </pre>
 <h3 id="目录设计要点">目录设计要点</h3>
 <ol>
-<li><strong>每个目录有 <code>_index.md</code></strong> — 给 LLM 快速读&quot;这个目录里有什么 + 一句话摘要&quot;,不必扫整个目录。结构:<pre><code class="language-yaml">---
+<li><strong><code>_</code> 前缀文件 = 系统索引/派生, 默认对用户隐藏</strong> — FileTree 组件默认 filter 掉所有 <code>_*</code> 文件 (spec/13 §Developer Mode 可切换可见)。这是 Agent 面向的基础设施 (Writer 读 / context builder 注入), 不是用户产物。命中条件: 文件名或目录名以 <code>_</code> 开头 (e.g. <code>_index.md</code> / <code>_matrix.md</code> / <code>_character-ages.md</code> / <code>_registry</code>)。<strong>派生文件必须 <code>_</code> 前缀</strong>。</li>
+<li><strong>每个目录有 <code>_index.md</code></strong> — 给 LLM 快速读&quot;这个目录里有什么 + 一句话摘要&quot;, 不必扫整个目录。<code>_</code> 前缀对用户隐藏 (上一条)。结构:<pre><code class="language-yaml">---
 id: index_worldview_a3f2
 type: index
 for_directory: worldview
@@ -81,9 +82,15 @@ for_directory: worldview
 - ...
 </code></pre>
 </li>
-<li><strong>派生文件</strong> (<code>relationships/_matrix.md</code> / <code>timeline/character-ages.md</code>) — 这些是 SQLite 表的 markdown 投影,frontmatter 标 <code>derived: true</code>,UI 锁写 (见 spec/16 §派生文件守卫)。reindex 时自动重生成。</li>
+<li><strong>派生文件</strong> (<code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code>) — SQLite 表的 markdown 投影, 同时具备:
+<ul>
+<li><code>_</code> 前缀: FileTree 隐藏 (上一条)</li>
+<li>frontmatter 标 <code>derived: true</code>: writeSetting 拒写 (spec/16 §派生文件守卫)</li>
+</ul>
+两个 flag 正交但同时使用 — 派生文件 = 用户既不需看也不能改的纯计算产物, reindex 时自动重生成。
+</li>
 <li><strong>空目录的处理</strong> — 若用户项目流派不需要某目录(都市流不需要 power-system/),目录仍创建,<code>_index.md</code> 写一行&quot;此目录适用于玄幻 / 修仙 / 系统流,本项目暂未使用&quot;。空目录不影响 reindex,不影响 token (assembleContext 不会把空目录塞 prompt)。</li>
-<li><strong>非派生 <code>_matrix.md</code> 用户能扩展</strong> — 用户在 <code>relationships/notes/{id}.md</code> 写&quot;林川和王老板的私人恩怨详情&quot;,这些 notes 不参与 entity_relations 表派生,只供 Writer assembleContext 时取用。</li>
+<li><strong>用户扩展点 vs 派生点</strong> — <code>relationships/_matrix.md</code> 派生 (用户不可见), 用户想加私人恩怨详情写在 <code>relationships/notes/{id}.md</code> (普通文件, FileTree 可见), 这些 notes 不参与派生只供 Writer assembleContext 时取用。</li>
 </ol>
 <h2 id="markdown-frontmatter-规范">Markdown frontmatter 规范</h2>
 <p>每个内容文件用 YAML frontmatter 携带元数据。</p>
@@ -249,7 +256,8 @@ updated_at: ...
 <li><code>backlinks</code>: 反向索引 (打开角色页时显示 &quot;被 X 章引用&quot;)</li>
 <li><code>history</code>: 变更历史 (谁、何时、改了什么、为什么)</li>
 <li><code>learnings</code>: Reflector 提炼的经验</li>
-<li><code>approvals</code>: 审批记录 (含 diff 与决定)</li>
+<li><code>user_turns</code>: 用户对话 turn 级状态 (Router actions[] + status 跟踪 + cancel 支持, 见 spec/06 §Turn 取消语义)</li>
+<li><code>approvals</code>: 审批记录 (含 diff / change_set / accepted_items / turn_id; status 含 reverted)</li>
 <li><code>traces</code>: Agent 流式日志归档 (JSONL 形态太重时按需 ingest)</li>
 <li><code>narrative_metrics</code>: BeatAnalyzer / ArcTracker 输出 (spec/10)</li>
 </ul>
@@ -434,7 +442,7 @@ flowchart TD
 <li><strong>frontmatter delta 同步知识图谱表</strong>:<ul>
 <li><code>relations</code> 字段变化 → upsert 到 <code>entity_relations</code> (source=&#39;frontmatter&#39;)</li>
 <li><code>initial_state</code> 变化 → upsert 到 <code>entity_timeline</code></li>
-<li>派生文件 (<code>_matrix.md</code> / <code>character-ages.md</code>) 重生成</li>
+<li>派生文件 (<code>_matrix.md</code> / <code>_character-ages.md</code>) 重生成</li>
 </ul>
 </li>
 <li><strong>若主修改属于 P0 设定文件 (<code>worldview/*</code> / <code>characters/*</code> / <code>outline/master.md</code>)</strong>: 自动 setting snapshot (见 spec/16 §Snapshot)</li>
@@ -449,30 +457,10 @@ flowchart TD
 <li>提供&quot;Import Project&quot;按钮: 解压后,若 projectId 冲突自动生成新 id;Worker 后台重建 entity_refs / backlinks</li>
 <li>详细 UI flow 见 <a href="../spec/13-settings.html">spec/13-settings.html</a> §项目生命周期 UI flow</li>
 </ul>
-<h2 id="多-tab-同项目并发">多 Tab 同项目并发</h2>
+<h2 id="单-tab-假设">单 tab 假设</h2>
 <blockquote>
-<p>用户开两个浏览器 tab 同一 localhost — 同时改 worldview.md,谁覆盖谁?Mastra Memory 同 thread 双方收 deltas。多 tab 是单用户的常见使用方式。</p>
+<p>本应用按<strong>单用户单 tab</strong>设计 — 不做多 tab 协调 / Web Locks / "后到 tab 只读" 等机制。用户若开第二 tab 是 OS 行为不是 app 行为,共享同一 Node 进程的内存状态,行为以最后一次写入为准 (last-write-wins),不额外提示。简化的代价是: 用户必须自律不开第二 tab 同时改同一项目。<strong>多 tab 协作 / 多用户协作不在本期范围</strong> (见 plan/12 §不解决)。</p>
 </blockquote>
-<p>策略: <strong>Web Locks API</strong> 软锁 + 后到的 tab 进只读模式。</p>
-<pre><code class="language-ts">// lib/storage/tab-lock.ts
-export async function acquireProjectLock(projectId: string, onLost: () =&gt; void) {
-  const ac = new AbortController()
-  navigator.locks.request(`open-novel:project:${projectId}`, { signal: ac.signal },
-    async (lock) =&gt; {
-      if (!lock) return    // 没拿到 (其他 tab 持有)
-      // 拿到了 — 维持 lock 直到 tab 关闭或显式释放
-      await new Promise&lt;void&gt;((resolve) =&gt; { ac.signal.addEventListener(&#39;abort&#39;, () =&gt; resolve()) })
-    },
-  ).catch(onLost)
-  return ac
-}
-</code></pre>
-<p>UI 在第二 tab:</p>
-<ul>
-<li>顶部 banner &quot;另一个标签页正在编辑此项目,本标签页只读&quot;;</li>
-<li>编辑动作 disabled,Esc 切到只读浏览模式</li>
-<li>&quot;强制接管&quot; 按钮: 用户主动释放上一 tab 的锁 (<code>postMessage</code> 协议),接管编辑</li>
-</ul>
 <h2 id="外部编辑器同步">外部编辑器同步</h2>
 <blockquote>
 <p>用户在 VSCode/iA Writer 直接改了 <code>characters/lin.md</code> — 应用不知道;TipTap 仍显示旧内容,审批的 before-state 错位 → diff 出错。</p>

@@ -22,12 +22,8 @@
 <p>DeepSeek V4 (Pro &amp; Flash) 的 ctx 是 <strong>1M tokens</strong>(实查见 spec/00 §C),这意味着:</p>
 <ul>
 <li>普通章节场景下,全设定 + 全相关章节 + 全 entity timeline + 全 relations + 用户范文加起来通常 200K-500K,<strong>远不到 1M</strong></li>
-<li>不再需要&quot;token 预算控制 / 降级链&quot;这种以&quot;省&quot;为骨架的设计 — 它会主动制造一致性漏洞</li>
-<li>取而代之的设计骨架: <strong>每个 agent 各自定义&quot;上下文契约&quot; — 它的职责需要哪些数据,白纸黑字写清楚,该装的必装,不在限额内做选择</strong></li>
+<li>设计骨架: <strong>每个 agent 各自定义&quot;上下文契约&quot; — 它的职责需要哪些数据,白纸黑字写清楚,该装的必装,不做 token 预算裁剪</strong></li>
 </ul>
-<blockquote>
-<p>⚠ <strong>历史教训</strong>: 在审计前曾把 ctx 假设为 128K,设计了 &quot;6 agent × 7 用途 token 预算表&quot; + &quot;5 级降级链 (砍 messages → 丢 summary → 强裁 retrieve → 砍 learnings)&quot;。这套基于错误数值的设计让 Validator/Writer 在限额下做&quot;该不该装这条历史章节&quot;的取舍 — 这是反一致性的。整套已撤,见 progress/006。</p>
-</blockquote>
 <h2 id="为什么要单独立章">为什么要单独立章</h2>
 <p>之前的设计里 Memory 只有一句:</p>
 <pre><code class="language-ts">const memory = new Memory({ storage: new LibSQLStore({ url: &#39;...&#39; }) })
@@ -63,7 +59,7 @@ flowchart BT
   end
   subgraph L3["L3. 项目记忆 (Project Memory) — Reflector 沉淀的经验"]
     direction TB
-    L3A["规模: ≤数百条 learnings + reflector_pending 队列"]
+    L3A["规模: ≤数百条 learnings (Reflector per-turn 写入, 见 plan/06)"]
     L3B["位置: LibSQL index.db (learnings 表)"]
     L3C["访问: 各 agent context builder 注入 system prompt"]
     L3D["生命周期: 跨 session 永久 (用户可手动删除)"]
@@ -84,7 +80,7 @@ flowchart BT
 <p><strong>关键不变性</strong> (在 plan/01 §不变性 锁定为 L13-L15):</p>
 <ul>
 <li><strong>L4 是单一事实源</strong>: L1-L3 任何与 L4 冲突的内容,answer 时以 L4 为准(例:历史 message 里说&quot;林溪是男的&quot;,但 L4 character 已改女,以 L4 为准)</li>
-<li><strong>L3 写入仅 Reflector</strong>: 不允许 LLM 在 stream 中直接 upsert learnings;只有 Reflector 在审批闭环后写入</li>
+<li><strong>L3 写入仅 Reflector</strong>: 不允许 LLM 在 stream 中直接 upsert learnings;只有 Reflector 在 <code>user_turns.status='done'</code> 时跑一次 (per-turn 批次, 见 plan/06)</li>
 <li><strong>L1 装配契约严格写死</strong>: 各 agent 必装项不允许&quot;为节省临时省略&quot; — 1M ctx 给的就是奢侈装齐的本钱</li>
 </ul>
 <h2 id="mastra-memory-的角色边界">Mastra Memory 的角色边界</h2>
@@ -102,7 +98,7 @@ flowchart BT
 <p>Mastra <code>Memory</code> 还有 working memory / scopes 等概念。本项目只用最基础的 thread + resource,其余不开启 — 见 spec/22 §配置决策。</p>
 </blockquote>
 <h2 id="per-agent-上下文契约-核心设计">per-agent 上下文契约 (核心设计)</h2>
-<p>每个 agent 都有自己的 context builder,<strong>根据职责定义&quot;必装什么 / 不装什么&quot;</strong>。这是与之前&quot;统一 buildPromptContext&quot;反转的核心 — 详见 <a href="../spec/23-context-contracts.html">spec/23 §per-agent 上下文契约</a>。</p>
+<p>每个 agent 都有自己的 context builder,<strong>根据职责定义&quot;必装什么 / 不装什么&quot;</strong> — 详见 <a href="../spec/23-context-contracts.html">spec/23 §per-agent 上下文契约</a>。</p>
 <p>各 agent 装配概览:</p>
 <table>
 <thead>
@@ -156,7 +152,7 @@ flowchart BT
 </ul>
 <h2 id="l2-历史管理-lastmessages-可选压缩">L2 历史管理 (lastMessages + 可选压缩)</h2>
 <ul>
-<li>Mastra <code>lastMessages: 30</code> (1M ctx 下放宽,与之前&quot;为节省 token 卡到 12 条&quot;的旧设计相反)</li>
+<li>Mastra <code>lastMessages: 30</code> (1M ctx 下,plan/write 完整对话历史不被滑窗截断)</li>
 <li><code>compressed_messages</code> 表保留(spec/22 设计),但<strong>默认 disabled</strong> — 长 session (&gt;200 messages) 时由用户手动开启</li>
 <li><code>semanticRecall: false</code> (与 spec/18 embedding 选型耦合)</li>
 </ul>
@@ -271,7 +267,7 @@ flowchart BT
 <p>Reflector 是 L3 的<strong>唯一写入者</strong>,本章是 L3 的<strong>统一读取规则</strong>:</p>
 <pre class="mermaid">
 flowchart TD
-  A([审批闭环]) --> B[入队 reflector_pending<br/>按 cascade_group_id]
+  A([user_turns.status='done']) --> B[入队 Reflector<br/>turn 级批次 (per-turn)]
   B --> C[Reflector 出队]
   C --> D[提炼 1-3 条 learnings<br/>走 JSON mode, spec/24]
   D --> E[upsert 到 learnings 表]

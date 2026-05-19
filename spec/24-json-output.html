@@ -149,27 +149,64 @@ const result = await generateText({
 </tr>
 </tbody></table>
 <p>详见下面各 schema 章节。</p>
-<h3 id="router-输出">Router 输出</h3>
+<h3 id="router-输出-actions">Router 输出 (actions[] 一次性意图解析, 见 plan/02 §路由策略)</h3>
 <pre><code class="language-ts">import { z } from &#39;zod&#39;
 
+export const RouterActionSchema = z.discriminatedUnion(&#39;kind&#39;, [
+  // plan 模式产物
+  z.object({
+    kind: z.literal(&#39;writeSetting&#39;),
+    target: z.string(),                          // settings/ 下相对 path, e.g. characters/lin.md
+    intent: z.string().min(1).max(300),          // 用户原话拆出的意图片段
+  }),
+  // write 模式产物
+  z.object({
+    kind: z.literal(&#39;writeChapter&#39;),
+    chapterIndex: z.number().int().positive(),
+    intent: z.string().min(1).max(300),          // e.g. &quot;开头&quot; / &quot;续写&quot; / &quot;重写第 3 段&quot;
+  }),
+  // 只读分析 (无审批)
+  z.object({ kind: z.literal(&#39;analyzeChapterPacing&#39;), chapterIndex: z.number().int().positive() }),
+  z.object({ kind: z.literal(&#39;analyzeArc&#39;), characterId: z.string() }),
+  // 事实查询 (discuss 模式优先)
+  z.object({
+    kind: z.literal(&#39;queryFacts&#39;),
+    queryMode: z.enum([&#39;entity-at&#39;, &#39;relations-of&#39;, &#39;mentions-of&#39;, &#39;semantic-search&#39;]),
+    queryPayload: z.string().min(1).max(500),
+  }),
+  // discuss fallback (自由 LLM)
+  z.object({ kind: z.literal(&#39;discussFreeForm&#39;), question: z.string().min(1).max(2000) }),
+  // 取消当前 turn (整 turn revert, 见 spec/06 §Turn 取消语义)
+  z.object({ kind: z.literal(&#39;cancelTurn&#39;), reason: z.string().max(500).optional() }),
+])
+
 export const RouterOutputSchema = z.object({
-  intent: z.enum([
-    &#39;discuss_question&#39;,     // discuss 模式 - 提问
-    &#39;discuss_search&#39;,       // discuss 模式 - 检索请求
-    &#39;plan_modify&#39;,          // plan 模式 - 改设定
-    &#39;plan_create&#39;,          // plan 模式 - 新增设定
-    &#39;write_chapter&#39;,        // write 模式 - 写新章
-    &#39;write_continue&#39;,       // write 模式 - 续写
-    &#39;unclear&#39;,              // 不明确
-  ]),
   mode: z.enum([&#39;discuss&#39;, &#39;plan&#39;, &#39;write&#39;]),
-  modeMatchesCurrentMode: z.boolean(),       // 用户当前 mode 与意图是否匹配
-  reasoning: z.string().min(1).max(200),
+  modeMatchesCurrentMode: z.boolean(),                  // 用户当前 mode 与 actions 是否匹配
+  actions: z.array(RouterActionSchema).min(1).max(8),   // 有序数组, 上限 8 防止 LLM 失控拆分
+  reasoning: z.string().min(1).max(400),                // Router 解析理由 (Reflector 训练用)
 })
 
+export type RouterAction = z.infer&lt;typeof RouterActionSchema&gt;
 export type RouterOutput = z.infer&lt;typeof RouterOutputSchema&gt;
 </code></pre>
-<p><strong>maxTokens</strong>: 256(field 数固定 + reasoning ≤ 200 中文 ≈ 200 token)</p>
+<p><strong>maxTokens</strong>: 800 (actions 每条 ≈ 80 token × 8 上限 + reasoning ≈ 400 token)</p>
+<p><strong>Router prompt 注入 (cascade 控制器拼)</strong>: 当前队列 snapshot — pending ApprovalCard + queued actions, Router 据此判定新输入是"插队 / 排队 / 取消 / 继续审批"。snapshot 格式:</p>
+<pre><code>[当前队列 snapshot]
+进行中 turn: turn_abc (用户原话: &quot;把主角改成女的, 然后写第三章&quot;)
+  ✅ 0. writeSetting characters/lin.md (已 approve, 12 cascade)
+  ▶ 1. writeChapter ch_3 开头 (审批中, ApprovalCard_xyz 待决议)
+  ⏸ 2. analyzeChapterPacing ch_2 (排队)
+[用户新输入]
+{user_input}
+</code></pre>
+<p><strong>意图分类示例</strong> (与 plan/02 §路由策略 对齐):</p>
+<ul>
+<li>&quot;你觉得主角应该长什么样&quot; → <code>actions=[{ kind: &#39;discussFreeForm&#39;, question: ... }]</code></li>
+<li>&quot;把主角改成女生&quot; → <code>actions=[{ kind: &#39;writeSetting&#39;, target: &#39;characters/lin.md&#39;, intent: ... }]</code></li>
+<li>&quot;写第三章开头, 顺便看第二章节奏&quot; → <code>actions=[{ kind: &#39;writeChapter&#39;, chapterIndex: 3, ... }, { kind: &#39;analyzeChapterPacing&#39;, chapterIndex: 2 }]</code></li>
+<li>&quot;等下, 先别写第三章&quot; (queue snapshot 显示 writeChapter ch_3 在审批中) → <code>actions=[{ kind: &#39;cancelTurn&#39;, reason: ... }]</code></li>
+</ul>
 <h3 id="validator-一致性审-输出">Validator 一致性审 输出</h3>
 <pre><code class="language-ts">export const ChangeProposalSchema = z.object({
   anchorId: z.string(),                       // 段锚点 ID (spec/17)
@@ -326,7 +363,7 @@ export const ReaderPanelOutputSchema = z.object({
 
 export const ReflectorOutputSchema = z.object({
   learnings: z.array(LearningItemSchema).max(3),  // 每次最多 3 条
-  rootApprovalId: z.string().optional(),          // cascade 链合并时填
+  turnId: z.string(),                              // 关联 user_turns.id (spec/01) — Reflector per-turn 批次
 })
 </code></pre>
 <p><strong>maxTokens</strong>: 2K</p>

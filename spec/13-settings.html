@@ -361,7 +361,53 @@ flowchart TB
 <li>&quot;重置首启提示&quot;: 一次确认即可 (只清 onboarding.seenTips,不删数据)</li>
 </ul>
 <p>执行前 server 端再校验一次 (防止 client UI 被绕)。</p>
-<h2 id="section-8-关于-全局">Section 8: 关于 (🌐 全局)</h2>
+<h2 id="section-8-developer-mode-全局">Section 8: Developer Mode (🌐 全局)</h2>
+<blockquote>
+<p>默认关闭。打开后揭示系统内部基础设施 (派生文件 / 索引 / 调试面板), 普通用户不需要看见。</p>
+</blockquote>
+<pre class="mermaid">
+flowchart TB
+  subgraph DM["Developer Mode"]
+    direction TB
+    T["开启后影响:"]
+    F1["FileTree 显示 _ 前缀文件 / 目录<br/>(_index.md / _matrix.md / _character-ages.md / _registry 等)"]
+    F2["编辑器右上角小图标: 派生标记 + SQLite 表跳转"]
+    F3["DebugConsole 默认展开 (Agent 调用栈 / 工具结果 / 错误)"]
+    F4["ThinkingPanel 显示 reasoning_content 全文 (默认仅显示一句摘要)"]
+    F5["ApprovalCard 顶部多一栏 [查看 ChangeSet JSON]"]
+    F6["chat box 下方显示当前 turn_id / threadId / current_action_index"]
+    F7["设定 Section 5 增加 doom-loop 相似度阈值微调"]
+    F8["session_history.db 调试面板 (LLM 调用日志 / token 用量 / retry / cache 命中)"]
+    T --- F1 --- F2 --- F3 --- F4 --- F5 --- F6 --- F7 --- F8
+  end
+</pre>
+<p><strong>切换方式</strong>:</p>
+<ul>
+<li>SettingsDialog → Section 8: Developer Mode → toggle <code>developerMode: boolean</code></li>
+<li>快捷键: <code>Cmd+Shift+D</code> (与 spec/12 §快捷键 Registry 对接)</li>
+<li>状态持久化: 全局 settings.json (跨项目共享)</li>
+</ul>
+<p><strong>不暴露的能力</strong> (即使开 Developer Mode 也不允许):</p>
+<ul>
+<li>派生文件直接编辑: <code>_</code> 前缀文件即使可见仍 read-only (spec/16 §派生文件守卫)</li>
+<li><code>cardinal-rules.json</code> <code>enabled</code> 字段: UI 锁死, 只能微调阈值 (plan/04 §cardinal-rules)</li>
+<li>跳过 cascade 内部递归: 即使 Developer Mode 也不允许 (plan/01 inv L9)</li>
+</ul>
+<p><strong>store 字段</strong>:</p>
+<pre><code class="language-ts">// lib/store/settings.ts
+type SettingsState = {
+  // ... existing global fields
+  developerMode: boolean        // default false
+}
+</code></pre>
+<p><strong>FileTree filter 实现</strong>:</p>
+<pre><code class="language-ts">// components/panels/FileTree.tsx
+function filterEntries(entries: FileEntry[], developerMode: boolean): FileEntry[] {
+  if (developerMode) return entries
+  return entries.filter(e =&gt; !path.basename(e.path).startsWith(&#39;_&#39;))
+}
+</code></pre>
+<h2 id="section-9-关于-全局">Section 9: 关于 (🌐 全局)</h2>
 <pre class="mermaid">
 flowchart TB
   subgraph AB["关于"]

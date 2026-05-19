@@ -60,31 +60,49 @@ flowchart TD
 <h2 id="react-式反馈学习">React 式反馈学习</h2>
 <h3 id="设计动机">设计动机</h3>
 <p>用户希望系统<strong>越用越懂自己</strong>。直接微调模型代价过高 (DeepSeek 暂未开放微调),但我们可以把&quot;经验&quot;持久化为结构化数据,<strong>自动注入到后续生成的 system prompt</strong>,实现廉价但实用的&quot;learning&quot;。</p>
-<h3 id="reflector-触发时机">Reflector 触发时机</h3>
-<p>每次以下事件后入队:</p>
-<ol>
-<li><strong>审批闭环完成</strong> (approve / reject + feedback)</li>
-<li><strong>用户手动编辑了 Agent 生成的内容</strong> (检测到 saved content 与 generated content 的 diff)</li>
-</ol>
-<p><strong>唯一合并规则 — 不是频率上限,而是批次语义</strong>:</p>
+<h3 id="reflector-触发时机">Reflector 触发时机 (per-turn 批次)</h3>
+<p>触发条件: <strong><code>user_turns.status</code> 从 'running' / 'awaiting_approval' 转入终态 'done' 时入队</strong> (spec/01 §user_turns)。每 turn <strong>跑一次</strong> Reflector, 输入是整个 turn 的:</p>
 <ul>
-<li><strong>同一 cascade 链路内的 N 项审批合并为 1 次 reflect</strong> — 整批数据丢给 Reflector 一次性提炼,得到的 learnings 质量更高 (上下文完整),不是为省 token</li>
-<li>决定一组审批是否同链路: 它们共享同一个 root <code>approval_id</code> (cascade 提议时的根审批),Worker 端按 root 聚合</li>
-<li>批次窗口: cascade 链全部 resolve (approve/reject/dismiss 全决) 后立即跑;单次审批无 cascade 时直接跑</li>
+<li>用户原话 (<code>user_turns.user_input</code>)</li>
+<li>Router 解析的 <code>actions[]</code> (<code>user_turns.router_actions</code>)</li>
+<li>每个 action 的决议 (<code>approvals</code> 表 WHERE turn_id=X, 含 approve / reject / edited + accepted_items + feedback)</li>
 </ul>
+<p><strong>为什么 per-turn 而非 per-cascade_group</strong>: 单 turn 内的多个 action 之间有<strong>因果关联</strong>。例: action[0] 改主角性别接受 12/15 cascade, action[1] Writer 写章节用了新性别 + 漏改称谓 → 用户 reject → 这串经验只有跨 action 看完整 turn 才能提炼出 "gender cascade 用户在意称谓不在意 X"。逐 cascade_group 跑 Reflector 看不到这层因果。</p>
+<p><strong>cancelled turn 不跑 Reflector</strong>: <code>user_turns.status='cancelled'</code> 表示用户主动放弃整 turn (spec/06 §Turn 取消语义), 含义是"这次试错本身就不该参考", 入 learnings 反而误导后续生成。cancelled turn 进 <code>history</code> 留 trace (Settings → 审批历史可查), 但不进 Reflector 训练数据。</p>
 <p>入队伪码:</p>
-<pre><code class="language-ts">async function enqueueReflector(projectId: string, sessionId: string, items: ApprovalContext[]) {
-  const rootApprovalId = items[0].cascadeRootApprovalId ?? items[0].approvalId
-  // 同 root 的等齐: 等链路上所有 approval 都 resolved 才入队
-  const allResolved = await db.approvals.allResolved(rootApprovalId)
-  if (!allResolved) {
-    await db.reflectorPending.upsert({ rootApprovalId, projectId, sessionId, items })
-    return  // 等下次 resolve 事件来再 check
+<pre><code class="language-ts">// 在 cascade 控制器内, 每次 action 决议后检查
+async function onActionResolved(turnId: string) {
+  const turn = await db.userTurns.get(turnId)
+  const actions = JSON.parse(turn.router_actions)
+  if (turn.current_action_index &lt; actions.length - 1) {
+    // 还有 action 未跑 — 不触发
+    return
   }
-  const fullBatch = await db.reflectorPending.drain(rootApprovalId)
-  await reflectorQueue.add({ projectId, sessionId, items: fullBatch })
+  // 全 actions 跑完 → 标 done + 入队 Reflector
+  await db.userTurns.update(turnId, { status: &#39;done&#39;, completed_at: Date.now() })
+  await reflectorQueue.add({
+    projectId: turn.project_id, sessionId: turn.session_id, turnId,
+  })
+}
+
+// Reflector worker
+async function runReflector({ projectId, sessionId, turnId }: ReflectorJob) {
+  const turn = await db.userTurns.get(turnId)
+  const approvals = await db.approvals.findByTurn(turnId)         // 全部 approved/rejected/edited
+  await callJsonAgent({
+    label: &#39;reflector&#39;,
+    model: deepseekFlash,
+    schema: ReflectorOutputSchema,
+    messages: [
+      { role: &#39;system&#39;, content: REFLECTOR_SYSTEM_PROMPT },
+      { role: &#39;user&#39;, content: formatTurnForReflector(turn, approvals) },
+    ],
+  })
+  // 写 learnings + 标各 approval 已消化
 }
 </code></pre>
+<p><strong>触发位置</strong>: 仅在 <code>onActionResolved</code> 检测到 turn 完成时入队 (单点)。<code>user_turns.status</code> 转 'done' 与 Reflector 入队是同一 transaction (避免漏跑或重复跑)。</p>
+<p><strong>用户手动编辑了 Agent 内容</strong>(detected diff): 不再单独触发 Reflector — 这种 edit 会改 turn 内某 action 的 <code>edits</code> 字段, 落到 approvals.accepted_items + history 表, turn 结束时 Reflector 自然能从 history diff 看到 "用户改了什么"。</p>
 <h3 id="reflector-输入输出">Reflector 输入/输出</h3>
 <p>输入:</p>
 <pre><code class="language-json">{
@@ -117,7 +135,7 @@ flowchart TD
       &quot;suggestedWeight&quot;: 1.0
     }
   ],
-  &quot;rootApprovalId&quot;: &quot;ap_xyz&quot;
+  &quot;turnId&quot;: &quot;turn_01HX...&quot;
 }
 </code></pre>
 <p>scope 枚举值 (与 spec/24 一致): <code>style</code>, <code>narrative</code>, <code>pacing</code>, <code>voice</code>, <code>worldview</code>, <code>character</code>, <code>consistency</code>, <code>relations</code>, <code>cardinal_rule</code>, <code>intent</code>, <code>mode</code>。</p>
@@ -191,7 +209,7 @@ CREATE INDEX idx_learnings_scope ON learnings(project_id, scope);
 </tr>
 </tbody></table>
 <p><strong><code>scope=&#39;cardinal_rule&#39;</code> 例外</strong>: 用户 reject 不降低 weight (那是用户拒绝的&quot;违反守则的写法&quot;,不是拒绝&quot;守则本身&quot;);只有用户在 SettingsDialog 显式调整阈值才生效 (spec/25)。</p>
-<p>&quot;命中&quot;判定:Reflector 在审批闭环里写 <code>last_hit_at</code> 时,把当时 context builder 装载的 learnings ids 列表关联到该 approval 的 metadata,审批落定后回写 hit_count + weight (见 spec/23 prompt_traces 表)。</p>
+<p>&quot;命中&quot;判定:Reflector 在 turn 收尾跑时写 <code>last_hit_at</code>,把当时 context builder 装载的 learnings ids 列表关联到该 turn 的所有 approvals metadata,turn done 后回写 hit_count + weight (见 spec/23 prompt_traces 表)。</p>
 <p>learnings 的用户检视、软删恢复、scope=project / global 切换、promote 合并 dialog 等 UI 与安全机制详见 <a href="../spec/13-settings.html">spec/13-settings.html</a> §学习偏好面板。</p>
 <p>避免一个项目的特殊偏好污染其他风格不同的项目。</p>
 <h2 id="与-llm-微调的对比">与 LLM 微调的对比</h2>

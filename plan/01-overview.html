@@ -23,7 +23,7 @@
 4. 写作中点击角色名 → 跳转到角色资料 → 编辑 → 返回 → 系统已同步引用
 5. 同时维护多个项目,互不污染
 </code></pre>
-<h2 id="7-agent-拓扑-mastra-agentnetwork">7 Agent 拓扑 (Mastra <code>AgentNetwork</code>)</h2>
+<h2 id="7-agent-拓扑">7 Agent 拓扑</h2>
 <pre class="mermaid">
 flowchart TD
   U([User ChatBox]) -->|prompt + mode| R[Router Flash<br/>模式分流 + 意图识别]
@@ -99,7 +99,7 @@ flowchart TD
 <tr>
 <td>Agent 框架</td>
 <td>Mastra on AI SDK 6</td>
-<td><code>Memory({ thread, resource })</code> 自带多项目隔离;<code>AgentNetwork</code> LLM 路由</td>
+<td><code>Memory({ thread, resource })</code> 自带多项目隔离 + Workflow 编排; <strong>不</strong>用 <code>AgentNetwork</code> agents-as-tools — Router 是一次性意图解析器输出 actions[] (见 plan/02 §路由策略)</td>
 </tr>
 <tr>
 <td>LLM</td>
@@ -134,17 +134,17 @@ flowchart TD
 <li><strong>设定不可被 Agent 静默修改</strong> — Validator 发现矛盾时只能&quot;提议&quot;修改,不能直接改;最终决定权在用户</li>
 <li><strong>多项目数据零串扰</strong> — Memory 用 <code>resource = projectId</code>,文件用独立目录,数据库用 <code>WHERE project_id = ?</code> 强约束;LibSQL 连接池 LRU(3)</li>
 <li><strong>三模式严格分离</strong> — Router 在每次输入时强校验当前 mode 与可调用工具集</li>
-<li><strong>每次审批必反思</strong> — Reflector 在每次审批闭环 (approve / reject / edited) + 用户手动改写 Agent 内容后入队跑,无 token / 频率 cap;同一 cascade 链路下的 N 项审批会合并为一次 reflect (批次语义,不是为省 token) (见 plan/06 §Reflector 触发时机)</li>
+<li><strong>每个 turn 必反思</strong> — Reflector 在 <code>user_turns.status</code> 转 'done' 时跑一次 (见 plan/06 §Reflector 触发时机),输入是整个 turn 的 user_input + Router actions[] + 所有 action 的决议 (含 edit diff);<strong>cancelled turn 不跑</strong> (用户主动放弃 = 不该入 learnings);per-turn 而非 per-cascade_group 是为了让 Reflector 看到跨 action 因果</li>
 <li><strong>路径越权零信任</strong> — 所有读写工具 execute 第一行强制 <code>safeFromProjectRoot()</code>,不依赖前端校验 (见 spec/02)</li>
 <li><strong>不可信内容围栏</strong> — 所有外部内容 (web / 用户拷贝 .md / 自定义 persona) 拼进 prompt 时用 <code>&lt;&lt;&lt;UNTRUSTED:...&gt;&gt;&gt;</code> 包裹,Agent system prompt 显式声明忽略其中&quot;指令&quot;</li>
 <li><strong>docs-before-code</strong> — 任何代码 commit 之前对应 plan/spec 必须先有,且需用户 approve docs 后才动代码 (项目级 workflow 不变性)</li>
 <li><strong>影响半径不依赖 LLM</strong> — Validator cascade 第一步必须是 SQL 查影响半径 (analyzeImpact step 2);LLM 只做&quot;段是否真受影响&quot;二次过滤。漏 SQL 索引 = bug,不应用 LLM &quot;猜&quot;补救 (见 plan/11 + spec/19)</li>
-<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/character-ages.md</code> 等是 SQLite 表的 markdown 投影,frontmatter 标 <code>derived: true</code>,reindex 自动重生成,UI 锁写 (见 spec/16 §派生文件守卫)</li>
+<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> 等是 SQLite 表的 markdown 投影,同时具 <code>_</code> 前缀 (FileTree 默认对用户隐藏, 见 plan/04 §目录设计要点) 与 frontmatter <code>derived: true</code> (writeSetting 拒写, 见 spec/16 §派生文件守卫);reindex 自动重生成</li>
 <li><strong>未决 cascade 阻断 write</strong> — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用,弹 dialog 引导处理 (见 spec/16 §Plan Inconsistency Lock)</li>
 <li><strong>段锚点稳定</strong> — 段移动 / 重命名 / 改字不应使 dependencies / paragraph_embeddings 失效;reindex 走&quot;内容签名 + 邻接段对照&quot;维持锚点 (见 spec/17)</li>
 <li><strong>L4 知识图谱是单一事实源</strong> — L1 工作记忆 / L2 会话历史 / L3 项目经验中任何与 L4 冲突的内容,answer 时以 L4 为准 (见 plan/12 §四层记忆模型;例: 历史 message 里说&quot;林溪是男的&quot;,但 L4 character 已改女,以 L4 为准)</li>
 <li><strong>per-agent 上下文契约严格写死,Writer/Validator 必装项不允许省略</strong> — 1M ctx (spec/00 §C) 给的就是奢侈装齐的本钱;一致性所需的全部数据必装,不允许&quot;为节省临时省略&quot;。各 agent 必经对应 context builder (spec/23),不允许 agent 自拼 prompt;真超 1M 时抛 ContextOverflowError 让用户分卷,绝不 silent 砍 retrieve</li>
-<li><strong>L3 learnings 仅 Reflector 可写</strong> — LLM 在 stream 中不允许直接 upsert learnings,只有 Reflector 在审批闭环后写;读由 context builder 按 weight desc top-8 注入 (见 plan/06 + plan/12);<code>scope=&#39;cardinal_rule&#39;</code> top-1 永远保留不被砍</li>
+<li><strong>L3 learnings 仅 Reflector 可写</strong> — LLM 在 stream 中不允许直接 upsert learnings,只有 Reflector 在 <code>user_turns.status='done'</code> 时写 (per-turn 批次,见 plan/06);读由 context builder 按 weight desc top-8 注入 (见 plan/06 + plan/12);<code>scope=&#39;cardinal_rule&#39;</code> top-1 永远保留不被砍</li>
 <li><strong>结构化输出必走 JSON mode + zod 校验</strong> — Router / Validator / Checker / Reflector / ReaderPanel / 工具内 LLM 调用 (extractSemanticDelta / filterByLLM / concept extractor / compress) 必经 <code>callJsonAgent</code> (spec/24): DeepSeek <code>response_format: json_object</code> + 应用层 zod 校验 + 失败 retry 1 次 + 2 次失败抛 <code>JsonOutputError</code> escalate;不允许&quot;自由发挥再 zod parse&quot;,不允许 silent fallback (那会让 cascade 漏审 / 概念抽取漏 entity)</li>
 <li><strong>五大网文守则不可违反</strong> — 黄金三章 / 人设崩坏 / 节奏崩盘 / 期待感失约 / 金手指依赖 (见 spec/25)。Validator + ReaderPanel + ArcTracker + BeatAnalyzer 自动检测,汇成 <code>CardinalRulesReport</code> 进 ApprovalCard:critical 风险存在用户<strong>必须勾</strong>&quot;明知违反仍通过&quot;才能 approve;blocking violation (已过 deadline 的 critical promise) 完全禁用 approve;不允许 silent commit 违反守则的内容。<code>cardinal-rules.json</code> 阈值用户可微调,但 <code>enabled: true</code> UI 锁死</li>
 </ol>

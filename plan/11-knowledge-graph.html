@@ -242,13 +242,13 @@ flowchart LR
 <li><code>worldview/</code> 拆为多个子文件</li>
 <li><code>outline/</code> 拆为多个子文件</li>
 <li>新增:<code>factions/</code> <code>organizations/</code> <code>locations/</code> <code>items/</code> <code>events/</code> <code>timeline/</code> <code>relationships/</code> <code>story-lines/</code> <code>foreshadowing/</code> <code>chapter-arcs/</code> <code>power-system/</code> <code>glossary/</code> <code>taboos.md</code> <code>themes.md</code> <code>reader-promises.md</code></li>
-<li>派生视图:<code>relationships/_matrix.md</code> / <code>timeline/character-ages.md</code> (从 SQLite 表自动生成,只读)</li>
+<li>派生视图:<code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> (从 SQLite 表自动生成, <code>_</code> 前缀 + <code>derived: true</code>, 用户既不可见也不可改)</li>
 </ul>
 <h2 id="不变性-invariants">不变性 (Invariants)</h2>
 <p>加进 plan/01 §不变性 第 9-12 条:</p>
 <ol start="9">
 <li><strong>影响半径不依赖 LLM</strong> — Validator cascade 第一步必须是 SQL 查影响半径 (analyzeImpact step 2);LLM 只做二次过滤。漏 SQL 索引 = bug,不是 LLM &quot;推不准&quot;。</li>
-<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/character-ages.md</code> 等是 SQLite 表 → markdown 投影,reindex 覆盖,UI 锁写,frontmatter 标 <code>derived: true</code>。</li>
+<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> 等是 SQLite 表 → markdown 投影,reindex 覆盖,<code>_</code> 前缀 (FileTree 默认隐藏) + frontmatter <code>derived: true</code> (UI 锁写)。</li>
 <li><strong>未决 cascade 阻断 write</strong> — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用 (Setting Lint 一项)。</li>
 <li><strong>段锚点稳定</strong> — 段移动 / 重命名不应使 dependencies / paragraph_embeddings 失效;reindex 走&quot;内容签名 + 邻接段对照&quot;维持锚点。</li>
 </ol>

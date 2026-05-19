@@ -168,7 +168,7 @@ export const modeMachine = setup({
 }
 </code></pre>
 <p><strong>例外</strong>: 用户主动按 <code>Esc</code> 触发 CANCEL → 走到 idle 才能接受新 USER_INPUT。这给用户兜底逃生通道,避免被卡死在 await。</p>
-<p><code>Esc</code> 在 awaitingApproval 状态有特殊语义: <strong>不</strong>关闭 ApprovalCard (那是审批 dialog 的&quot;无操作关闭&quot;),而是 emit CANCEL → 落到 idle + 把当前 approval 标 &#39;cancelled&#39; (区别于 expired/rejected)。</p>
+<p><code>Esc</code> 在 awaitingApproval 状态有特殊语义: <strong>不</strong>关闭 ApprovalCard (那是审批 dialog 的&quot;无操作关闭&quot;),而是 emit CANCEL → 走 spec/06 §Turn 取消语义 (整 turn revert, 把当前 turn.status 标 &#39;cancelled&#39; 区别于普通 rejected)。</p>
 <h2 id="approval-queue-建模-w9-整批审之后简化">Approval Queue 建模 (W9 整批审之后简化)</h2>
 <blockquote>
 <p>⚠ <strong>W9 升级 (见 spec/06 / spec/19)</strong>: cascade 改为审批前内部递归 + 整批审,<strong>单个 ChangeSet 一个 approval 行</strong>,内部 1-3 级 cascade 全在同一 ApprovalCard 勾选 — 不再需要&quot;cascade 各项独立 approval 行&quot;的子项排队建模。</p>
@@ -203,13 +203,17 @@ export const modeMachine = setup({
 </blockquote>
 <p><strong>契约</strong>: <code>approvals</code> 表是唯一 source of truth。session.json 仅缓存机器 context,启动时:</p>
 <pre><code class="language-ts">async function rehydrateMachine(projectId: string): Promise&lt;MachineState&gt; {
-  const pendingFromDb = await db.approvals.findPending(projectId, { since: now() - 24h })
-  // 丢弃 24h 前的 pending (按 spec/06 §审批超时与悬挂时长)
-  // session.json 仅用于恢复 mode 与 currentTask;pending 数组永远以 db 为准
+  // 拉 in-flight user_turns 的 pending approvals (无 24h 过期, 见 spec/06 §Turn 取消语义)
+  const inFlightTurns = await db.userTurns.findActive(projectId)             // status IN ('running','awaiting_approval')
+  const pendingFromDb = await db.approvals.findByTurns(
+    inFlightTurns.map(t =&gt; t.id),
+    { status: &#39;pending&#39; },
+  )
+  // session.json 仅缓存 mode / currentTurnId; approvals/user_turns 永远以 db 为准
   const session = await fs.readFile(&#39;runtime/session.json&#39;).catch(() =&gt; null)
   return {
     mode: session?.mode ?? &#39;discuss&#39;,
-    currentTask: session?.currentTask ?? null,
+    currentTurnId: session?.currentTurnId ?? inFlightTurns[0]?.id ?? null,
     pendingApprovals: pendingFromDb.length &gt; 0 ? [pendingFromDb[0].id] : [],
     approvalQueue: pendingFromDb.slice(1).map(a =&gt; a.id),
     lastError: null,

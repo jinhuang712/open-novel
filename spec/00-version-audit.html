@@ -104,7 +104,7 @@ npm view ahocorasick versions --json | jq &#39;.[-3:]&#39;
 </tbody></table>
 <p><strong>关键修正</strong> (与之前训练数据假设的偏差):</p>
 <ul>
-<li><strong>ctx 上限</strong>: 训练数据假设 128K → 实查 <strong>1M tokens</strong>(8 倍差异)。这意味着 spec/23 / plan/12 的 token 预算控制设计完全无必要,改为 per-agent 上下文契约 + 一致性优先</li>
+<li><strong>ctx 上限</strong>: <strong>1M tokens</strong>。设计骨架 = per-agent 上下文契约 + 一致性优先 (spec/23 / plan/12),不做 token 预算裁剪</li>
 <li><strong>max output</strong>: 之前没考虑 → <strong>384K tokens</strong>(对 Writer 单次写超长章节非常友好,但 JSON mode 必须配套设 <code>max_tokens</code> 防截断,见 §G)</li>
 <li><strong>模型命名</strong>: 实查证实 <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code> 是真实 ID(无 <code>deepseek/</code> 前缀,纯 model 名)</li>
 <li><strong>reasoning</strong>: 没有独立 reasoning model;V4-Flash 自带 thinking 模式,通过参数切换;不需要再为 ArcTracker / Validator 单独选 reasoner</li>

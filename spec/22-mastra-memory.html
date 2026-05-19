@@ -68,15 +68,14 @@ export const memory = new Memory({
     url: &#39;file:&#39; + path.join(os.homedir(), &#39;.open-novel&#39;, &#39;runtime.db&#39;),
   }),
   options: {
-    lastMessages: 30,        // 1M ctx 下放宽 (旧设计 12 是基于 128K ctx 假设的错误产物)
+    lastMessages: 30,        // plan/write 完整对话历史不被滑窗截断
     semanticRecall: false,   // 关闭, 见下
     workingMemory: false,    // 关闭, 与&quot;L3 仅 Reflector 写&quot;原则冲突
   },
 })
 </code></pre>
 <h3 id="决策-1-lastmessages-30">决策 1: <code>lastMessages: 30</code></h3>
-<p>DeepSeek V4 实测 ctx 上限 1M (spec/00 §C),30 条 messages × 平均 500 token ≈ 15K,<strong>远不会挤压一致性 retrieve 的空间</strong>。</p>
-<p>历史包袱: 之前文档曾设 12,理由是&quot;为省 token 防 ctx 爆&quot;;实查 V4 真实 ctx 后,这个理由作废。新值 30 给 plan / write 模式典型 session 提供完整对话历史,不至于&quot;用户回头说&#39;上次那个修改&#39;已经被滑出窗口&quot;。</p>
+<p>DeepSeek V4 ctx 上限 1M (spec/00 §C),30 条 messages × 平均 500 token ≈ 15K,<strong>远不会挤压一致性 retrieve 的空间</strong>。30 给 plan / write 模式典型 session 提供完整对话历史,不至于&quot;用户回头说&#39;上次那个修改&#39;已经被滑出窗口&quot;。</p>
 <h3 id="决策-2-semanticrecall-false">决策 2: <code>semanticRecall: false</code></h3>
 <p>关闭原因:</p>
 <ul>
@@ -106,6 +105,39 @@ resource id = `${projectId}`
 <ul>
 <li>所有 streamVNext 必须传 <code>memory: { thread, resource }</code>,不传报错 (见 plan/02 §多项目隔离)</li>
 <li>我们再加一层 wrapper <code>streamWithGuard</code> 二次校验 (见 §保证 resource 隔离)</li>
+</ul>
+<h3 id="thread-归属规则-各-agent-用哪个-thread">thread 归属规则 (各 agent 用哪个 thread)</h3>
+<p>spec/22 §主定义 与 spec/06 §doom-loop 出现两种 thread id 形态, <strong>不冲突</strong>, 对应三类场景:</p>
+<table>
+<thead>
+<tr><th>场景</th><th>thread id</th><th>挂 Mastra Memory?</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>用户 ↔ Router / Writer / Humanizer 主对话 (NL 流)</td>
+<td><code>proj:X:session:Y</code> (主 thread)</td>
+<td>是</td>
+<td>对话连贯, lastMessages=30 服务主线</td>
+</tr>
+<tr>
+<td>Writer doom-loop 重写 (spec/06)</td>
+<td><code>proj:X:session:Y:writer:${chapterId}</code></td>
+<td>是</td>
+<td>per-chapter 续 thread, 让 Writer 看到 Validator 上次拒绝理由 (作为 user message 写入)</td>
+</tr>
+<tr>
+<td>JSON agent (Checker / Validator / ReaderPanel / Reflector / hidden agents / Router 内部决策)</td>
+<td>不挂 thread</td>
+<td>否</td>
+<td>一次性分析, 历史由 spec/23 context builder 每次重装; 挂 Memory 反而污染主线 lastMessages 滑窗</td>
+</tr>
+</tbody>
+</table>
+<p><strong>关键边界</strong>:</p>
+<ul>
+<li><code>streamWithGuard</code> (本节下文) 只校验 <strong>Mastra Agent.streamVNext</strong> 调用 (即 Writer / Humanizer NL 流)。JSON agent 走 <code>callJsonAgent</code> (spec/24) — 底层是 AI SDK <code>generateObject</code> / <code>streamText</code> 而非 Mastra Agent, 不强制 thread/resource 参数</li>
+<li>JSON agent 的输出<strong>不进</strong> <code>mastra_messages</code>。结果走 <code>index.db</code> (approvals / narrative_metrics / cardinal_rules_report 等业务表) 或 <code>session_history.db</code> (llm_calls / chapter_tool_runs / doom_loop_events 等过程表), 见 plan/04</li>
+<li>Validator 拒绝 → Writer 重生成 时, 拒绝理由由 cascade 控制器作为 <strong>user message</strong> 显式写入 Writer 子 thread (spec/06 §subagent task_id 续跑), 不依赖 lastMessages 滑窗"恰好捞到"</li>
 </ul>
 <h2 id="保证-resource-隔离-defense-in-depth">保证 resource 隔离 (defense-in-depth)</h2>
 <p>Mastra 内部按 resource filter,但我们再加一层:</p>
@@ -545,7 +577,8 @@ export async function rehydrateSession(projectId: string): Promise&lt;Rehydrated
   const machine = await rehydrateMachine(projectId)
 
   // 4. 恢复 pending approvals (spec/07 §source-of-truth)
-  const pendingFromDb = await db.workspace(projectId).approvals.findPending({ since: now() - 24h })
+  const inFlightTurns = await db.workspace(projectId).userTurns.findActive()              // status IN ('running','awaiting_approval'), 无 24h 过期 (spec/06 §Turn 取消语义)
+  const pendingFromDb = await db.workspace(projectId).approvals.findByTurns(inFlightTurns.map(t =&gt; t.id), { status: &#39;pending&#39; })
 
   // 5. 写回 session.json (新增 threadId 若为新建)
   if (session.threadId !== threadId) {

@@ -21,7 +21,7 @@
 <h2>本期来源 (用户 5 个反馈点)</h2>
 <p>005 (知识图谱) + cascade flow 修正后,用户阅读发现&quot;上下文 / memory 工程动作完全没有&quot;。在补的过程中,用户连续给了 5 个根本性的设计反馈,每个都让前一个版本的设计反转:</p>
 <ol>
-<li><strong>DeepSeek V4 ctx 是 1M 不是 128K</strong> — 训练数据假设错了 8 倍</li>
+<li><strong>DeepSeek V4 ctx 实查 1M tokens</strong> (spec/00 §C) — 早期估算偏低,设计骨架必须按 1M 重定位</li>
 <li><strong>不要 token 预算控制</strong> — 优化目标错了。读者最大弃书原因之一是不一致;一致性 &gt; 节流;该装齐就装齐</li>
 <li><strong>每个 agent 不应共用上下文装配</strong> — 它们职责不同,需要的数据不同;统一装配会让 Router 塞一堆没用的 timeline,Writer 又错过该装的范文</li>
 <li><strong>DeepSeek 原生支持 JSON mode</strong> — 用上,Validator/Router/Reflector/ReaderPanel/Checker 输出本质结构化,过去用&quot;自由发挥再 zod parse&quot;是反模式</li>
@@ -31,7 +31,7 @@
 <h2>撤掉的错误工作</h2>
 <p>提交过 <code>75beb2f docs(plan/spec/progress): memory &amp; context — 4-layer model + buildPromptContext + token budget</code> (本地未 push)。它的核心思路被反馈 1+2+3 全部否定:</p>
 <ul>
-<li>❌ 6 agent × 7 用途的 token 预算分配表 (基于 128K 假设, 实际 1M)</li>
+<li>❌ 6 agent × 7 用途的 token 预算分配表 — 1M ctx 下让 agent 做&quot;限额内取舍&quot;主动制造一致性漏洞</li>
 <li>❌ 5 级降级链 (砍 messages → 丢 summary → 强裁 retrieve → 砍 learnings → 抛 PromptOverflowError) — 这是反一致性的, 主动制造一致性漏洞</li>
 <li>❌ 统一 buildPromptContext 10 步装配 — 不该一刀切</li>
 </ul>
@@ -160,7 +160,7 @@
 </tr>
 <tr>
 <td>spec/20</td>
-<td>assembleContext 默认装 5 类守则数据; tokenBudget 上限 80K → 800K (1M ctx); truncated 应永远空</td>
+<td>assembleContext 默认装 5 类守则数据; tokenBudget 上限 800K (1M ctx); truncated 应永远空</td>
 </tr>
 </tbody></table>
 <h3>T6 (本 commit): plan/01 不变性总更新 L13-L17 + progress 总束</h3>

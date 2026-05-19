@@ -20,7 +20,7 @@
 <h2 id="设计原则">设计原则</h2>
 <ol>
 <li><strong>Writer 不再&quot;半瞎&quot;</strong> — 写 ch_050 第 3 段时,系统主动把&quot;涉及角色到本章为止的最新状态 + 活跃关系 + 待回收伏笔 + 语义相关历史段&quot;打包注入 prompt</li>
-<li><strong>token 预算硬上限</strong> — 装配结果按预算严格裁剪,绝不超出 (DeepSeek Pro 单次输入上限 128K,但要给生成留至少 16K 输出 + 8K 系统 prompt 余量)</li>
+<li><strong>一致性优先, budget 为软警报</strong> — DeepSeek V4 ctx 实查 <strong>1M tokens</strong> (spec/00 §C),普通章节场景远不到上限,该装的必装、不省。<code>tokenBudget</code> 默认 200K / 上限 800K 仅作软阈值,超阈记入 <code>truncated</code> 字段引导用户分卷,不允许 silent 砍 retrieve (per-agent 上下文契约见 spec/23)</li>
 <li><strong>可解释</strong> — 装配结果含 <code>sourcePath</code> 字段标注每段来自哪里,Writer 引用时心里有数;UI 在 ThinkingPanel 可展开看</li>
 <li><strong>不替决策</strong> — 装配工具只 retrieve,不评判&quot;应该怎么写&quot;。Writer 看到 context 后自己判</li>
 </ol>
@@ -340,19 +340,48 @@ ${fm.expected_arc ? `\n**预期弧光:** ${fm.expected_arc}` : &#39;&#39;}
   }))
 }
 </code></pre>
-<h2 id="step-7-相关世界观">Step 7 — 相关世界观</h2>
-<pre><code class="language-ts">async function relevantWorldview(projectId: string, entityIds: string[]): Promise&lt;WorldviewSection[]&gt; {
-  // 取所有 worldview/* 文件,按 entity 引用密度 + 与 entity 类目相关性排序
-  // 简化: 直接把 worldview/_index.md 全文 + worldview/rules.md (硬规则) 全文带上
-  const indexFm = await readFile(`${projectDir(projectId)}/settings/worldview/_index.md`)
-  const rules = await readFile(`${projectDir(projectId)}/settings/worldview/rules.md`)
-  return [
-    { title: &#39;世界观索引&#39;, excerpt: indexFm, sourcePath: &#39;settings/worldview/_index.md&#39; },
-    { title: &#39;世界硬规则&#39;, excerpt: rules, sourcePath: &#39;settings/worldview/rules.md&#39; },
-  ]
-  // 二期: 按 entity locations 推断需要的具体子文件 (geography/places/affiliations/...)
+<h2 id="step-7-相关设定索引-全-18-子目录">Step 7 — 相关设定索引 (全 18 子目录 _index.md + 顶层 scalar)</h2>
+<blockquote>
+<p>取所有 settings/ 子目录的 <code>_index.md</code> 给 Agent 一目了然 — 这些是 Agent 面向的索引文件 (<code>_</code> 前缀对用户默认隐藏, 见 plan/04 §_ 前缀文件约定), Writer 写章节前看到整个项目设定地形, 需细节时显式调 <code>readSetting</code> 工具取具体子文件。</p>
+</blockquote>
+<pre><code class="language-ts">async function relevantSettingsIndexes(projectId: string): Promise&lt;WorldviewSection[]&gt; {
+  // 取 settings/&ast;&ast;/_index.md 全部 + 顶层 scalar 散文件 (taboos.md / themes.md / reader-promises.md)
+  // 1M ctx 下不裁: 18 个 _index.md 约 5-10K token, 顶层 scalar 约 1-3K token, 合计 < 15K (与 plan/12 一致性优先一致)
+  const settingsDir = `${projectDir(projectId)}/settings`
+  const indexPaths = await glob(`${settingsDir}/&ast;&ast;/_index.md`)         // 18 个子目录索引
+  const topLevelScalars = [&#39;taboos.md&#39;, &#39;themes.md&#39;, &#39;reader-promises.md&#39;]    // 项目级硬约束散文件
+
+  const sections: WorldviewSection[] = []
+  for (const p of indexPaths) {
+    const content = await readFile(p)
+    const rel = path.relative(projectDir(projectId), p)                       // settings/worldview/_index.md
+    const dirName = path.basename(path.dirname(p))                            // worldview / characters / factions / ...
+    sections.push({ title: `${dirName} 索引`, excerpt: content, sourcePath: rel })
+  }
+  for (const fname of topLevelScalars) {
+    const fp = `${settingsDir}/${fname}`
+    if (!(await exists(fp))) continue
+    const content = await readFile(fp)
+    sections.push({ title: fname.replace(/\.md$/, &#39;&#39;), excerpt: content, sourcePath: `settings/${fname}` })
+  }
+
+  // 额外: worldview/rules.md 是硬规则, 与 _index.md 同等重要, 单独加 (即使 worldview/_index.md 已含摘要)
+  const rulesPath = `${settingsDir}/worldview/rules.md`
+  if (await exists(rulesPath)) {
+    const rules = await readFile(rulesPath)
+    sections.push({ title: &#39;世界硬规则&#39;, excerpt: rules, sourcePath: &#39;settings/worldview/rules.md&#39; })
+  }
+  return sections
+  // 二期: 若 _index.md 摘要太粗, 按命中 entity 反查具体子文件再叠加 (entity-location 映射在 entity_refs)
 }
 </code></pre>
+<p><strong>为什么全量而非按 entity 反查子文件</strong>:</p>
+<ul>
+<li>plan/01 inv L14 "一致性所需的全部数据必装, 1M ctx 给的就是奢侈装齐的本钱"</li>
+<li><code>_index.md</code> 每份 200-500 字, 18 份合计 5-10K token (远低于 1M)</li>
+<li>"按 entity 反查"会引入"选错文件 = 漏看关键设定"的错误源 — 选错索引 = Writer 不知道有 power-system 这种东西</li>
+<li>真细节由 Writer 调 <code>readSetting</code> 工具显式取 — context 装索引, 内容按需取</li>
+</ul>
 <h2 id="step-8-活跃概念约束">Step 8 — 活跃概念约束</h2>
 <pre><code class="language-ts">async function pickActiveConcepts(projectId: string, chapterId: string): Promise&lt;ConceptItem[]&gt; {
   // 取所有 &#39;active&#39; 概念,语义在 absent / restricted / mandatory / unique 内
@@ -590,7 +619,7 @@ function trimByTokens&lt;T&gt;(items: T[], budget: number, getText: (t: T) =&gt;
 </tbody></table>
 <h2 id="已决策项">已决策项</h2>
 <p>✅ <strong>token 计数策略</strong>: 简化估算 (text.length / 1.5, 误差 10-15%)。理由 = DeepSeek V4 1M ctx 下 budget 精度容忍度高 (一致性优先, 不做 token budget 控制); <code>@dqbd/tiktoken</code> 二进制 ~3MB 且 DeepSeek tokenizer 真实精度未知, 装了也不一定准。若 prune / volume_summary 触发频次明显与估算偏离, 切 tiktoken。</p>
-<p>✅ <strong>Worldview retrieve 策略</strong>: 全 <code>_index.md + rules.md</code>。理由 = 1M ctx 下整个 worldview 通常 &lt; 50K token, 全量喂入不挤压上下文; &quot;智能选择子文件&quot;会引入新错误源 (选错文件 = 漏看关键世界观 = 一致性破)。若 worldview 真扩到 &gt; 200K token (大世界观奇幻 / 修仙长篇), 再做 entity locations / category 选择 — 触发条件是规模而非性能。</p>
+<p>✅ <strong>设定索引 retrieve 策略</strong>: 全 18 个子目录 <code>_index.md</code> + 顶层 scalar (taboos / themes / reader-promises) + <code>worldview/rules.md</code>。理由 = 1M ctx 下 18 份 _index.md 合计 5-10K token 远不挤压上下文; <code>_</code> 前缀的索引文件是 Agent 面向 (对用户默认隐藏, 见 plan/04), 全量注入符合 inv L14 "一致性所需的全部数据必装"; "智能选择子目录" 会引入"选错索引 = Writer 不知道有 power-system" 的错误源。若单 _index.md 真扩到 &gt; 200K (极少数巨型奇幻项目), 再做反查 — 触发条件是规模而非性能。</p>
   </main>
 </body>
 </html>

@@ -661,16 +661,32 @@ flowchart LR
 <p>UI: SettingsDialog → 历史快照面板,显示时间轴 + 每条 [还原] 按钮(走 ApprovalCard 让用户审一次完整 diff 再覆盖)。</p>
 <p>清理: 每周后台 Worker 删 expires_at &lt; now 的 snapshot;手动 promote = expires_at += 90 days。</p>
 <h2 id="l4-治理-派生文件守卫">L4 治理 — 派生文件守卫</h2>
+<p>派生文件具备<strong>两个正交标记</strong>, 同时使用:</p>
+<ul>
+<li><strong>文件名 <code>_</code> 前缀</strong> — FileTree 组件默认隐藏 (plan/04 §目录设计要点), 用户感知不到这些文件存在; Developer Mode 切换可见 (spec/13)</li>
+<li><strong>frontmatter <code>derived: true</code></strong> — writeSetting / resolve 落盘路径拒写</li>
+</ul>
+<p>命名规范: 派生文件必须 <code>_</code> 前缀 (e.g. <code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code>), 强制让"不可见 + 不可写"绑定。</p>
 <pre><code class="language-ts">// lib/storage/derived-guard.ts
 export async function assertNotDerived(filePath: string) {
+  const basename = path.basename(filePath)
+  // 双重校验: _ 前缀 OR frontmatter derived: true
+  if (basename.startsWith(&#39;_&#39;)) {
+    throw new ToolValidationError(&#39;DERIVED_FILE_READONLY&#39;, `${filePath} 是 _ 前缀派生/索引文件, 不可经 writeSetting 修改`)
+  }
   const fm = await readFrontmatter(filePath)
   if (fm.derived === true) {
-    throw new ToolValidationError(&#39;DERIVED_FILE_READONLY&#39;, `${filePath} 是派生文件,改动 SQLite 表即可`)
+    throw new ToolValidationError(&#39;DERIVED_FILE_READONLY&#39;, `${filePath} 标记 derived: true (派生文件), 改动 SQLite 表即可`)
   }
 }
 </code></pre>
-<p>writeSetting 调用前先 assert。读取派生文件正常(供 LLM / Writer 取用)。
-UI: 打开派生文件时编辑器 read-only + 顶部 banner &quot;派生视图,改动 SQLite 表后会自动重生成&quot;。</p>
+<p>调用点:</p>
+<ul>
+<li><code>writeSetting</code> tool execute 第一行</li>
+<li>spec/06 <code>POST /api/approvals/:id/resolve</code> 落盘前每个 accepted_item 再校验一次 (防 cascade proposal 改派生文件被审批通过)</li>
+<li>spec/06 <code>rollbackApproval</code> 写 fs 前 (防回退覆盖派生文件)</li>
+</ul>
+<p>读取派生文件正常 (供 LLM / Writer 取用, 走 readSetting tool)。Developer Mode 打开时 UI 显示派生文件 → 编辑器 read-only + 顶部 banner &quot;派生视图, 改动 SQLite 表后会自动重生成&quot;。</p>
 <h2 id="测试-与-spec14-对接">测试 (与 spec/14 对接)</h2>
 <table>
 <thead>
