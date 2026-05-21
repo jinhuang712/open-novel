@@ -37,6 +37,7 @@
 <li><code>spec/15-onboarding.html</code></li>
 <li><code>spec/25-cardinal-rules.html</code></li>
 </ul>
+<p><strong>本轮范围</strong>: 此 12 篇体例升级 + 名单外的 14 篇 spec 同样缺尾部模板 (§关联文档 + §ADR), 统一推迟到后续清理周期批量处理。</p>
 
 <h3 id="todo-progress-restructure">1.2 progress/ 重构 (P0 系列收尾后做)</h3>
 <p>9 篇 <code>progress/</code> 文档目前的角色混乱(既是事后记录,又是前置 plan,retro 区块全部空着)。<strong>P0 系列全部收尾后</strong>,统一重构 progress/:</p>
@@ -46,8 +47,8 @@
 <li>未来仅写 008+,记录每次重大决策的回溯</li>
 </ul>
 
-<h3 id="todo-tech-conflicts">1.3 现存技术矛盾清单 (P0-1 决策落地后,这些 spec 未触碰但已与新决策矛盾)</h3>
-<p>这些 spec 未在 P0-1 范围,但 P0-1 决策(去 Mastra / LibSQL,改 better-sqlite3 + AI SDK 6 + sqlite-vec)落地后已经矛盾。短期内 plan/01 / plan/02 / plan/08 指向这些 spec 时读者会读到矛盾内容。等后续 P0 主题触碰时同步修正:</p>
+<h3 id="todo-tech-conflicts">1.3 现存技术矛盾清单 (与 P0-1 决策矛盾, 待修正)</h3>
+<p>这些 spec 与 P0-1 决策(去 Mastra / LibSQL,改 better-sqlite3 + AI SDK 6 + sqlite-vec)矛盾。包括未在 P0-1 范围的 5 个 spec + 在 P0-1 wave 触碰过但内部仍有漂移的 spec/18。短期内 plan/01 / plan/02 / plan/08 指向这些 spec 时读者会读到矛盾内容。等后续 P0 主题触碰时同步修正:</p>
 <table>
 <thead>
 <tr><th>文档</th><th>矛盾点</th><th>需要改成</th></tr>
@@ -60,8 +61,8 @@
 </tr>
 <tr>
 <td><code>spec/09-build-and-tooling</code></td>
-<td>L126 <code>@mastra/libsql</code> 列在 <code>serverExternalPackages</code> · L211 &quot;Mastra 包打包错误 (libsql 找不到 .node 文件)&quot; · L219 &quot;dev hot-reload 后 LibSQL 连接异常&quot;</td>
-<td>替换为 <code>better-sqlite3</code>;打包问题相应改写</td>
+<td>L23 &quot;与 Mastra / Next.js 兼容良好&quot; · L126 <code>@mastra/libsql</code> 列在 <code>serverExternalPackages</code> · L136 注释提 libsql · L157 &quot;需要 Mastra 的 Route&quot; · L211 &quot;Mastra 包打包错误 (libsql 找不到 .node 文件)&quot; · L219 &quot;dev hot-reload 后 LibSQL 连接异常&quot; · L220 <code>lib/mastra/index.ts</code> 排查路径</td>
+<td>全部替换为 <code>better-sqlite3</code>;Mastra 引用删除;打包问题相应改写</td>
 </tr>
 <tr>
 <td><code>spec/10-narrative-engine</code></td>
@@ -75,8 +76,13 @@
 </tr>
 <tr>
 <td><code>spec/13-settings</code></td>
-<td>L341 <code>pool.delete(projectId)</code> close LibSQL · L423/482 &quot;Mastra 1.x&quot; / &quot;Mastra agents 实例化&quot; · 整段 &quot;学习偏好面板&quot;(与 Reflector 简化矛盾)</td>
-<td>改为 better-sqlite3 connection close;移除 Mastra 引用;删 &quot;学习偏好面板&quot; 段</td>
+<td>L341 <code>pool.delete(projectId)</code> close LibSQL · L353 &quot;LibSQL 必须先 close&quot; (迁移 workspace) · L423/426/482 &quot;Mastra 1.x&quot; / &quot;LibSQL / 等&quot; / &quot;Mastra agents 实例化&quot; · 整段 &quot;学习偏好面板&quot; L484-516(33 行) · 跨文件 stub: <code>index.html:365</code> / <code>progress/004-docs-hardening.html:119</code> / <code>plan/06-cascade-and-reflection.html:167</code></td>
+<td>改为 better-sqlite3 connection close;移除 Mastra 引用;删 &quot;学习偏好面板&quot; 段;同步 3 处跨文件 stub</td>
+</tr>
+<tr>
+<td><code>spec/18-embeddings</code></td>
+<td>L297 &amp; L397 &quot;优先 LibSQL native vector&quot; (违 P0-1 改用 sqlite-vec 决议;本 spec 在 P0-1 wave 已触碰但残留漂移)</td>
+<td>改为 &quot;sqlite-vec (主) → 朴素 cosine (回退)&quot;</td>
 </tr>
 </tbody>
 </table>
@@ -104,6 +110,21 @@
 </tr>
 </tbody>
 </table>
+
+<h3 id="todo-schema-sovereignty">1.5 Schema 主权清理 (P2-3 衍生, Wave 4)</h3>
+<p>调查发现的现存表定义碎片化问题:</p>
+<ul>
+<li><strong>3 处重复 CREATE TABLE</strong>:
+  <ul>
+    <li><code>learnings</code>: <code>spec/01:258</code> + <code>plan/06-cascade-and-reflection.html:117</code></li>
+    <li><code>paragraph_anchors</code>: <code>spec/16:411</code> + <code>spec/17:90</code> (后者已 acknowledged 但仍重复)</li>
+    <li><code>paragraph_embeddings</code>: <code>spec/16:426</code> + <code>spec/18:28</code> (后者已 acknowledged 但仍重复)</li>
+  </ul>
+</li>
+<li><strong>1 张幻影表</strong>: <code>foreshadowings</code> — <code>spec/22:42</code> prose 列名, 全仓无 <code>CREATE TABLE</code> 定义</li>
+<li><strong>分散现状</strong>: ~22 张表分散在 9 个文件 (spec/01 10 张 · spec/16 8 张 · spec/17 / 19 / 22 / 23 / 10 / 11 各 1-3 张), 无 single source of truth</li>
+</ul>
+<p><strong>解决方向 (Wave 4 · 方案 C)</strong>: spec/01 收回完整 <code>CREATE TABLE</code> 主权 + 加全表索引目录;其他 spec 保留字段摘要 + 用途 + 指针;删 3 处重复;<code>foreshadowings</code> 二次决策(建表 / 删名)。</p>
 
 <h2 id="known-issues">2 · 已知问题 (Known Issues)</h2>
 <p>P0/P1 风险中目前 <strong>已识别但未关闭</strong> 的项。</p>
@@ -243,10 +264,10 @@
 </thead>
 <tbody>
 <tr>
-<td>OQ-1</td>
-<td>Embedding provider 最终选(BGE-M3 / DeepSeek / OpenAI)</td>
+<td><del>OQ-1</del></td>
+<td><del>Embedding provider 最终选(BGE-M3 / DeepSeek / OpenAI)</del></td>
 <td><code>spec/18</code></td>
-<td>spec/18 待用户决策;影响成本估算与 spec/22 semantic recall 启用</td>
+<td><strong>[已关闭]</strong> spec/18 §决议 (L41-44) 已锁 <strong>BGE-M3 本地</strong>;fallback 顺序 DeepSeek embedding → OpenAI text-embedding-3-small;详 spec/18 §已决策项 L395-398</td>
 </tr>
 <tr>
 <td>OQ-2</td>
