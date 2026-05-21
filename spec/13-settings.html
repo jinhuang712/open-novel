@@ -338,7 +338,7 @@ flowchart TB
 </tr>
 <tr>
 <td><strong>删除 (硬删)</strong></td>
-<td>二次确认 + 输入项目名字样;先 <code>pool.delete(projectId)</code> close LibSQL,再 fs.rm 项目目录;删 runtime.db 中对应 thread</td>
+<td>二次确认 + 输入项目名字样;先 <code>closeProjectConnections(projectId)</code> 关闭 better-sqlite3 connection (见 spec/01 §<code>lib/storage/db-pool.ts</code>),再 fs.rm 项目目录;删 session_history.db 中对应 thread / messages</td>
 </tr>
 <tr>
 <td><strong>导入 zip</strong></td>
@@ -350,7 +350,7 @@ flowchart TB
 </tr>
 <tr>
 <td><strong>迁移 Workspace 路径</strong></td>
-<td>整体 <code>~/.open-novel/</code> move,settings.json <code>workspaceRoot</code> 字段更新;过程中所有项目 LibSQL 必须先 close</td>
+<td>整体 <code>~/.open-novel/</code> move,settings.json <code>workspaceRoot</code> 字段更新;过程中所有项目 better-sqlite3 connection 必须先 close</td>
 </tr>
 </tbody></table>
 <h3 id="危险操作的安全闸">危险操作的安全闸</h3>
@@ -420,10 +420,10 @@ flowchart TB
     subgraph OSS["使用的开源"]
       direction TB
       O1["Next.js 15 / React 19 / TypeScript"]
-      O2["Mastra 1.x / Vercel AI SDK 6"]
+      O2["Vercel AI SDK 6 / DeepSeek V4"]
       O3["TipTap / ProseMirror"]
       O4["Tailwind CSS / shadcn/ui"]
-      O5["LibSQL / 等"]
+      O5["better-sqlite3 / sqlite-vec / Drizzle"]
       O1 --- O2 --- O3 --- O4 --- O5
     end
     BTN["[打开 GitHub] [打开本地 plan 目录]"]
@@ -479,41 +479,15 @@ flowchart TD
   CHK -->|是| PICK["用户选项目"]
   PICK --> G2["GET /api/projects/{id}/settings — load project"]
   G2 --> MERGE["merge effectiveSettings = global ∪ project<br/>(project override)"]
-  MERGE --> INJ["注入到 Mastra agents 实例化"]
+  MERGE --> INJ["注入到 agent 调用入口 (callJsonAgent / callTextAgent, spec/24)"]
 </pre>
-<h2 id="学习偏好面板">学习偏好面板</h2>
-<p>ActivityBar [💡] 入口 → 打开 LearningsPanel,展示 <code>learnings</code> 表:</p>
-<pre class="mermaid">
-flowchart TB
-  subgraph LP["已学到的偏好"]
-    direction TB
-    TOP["[项目 / 全局] [全部 category]  搜索..."]
-    subgraph PRJ["项目级 (7 条)"]
-      direction TB
-      I1["用户偏好 ≤25 字短句,优先用句号断句"]
-      I2["命中: 12 次 | weight: 12.5 | 最近: 3 小时前"]
-      I3["[编辑] [promote 全局] [删除]"]
-      I1 --- I2 --- I3
-      DOTS["..."]
-    end
-    subgraph GLB2["全局 (3 条)"]
-      direction TB
-      J1["对话场景中尽量少用 XX 地说"]
-      J2["适用: writer / humanizer  [限定到当前项目]"]
-      J1 --- J2
-    end
-    NEW["本周新增 5 条 [审视]"]
-    TOP --- PRJ --- GLB2 --- NEW
-  end
-</pre>
-<p>操作:</p>
-<ul>
-<li><strong>promote 全局</strong>: 项目级 → scope=&#39;global&#39;,跨项目生效。冲突时 (同 insight 已有 global) → 弹合并对话框</li>
-<li><strong>demote 项目</strong>: 全局 → 项目级</li>
-<li><strong>编辑</strong>: 改 insight 文字 + applicable_agents</li>
-<li><strong>删除</strong>: 移到 <code>learnings_archive</code> 表 (软删,可恢复 30 天)</li>
-<li><strong>审视 (本周新增)</strong>: 引导用户走一遍新增的 learnings,确认每条</li>
-</ul>
+<h2 id="学习偏好面板">学习偏好面板 (MVP 不做)</h2>
+<blockquote>
+<p>原设计含 ActivityBar 💡 入口 + LearningsPanel UI (项目↔全局 promote/demote + 编辑 + 软删 + 本周新增审视), 与 Reflector 简化版决议 <strong>矛盾</strong>。本节已废弃。</p>
+<p>权威决议见 <a href="../plan/06-cascade-and-reflection.html#不做什么">plan/06 §不做什么</a>: &quot;MVP 不做学习偏好面板 — 用户暂时无法手动 +/-/删 / promote / 软删恢复;若 learnings 误学, 只能等 30 天衰减&quot;。</p>
+<p>二期若重启此功能, 需先在 <a href="../plan/06-cascade-and-reflection.html">plan/06</a> 同步 hit 追踪 + archive 表 + 跨进程 hydrate 等前置依赖 (见 plan/06 §简化版砍掉的)。</p>
+</blockquote>
+
 <h2 id="不做什么">不做什么</h2>
 <ul>
 <li><strong>不做云同步</strong>: 单设备 localhost,所有设置本地文件即可</li>
