@@ -85,29 +85,13 @@ function computeContentSignature(text: string): string {
 <li>❌ 把&quot;林川走了&quot;改成&quot;林川离开了&quot; — 同一意思不同字,anchor 会变</li>
 </ul>
 <p>最后这个 corner case 由&quot;邻接段对照&quot;(下方)兜底:reindex 时若旧 anchor X 找不到了,但邻接段 (X-1, X+1 的 anchor) 仍在,且 X 位置有新段 Y 内容相似度高 → 把 X 视为&quot;重写为 Y&quot;,dependencies 锚点迁移到 Y。</p>
-<h2 id="paragraph-anchors-表-schema">paragraph_anchors 表 (schema)</h2>
-<p>(已在 spec/16 §表 6 定义,此处补全语义)</p>
-<pre><code class="language-sql">CREATE TABLE paragraph_anchors (
-  anchor_id TEXT PRIMARY KEY,
-  file_path TEXT NOT NULL,
-  paragraph_index INTEGER NOT NULL,
-  heading_path TEXT,
-  content_hash TEXT NOT NULL,             -- 完整 sha256 (供 diff 检测)
-  content_signature TEXT NOT NULL,        -- 归一化指纹 (anchor_id 用)
-  prev_anchor TEXT,                       -- 前一段 anchor (双链)
-  next_anchor TEXT,                       -- 后一段 anchor
-  start_offset INTEGER NOT NULL,          -- 在 file 中的字符 offset
-  end_offset INTEGER NOT NULL,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  -- 软删除: anchor 失效但仍保留 (供 dependencies 标 broken),保留 30 天后清理
-  deleted_at TEXT
-);
-CREATE INDEX idx_anchors_file ON paragraph_anchors(file_path) WHERE deleted_at IS NULL;
-CREATE INDEX idx_anchors_hash ON paragraph_anchors(content_hash);
-CREATE INDEX idx_anchors_signature ON paragraph_anchors(content_signature);
-CREATE INDEX idx_anchors_double_link ON paragraph_anchors(prev_anchor, next_anchor);
-</code></pre>
+<h2 id="paragraph-anchors-表-schema">paragraph_anchors 表 (schema 指针 + 语义补全)</h2>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE paragraph_anchors</code> + 全部 INDEX 见 <a href="./01-storage-schema.html#paragraph-anchors">spec/01 §paragraph_anchors</a>。本 spec 仅补全 anchor_id 生成算法 + 邻接对照兜底 + reindex Worker 语义。</p>
+</blockquote>
+<p><em>(原此处的完整 <code>CREATE TABLE paragraph_anchors</code> + 4 INDEX 已迁至 <a href="./01-storage-schema.html#paragraph-anchors">spec/01 §paragraph_anchors</a> — Wave 4 schema 主权迁移。)</em></p>
+<p><strong>字段摘要</strong>: <code>anchor_id</code> (PK, 算法本 spec §稳定 ID) · <code>file_path</code> · <code>paragraph_index</code> · <code>heading_path</code> · <code>content_hash</code> (完整 sha256, diff 用) · <code>content_signature</code> (归一化指纹, anchor_id 用) · <code>prev_anchor</code> / <code>next_anchor</code> (双链) · <code>start_offset</code> / <code>end_offset</code> (file 内字符 offset) · <code>deleted_at</code> (软删除, 30 天清理)。</p>
+<p>4 个 INDEX: file (active only) / hash / signature / double-link。</p>
 <h2 id="差量-reindex-流程">差量 reindex 流程</h2>
 <h3 id="触发时机">触发时机</h3>
 <pre class="mermaid">
@@ -319,15 +303,10 @@ CREATE INDEX idx_refs_anchor ON entity_refs(anchor_id);
 }
 </code></pre>
 <p><code>reindex_failures</code> 表:</p>
-<pre><code class="language-sql">CREATE TABLE reindex_failures (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  file_path TEXT NOT NULL,
-  error TEXT NOT NULL,
-  retry_count INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  resolved_at TEXT
-);
-</code></pre>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE reindex_failures</code> 见 <a href="./01-storage-schema.html#reindex-failures">spec/01 §reindex_failures</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>file_path</code> · <code>error</code> · <code>retry_count</code> (default 0) · <code>created_at</code> · <code>resolved_at</code> (nullable, 重试成功时填)。</p>
 <p>UI 在 SettingsDialog → &quot;索引健康&quot;显示&quot;N 条 reindex 待重试&quot;,点开手动重试或忽略。</p>
 <h2 id="性能目标">性能目标</h2>
 <p>参考目标 (W7-W8 用 vitest bench 实测填充):</p>

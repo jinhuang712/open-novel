@@ -39,7 +39,7 @@
 <tr>
 <td><code>index.db</code></td>
 <td><code>~/.open-novel/workspaces/{projectId}/index.db</code></td>
-<td>项目数据: chapters, settings, entities, relations, learnings, approvals, history, dependencies, paragraph_anchors, paragraph_embeddings, concepts, concept_refs, foreshadowings</td>
+<td>项目数据: chapters, settings, entities, entity_relations, entity_timeline, learnings, approvals, history, dependencies, paragraph_anchors, paragraph_embeddings, concepts, concept_refs, setting_snapshots, reindex_failures, cascade_audits, archived_threads, compressed_messages, volume_summaries, prompt_traces, narrative_metrics, reader_reports, narrative_feedback, entity_match_feedback (完整全表索引见 <a href="./01-storage-schema.html#index-db-全表-schema-主权">spec/01 §index.db 全表索引目录</a>)</td>
 <td>应用层 (见 spec/01)</td>
 </tr>
 <tr>
@@ -235,37 +235,18 @@ WHERE thread_id IN (
   WHERE updated_at &lt; datetime(&#39;now&#39;, &#39;-30 days&#39;)
 )
 </code></pre>
-<p>archive 而非真删:</p>
-<pre><code class="language-sql">CREATE TABLE archived_threads (
-  id TEXT PRIMARY KEY,
-  resource TEXT,
-  archived_at INTEGER,
-  message_count INTEGER,
-  metadata TEXT
-)
-</code></pre>
+<p>archive 而非真删。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE archived_threads</code> 见 <a href="./01-storage-schema.html#archived-threads">spec/01 §archived_threads</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>id</code> · <code>resource</code> · <code>archived_at</code> (unix ms) · <code>message_count</code> · <code>metadata</code> (JSON)。</p>
 <p>archived 后,前端 thread 列表按 <code>archived_at IS NULL</code> 过滤;Settings 里有&quot;恢复已归档对话&quot;入口。</p>
 <h2 id="可选历史压缩-compressed-messages-表-默认关">可选历史压缩 (<code>compressed_messages</code> 表) — 默认关</h2>
-<p>放在 <code>runtime.db</code> (与 mastra_messages 同库),让 cross-thread join 简单:</p>
-<pre><code class="language-sql">CREATE TABLE compressed_messages (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT NOT NULL,
-  resource TEXT NOT NULL,
-  message_range_start INTEGER NOT NULL,
-  message_range_end INTEGER NOT NULL,
-  message_count INTEGER NOT NULL,
-  cascade_group_id TEXT,
-  approval_ids TEXT,                       -- json array
-  summary TEXT NOT NULL,
-  preserved_anchors TEXT NOT NULL,         -- json: { entity_names, paragraph_anchors, approval_ids }
-  compressed_by TEXT NOT NULL,
-  created_at INTEGER NOT NULL
-);
-
-CREATE INDEX idx_compressed_thread ON compressed_messages(thread_id);
-CREATE INDEX idx_compressed_resource ON compressed_messages(resource);
-CREATE INDEX idx_compressed_cascade ON compressed_messages(cascade_group_id) WHERE cascade_group_id IS NOT NULL;
-</code></pre>
+<p>历史 thread 老消息 summarize 后的缓存。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE compressed_messages</code> + 3 INDEX 见 <a href="./01-storage-schema.html#compressed-messages">spec/01 §compressed_messages</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>thread_id</code> · <code>resource</code> · <code>message_range_start</code> / <code>end</code> · <code>message_count</code> · <code>cascade_group_id</code> · <code>approval_ids</code> (JSON array) · <code>summary</code> · <code>preserved_anchors</code> (JSON: entity_names / paragraph_anchors / approval_ids) · <code>compressed_by</code>。</p>
 <p><strong>为什么默认关</strong>:</p>
 <ul>
 <li>1M ctx 下,30 条 mastra_messages 远不会挤压</li>
@@ -407,30 +388,24 @@ export async function compressOldMessages(threadId: string, projectId: string) {
 <td>spec/23 各 agent context builder 的&quot;长期上下文&quot;段 (与最近 N 章原文并列)</td>
 </tr>
 </tbody></table>
-<h3 id="volume-summaries-表-indexdb"><code>volume_summaries</code> 表 (index.db)</h3>
-<pre><code class="language-sql">CREATE TABLE volume_summaries (
-  id TEXT PRIMARY KEY,
-  volume_index INTEGER NOT NULL,                    -- 第几卷 (与 chapter.volume 对齐)
-  chapter_range_start TEXT NOT NULL,                -- 例 ch_001
-  chapter_range_end TEXT NOT NULL,                  -- 例 ch_030
-  previous_summary_id TEXT,                         -- 上一份摘要 (锚点累积链)
-  -- 固定结构 Markdown 各段
-  main_line TEXT NOT NULL,                          -- ## 本卷主线进度
-  established_personas TEXT NOT NULL,               -- ## 已建立人设 (角色名 → value_axes 当前状态)
-  active_foreshadowings TEXT NOT NULL,              -- ## 待回收伏笔 (foreshadowing.id 列表 + deadline)
-  worldview_invariants TEXT NOT NULL,               -- ## 关键世界观规则
-  reader_promises TEXT NOT NULL,                    -- ## 待兑现读者承诺 (critical promise + deadline)
-  pacing_phase TEXT NOT NULL,                       -- ## 节奏当前阶段 (开局/小高潮/转折/卷末/...)
-  golden_chapter_set TEXT NOT NULL,                 -- ## 黄金三章已立设定 (前 3 章定下的不可违反基线, spec/25)
-  cardinal_rule_state TEXT NOT NULL,                -- ## 五大守则当前状态 (各守则累计 finding 数 + last violation)
-  raw_summary TEXT NOT NULL,                        -- 完整 Markdown (= 上述各段拼接, 用于直接注入 prompt)
-  generated_by TEXT NOT NULL,                       -- &#39;deepseek-v4-flash&#39;
-  created_at INTEGER NOT NULL,
-  approved_at INTEGER                               -- 用户在 SettingsDialog 审过摘要后置时间戳, 未审默认仍生效
-);
-
-CREATE INDEX idx_vol_summary_range ON volume_summaries(volume_index, chapter_range_end);
-</code></pre>
+<h3 id="volume-summaries-表-indexdb"><code>volume_summaries</code> 表 (index.db, Wave 4 schema 指针)</h3>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE volume_summaries</code> 见 <a href="./01-storage-schema.html#volume-summaries">spec/01 §volume_summaries</a>。本 spec 仅描述卷级摘要的语义与生成流程。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>volume_index</code> · <code>chapter_range_start</code> / <code>end</code> · <code>previous_summary_id</code> (锚点累积链) · 固定 8 段 Markdown 字段 (main_line / established_personas / active_foreshadowings / worldview_invariants / reader_promises / pacing_phase / golden_chapter_set / cardinal_rule_state) · <code>raw_summary</code> (拼接版, 直接注 prompt) · <code>generated_by</code> · <code>approved_at</code>。</p>
+<p><em>(原此处的完整 CREATE TABLE + <code>CREATE INDEX idx_vol_summary_range</code> 已迁至 spec/01。)</em></p>
+<p><strong>固定 8 段 Markdown 字段含义</strong> (字段 → Markdown 章节标题):</p>
+<ul>
+<li><code>main_line</code> → <code>## 本卷主线进度</code></li>
+<li><code>established_personas</code> → <code>## 已建立人设</code> (角色名 → value_axes 当前状态)</li>
+<li><code>active_foreshadowings</code> → <code>## 待回收伏笔</code> (dependencies.id 列表 + deadline)</li>
+<li><code>worldview_invariants</code> → <code>## 关键世界观规则</code></li>
+<li><code>reader_promises</code> → <code>## 待兑现读者承诺</code> (critical promise + deadline)</li>
+<li><code>pacing_phase</code> → <code>## 节奏当前阶段</code> (开局/小高潮/转折/卷末/...)</li>
+<li><code>golden_chapter_set</code> → <code>## 黄金三章已立设定</code> (前 3 章基线, spec/25)</li>
+<li><code>cardinal_rule_state</code> → <code>## 五大守则当前状态</code> (累计 finding 数 + last violation)</li>
+</ul>
+<p><code>approved_at</code>: 用户审过后置时间戳, 未审默认仍生效。</p>
 <h3 id="锚点累积-借鉴-opencode-compactionts124-135-的-anchored-summary">锚点累积 (借鉴 opencode <code>compaction.ts:124-135</code> 的 anchored summary)</h3>
 <p>新摘要生成时<strong>读上一份摘要</strong> (<code>previous_summary_id</code>), prompt 模板:</p>
 <pre><code>更新已锚定的摘要 (anchored summary) — 你需要把章节 ch_${range_start} 到 ch_${range_end} 这段时间的新事实合并进上一份摘要,

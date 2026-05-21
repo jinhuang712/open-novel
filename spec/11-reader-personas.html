@@ -373,18 +373,12 @@ flowchart TB
     L1 --- L2
   end
 </pre>
-<h2 id="sqlite-schema-追加">SQLite Schema 追加</h2>
-<pre><code class="language-sql">CREATE TABLE reader_reports (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  chapter_id TEXT NOT NULL,             -- chapter id (无外键 — 不在 entities 表)
-  report TEXT NOT NULL,                 -- JSON (ChapterRiskReport)
-  version TEXT NOT NULL,                -- persona prompt 版本号
-  success_count INTEGER NOT NULL,
-  total_count INTEGER NOT NULL,
-  generated_at TEXT NOT NULL
-);
-CREATE INDEX idx_reader_chapter ON reader_reports(chapter_id);
-</code></pre>
+<h2 id="sqlite-schema-追加">SQLite Schema (Wave 4 指针)</h2>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE reader_reports</code> 见 <a href="../spec/01-storage-schema.html#reader-reports">spec/01 §reader_reports</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>chapter_id</code> (无 FK — 不在 entities 表) · <code>report</code> (JSON ChapterRiskReport) · <code>version</code> (persona prompt 版本号) · <code>success_count</code> · <code>total_count</code> · <code>generated_at</code>。</p>
+<p><em>(原此处的完整 CREATE TABLE + <code>CREATE INDEX idx_reader_chapter</code> 已迁至 spec/01。)</em></p>
 <blockquote>
 <p>chapter 不登记到 entities 表 (entities 主要是 character/place/item/org),所以 <code>FOREIGN KEY (chapter_id) REFERENCES entities(id)</code> <strong>不设外键</strong>;chapter_id 真源 = 章节目录名。</p>
 </blockquote>

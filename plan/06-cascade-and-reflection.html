@@ -113,21 +113,12 @@ flowchart TD
 
 <p>scope 枚举值(与 spec/24 一致):<code>style</code>, <code>narrative</code>, <code>pacing</code>, <code>voice</code>, <code>worldview</code>, <code>character</code>, <code>consistency</code>, <code>relations</code>, <code>cardinal_rule</code>, <code>intent</code>, <code>mode</code>。</p>
 
-<h3 id="learnings-表-schema"><code>learnings</code> 表 schema(简化版)</h3>
-<pre><code class="language-sql">CREATE TABLE learnings (
-  id INTEGER PRIMARY KEY,
-  project_id TEXT NOT NULL,
-  scope TEXT NOT NULL,                   -- 'style' | 'cardinal_rule' | ...
-  insight TEXT NOT NULL,
-  evidence TEXT,
-  applicable_agents TEXT,                 -- JSON array
-  weight REAL NOT NULL DEFAULT 1.0,       -- 衰减老化,无加权
-  created_at TEXT NOT NULL
-);
-CREATE INDEX idx_learnings_scope ON learnings(project_id, scope);
-</code></pre>
+<h3 id="learnings-表-schema"><code>learnings</code> 表 schema</h3>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE learnings</code> 见 <a href="../spec/01-storage-schema.html#learnings">spec/01 §learnings</a>。本节原"简化版" CREATE 已删 (与 spec/01 重复)。</p>
+</blockquote>
 
-<p>注:简化版不带 <code>hit_count</code> / <code>last_hit_at</code> / 归档表(<code>learnings_archive</code>)— 二期视实际需求再加。</p>
+<p>本计划阶段约束:简化版<strong>不带</strong> <code>hit_count</code> / <code>last_hit_at</code> / 归档表(<code>learnings_archive</code>)等加权与软删字段 — 二期视实际需求再加 (具体见 plan/06 §不做什么)。spec/01 §learnings 已含 <code>hit_count</code> / <code>last_hit_at</code> 字段, MVP 阶段这些字段保留默认值 0 / NULL, 不参与衰减计算。</p>
 
 <h3 id="注入策略">注入策略</h3>
 <blockquote>

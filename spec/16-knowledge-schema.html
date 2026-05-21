@@ -25,30 +25,11 @@
 <li><strong>派生表 vs 事实表分离</strong> — entity_relations 是派生表 (从 frontmatter + 章节扫描出来),<code>relationships/notes/*.md</code> 是用户对关系的注解 (事实)</li>
 </ol>
 <h2 id="表-1-entity-relations">表 1 — entity_relations</h2>
-<pre><code class="language-sql">CREATE TABLE entity_relations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  source_id TEXT NOT NULL,                -- char_lin_a3f2
-  target_id TEXT NOT NULL,                -- char_zhang_b1c4
-  kind TEXT NOT NULL,                     -- 关系类型,见下方枚举
-  since_chapter TEXT,                     -- ch_005 起建立此关系 (nullable = 故事初始)
-  until_chapter TEXT,                     -- 在 ch_080 解除/转化 (nullable = 仍持续)
-  strength INTEGER NOT NULL DEFAULT 50 CHECK (strength BETWEEN 0 AND 100),
-  reciprocal_kind TEXT,                   -- 对偶关系: source.mentor → target.disciple (nullable)
-  evidence_file TEXT NOT NULL,            -- settings/characters/lin.md 或 chapters/005-XX/draft.md
-  evidence_anchor TEXT,                   -- 段级 stable id (见 spec/17)
-  evidence_quote TEXT,                    -- 该关系来源的原文片段 ≤ 200 字
-  source TEXT NOT NULL,                   -- &#39;frontmatter&#39; | &#39;narrative&#39; | &#39;user-edit&#39;
-  confidence INTEGER NOT NULL DEFAULT 100 CHECK (confidence BETWEEN 0 AND 100),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  FOREIGN KEY (source_id) REFERENCES entities(id) ON DELETE CASCADE,
-  FOREIGN KEY (target_id) REFERENCES entities(id) ON DELETE CASCADE,
-  UNIQUE(source_id, target_id, kind, since_chapter)   -- 防重复 reindex
-);
-CREATE INDEX idx_rel_src ON entity_relations(source_id, kind);
-CREATE INDEX idx_rel_tgt ON entity_relations(target_id, kind);
-CREATE INDEX idx_rel_active ON entity_relations(source_id, since_chapter, until_chapter);
-</code></pre>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE entity_relations</code> + 全部 INDEX 见 <a href="./01-storage-schema.html#entity-relations">spec/01 §entity_relations</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>source_id</code> / <code>target_id</code> (实体 id) · <code>kind</code> (17 种内置, 见下方枚举) · <code>since_chapter</code> / <code>until_chapter</code> (生效区间, nullable) · <code>strength</code> (0-100) · <code>reciprocal_kind</code> (对偶) · <code>evidence_file</code> / <code>evidence_anchor</code> / <code>evidence_quote</code> (来源追溯) · <code>source</code> (frontmatter/narrative/user-edit) · <code>confidence</code> (0-100)。</p>
+<p><strong>本节聚焦</strong>: kind 枚举语义 + reciprocal_kind 对照 + 来源等级冲突解决。</p>
 <h3 id="kind-枚举-开放扩展">kind 枚举 (开放扩展)</h3>
 <p>内置 17 种,自由扩展走 <code>metadata</code> 字段:</p>
 <table>
@@ -108,25 +89,11 @@ CREATE INDEX idx_rel_active ON entity_relations(source_id, since_chapter, until_
 </tbody></table>
 <p>冲突时:<code>user-edit</code> &gt; <code>frontmatter</code> &gt; <code>narrative</code>。<code>narrative</code> 行 confidence &lt; 60 时 UI 不显示,只在 lint 时提示作者&quot;是否登记&quot;。</p>
 <h2 id="表-2-entity-timeline">表 2 — entity_timeline</h2>
-<pre><code class="language-sql">CREATE TABLE entity_timeline (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  entity_id TEXT NOT NULL,
-  attribute TEXT NOT NULL,                -- 见 attribute 枚举
-  value TEXT NOT NULL,                    -- 字符串/JSON,按 attribute 解释
-  valid_from_chapter TEXT NOT NULL,       -- ch_001 起此值有效
-  valid_to_chapter TEXT,                  -- 至 ch_050 失效 (nullable = 至今)
-  declared_in TEXT NOT NULL,              -- 来源文件
-  declared_anchor TEXT,                   -- 段级 stable id
-  declared_quote TEXT,                    -- ≤ 200 字
-  source TEXT NOT NULL,                   -- &#39;frontmatter&#39; | &#39;narrative&#39; | &#39;user-edit&#39;
-  confidence INTEGER NOT NULL DEFAULT 100 CHECK (confidence BETWEEN 0 AND 100),
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
-  UNIQUE(entity_id, attribute, valid_from_chapter, source)
-);
-CREATE INDEX idx_tl_entity_attr ON entity_timeline(entity_id, attribute);
-CREATE INDEX idx_tl_validity ON entity_timeline(entity_id, valid_from_chapter, valid_to_chapter);
-</code></pre>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE entity_timeline</code> + 全部 INDEX 见 <a href="./01-storage-schema.html#entity-timeline">spec/01 §entity_timeline</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>entity_id</code> · <code>attribute</code> (9 类: age/location/mood/power_level/status/affiliation/wealth/social_rank/key_possession, 见下方枚举) · <code>value</code> (字符串/JSON) · <code>valid_from_chapter</code> / <code>valid_to_chapter</code> (生效区间) · <code>declared_in</code> / <code>declared_anchor</code> / <code>declared_quote</code> (来源) · <code>source</code> · <code>confidence</code>。</p>
+<p><strong>本节聚焦</strong>: attribute 枚举 + 关键查询模式 + 自动推断规则 (frontmatter initial_state → entity_timeline 第一行)。</p>
 <h3 id="attribute-枚举">attribute 枚举</h3>
 <table>
 <thead>
@@ -200,24 +167,11 @@ SELECT value FROM entity_timeline
 </ol>
 <p>二期可加 LLM 主动扫描 narrative 推断时间轴。当前:作者在 character.md 显式声明 (frontmatter <code>initial_state</code> + 用户编辑 timeline 注解) 为主路径,narrative 推断为辅路径。</p>
 <h2 id="表-3-concepts">表 3 — concepts</h2>
-<pre><code class="language-sql">CREATE TABLE concepts (
-  id TEXT PRIMARY KEY,                    -- concept_no_phone_x1y2
-  category TEXT NOT NULL,                 -- &#39;tech&#39; | &#39;magic&#39; | &#39;taboo&#39; | &#39;glossary&#39; | &#39;rule&#39; | &#39;culture&#39;
-  semantic TEXT NOT NULL,                 -- &#39;absent&#39; | &#39;present&#39; | &#39;restricted&#39; | &#39;mandatory&#39; | &#39;unique&#39;
-  title TEXT NOT NULL,                    -- &#39;此世界没有手机&#39;
-  surface_forms TEXT NOT NULL,            -- JSON [&#39;手机&#39;, &#39;移动电话&#39;, &#39;电话&#39;, &#39;mobile&#39;]
-  description TEXT NOT NULL,              -- 完整描述
-  defined_in TEXT NOT NULL,               -- worldview/rules.md
-  defined_anchor TEXT,                    -- 段级 stable id
-  source TEXT NOT NULL,                   -- &#39;llm-extracted&#39; | &#39;user-edit&#39;
-  confidence INTEGER NOT NULL DEFAULT 100 CHECK (confidence BETWEEN 0 AND 100),
-  status TEXT NOT NULL DEFAULT &#39;active&#39;,  -- &#39;active&#39; | &#39;reviewing&#39; | &#39;archived&#39;
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX idx_concepts_category ON concepts(category);
-CREATE INDEX idx_concepts_status ON concepts(status);
-</code></pre>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE concepts</code> + 全部 INDEX 见 <a href="./01-storage-schema.html#concepts">spec/01 §concepts</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>id</code> (concept_X_yyyy) · <code>category</code> (tech/magic/taboo/glossary/rule/culture) · <code>semantic</code> (absent/present/restricted/mandatory/unique, 见下方语义) · <code>title</code> · <code>surface_forms</code> (JSON array, AC trie 用) · <code>description</code> · <code>defined_in</code> / <code>defined_anchor</code> · <code>source</code> (llm-extracted/user-edit) · <code>confidence</code> · <code>status</code> (active/reviewing/archived)。</p>
+<p><strong>本节聚焦</strong>: semantic 字段语义 + 概念抽取流程 + concept-extractor prompt。</p>
 <p><code>semantic</code> 字段语义:</p>
 <ul>
 <li><code>absent</code> — 此世界<strong>没有</strong>该事物 (e.g. 无手机)</li>
@@ -261,25 +215,12 @@ JSON 数组,每条形如:
 - 输出严格 JSON 数组
 </code></pre>
 <h2 id="表-4-concept-refs">表 4 — concept_refs</h2>
-<p>与 entity_refs 对称结构,但索引概念表面词:</p>
-<pre><code class="language-sql">CREATE TABLE concept_refs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  concept_id TEXT NOT NULL,
-  source_file TEXT NOT NULL,
-  source_anchor TEXT,                     -- 段级 stable id
-  position_from INTEGER NOT NULL,         -- 字符 offset (within paragraph)
-  position_to INTEGER NOT NULL,
-  matched_text TEXT NOT NULL,             -- &#39;手机&#39; / &#39;移动电话&#39; (实际命中表面词)
-  snippet TEXT NOT NULL,                  -- 前后 30 字
-  is_violation INTEGER NOT NULL DEFAULT 0, -- 1 = 与 concept.semantic 冲突 (e.g. concept=&#39;no phone&#39; 但章节出现&#39;手机&#39;)
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (concept_id) REFERENCES concepts(id) ON DELETE CASCADE,
-  UNIQUE(concept_id, source_file, position_from)
-);
-CREATE INDEX idx_cref_concept ON concept_refs(concept_id);
-CREATE INDEX idx_cref_source ON concept_refs(source_file);
-CREATE INDEX idx_cref_violations ON concept_refs(is_violation) WHERE is_violation = 1;
-</code></pre>
+<p>与 entity_refs 对称结构,但索引概念表面词。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE concept_refs</code> + 全部 INDEX 见 <a href="./01-storage-schema.html#concept-refs">spec/01 §concept_refs</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>concept_id</code> (FK concepts) · <code>source_file</code> / <code>source_anchor</code> · <code>position_from</code> / <code>position_to</code> (段内 offset) · <code>matched_text</code> · <code>snippet</code> (前后 30 字) · <code>is_violation</code> (0/1, 与 concept.semantic 冲突)。</p>
+<p><strong>本节聚焦</strong>: is_violation 计算规则 (按 concept.semantic 分支)。</p>
 <h3 id="is-violation-计算">is_violation 计算</h3>
 <p>reindex 时按 concept.semantic 判:</p>
 <ul>
@@ -290,25 +231,12 @@ CREATE INDEX idx_cref_violations ON concept_refs(is_violation) WHERE is_violatio
 </ul>
 <p>violation = 1 的行让 Validator cascade 自动捞起来重写。</p>
 <h2 id="表-5-dependencies">表 5 — dependencies</h2>
-<p>跨文件 / 跨设定的显式依赖:</p>
-<pre><code class="language-sql">CREATE TABLE dependencies (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  kind TEXT NOT NULL,                     -- 见 kind 枚举
-  source_file TEXT NOT NULL,              -- foreshadowing/001-pocket-watch.md
-  source_anchor TEXT,                     -- 段级 stable id (来源)
-  target_file TEXT NOT NULL,              -- chapters/010-XX/draft.md
-  target_anchor TEXT NOT NULL,            -- 段级 stable id (锚点必填)
-  status TEXT NOT NULL DEFAULT &#39;pending&#39;, -- 见 status 枚举
-  metadata TEXT,                          -- JSON: 收割章节 / 强度 / Custom 字段
-  user_note TEXT,                         -- 用户对此依赖的注解
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX idx_dep_target ON dependencies(target_file, target_anchor);
-CREATE INDEX idx_dep_source ON dependencies(source_file);
-CREATE INDEX idx_dep_status ON dependencies(status);
-CREATE INDEX idx_dep_kind ON dependencies(kind);
-</code></pre>
+<p>跨文件 / 跨设定的显式依赖。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE dependencies</code> + 全部 INDEX 见 <a href="./01-storage-schema.html#dependencies">spec/01 §dependencies</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>kind</code> (foreshadowing/payoff/callback/promise/constraint, 见下方枚举) · <code>source_file</code> / <code>source_anchor</code> · <code>target_file</code> / <code>target_anchor</code> (锚点必填) · <code>status</code> (pending/fulfilled/broken/cancelled) · <code>metadata</code> (JSON: 收割章节/weight/deadline_chapter) · <code>user_note</code>。</p>
+<p><strong>本节聚焦</strong>: kind 枚举 + status 枚举 + lint 增强规则 (deadline / weight / promiseAccountabilityCheck 联动 spec/25)。</p>
 <h3 id="kind-枚举">kind 枚举</h3>
 <table>
 <thead>
@@ -408,32 +336,17 @@ CREATE INDEX idx_dep_kind ON dependencies(kind);
 <li>距 deadline ≤ 3 章无 <code>recently_touched_in</code> 命中 → warn level (<code>warn</code> 守则的 majorpromise / <code>critical</code> 守则的 critical promise)</li>
 </ul>
 <h2 id="表-6-paragraph-anchors-实现详见-spec17">表 6 — paragraph_anchors (实现详见 spec/17)</h2>
-<pre><code class="language-sql">CREATE TABLE paragraph_anchors (
-  anchor_id TEXT PRIMARY KEY,             -- 算法见 spec/17 §稳定 ID
-  file_path TEXT NOT NULL,
-  paragraph_index INTEGER NOT NULL,       -- 当前段在文件中的顺序 (1-based)
-  heading_path TEXT,                      -- &#39;第一章 § 段落 5&#39;
-  content_hash TEXT NOT NULL,             -- sha256(段内容)
-  prev_anchor TEXT,                       -- 邻接段 (用于稳定性追踪)
-  next_anchor TEXT,
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-CREATE INDEX idx_anchors_file ON paragraph_anchors(file_path);
-CREATE INDEX idx_anchors_hash ON paragraph_anchors(content_hash);
-</code></pre>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE paragraph_anchors</code> + INDEX 见 <a href="./01-storage-schema.html#paragraph-anchors">spec/01 §paragraph_anchors</a>。原 spec/17:90 重复声明已改为指针。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>anchor_id</code> (PK, 算法见 spec/17 §稳定 ID) · <code>file_path</code> · <code>paragraph_index</code> (1-based 顺序) · <code>heading_path</code> (e.g. '第一章 § 段落 5') · <code>content_hash</code> (sha256 + 标点/空格/数字归一化) · <code>prev_anchor</code> / <code>next_anchor</code> (邻接双链)。</p>
+<p><strong>用途</strong>: 段级稳定 ID, 让 entity_refs / concept_refs / dependencies / paragraph_embeddings 引用一个跨章节稳定的句柄。实现算法 + 邻接对照兜底 详 spec/17 §稳定 ID + §邻接对照。</p>
 <h2 id="表-7-paragraph-embeddings-实现详见-spec18">表 7 — paragraph_embeddings (实现详见 spec/18)</h2>
-<pre><code class="language-sql">CREATE TABLE paragraph_embeddings (
-  anchor_id TEXT PRIMARY KEY,
-  embedding BLOB NOT NULL,                -- F32 array,长度 = embedding model dim
-  model_name TEXT NOT NULL,               -- &#39;bge-m3&#39; / &#39;deepseek-embedding-v1&#39; / ...
-  model_dim INTEGER NOT NULL,             -- 1024 / 1536
-  content_hash TEXT NOT NULL,             -- 与 paragraph_anchors.content_hash 对应,用于增量
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (anchor_id) REFERENCES paragraph_anchors(anchor_id) ON DELETE CASCADE
-);
--- 是否建 vss 虚拟表 (LibSQL 原生 vector / sqlite-vss),见 spec/18 §选型决策
-</code></pre>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE paragraph_embeddings</code> (含 spec/18 确认版的 <code>norm REAL</code> 字段) + INDEX 见 <a href="./01-storage-schema.html#paragraph-embeddings">spec/01 §paragraph_embeddings</a>。原 spec/16 / spec/18:28 重复声明已改为指针。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>anchor_id</code> (PK + FK paragraph_anchors) · <code>embedding</code> (BLOB, F32 little-endian) · <code>model_name</code> (bge-m3 / deepseek-v1 / text-embedding-3-small) · <code>model_dim</code> (1024 / 1536 / 3072) · <code>content_hash</code> (增量更新用) · <code>norm</code> (预计算 L2, cosine 加速)。</p>
+<p><strong>向量索引</strong>: P0-1 升级路径 = sqlite-vec extension (<code>db.loadExtension(sqliteVec.getLoadablePath())</code>), 见 <a href="./18-embeddings.html">spec/18 §决议</a> + <a href="../plan/08-tech-stack.html">plan/08 §Drizzle + better-sqlite3 + sqlite-vec</a>。provider 选型 (BGE-M3 本地, fallback DeepSeek/OpenAI) 详 spec/18 §选型对比。</p>
 <h2 id="charactermd-frontmatter-升级">character.md frontmatter 升级</h2>
 <p>替换 spec/01 §characterFrontmatter 的 zod schema:</p>
 <pre><code class="language-ts">// lib/storage/frontmatter-schema.ts
@@ -638,19 +551,11 @@ export async function checkPlanLock(projectId: string): Promise&lt;LockState&gt;
 <p>write 模式启动前调用;locked = true 时弹 dialog &quot;请先处理设定不一致项 [跳转 cascade 队列] / [跳转 lint 报告]&quot;,不允许 mode = write。</p>
 <p>绕过:用户可点 &quot;强制写作&quot;(高级选项,后台仍记录 audit log;不推荐但保留逃生口)。</p>
 <h2 id="l4-治理-snapshot">L4 治理 — Snapshot</h2>
-<p>每次 writeSetting 落盘后,若改动文件属于 (P0 类目: worldview/* / outline/master.md / characters/*),自动 snapshot:</p>
-<pre><code class="language-sql">CREATE TABLE setting_snapshots (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id TEXT NOT NULL,
-  triggered_by_approval_id INTEGER,       -- 哪次审批触发
-  snapshot_dir TEXT NOT NULL,             -- ~/.open-novel/.snapshots/{projectId}/{ts}/
-  size_bytes INTEGER NOT NULL,
-  description TEXT,                       -- 一句话变更摘要
-  created_at TEXT NOT NULL,
-  expires_at TEXT NOT NULL                -- 默认 30 天后清理
-);
-CREATE INDEX idx_snap_project ON setting_snapshots(project_id, created_at DESC);
-</code></pre>
+<p>每次 writeSetting 落盘后,若改动文件属于 (P0 类目: worldview/* / outline/master.md / characters/*),自动 snapshot。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE setting_snapshots</code> + INDEX 见 <a href="./01-storage-schema.html#setting-snapshots">spec/01 §setting_snapshots</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>project_id</code> · <code>triggered_by_approval_id</code> · <code>snapshot_dir</code> (<code>~/.open-novel/.snapshots/{projectId}/{ts}/</code>) · <code>size_bytes</code> · <code>description</code> (一句话变更摘要) · <code>expires_at</code> (默认 30 天后清理)。</p>
 <p>snapshot_dir 内容:</p>
 <pre class="mermaid">
 flowchart LR

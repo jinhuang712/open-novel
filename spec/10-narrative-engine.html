@@ -366,19 +366,11 @@ export const templates: Record&lt;string, string&gt; = {
 })
 </code></pre>
 <p>Writer 在生成大纲时,如检测到用户 prompt 中含&quot;用 X 结构&quot;或显式调用 applyTemplate,把模板内容塞进 context。</p>
-<h2 id="sqlite-schema-追加">SQLite Schema 追加</h2>
-<p>附在 spec/01-storage-schema.html 的 <code>index.db</code> 表组里:</p>
-<pre><code class="language-sql">CREATE TABLE narrative_metrics (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  kind TEXT NOT NULL,                   -- &#39;beat&#39; | &#39;arc&#39;
-  target_id TEXT NOT NULL,              -- chapterId 或 characterId
-  report TEXT NOT NULL,                 -- JSON
-  version TEXT NOT NULL,                -- &#39;v1&#39; (prompt 版本号)
-  generated_at TEXT NOT NULL,
-  UNIQUE(kind, target_id, version)
-);
-CREATE INDEX idx_narrative_target ON narrative_metrics(kind, target_id);
-</code></pre>
+<h2 id="sqlite-schema-追加">SQLite Schema (Wave 4 指针)</h2>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE narrative_metrics</code> + INDEX 见 <a href="../spec/01-storage-schema.html#narrative-metrics">spec/01 §narrative_metrics</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>kind</code> (&#39;beat&#39; | &#39;arc&#39;) · <code>target_id</code> (chapterId 或 characterId) · <code>report</code> (JSON) · <code>version</code> (&#39;v1&#39; prompt 版本号) · <code>generated_at</code> · <code>UNIQUE(kind, target_id, version)</code> 保证同 chapter 同 version 唯一。</p>
 <p><code>UNIQUE</code> 约束保证同一 chapter 同 version 只有一条记录,prompt 升级时 version 号 bump 后重跑可生成新行。</p>
 <h2 id="ui-集成">UI 集成</h2>
 <p>ThinkingPanel 同时渲染 Checker 与 Validator 的叙事输出:</p>

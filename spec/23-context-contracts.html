@@ -453,19 +453,11 @@ ${block}`
 </code></pre>
 <p><code>agentScopes(agentName)</code> 详见 <code>lib/agents/context/base.ts</code> (本章顶部代码)。</p>
 <h2 id="调试与遥测">调试与遥测</h2>
-<p>每次 context builder 调用,在 LibSQL 写一条 trace:</p>
-<pre><code class="language-sql">CREATE TABLE prompt_traces (
-  id TEXT PRIMARY KEY,
-  thread_id TEXT,
-  agent_name TEXT,
-  mode TEXT,
-  json_mode INTEGER,                -- bool
-  token_report TEXT,                -- json
-  metadata TEXT,                    -- json (learningsApplied / retrievedKeys / jsonMode / etc.)
-  duration_ms INTEGER,
-  created_at INTEGER
-);
-</code></pre>
+<p>每次 context builder 调用,在 index.db 写一条 trace。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE prompt_traces</code> 见 <a href="./01-storage-schema.html#prompt-traces">spec/01 §prompt_traces</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>thread_id</code> · <code>agent_name</code> · <code>mode</code> · <code>json_mode</code> (0/1) · <code>token_report</code> (JSON) · <code>metadata</code> (JSON: learningsApplied / retrievedKeys / jsonMode / etc.) · <code>duration_ms</code>。</p>
 <p>Settings → &quot;Prompt 装配诊断&quot;面板:</p>
 <ul>
 <li>列出最近 50 条 prompt_traces</li>

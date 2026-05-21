@@ -584,23 +584,11 @@ flowchart TD
 <li>❌ 旧:&quot;章节级 word_count + entity_count diff 短路&quot; — 改为按 anchor diff 短路 (无段变化即跳过)</li>
 </ul>
 <h2 id="l4-治理-cascade-audit">L4 治理 — Cascade Audit</h2>
-<p>每次 analyzeImpact 调用记录到新表:</p>
-<pre><code class="language-sql">CREATE TABLE cascade_audits (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  project_id TEXT NOT NULL,
-  triggered_by_approval_id INTEGER NOT NULL,
-  parent_audit_id INTEGER,                          -- 递归层级
-  total_candidates INTEGER NOT NULL,
-  filtered_by_llm INTEGER NOT NULL,
-  proposals_count INTEGER NOT NULL,
-  llm_token_cost INTEGER,                           -- 累计 (Pro tokens)
-  duration_ms INTEGER NOT NULL,
-  graph_json TEXT NOT NULL,                         -- 完整影响图,审计 / 复盘用
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (parent_audit_id) REFERENCES cascade_audits(id)
-);
-CREATE INDEX idx_cascade_project ON cascade_audits(project_id, created_at DESC);
-</code></pre>
+<p>每次 analyzeImpact 调用记录到 <code>cascade_audits</code> 表。</p>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE cascade_audits</code> + INDEX 见 <a href="./01-storage-schema.html#cascade-audits">spec/01 §cascade_audits</a>。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>project_id</code> · <code>triggered_by_approval_id</code> · <code>parent_audit_id</code> (递归层级, FK 自表) · <code>total_candidates</code> · <code>filtered_by_llm</code> · <code>proposals_count</code> · <code>llm_token_cost</code> (Pro tokens 累计) · <code>duration_ms</code> · <code>graph_json</code> (完整影响图)。</p>
 <p>UI: SettingsDialog → &quot;Cascade 历史&quot;显示每次 cascade 的影响图、proposals 数、用户接受率。Reflector 输入也包括 cascade_audits 数据 (用户拒绝某 proposal 时,提炼&quot;这种类型的 cascade 用户倾向 / 不倾向接受&quot;)。</p>
 <h2 id="测试">测试</h2>
 <table>

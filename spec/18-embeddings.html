@@ -24,20 +24,11 @@
 <li><strong><code>queryFacts</code> 工具 (spec/21) §semantic-search 模式</strong>:作者主动查&quot;林川以前对女上司说过什么类似台词&quot;</li>
 <li><strong><code>analyzeImpact</code> 工具 (spec/19) §rewriting candidates</strong>:Validator 拿 setting 改动后,可附带&quot;语义最相关的 N 段&quot;作为补充候选</li>
 </ol>
-<h2 id="paragraph-embeddings-表-确认-schema">paragraph_embeddings 表 (确认 schema)</h2>
-<pre><code class="language-sql">CREATE TABLE paragraph_embeddings (
-  anchor_id TEXT PRIMARY KEY,
-  embedding BLOB NOT NULL,                -- F32 array,字节序见下
-  model_name TEXT NOT NULL,               -- &#39;bge-m3&#39; / &#39;deepseek-v1&#39; / &#39;text-embedding-3-small&#39;
-  model_dim INTEGER NOT NULL,             -- 1024 / 1536 / 3072
-  content_hash TEXT NOT NULL,             -- 与 paragraph_anchors.content_hash 对应
-  norm REAL NOT NULL,                     -- 预计算 L2 norm (用于 cosine 加速)
-  created_at TEXT NOT NULL,
-  FOREIGN KEY (anchor_id) REFERENCES paragraph_anchors(anchor_id) ON DELETE CASCADE
-);
-CREATE INDEX idx_emb_model ON paragraph_embeddings(model_name);
-</code></pre>
-<p>embedding BLOB 存储格式:F32 little-endian 数组,直接 buffer dump。读时 <code>new Float32Array(buffer)</code> 还原。</p>
+<h2 id="paragraph-embeddings-表-确认-schema">paragraph_embeddings 表 (Wave 4 schema 指针)</h2>
+<blockquote>
+<p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE paragraph_embeddings</code> (含本 spec 确认的 <code>norm REAL</code> 字段 + INDEX) 见 <a href="./01-storage-schema.html#paragraph-embeddings">spec/01 §paragraph_embeddings</a>。本节确认 schema 的版本已成为 spec/01 主权版。</p>
+</blockquote>
+<p><strong>字段摘要</strong>: <code>anchor_id</code> (PK + FK paragraph_anchors) · <code>embedding</code> (BLOB, F32 little-endian, 直接 buffer dump; 读时 <code>new Float32Array(buffer)</code> 还原) · <code>model_name</code> (bge-m3 / deepseek-v1 / text-embedding-3-small) · <code>model_dim</code> (1024 / 1536 / 3072) · <code>content_hash</code> (增量更新) · <code>norm</code> (预计算 L2 norm, cosine 加速)。</p>
 <h2 id="选型对比-锁-bge-m3-本地">选型对比 (锁 BGE-M3 本地)</h2>
 <blockquote>
 <p><strong>决议</strong>: 锁 <strong>BGE-M3 本地</strong>。理由 = 0 边际成本 (重算自由) + 隐私 (创作隐私是网文作者强诉求) + 中文质量第一 (BAAI 出品)。代价: 启动需 Ollama (~600MB 二进制依赖)。Fallback 顺序: DeepSeek embedding (复用 API key) → OpenAI text-embedding-3-small。</p>
@@ -292,19 +283,16 @@ export async function semanticSearch(
 <tr>
 <td>&gt; 20,000</td>
 <td>&gt; 200ms</td>
-<td>升级到 sqlite-vss / LibSQL vector</td>
+<td>升级到 sqlite-vec extension</td>
 </tr>
 </tbody></table>
 <p>起步用朴素扫描;若 Demo 项目突破 20K 段,<strong>升级路径</strong>:</p>
-<pre><code class="language-sql">-- LibSQL native vector (libsql-server &gt; 0.24)
-CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vector_search(
-  embedding FLOAT32(1024)
+<pre><code class="language-sql">-- sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath()), 见 plan/08 §Drizzle + better-sqlite3 + sqlite-vec)
+CREATE VIRTUAL TABLE paragraph_embeddings_vec USING vec0(
+  embedding FLOAT[1024]
 );
-
--- 或 sqlite-vss (sidecar 需 load extension)
-CREATE VIRTUAL TABLE paragraph_embeddings_vss USING vss0(embedding(1024));
 </code></pre>
-<p><strong>决议</strong>: 优先 LibSQL native vector (<code>libsql-server &gt; 0.24</code> + <code>vector_search</code> 虚拟表), 兼容 LibSQL 单文件结构; 若当前 <code>@mastra/libsql</code> 不带, 降级到 sqlite-vss extension (sidecar load_extension)。两者都失败再降级到朴素 cosine (5K 段以下能跑)。</p>
+<p><strong>决议 (P0-1 修正)</strong>: 优先 <strong>sqlite-vec</strong> extension (<code>better-sqlite3 + db.loadExtension(sqliteVec.getLoadablePath())</code>), 与 better-sqlite3 native bindings 同 process 加载, 不需要 sidecar。失败时降级到朴素 cosine (5K 段以下能跑)。<strong>W3 启动前必跑 Spike 2</strong> (见 todo.html §1.4) 验证 macOS arm64 / Linux x64 双平台加载 + <code>vec0</code> 虚拟表 CRUD + 与普通表 JOIN。Spike 失败回退到 <code>hnswlib-node</code> 独立索引(放弃 JOIN)。</p>
 <h3 id="3-检索结果鲁棒性">3. 检索结果鲁棒性</h3>
 <p>cosine 相似度在中文 + BGE-M3 上的经验阈值:</p>
 <ul>
@@ -394,7 +382,7 @@ flowchart TD
 </tbody></table>
 <h2 id="已决策项">已决策项</h2>
 <p>✅ <strong>embedding 模型选型</strong>: 锁 <strong>BGE-M3 本地</strong>, fallback 1 = DeepSeek, fallback 2 = OpenAI (见 §选型对比 + §决议依据)
-✅ <strong>vector 索引路径</strong>: 优先 LibSQL native vector → sqlite-vss → 朴素 cosine (见 §决议条款 实施顺序)
+✅ <strong>vector 索引路径</strong>: 优先 <strong>sqlite-vec</strong> extension → 朴素 cosine 回退 (P0-1 修正; W3 Spike 2 验证后定稿; 见 §决议条款 实施顺序)
 ✅ <strong>embedding model 升级时的全量重算成本上限</strong>: 阈值 <strong>1000 段以上必弹 UI 提示</strong>, 显示 &quot;切换 model 将重算 N 段, 预计 X 分钟, 确认?&quot;; 1000 段以下静默重算</p>
   </main>
 </body>
