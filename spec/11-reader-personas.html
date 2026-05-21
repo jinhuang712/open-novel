@@ -44,19 +44,29 @@ flowchart LR
   BLT --> CY["cynic.md<br/>毒舌读者"]
   BLT --> DL["deep-lurker.md<br/>潜水大佬"]
 </pre>
-<h2 id="readerpanel-agent-定义">ReaderPanel Agent 定义</h2>
+<h2 id="readerpanel-agent-定义">ReaderPanel 入口函数</h2>
 <pre><code class="language-ts">// lib/agents/reader-panel.ts
-import { Agent } from &#39;@mastra/core/agent&#39;
+// P0-1: Mastra Agent 类已下线; 顶层不再走 LLM-as-orchestrator —
+// readerPanelPrompt 在原设计中 &quot;仅指挥 Orchestration&quot;, LLM 居间无实质工作,
+// 改为代码直串 readChapter → simulateReaders, 省 1 次 LLM 决策 + 上下文压力。
 import { simulateReaders } from &#39;@/lib/personas&#39;
+import { readChapterFile } from &#39;@/lib/storage/chapter&#39;
+import type { z } from &#39;zod&#39;
+import type { chapterRiskReportSchema } from &#39;./schemas&#39;
 
-export const readerPanelAgent = new Agent({
-  id: &#39;reader-panel&#39;,
-  model: &#39;deepseek/deepseek-v4-flash&#39;,          // 5 persona 并行,Flash 控成本
-  instructions: readerPanelPrompt,
-  tools: { simulateReaders, readChapter, readSetting },
-})
+export async function runReaderPanel({
+  projectId,
+  chapterId,
+}: {
+  projectId: string
+  chapterId: string
+}): Promise&lt;z.infer&lt;typeof chapterRiskReportSchema&gt;&gt; {
+  const chapter = await readChapterFile(projectId, chapterId)
+  // 5 persona 并行 (deepseek-v4-flash, 内部走 callJsonAgent × 5, 见 spec/24)
+  return await simulateReaders({ projectId, chapterId, chapter })
+}
 </code></pre>
-<p><code>readerPanelPrompt</code> 仅指挥 Orchestration,真正的 persona 反应由 <code>simulateReaders</code> 工具调用并行 5 个 sub-LLM 完成。</p>
+<p>原 <code>new Agent({ tools: { simulateReaders, readChapter, readSetting } })</code> 已不再存在: <code>readerPanelPrompt</code> 现仅作 <code>simulateReaders</code> 内部 5 个 sub-LLM 的共享 system 指引, 不再驱动顶层 LLM。<code>readChapter</code> / <code>readSetting</code> 工具仍存在 (spec/02), 但 ReaderPanel 顶层走代码版 <code>readChapterFile</code> 直读, 不再经 LLM tool-call 路径。</p>
 <h2 id="simulatereaders-工具">simulateReaders 工具</h2>
 <pre><code class="language-ts">import { tool } from &#39;ai&#39;
 import { z } from &#39;zod&#39;
