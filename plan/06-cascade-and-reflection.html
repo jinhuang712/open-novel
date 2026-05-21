@@ -13,15 +13,19 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/06-cascade-and-reflection.html</span>
 </nav>
+
 <h1 id="06-cascade-一致性与反馈学习">06 — Cascade 一致性与反馈学习</h1>
+
 <h2 id="cascade-一致性">Cascade 一致性</h2>
+
 <h3 id="问题">问题</h3>
-<p>用户的核心痛点之一:<strong>&quot;改了一个角色资料,后面写出来的章节自相矛盾&quot;</strong>。例如把主角性别从男改女后,后续章节里仍然用&quot;兄弟&quot;、&quot;小子&quot;等男性化称谓。</p>
-<h3 id="解决方案-内部递归-cascade-整批审批-w9-升级">解决方案: 内部递归 cascade + 整批审批 (W9 升级)</h3>
+<p>用户的核心痛点之一:<strong>"改了一个角色资料,后面写出来的章节自相矛盾"</strong>。例如把主角性别从男改女后,后续章节里仍然用"兄弟"、"小子"等男性化称谓。</p>
+
+<h3 id="解决方案-内部递归-整批审批">解决方案:内部递归 cascade + 整批审批</h3>
 <blockquote>
-<p><strong>W9 重大升级 (见 plan/11-knowledge-graph.html)</strong>: 旧版 cascade 是&quot;现场 LLM 推理影响范围&quot;,已被证实对概念级 / 关系级 / 时间级 / 伏笔级改动全部漏检。新链路改为&quot;先 SQL 出影响半径,再 LLM 二次过滤,递归在审批前内部跑完,整批一次审&quot;。</p>
-<p>⚠ <strong>关键交互模型</strong>: writeSetting / writeChapter <strong>不直接落盘</strong> (proposal-only,见 spec/06)。Cascade 递归全部在审批前的内部循环里完成,用户只看到一次最终汇总的 ChangeSet。</p>
+<p>⚠ <strong>关键交互模型</strong>:writeSetting / writeChapter <strong>不直接落盘</strong>(proposal-only,见 <a href="../spec/06-approval-flow.html">spec/06</a>)。Cascade 递归全部在审批前的内部循环里完成,用户只看到一次最终汇总的 ChangeSet。</p>
 </blockquote>
+
 <pre class="mermaid">
 flowchart TD
   U([用户发起修改意图<br/>例: 把林川性别改成女性]) --> W0[Writer 生成主修改<br/>in-memory 未落盘]
@@ -40,214 +44,200 @@ flowchart TD
   DEC --> TX[后端 transaction<br/>一次写所有 accepted 文件 主+cascade]
   TX --> SIDE[触发副作用<br/>差量 reindex / snapshot / history group / Reflector 入队]
 </pre>
+
 <h3 id="validator-analyzeimpact-的关键约束">Validator + analyzeImpact 的关键约束</h3>
 <ul>
 <li><strong>不现场 LLM 推影响范围</strong> — analyzeImpact step 2 的 SQL 已覆盖,LLM 只做二次判断</li>
-<li><strong>递归全部在审批前完成</strong> — 用户审之前所有&quot;二级 / 三级 cascade&quot;已被算出并合入同一 ChangeSet</li>
+<li><strong>递归全部在审批前完成</strong> — 用户审之前所有"二级 / 三级 cascade"已被算出并合入同一 ChangeSet</li>
 <li><strong>绝不静默修改文件</strong> — 任何文件变更必须经过整批 ApprovalCard 用户勾选</li>
-<li><strong>每条 proposal 必须含</strong>: <code>anchorId</code>, <code>targetFile</code>, <code>needsChange</code>, <code>proposedText</code> (needsChange=true 时), <code>reason</code>, <code>confidence</code>, <code>cascadeLevel</code> (1=主 / 2=一级 / 3=二级)</li>
-<li><strong>不确定时 confidence=&#39;low&#39;</strong>,UI 用黄色警告 + 默认不勾选</li>
-<li><strong>needsChange=false 也必须给 reason</strong> (审计需要,展示在影响图谱中作为&quot;已分析但无需改动&quot;)</li>
+<li><strong>每条 proposal 必须含</strong>:<code>anchorId</code>, <code>targetFile</code>, <code>needsChange</code>, <code>proposedText</code>(needsChange=true 时), <code>reason</code>, <code>confidence</code>, <code>cascadeLevel</code>(1=主 / 2=一级 / 3=二级)</li>
+<li><strong>不确定时 confidence='low'</strong>,UI 用黄色警告 + 默认不勾选</li>
+<li><strong>needsChange=false 也必须给 reason</strong>(审计需要,展示在影响图谱中作为"已分析但无需改动")</li>
 </ul>
+
 <h3 id="性能策略">性能策略</h3>
 <ul>
-<li><del>按章节范围 ±5 章</del> — 已撤,改为 SQL 出完整候选 + weight 排序 + LLM 顶部 50 个分批过滤</li>
-<li><del>entity hash 已审过标记</del> — 已无意义 (LLM 二次过滤本就只对未审段调用)</li>
-<li><del>章节级 word_count + entity_count short-circuit</del> — 改为 anchor diff 短路 (无段变化即跳过)</li>
-<li>新性能保证: SQL 影响半径 &lt; 100ms (5K 段规模),LLM 二次过滤每批 5 段 ~3-5s</li>
-<li><strong>内部递归 ≤ 3 轮典型耗时 15-45s</strong> — UI 在 Writer 出主修改后立刻显示进度 (&quot;正在分析影响范围... 第 1 轮 / 第 2 轮 / 第 3 轮&quot;),作者可看到内部进度但不能干预,直到 ChangeSet 出来</li>
+<li>SQL 影响半径 &lt; 100ms(5K 段规模)</li>
+<li>LLM 二次过滤每批 5 段 ~3-5s</li>
+<li><strong>内部递归 ≤ 3 轮典型耗时 15-45s</strong> — UI 在 Writer 出主修改后立刻显示进度("正在分析影响范围... 第 1 轮 / 第 2 轮 / 第 3 轮"),作者可看到内部进度但不能干预,直到 ChangeSet 出来</li>
 </ul>
-<h2 id="react-式反馈学习">React 式反馈学习</h2>
-<h3 id="设计动机">设计动机</h3>
-<p>用户希望系统<strong>越用越懂自己</strong>。直接微调模型代价过高 (DeepSeek 暂未开放微调),但我们可以把&quot;经验&quot;持久化为结构化数据,<strong>自动注入到后续生成的 system prompt</strong>,实现廉价但实用的&quot;learning&quot;。</p>
-<h3 id="reflector-触发时机">Reflector 触发时机 (per-turn 批次)</h3>
-<p>触发条件: <strong><code>user_turns.status</code> 从 'running' / 'awaiting_approval' 转入终态 'done' 时入队</strong> (spec/01 §user_turns)。每 turn <strong>跑一次</strong> Reflector, 输入是整个 turn 的:</p>
-<ul>
-<li>用户原话 (<code>user_turns.user_input</code>)</li>
-<li>Router 解析的 <code>actions[]</code> (<code>user_turns.router_actions</code>)</li>
-<li>每个 action 的决议 (<code>approvals</code> 表 WHERE turn_id=X, 含 approve / reject / edited + accepted_items + feedback)</li>
-</ul>
-<p><strong>为什么 per-turn 而非 per-cascade_group</strong>: 单 turn 内的多个 action 之间有<strong>因果关联</strong>。例: action[0] 改主角性别接受 12/15 cascade, action[1] Writer 写章节用了新性别 + 漏改称谓 → 用户 reject → 这串经验只有跨 action 看完整 turn 才能提炼出 "gender cascade 用户在意称谓不在意 X"。逐 cascade_group 跑 Reflector 看不到这层因果。</p>
-<p><strong>cancelled turn 不跑 Reflector</strong>: <code>user_turns.status='cancelled'</code> 表示用户主动放弃整 turn (spec/06 §Turn 取消语义), 含义是"这次试错本身就不该参考", 入 learnings 反而误导后续生成。cancelled turn 进 <code>history</code> 留 trace (Settings → 审批历史可查), 但不进 Reflector 训练数据。</p>
-<p>入队伪码:</p>
-<pre><code class="language-ts">// 在 cascade 控制器内, 每次 action 决议后检查
-async function onActionResolved(turnId: string) {
-  const turn = await db.userTurns.get(turnId)
-  const actions = JSON.parse(turn.router_actions)
-  if (turn.current_action_index &lt; actions.length - 1) {
-    // 还有 action 未跑 — 不触发
-    return
-  }
-  // 全 actions 跑完 → 标 done + 入队 Reflector
-  await db.userTurns.update(turnId, { status: &#39;done&#39;, completed_at: Date.now() })
-  await reflectorQueue.add({
-    projectId: turn.project_id, sessionId: turn.session_id, turnId,
-  })
-}
 
-// Reflector worker
-async function runReflector({ projectId, sessionId, turnId }: ReflectorJob) {
-  const turn = await db.userTurns.get(turnId)
-  const approvals = await db.approvals.findByTurn(turnId)         // 全部 approved/rejected/edited
-  await callJsonAgent({
-    label: &#39;reflector&#39;,
-    model: deepseekFlash,
-    schema: ReflectorOutputSchema,
-    messages: [
-      { role: &#39;system&#39;, content: REFLECTOR_SYSTEM_PROMPT },
-      { role: &#39;user&#39;, content: formatTurnForReflector(turn, approvals) },
-    ],
-  })
-  // 写 learnings + 标各 approval 已消化
-}
-</code></pre>
-<p><strong>触发位置</strong>: 仅在 <code>onActionResolved</code> 检测到 turn 完成时入队 (单点)。<code>user_turns.status</code> 转 'done' 与 Reflector 入队是同一 transaction (避免漏跑或重复跑)。</p>
-<p><strong>用户手动编辑了 Agent 内容</strong>(detected diff): 不再单独触发 Reflector — 这种 edit 会改 turn 内某 action 的 <code>edits</code> 字段, 落到 approvals.accepted_items + history 表, turn 结束时 Reflector 自然能从 history diff 看到 "用户改了什么"。</p>
-<h3 id="reflector-输入输出">Reflector 输入/输出</h3>
+<h2 id="reflector-反馈学习">Reflector 反馈学习(简化版)</h2>
+
+<h3 id="设计动机">设计动机</h3>
+<p>用户希望系统<strong>越用越懂自己</strong>。直接微调模型代价过高(DeepSeek 暂未开放微调),但我们可以把"经验"持久化为结构化数据,<strong>自动注入到后续生成的 system prompt</strong>,实现廉价但实用的"learning"。</p>
+
+<p><strong>MVP 阶段范围</strong>:保留核心闭环(per-turn LLM 提炼 + weight 自然衰减 + context builder 注入 top-8 + cardinal_rule scope top-1 保留);砍掉 hit_count 跟踪 / archive 软删 / 学习面板 / 跨进程 hydrate / 命中加权,后续二期补。</p>
+
+<h3 id="reflector-触发时机">Reflector 触发时机(per-turn 批次)</h3>
+<p>触发条件:<strong><code>user_turns.status</code> 从 'running' / 'awaiting_approval' 转入终态 'done' 时入队</strong>(<a href="../spec/01-storage-schema.html">spec/01</a> §user_turns)。每 turn <strong>跑一次</strong> Reflector,输入是整个 turn 的:</p>
+<ul>
+<li>用户原话(<code>user_turns.user_input</code>)</li>
+<li>Router 解析的 <code>actions[]</code>(<code>user_turns.router_actions</code>)</li>
+<li>每个 action 的决议(<code>approvals</code> 表 WHERE turn_id=X,含 approve / reject / edited + accepted_items + feedback)</li>
+</ul>
+
+<p><strong>为什么 per-turn 而非 per-cascade_group</strong>:单 turn 内的多个 action 之间有<strong>因果关联</strong>。例:action[0] 改主角性别接受 12/15 cascade,action[1] Writer 写章节用了新性别 + 漏改称谓 → 用户 reject → 这串经验只有跨 action 看完整 turn 才能提炼出 "gender cascade 用户在意称谓不在意 X"。逐 cascade_group 跑 Reflector 看不到这层因果。</p>
+
+<p><strong>cancelled turn 不跑 Reflector</strong>:<code>user_turns.status='cancelled'</code> 表示用户主动放弃整 turn(<a href="../spec/06-approval-flow.html">spec/06 §Turn 取消语义</a>),含义是"这次试错本身就不该参考",入 learnings 反而误导后续生成。cancelled turn 进 <code>history</code> 留 trace(Settings → 审批历史可查),但不进 Reflector 训练数据。</p>
+
+<h3 id="reflector-输入输出">Reflector 输入 / 输出</h3>
 <p>输入:</p>
 <pre><code class="language-json">{
-  &quot;context&quot;: {
-    &quot;agent&quot;: &quot;writer&quot;,
-    &quot;mode&quot;: &quot;write&quot;,
-    &quot;input&quot;: &quot;...原始 prompt + 上下文...&quot;,
-    &quot;output&quot;: &quot;...Agent 生成的内容...&quot;,
-    &quot;user_decision&quot;: &quot;edited&quot;,
-    &quot;user_final_content&quot;: &quot;...用户改后的内容...&quot;,
-    &quot;feedback_text&quot;: &quot;短句太长,改短了&quot;
+  "context": {
+    "agent": "writer",
+    "mode": "write",
+    "input": "...原始 prompt + 上下文...",
+    "output": "...Agent 生成的内容...",
+    "user_decision": "edited",
+    "user_final_content": "...用户改后的内容...",
+    "feedback_text": "短句太长,改短了"
   }
 }
 </code></pre>
-<p>输出 — 走 <a href="../spec/24-json-output.html">DeepSeek JSON mode (spec/24)</a>, zod schema 见 spec/24 §Reflector 经验提炼:</p>
+
+<p>输出 — 走 <a href="../spec/24-json-output.html">JSON mode</a>,zod schema 见 spec/24 §Reflector 经验提炼:</p>
 <pre><code class="language-json">{
-  &quot;learnings&quot;: [
+  "learnings": [
     {
-      &quot;insight&quot;: &quot;用户偏好≤25字短句,生成时多用句号少用逗号&quot;,
-      &quot;evidence&quot;: &quot;本次将12处长句拆成短句&quot;,
-      &quot;scope&quot;: &quot;style&quot;,
-      &quot;applicableAgents&quot;: [&quot;writer&quot;, &quot;humanizer&quot;],
-      &quot;suggestedWeight&quot;: 1.5
-    },
-    {
-      &quot;insight&quot;: &quot;对话场景中尽量少用&#39;地&#39;字补语&quot;,
-      &quot;evidence&quot;: &quot;用户删除了7处&#39;XX地说&#39;结构&quot;,
-      &quot;scope&quot;: &quot;style&quot;,
-      &quot;applicableAgents&quot;: [&quot;writer&quot;],
-      &quot;suggestedWeight&quot;: 1.0
+      "insight": "用户偏好≤25字短句,生成时多用句号少用逗号",
+      "evidence": "本次将12处长句拆成短句",
+      "scope": "style",
+      "applicableAgents": ["writer", "humanizer"],
+      "suggestedWeight": 1.5
     }
   ],
-  &quot;turnId&quot;: &quot;turn_01HX...&quot;
+  "turnId": "turn_01HX..."
 }
 </code></pre>
-<p>scope 枚举值 (与 spec/24 一致): <code>style</code>, <code>narrative</code>, <code>pacing</code>, <code>voice</code>, <code>worldview</code>, <code>character</code>, <code>consistency</code>, <code>relations</code>, <code>cardinal_rule</code>, <code>intent</code>, <code>mode</code>。</p>
-<h3 id="learnings-表-schema"><code>learnings</code> 表 schema</h3>
+
+<p>scope 枚举值(与 spec/24 一致):<code>style</code>, <code>narrative</code>, <code>pacing</code>, <code>voice</code>, <code>worldview</code>, <code>character</code>, <code>consistency</code>, <code>relations</code>, <code>cardinal_rule</code>, <code>intent</code>, <code>mode</code>。</p>
+
+<h3 id="learnings-表-schema"><code>learnings</code> 表 schema(简化版)</h3>
 <pre><code class="language-sql">CREATE TABLE learnings (
   id INTEGER PRIMARY KEY,
   project_id TEXT NOT NULL,
-  scope TEXT NOT NULL,                  -- &#39;project&#39; | &#39;global&#39; | &#39;chapter:001&#39;
+  scope TEXT NOT NULL,                   -- 'style' | 'cardinal_rule' | ...
   insight TEXT NOT NULL,
   evidence TEXT,
-  applicable_agents TEXT,                -- JSON array
-  weight REAL NOT NULL DEFAULT 1.0,      -- 命中加权,衰减老化
-  hit_count INTEGER NOT NULL DEFAULT 0,
-  last_hit_at TEXT,
+  applicable_agents TEXT,                 -- JSON array
+  weight REAL NOT NULL DEFAULT 1.0,       -- 衰减老化,无加权
   created_at TEXT NOT NULL
 );
 CREATE INDEX idx_learnings_scope ON learnings(project_id, scope);
 </code></pre>
+
+<p>注:简化版不带 <code>hit_count</code> / <code>last_hit_at</code> / 归档表(<code>learnings_archive</code>)— 二期视实际需求再加。</p>
+
 <h3 id="注入策略">注入策略</h3>
 <blockquote>
-<p>注入由 <a href="../spec/23-context-contracts.html">spec/23 §learnings 注入到 system prompt</a> 的 per-agent context builder 统一做,所有 Agent 共享同一逻辑。本节给出 weight 调整与 scope 决策协议。</p>
+<p>注入由 <a href="../spec/23-context-contracts.html">spec/23 §learnings 注入</a> 的 per-agent context builder 统一做,所有 Agent 共享同一逻辑。</p>
 </blockquote>
-<p>每次 Agent stream 启动前 (经 context builder):</p>
+
+<p>每次 Agent stream 启动前(经 context builder):</p>
 <ol>
-<li>按当前 Agent 的 scope 集合查 (见 <a href="../spec/23-context-contracts.html">spec/23 §agentScopes</a>)</li>
-<li><code>WHERE weight &gt;= 0.2</code> (低于 0.2 视为已失效)</li>
-<li>按 <code>weight desc</code> 排序,取 <strong>top-8</strong> (与 plan/12 §关键参数一致 — <strong>不是为省 token,是为模型注意力</strong>:注入 30 条经验反而稀释主任务,top-8 是&quot;用户最强偏好集中,模型注意力不分散&quot;的平衡点)</li>
-<li><strong><code>scope=&#39;cardinal_rule&#39;</code> top-1 永远保留</strong> (无论 weight 排序如何;spec/25 五大守则学习不可被一般经验挤掉)</li>
+<li>按当前 Agent 的 scope 集合查(见 <a href="../spec/23-context-contracts.html">spec/23 §agentScopes</a>)</li>
+<li><code>WHERE weight &gt;= 0.2</code>(低于 0.2 视为已失效)</li>
+<li>按 <code>weight desc</code> 排序,取 <strong>top-8</strong>(不是为省 token,是为模型注意力 — 注入 30 条经验反而稀释主任务)</li>
+<li><strong><code>scope='cardinal_rule'</code> top-1 永远保留</strong>(无论 weight 排序如何;<a href="../spec/25-cardinal-rules.html">spec/25</a> 五大守则学习不可被一般经验挤掉)</li>
 <li>拼接为 system prompt section:<pre><code>## 用户偏好与项目经验 (Reflector 沉淀)
 以下经验来自历次审批反馈,优先级由高到低。**遇到冲突时这些经验优先于通用风格**。
 
 - 用户偏好≤25字短句,生成时多用句号少用逗号  (置信度 1.50)
-- 对话场景中尽量少用&#39;地&#39;字补语                 (置信度 1.20, 守则)
+- 对话场景中尽量少用'地'字补语                 (置信度 1.20, 守则)
 ...
-</code></pre>
-</li>
+</code></pre></li>
 </ol>
-<h3 id="weight-调整协议">weight 调整协议</h3>
+
+<h3 id="weight-调整-简化版">weight 调整(简化版)</h3>
 <table>
-<thead>
-<tr>
-<th>触发</th>
-<th>调整</th>
-<th>说明</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>初始入库</td>
-<td>weight = 1.0 (或 Reflector suggestedWeight)</td>
-<td>Reflector 写入时</td>
-</tr>
-<tr>
-<td>该 learning 命中 + 用户 approve 不修改</td>
-<td>+0.5</td>
-<td>经验有效</td>
-</tr>
-<tr>
-<td>该 learning 命中 + 用户 reject 或大幅 edit</td>
-<td>-0.3</td>
-<td>经验失效信号</td>
-</tr>
-<tr>
-<td>30 天没命中</td>
-<td>× 0.95</td>
-<td>自然衰减</td>
-</tr>
-<tr>
-<td>weight &lt; 0.2</td>
-<td>自动归档 → <code>learnings_archive</code></td>
-<td>软删 (30 天可恢复)</td>
-</tr>
-</tbody></table>
-<p><strong><code>scope=&#39;cardinal_rule&#39;</code> 例外</strong>: 用户 reject 不降低 weight (那是用户拒绝的&quot;违反守则的写法&quot;,不是拒绝&quot;守则本身&quot;);只有用户在 SettingsDialog 显式调整阈值才生效 (spec/25)。</p>
-<p>&quot;命中&quot;判定:Reflector 在 turn 收尾跑时写 <code>last_hit_at</code>,把当时 context builder 装载的 learnings ids 列表关联到该 turn 的所有 approvals metadata,turn done 后回写 hit_count + weight (见 spec/23 prompt_traces 表)。</p>
-<p>learnings 的用户检视、软删恢复、scope=project / global 切换、promote 合并 dialog 等 UI 与安全机制详见 <a href="../spec/13-settings.html">spec/13-settings.html</a> §学习偏好面板。</p>
-<p>避免一个项目的特殊偏好污染其他风格不同的项目。</p>
+<thead><tr><th>触发</th><th>调整</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>初始入库</td><td>weight = 1.0(或 Reflector suggestedWeight)</td><td>Reflector 写入时</td></tr>
+<tr><td>30 天衰减</td><td>× 0.95</td><td>自然衰减(后台 cron 跑)</td></tr>
+<tr><td>weight &lt; 0.2</td><td>不注入(但保留在表中)</td><td>简化版不归档,直接软过滤</td></tr>
+</tbody>
+</table>
+
+<p>简化版砍掉的(二期补):</p>
+<ul>
+<li>命中加权 +0.5(需要 hit 追踪 + 关联 approvals)</li>
+<li>拒绝降权 -0.3(同上)</li>
+<li>archive 归档表 + 30 天可恢复</li>
+<li>SettingsDialog 学习偏好面板(用户手动 +/-/删)</li>
+<li>跨进程 hydrate(启动时按 projectId 加载 top-K)</li>
+</ul>
+
+<p><strong><code>scope='cardinal_rule'</code> 例外</strong>:这类 learning <strong>不参与衰减</strong>,只能用户在 SettingsDialog 显式调整守则阈值时同步移除(<a href="../spec/25-cardinal-rules.html">spec/25</a>)。</p>
+
 <h2 id="与-llm-微调的对比">与 LLM 微调的对比</h2>
 <table>
 <thead>
-<tr>
-<th>维度</th>
-<th>RAG 经验注入 (本方案)</th>
-<th>模型微调</th>
-</tr>
+<tr><th>维度</th><th>RAG 经验注入(本方案)</th><th>模型微调</th></tr>
 </thead>
-<tbody><tr>
-<td>启动成本</td>
-<td>0</td>
-<td>数据收集 + 训练 + 部署</td>
-</tr>
-<tr>
-<td>增量学习</td>
-<td>即时</td>
-<td>需重新训练</td>
-</tr>
-<tr>
-<td>可解释</td>
-<td>全可见</td>
-<td>黑盒</td>
-</tr>
-<tr>
-<td>准确度</td>
-<td>中 (受 prompt 长度限制)</td>
-<td>高</td>
-</tr>
-<tr>
-<td>适合场景</td>
-<td>起步 + 长尾</td>
-<td>风格固化期</td>
-</tr>
-</tbody></table>
+<tbody>
+<tr><td>启动成本</td><td>0</td><td>数据收集 + 训练 + 部署</td></tr>
+<tr><td>增量学习</td><td>即时</td><td>需重新训练</td></tr>
+<tr><td>可解释</td><td>全可见</td><td>黑盒</td></tr>
+<tr><td>准确度</td><td>中(受 prompt 长度限制)</td><td>高</td></tr>
+<tr><td>适合场景</td><td>起步 + 长尾</td><td>风格固化期</td></tr>
+</tbody>
+</table>
+
 <p>当前方案足够。后续如发现某些经验高度重复且稳定,可以 export 成数据集为微调做准备。</p>
-  </main>
+
+<h2 id="不做什么">不做什么</h2>
+<ul>
+<li><strong>MVP 不做 hit_count 跟踪</strong> — 加权依赖 prompt_traces 关联,实施复杂度大,二期补</li>
+<li><strong>MVP 不做学习偏好面板</strong> — 用户暂时无法手动 +/-/删 / promote / 软删恢复;若 learnings 误学,只能等 30 天衰减</li>
+<li><strong>不做跨项目 learnings 共享</strong> — 避免一个项目的特殊偏好污染其他风格不同的项目</li>
+<li><strong>不做模型微调</strong> — RAG 注入足够,见上表</li>
+</ul>
+
+<h2 id="关联文档">关联文档</h2>
+<ul>
+<li><strong>上游</strong>:<a href="./01-overview.html">plan/01</a> 不变性 #6 / #10 · <a href="./02-multi-agent.html">plan/02</a> §Reflector Agent · <a href="./11-knowledge-graph.html">plan/11</a> 知识图谱</li>
+<li><strong>核心 spec</strong>:<a href="../spec/19-impact-analysis.html">spec/19</a> analyzeImpact · <a href="../spec/06-approval-flow.html">spec/06</a> 审批流(含 Turn 取消语义 / doom-loop)· <a href="../spec/22-memory-and-history.html">spec/22</a> memory · <a href="../spec/23-context-contracts.html">spec/23</a> 上下文契约 · <a href="../spec/24-json-output.html">spec/24</a> Reflector JSON schema</li>
+<li><strong>下游</strong>:<a href="../spec/01-storage-schema.html">spec/01</a> learnings 表 · <a href="../spec/25-cardinal-rules.html">spec/25</a> cardinal_rule scope</li>
+</ul>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-01</td>
+<td>Reflector MVP 简化范围</td>
+<td>完整版(hit 追踪 + 加权 + archive + 面板) / <strong>简化版(只衰减 + 注入)</strong> / 完全砍</td>
+<td><strong>简化版</strong></td>
+<td>用户决策"不砍掉,但简单做";保留产品价值核心闭环(LLM 提炼 + 注入 + cardinal_rule 保护),砍运维复杂度(hit 追踪需要 prompt_traces / archive 表 / UI 面板)。误学只能等衰减,可接受</td>
+</tr>
+<tr>
+<td>ADR-02</td>
+<td>cascade 递归位置</td>
+<td>审批后多次落盘 / <strong>审批前内部递归整批审</strong> / 现场 LLM 推</td>
+<td><strong>审批前内部递归整批审</strong></td>
+<td>用户审 1 次 vs 审 N 次;落盘前可见全貌可发现"二级 cascade 把另一个角色搞崩";transaction 原子避免半落地</td>
+</tr>
+<tr>
+<td>ADR-03</td>
+<td>影响半径计算方式</td>
+<td>LLM 现场推 / <strong>SQL 出候选 + LLM 二次过滤</strong> / 全文喂 LLM</td>
+<td><strong>SQL 出候选 + LLM 二次过滤</strong></td>
+<td>LLM 现场推漏检率高(测试结果详见 progress/005);SQL 覆盖关系上下游 / 时间区间 / 概念引用 / 段级 embedding 五维;LLM 只做"是否真受影响"的二元判断</td>
+</tr>
+<tr>
+<td>ADR-04</td>
+<td>per-turn vs per-cascade-group 触发</td>
+<td>per-cascade-group(细粒度)/ <strong>per-turn(粗粒度)</strong> / per-approval(最细)</td>
+<td><strong>per-turn</strong></td>
+<td>单 turn 内多 action 之间有因果关联,粗粒度才能提炼出跨 action 经验(例:gender cascade + write chapter 漏改称谓 = "gender cascade 用户在意称谓")</td>
+</tr>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

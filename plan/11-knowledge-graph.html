@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>11 — 知识图谱:让&quot;牵一发动全身&quot;和&quot;边写边查&quot;真正可工作 - Open Novel</title>
+  <title>11 — 知识图谱 - Open Novel</title>
   <link rel="stylesheet" href="../assets/docs.css">
   <script src="../assets/docs-enhance.js" defer></script>
 </head>
@@ -13,80 +13,47 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/11-knowledge-graph.html</span>
 </nav>
-<h1 id="11-知识图谱让牵一发动全身和边写边查真正可工作">11 — 知识图谱:让&quot;牵一发动全身&quot;和&quot;边写边查&quot;真正可工作</h1>
+
+<h1 id="11-知识图谱">11 — 知识图谱:让"牵一发动全身"和"边写边查"真正可工作</h1>
 <blockquote>
 <p>此文档定义知识图谱层的总体架构。详细 schema / 算法 / 工具签名分散在 spec/16-21,本文档只讲 <strong>Why / What / How 总线</strong>。</p>
 </blockquote>
+
 <h2 id="为什么要有这一层">为什么要有这一层</h2>
-<h3 id="现状的薄弱audit-分析见-progress005">现状的薄弱(audit 分析,见 progress/005)</h3>
-<p>当前 cascade 与 entity 索引的真实运作:</p>
-<pre class="mermaid">
-flowchart TD
-  W([writeSetting 落盘<br/>例: 改 lin.gender = female]) --> V1[Validator 查 entities 表<br/>找 lin 的 entity_id]
-  V1 --> V2["查 entity_refs 表<br/>WHERE entity_id = char_lin<br/>得 source_file 列表"]
-  V2 --> V3["对每个 source_file 抽相关段<br/>LLM 逐段判 'lin.gender=female 是否矛盾'"]
-  V3 --> CP[输出 ChangeProposal 数组]
-</pre>
-<p><strong>这个机制只能 cover &quot;实体属性单字段改动 + 实体显式提及&quot; 的场景</strong>。下面这些场景全部漏检:</p>
+<p>仅靠"实体属性单字段改动 + 实体显式提及"无法 cover 真实长篇网文场景:</p>
 <table>
-<thead>
-<tr>
-<th>场景</th>
-<th>漏检原因</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>改 <code>worldview/rules.md</code> 加&quot;此世界没有手机&quot;</td>
-<td>&quot;无手机&quot; 不是 entity,entity_refs 表里压根无条目可查;LLM 写章节也不会显式引用 world_main ID</td>
-</tr>
-<tr>
-<td>改 <code>lin.md</code> 加 <code>mentor: char_zhang</code></td>
-<td>character.md frontmatter 当前 schema 没 relations 字段;entity_relations 表不存在 → 关系类 cascade 全靠 LLM 自由心证</td>
-</tr>
-<tr>
-<td><code>foreshadowing/001-pocket-watch.md</code> 锚定 ch_010 § 5 埋怀表,作者删了 ch_010 第 5 段</td>
-<td>没有 dependencies 表;foreshadowing 文件与章节段的依赖关系不可表达 → 伏笔静默失效</td>
-</tr>
-<tr>
-<td>章节内&quot;林川&quot;出现 100 次,plan/06 默认 ±5 章范围审</td>
-<td>这是治标:你改了核心设定,影响在 ch_50 / ch_100 — 默认范围漏掉,不是性能问题是 schema 漏</td>
-</tr>
-<tr>
-<td>改 <code>lin.md</code> 改 <code>age: 28</code> → 故事 ch_050 5 年后,林川多大?</td>
-<td>frontmatter 是单 snapshot,没有&quot;林川 ch_050 时年龄&quot;的查询能力</td>
-</tr>
-<tr>
-<td>Writer 写 ch_050&quot;林川和张三第一次合作&quot;</td>
-<td>没有 assembleContext 工具;Writer 是&quot;半瞎&quot;写的,token 爆炸 (全塞) 或漏知识 (只塞 referenced_entities)</td>
-</tr>
-<tr>
-<td>作者问 &quot;林川上次见王小芳是哪一章?&quot;</td>
-<td>没有按角色对查询 + 时间排序的查询面板;只能翻全章节</td>
-</tr>
-<tr>
-<td>&quot;林川以前对女上司说过什么类似台词?&quot;</td>
-<td>没有 embedding 索引;SQLite LIKE 关键词检索漏多</td>
-</tr>
-</tbody></table>
-<h3 id="一句话总结">一句话总结</h3>
-<p>当前是&quot;实体属性 + 显式提及&quot; 一阶图;真实长篇网文需要&quot;实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义&quot;六维图。<strong>不补上这一层,所谓的 cascade 和 RAG 都是表面 demo</strong>。</p>
-<h2 id="总体架构-4-层">总体架构 (4 层)</h2>
+<thead><tr><th>场景</th><th>漏检原因</th></tr></thead>
+<tbody>
+<tr><td>改 <code>worldview/rules.md</code> 加"此世界没有手机"</td><td>"无手机"不是 entity,entity_refs 表里无条目可查;LLM 写章节也不会显式引用 world_main ID</td></tr>
+<tr><td>改 <code>lin.md</code> 加 <code>mentor: char_zhang</code></td><td>关系类 cascade 需要 entity_relations 表 + character.md frontmatter 含 relations 字段</td></tr>
+<tr><td><code>foreshadowing/001-pocket-watch.md</code> 锚定 ch_010 § 5 埋怀表,作者删了 ch_010 第 5 段</td><td>需要 dependencies 表;foreshadowing 文件与章节段的依赖关系不可表达 → 伏笔静默失效</td></tr>
+<tr><td>核心设定改动,影响在 ch_50 / ch_100</td><td>默认 ±N 章范围是治标;需要全项目范围 SQL 出候选</td></tr>
+<tr><td>改 <code>lin.md</code> 改 <code>age: 28</code> → 故事 ch_050 5 年后,林川多大?</td><td>需要 entity_timeline 表 + 按章节查询能力</td></tr>
+<tr><td>Writer 写 ch_050"林川和张三第一次合作"</td><td>需要 assembleContext 工具,Writer 不能"半瞎"写</td></tr>
+<tr><td>作者问"林川上次见王小芳是哪一章?"</td><td>需要按角色对查询 + 时间排序</td></tr>
+<tr><td>"林川以前对女上司说过什么类似台词?"</td><td>需要段级 embedding + 语义检索</td></tr>
+</tbody>
+</table>
+
+<p><strong>一句话总结</strong>:真实长篇网文需要"实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义"六维图。<strong>不补上这一层,所谓的 cascade 和 RAG 都是表面 demo</strong>。</p>
+
+<h2 id="总体架构-4-层">总体架构(4 层)</h2>
 <pre class="mermaid">
 flowchart BT
-  subgraph L1["L1 数据层 (Schema 增强, 见 spec/16)"]
+  subgraph L1["L1 数据层 (Schema, 见 spec/16)"]
     direction TB
     L1A["entity_relations<br/>双向语义关系: 师徒/敌友/上下级/..."]
     L1B["entity_timeline<br/>随章节变化的属性: age/location/..."]
     L1C["concepts + concept_refs<br/>worldview 硬规则当 pseudo-entity"]
     L1D["dependencies<br/>foreshadowing / callback / 跨文件锚定"]
     L1E["paragraph_anchors (段级稳定 ID)"]
-    L1F["paragraph_embeddings (段级向量索引)"]
-    L1G["character.md frontmatter 升级<br/>initial_state/relations/reader_promises/taboos"]
+    L1F["paragraph_embeddings (sqlite-vec vec0 virtual table)"]
+    L1G["character.md frontmatter<br/>initial_state/relations/reader_promises/taboos/value_axes"]
   end
   subgraph L2["L2 算法层 (Index Pipeline, 见 spec/17-19)"]
     direction TB
     L2A["段级稳定 ID (paragraph anchors)"]
-    L2B["段级 embedding (语义检索)"]
+    L2B["段级 embedding (sqlite-vec MATCH 语义检索)"]
     L2C["概念抽取 (LLM 跑 worldview/rules concepts 表)"]
     L2D["影响半径计算器 (纯 SQL 出候选, 不调 LLM)"]
     L2E["差量 reindex (只重算 dirty 段)"]
@@ -106,254 +73,158 @@ flowchart BT
   end
   L1 --> L2 --> L3 --> L4
 </pre>
-<h2 id="核心数据流改造">核心数据流改造</h2>
-<h3 id="cascade-改造-写设定时">Cascade 改造 (写设定时)</h3>
+
+<h2 id="核心数据流">核心数据流</h2>
+
+<h3 id="cascade-写设定时">Cascade(写设定时)</h3>
 <pre class="mermaid">
 flowchart TD
-  subgraph OLD["旧"]
-    direction LR
-    O1[writeSetting] --> O2[Validator 取 entity_refs]
-    O2 --> O3[全段送 LLM 心证]
-    O3 --> O4[ChangeProposal 数组]
-  end
-  subgraph NEW["新"]
-    direction TB
-    N1[writeSetting] --> N2[analyzeImpact spec/19]
-    N2 --> N3["step 1: LLM 抽 semantic delta<br/>lin.gender: male -- female"]
-    N3 --> N4["step 2: 纯 SQL 查影响半径<br/>entity_refs ∪ relations 上下游<br/>∪ events 参与 ∪ concept_refs ∪ dependencies"]
-    N4 --> N5["step 3: LLM 二次过滤<br/>逐段判是否真受影响 + 给修改建议"]
-    N5 --> N6["step 4: 输出 ChangeProposal 数组<br/>+ 影响图谱 (UI 用)"]
-    N6 --> N7[用户审]
-    N7 --> N8[接受]
-    N8 --> N9[Writer 重写]
-    N9 -. 单层递归 防止环 .-> N2
-  end
-  OLD ~~~ NEW
+  N1[writeSetting] --> N2[analyzeImpact spec/19]
+  N2 --> N3["step 1: LLM 抽 semantic delta<br/>lin.gender: male -- female"]
+  N3 --> N4["step 2: 纯 SQL 查影响半径<br/>entity_refs ∪ relations 上下游<br/>∪ events 参与 ∪ concept_refs ∪ dependencies<br/>∪ paragraph_embeddings (sqlite-vec MATCH topK)"]
+  N4 --> N5["step 3: LLM 二次过滤<br/>逐段判是否真受影响 + 给修改建议"]
+  N5 --> N6["step 4: 输出 ChangeProposal 数组<br/>+ 影响图谱 (UI 用)"]
+  N6 --> N7[用户审]
+  N7 --> N8[接受]
+  N8 --> N9[Writer 重写]
+  N9 -. 单层递归 防止环 .-> N2
 </pre>
-<p>L2 §影响半径计算器 取代了 plan/06 的&quot;按章节范围 ±5&quot;治标策略。<strong>作者改任何 setting,系统能给出</strong>完整、确定、毫秒级的候选影响列表**,LLM 仅做&quot;是不是真受影响&quot;的二次判断。</p>
-<h3 id="context-assembly-改造-写章节时">Context Assembly 改造 (写章节时)</h3>
+
+<p><strong>作者改任何 setting,系统能给出完整、确定、毫秒级的候选影响列表</strong>,LLM 仅做"是不是真受影响"的二次判断。</p>
+
+<h3 id="context-assembly-写章节时">Context Assembly(写章节时)</h3>
 <pre class="mermaid">
 flowchart TD
-  subgraph OLD["旧"]
-    direction TB
-    O1["Writer prompt =<br/>system + project.style + outline<br/>+ referenced_entities (人工选)"]
-    O1 --> O2[漏 / 爆 token 二选一]
-  end
-  subgraph NEW["新"]
-    direction TB
-    N1[Writer 接到 chapterId + outline] --> N2[调 assembleContext spec/20]
-    N2 --> S1["step 1: 从 outline NER 抽出涉及的 entities"]
-    S1 --> S2["step 2: timeline.snapshotAt(entity, chapterId)<br/>取角色到本章的最新状态"]
-    S2 --> S3["step 3: relations.activeAt(entities, chapterId)<br/>取本章时间点活跃关系"]
-    S3 --> S4["step 4: dependencies.pendingFor(chapterId)<br/>取本章应当回收/埋设的伏笔"]
-    S4 --> S5["step 5: embeddings.search(outline, topK=5)<br/>语义最相关的历史段"]
-    S5 --> S6["step 6: 按 token 预算裁剪 拼成 context block"]
-    S6 --> N3[喂回 Writer prompt]
-    N3 --> N4["Writer 拿到完整 context 写章节<br/>不再'半瞎'"]
-  end
-  OLD ~~~ NEW
+  N1[Writer 接到 chapterId + outline] --> N2[调 assembleContext spec/20]
+  N2 --> S1["step 1: 从 outline NER 抽出涉及的 entities"]
+  S1 --> S2["step 2: timeline.snapshotAt(entity, chapterId)<br/>取角色到本章的最新状态"]
+  S2 --> S3["step 3: relations.activeAt(entities, chapterId)<br/>取本章时间点活跃关系"]
+  S3 --> S4["step 4: dependencies.pendingFor(chapterId)<br/>取本章应当回收/埋设的伏笔"]
+  S4 --> S5["step 5: embeddings.search(outline, topK=5)<br/>sqlite-vec MATCH 语义相关历史段"]
+  S5 --> S6["step 6: 装齐 context block<br/>(1M ctx 不裁剪)"]
+  S6 --> N3[喂回 Writer prompt]
 </pre>
-<p>token 预算控制详见 spec/20。</p>
-<h3 id="边写边查改造-作者主动查">边写边查改造 (作者主动查)</h3>
+
+<p>装齐策略详见 <a href="../spec/20-context-assembly.html">spec/20</a> + <a href="../spec/23-context-contracts.html">spec/23</a>。</p>
+
+<h3 id="边写边查">边写边查</h3>
 <pre class="mermaid">
 flowchart LR
-  subgraph OLD["旧"]
-    direction TB
-    O1["entity highlight + hover 卡 (spec/05)<br/>只能跳实体文件全文"]
-    O2["backlinks 面板<br/>只显示'被 N 处引用'"]
-  end
-  subgraph NEW["新"]
-    direction TB
-    QF["queryFacts 工具 (spec/21)"]
-    QF --> Q1["林川 ch_50 时多大<br/>entity-at 查询 直查 timeline 表"]
-    QF --> Q2["林川和王小芳关系演变<br/>relations-of 查询 时间排序输出"]
-    QF --> Q3["林川对女上司说过什么类似台词<br/>semantic-search embeddings 检索"]
-    QF --> Q4["ch_005 之前提到过怀表的所有段落<br/>mentions-of 查询 + 范围过滤"]
-    UI["UI 查询面板 (Cmd+K query-facts 模式)<br/>直接出结果, 不走 LLM"]
-    RT["Router 在 discuss 模式自动调 queryFacts<br/>事实查询 / 自由对话 分开"]
-  end
-  OLD ~~~ NEW
+  QF["queryFacts 工具 (spec/21)"]
+  QF --> Q1["林川 ch_50 时多大<br/>entity-at 查询 直查 timeline 表"]
+  QF --> Q2["林川和王小芳关系演变<br/>relations-of 查询 时间排序输出"]
+  QF --> Q3["林川对女上司说过什么类似台词<br/>semantic-search sqlite-vec 检索"]
+  QF --> Q4["ch_005 之前提到过怀表的所有段落<br/>mentions-of 查询 + 范围过滤"]
+  UI["UI 查询面板 (Cmd+K query-facts 模式)<br/>直接出结果, 不走 LLM"]
+  RT["Router 在 discuss 模式自动调 queryFacts<br/>事实查询 / 自由对话 分开"]
 </pre>
+
 <h2 id="与现有架构的对接">与现有架构的对接</h2>
 <table>
-<thead>
-<tr>
-<th>现有组件</th>
-<th>改造点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><code>entities</code> 表 (spec/01)</td>
-<td>不动,作为根 ID 注册</td>
-</tr>
-<tr>
-<td><code>entity_refs</code> 表 (spec/01)</td>
-<td>不动,概念维度由新 <code>concept_refs</code> 表承载 (与 entity_refs 对称)</td>
-</tr>
-<tr>
-<td><code>backlinks</code> 表 (spec/01)</td>
-<td>不动,作为 entity 反向索引</td>
-</tr>
-<tr>
-<td><code>history</code> 表 (spec/01)</td>
-<td>不动</td>
-</tr>
-<tr>
-<td><code>learnings</code> 表 (spec/01)</td>
-<td>不动</td>
-</tr>
-<tr>
-<td><code>approvals</code> 表 (spec/01)</td>
-<td>不动;cascade 链路通过 <code>parent_approval_id</code> 关联 (新字段,见 spec/19)</td>
-</tr>
-<tr>
-<td><code>narrative_metrics</code> 表 (spec/01 + spec/10)</td>
-<td>不动</td>
-</tr>
-<tr>
-<td>character.md frontmatter</td>
-<td>升级 — 加 <code>initial_state</code> / <code>relations</code> / <code>reader_promises</code> / <code>taboos</code>,见 spec/16</td>
-</tr>
-<tr>
-<td>Validator (plan/02)</td>
-<td>execute 内调 analyzeImpact,不再现场 LLM 推</td>
-</tr>
-<tr>
-<td>Writer (plan/02)</td>
-<td>execute 内调 assembleContext,不再人工塞 referenced_entities</td>
-</tr>
-<tr>
-<td>Router (plan/02)</td>
-<td>discuss 模式优先调 queryFacts,如查不到再调 LLM 自由答</td>
-</tr>
-<tr>
-<td>reindex Worker (plan/04)</td>
-<td>升级为差量,见 spec/17</td>
-</tr>
-<tr>
-<td>AC trie (spec/05)</td>
-<td>同时索引 entity 名 + concept surface_forms,hover 卡区分视觉</td>
-</tr>
-</tbody></table>
-<h2 id="文件系统拓扑变化">文件系统拓扑变化</h2>
-<p>详见 plan/04 §settings 目录 (拆分后)。</p>
+<thead><tr><th>现有组件</th><th>改造点</th></tr></thead>
+<tbody>
+<tr><td><code>entities</code> 表(spec/01)</td><td>不动,作为根 ID 注册</td></tr>
+<tr><td><code>entity_refs</code> 表(spec/01)</td><td>不动,概念维度由新 <code>concept_refs</code> 表承载(与 entity_refs 对称)</td></tr>
+<tr><td><code>backlinks</code> 表(spec/01)</td><td>不动,作为 entity 反向索引</td></tr>
+<tr><td><code>history</code> 表(spec/01)</td><td>不动</td></tr>
+<tr><td><code>learnings</code> 表(spec/01)</td><td>不动</td></tr>
+<tr><td><code>approvals</code> 表(spec/01)</td><td>cascade 链路通过 <code>parent_approval_id</code> 关联(新字段,见 spec/19)</td></tr>
+<tr><td><code>narrative_metrics</code> 表(spec/01 + spec/10)</td><td>不动</td></tr>
+<tr><td>character.md frontmatter</td><td>升级 — 加 <code>initial_state</code> / <code>relations</code> / <code>reader_promises</code> / <code>taboos</code> / <code>value_axes</code>,见 spec/16</td></tr>
+<tr><td>Validator(plan/02)</td><td>execute 内调 analyzeImpact,不再现场 LLM 推</td></tr>
+<tr><td>Writer(plan/02)</td><td>execute 内调 assembleContext,不再人工塞 referenced_entities</td></tr>
+<tr><td>Router(plan/02)</td><td>discuss 模式优先调 queryFacts,如查不到再调 LLM 自由答</td></tr>
+<tr><td>reindex worker(plan/04)</td><td>差量,见 spec/17</td></tr>
+<tr><td>AC trie(spec/05)</td><td>同时索引 entity 名 + concept surface_forms,hover 卡区分视觉</td></tr>
+</tbody>
+</table>
+
+<h2 id="文件系统拓扑">文件系统拓扑</h2>
+<p>详见 <a href="./04-storage-model.html">plan/04 §settings 目录</a>。</p>
 <p>要点:</p>
 <ul>
 <li><code>worldview/</code> 拆为多个子文件</li>
 <li><code>outline/</code> 拆为多个子文件</li>
-<li>新增:<code>factions/</code> <code>organizations/</code> <code>locations/</code> <code>items/</code> <code>events/</code> <code>timeline/</code> <code>relationships/</code> <code>story-lines/</code> <code>foreshadowing/</code> <code>chapter-arcs/</code> <code>power-system/</code> <code>glossary/</code> <code>taboos.md</code> <code>themes.md</code> <code>reader-promises.md</code></li>
-<li>派生视图:<code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> (从 SQLite 表自动生成, <code>_</code> 前缀 + <code>derived: true</code>, 用户既不可见也不可改)</li>
+<li>新增:<code>factions/</code> · <code>organizations/</code> · <code>locations/</code> · <code>items/</code> · <code>events/</code> · <code>timeline/</code> · <code>relationships/</code> · <code>story-lines/</code> · <code>foreshadowing/</code> · <code>chapter-arcs/</code> · <code>power-system/</code> · <code>glossary/</code> · <code>taboos.md</code> · <code>themes.md</code> · <code>reader-promises.md</code></li>
+<li>派生视图:<code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code>(从 SQLite 表自动生成,<code>_</code> 前缀 + <code>derived: true</code>,用户既不可见也不可改)</li>
 </ul>
-<h2 id="不变性-invariants">不变性 (Invariants)</h2>
-<p>加进 plan/01 §不变性 第 9-12 条:</p>
-<ol start="9">
-<li><strong>影响半径不依赖 LLM</strong> — Validator cascade 第一步必须是 SQL 查影响半径 (analyzeImpact step 2);LLM 只做二次过滤。漏 SQL 索引 = bug,不是 LLM &quot;推不准&quot;。</li>
-<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> 等是 SQLite 表 → markdown 投影,reindex 覆盖,<code>_</code> 前缀 (FileTree 默认隐藏) + frontmatter <code>derived: true</code> (UI 锁写)。</li>
-<li><strong>未决 cascade 阻断 write</strong> — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用 (Setting Lint 一项)。</li>
-<li><strong>段锚点稳定</strong> — 段移动 / 重命名不应使 dependencies / paragraph_embeddings 失效;reindex 走&quot;内容签名 + 邻接段对照&quot;维持锚点。</li>
-</ol>
-<h2 id="落地里程碑-w7-w10-专攻">落地里程碑 (W7-W10 专攻)</h2>
-<p>W7-W10 安排:</p>
-<table>
-<thead>
-<tr>
-<th>周</th>
-<th>内容</th>
-<th>对应 spec</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>W7</strong></td>
-<td>L1 schema 全部 4 张新表落地 + character frontmatter 升级 + zod 强校验 + 迁移脚本</td>
-<td>spec/16</td>
-</tr>
-<tr>
-<td><strong>W7-W8</strong></td>
-<td>L2 段级稳定 ID + 差量 reindex + paragraph_anchors 表 + Worker 升级</td>
-<td>spec/17</td>
-</tr>
-<tr>
-<td><strong>W8</strong></td>
-<td>L2 embedding 接入 + paragraph_embeddings 表 + 增量计算</td>
-<td>spec/18</td>
-</tr>
-<tr>
-<td><strong>W8-W9</strong></td>
-<td>L2 概念抽取 (worldview/rules.md → concepts) + LLM prompt + 用户审流程</td>
-<td>spec/16 §概念抽取</td>
-</tr>
-<tr>
-<td><strong>W9</strong></td>
-<td>L2 影响半径计算器 + L3 analyzeImpact 工具 + Validator 接入</td>
-<td>spec/19</td>
-</tr>
-<tr>
-<td><strong>W9</strong></td>
-<td>L3 assembleContext 工具 + Writer 接入 + token 预算控制</td>
-<td>spec/20</td>
-</tr>
-<tr>
-<td><strong>W10</strong></td>
-<td>L3 queryFacts 工具 + UI 查询面板 (Cmd+K query 模式)</td>
-<td>spec/21</td>
-</tr>
-<tr>
-<td><strong>W10</strong></td>
-<td>L4 Setting Lint + Plan inconsistency lock + Snapshot + 派生守卫</td>
-<td>spec/16 §治理</td>
-</tr>
-</tbody></table>
-<p>合计 4 周,占 W7-W10 全部带宽。联网工具能力推迟至二期(mock 已够)。</p>
-<h2 id="与同类产品的差异更新">与同类产品的差异(更新)</h2>
-<p>(对照 plan/01 §与同类产品的差异表)</p>
-<table>
-<thead>
-<tr>
-<th>维度</th>
-<th>NovelCrafter / Sudowrite</th>
-<th>Open Novel</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>实体索引</td>
-<td>静态卡片 (Codex)</td>
-<td>动态实体 + 时间轴 + 关系图</td>
-</tr>
-<tr>
-<td>Cascade 影响范围</td>
-<td>无 / 全人工</td>
-<td>纯 SQL 出候选 + LLM 二次过滤 + 递归</td>
-</tr>
-<tr>
-<td>写章节上下文</td>
-<td>用户手动选 cards 塞 prompt</td>
-<td>assembleContext 自动 retrieve + token 预算</td>
-</tr>
-<tr>
-<td>边写边查</td>
-<td>静态搜索 / 跳卡片</td>
-<td>queryFacts 4 模式 + 语义检索 + 时间感知</td>
-</tr>
-<tr>
-<td>伏笔 / 跨文件依赖</td>
-<td>无</td>
-<td>dependencies 表显式锚定 + lint</td>
-</tr>
-<tr>
-<td>概念级一致性</td>
-<td>无 (只懂实体)</td>
-<td>concepts 表 + 表面词 NER 索引</td>
-</tr>
-</tbody></table>
-<p>后四条 (assembleContext / queryFacts / dependencies / concepts) 是与&quot;AI 代笔工具&quot;赛道的二阶区分点:<strong>NovelCrafter / Sudowrite 是把 AI 装进文字编辑器,Open Novel 是把世界装进 AI</strong>。</p>
+
+<h2 id="不变性引用">不变性引用</h2>
+<p>本层产生的不变性已合并入 <a href="./01-overview.html#不变性约束">plan/01 §不变性</a>:</p>
+<ul>
+<li>#8 影响半径不依赖 LLM</li>
+<li>#9 派生视图只读 + 段锚点稳定</li>
+<li>#4 未决 cascade 阻断 write</li>
+</ul>
+
 <h2 id="不做什么">不做什么</h2>
 <ul>
-<li><strong>不做实时 LLM 影响分析</strong> — 影响半径必须是 SQL 出候选,LLM 仅二次过滤。任何&quot;现场让 LLM 推这次改动会影响什么&quot;的设计都禁止 (慢 + 漏 + 不可解释)。</li>
-<li><strong>不做向量数据库</strong> — 段级 embedding 落 SQLite + sqlite-vss 扩展或 LibSQL 原生 vector 支持。不引入 Qdrant / Milvus 等独立服务,详见 spec/18。</li>
-<li><strong>不做&quot;全自动派生设定&quot;</strong> — 派生视图(关系矩阵 / 时间轴)是表的投影,不替作者写设定。&quot;建议给林川加一个师父&quot;这种主动建议留给 Validator / Reflector 的二期能力,不在本层。</li>
-<li><strong>不做&quot;无 schema 自由文本扫描&quot;</strong> — 所有 cascade / context 必须依赖 schema 化字段。自由文本里隐式提到的关系(e.g. 章节正文里写&quot;林川的师父张三&quot;)不会被自动归一为 entity_relations 表条目;必须由作者在 character.md 显式声明,或由 Reflector 二期主动建议补全。</li>
-<li><strong>不做跨项目知识图谱共享</strong> — 知识图谱按项目独立,与 Memory 的 <code>resource = projectId</code> 一致。</li>
+<li><strong>不做实时 LLM 影响分析</strong> — 影响半径必须是 SQL 出候选,LLM 仅二次过滤。任何"现场让 LLM 推这次改动会影响什么"的设计都禁止(慢 + 漏 + 不可解释)</li>
+<li><strong>不做独立向量数据库</strong> — 段级 embedding 落 SQLite,用 <code>sqlite-vec</code> 扩展(loadExtension)+ <code>vec0</code> virtual table + <code>MATCH</code> 操作符;与普通表 JOIN。不引入 Qdrant / Milvus 等独立服务,详见 <a href="../spec/18-embeddings.html">spec/18</a></li>
+<li><strong>不做"全自动派生设定"</strong> — 派生视图(关系矩阵 / 时间轴)是表的投影,不替作者写设定。"建议给林川加一个师父"这种主动建议留给 Validator / Reflector 的二期能力,不在本层</li>
+<li><strong>不做"无 schema 自由文本扫描"</strong> — 所有 cascade / context 必须依赖 schema 化字段。自由文本里隐式提到的关系(e.g. 章节正文里写"林川的师父张三")不会被自动归一为 entity_relations 表条目;必须由作者在 character.md 显式声明,或由 Reflector 二期主动建议补全</li>
+<li><strong>不做跨项目知识图谱共享</strong> — 知识图谱按项目独立,与 memory 的 <code>resource = projectId</code> 一致</li>
 </ul>
-  </main>
+
+<h2 id="与同类产品的差异">与同类产品的差异</h2>
+<p>(对照 <a href="./01-overview.html#与同类产品的差异">plan/01 §与同类产品的差异</a>)</p>
+<table>
+<thead><tr><th>维度</th><th>NovelCrafter / Sudowrite</th><th>Open Novel</th></tr></thead>
+<tbody>
+<tr><td>实体索引</td><td>静态卡片(Codex)</td><td>动态实体 + 时间轴 + 关系图</td></tr>
+<tr><td>Cascade 影响范围</td><td>无 / 全人工</td><td>纯 SQL 出候选 + LLM 二次过滤 + 递归</td></tr>
+<tr><td>写章节上下文</td><td>用户手动选 cards 塞 prompt</td><td>assembleContext 自动 retrieve + 1M ctx 装齐</td></tr>
+<tr><td>边写边查</td><td>静态搜索 / 跳卡片</td><td>queryFacts 4 模式 + sqlite-vec 语义检索 + 时间感知</td></tr>
+<tr><td>伏笔 / 跨文件依赖</td><td>无</td><td>dependencies 表显式锚定 + lint</td></tr>
+<tr><td>概念级一致性</td><td>无(只懂实体)</td><td>concepts 表 + 表面词 NER 索引</td></tr>
+</tbody>
+</table>
+
+<p>后四条(assembleContext / queryFacts / dependencies / concepts)是与"AI 代笔工具"赛道的二阶区分点:<strong>NovelCrafter / Sudowrite 是把 AI 装进文字编辑器,Open Novel 是把世界装进 AI</strong>。</p>
+
+<h2 id="关联文档">关联文档</h2>
+<ul>
+<li><strong>上游</strong>:<a href="./01-overview.html">plan/01</a> 不变性 #4 / #8 / #9 · <a href="./02-multi-agent.html">plan/02</a> §Validator / Writer / Router · <a href="./04-storage-model.html">plan/04</a> 存储模型 · <a href="./06-cascade-and-reflection.html">plan/06</a> cascade</li>
+<li><strong>核心 spec</strong>:<a href="../spec/16-knowledge-schema.html">spec/16</a> 知识图谱 schema · <a href="../spec/17-paragraph-anchors.html">spec/17</a> 段锚 + 差量 reindex · <a href="../spec/18-embeddings.html">spec/18</a> embeddings(sqlite-vec)· <a href="../spec/19-impact-analysis.html">spec/19</a> analyzeImpact · <a href="../spec/20-context-assembly.html">spec/20</a> assembleContext · <a href="../spec/21-fact-query.html">spec/21</a> queryFacts</li>
+</ul>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-01</td>
+<td>影响半径算法</td>
+<td>LLM 现场推 / <strong>SQL 出候选 + LLM 二次过滤</strong> / 全文喂 LLM</td>
+<td><strong>SQL 出候选 + LLM 二次过滤</strong></td>
+<td>LLM 现场推漏检率高;SQL 覆盖关系上下游 / 时间区间 / 概念引用 / 段级 embedding 五维;LLM 只做"是否真受影响"二元判断</td>
+</tr>
+<tr>
+<td>ADR-02</td>
+<td>向量索引</td>
+<td>独立向量 DB(Qdrant / Milvus) / <strong>sqlite-vec + 同库 JOIN</strong> / 无向量(纯关键词)</td>
+<td><strong>sqlite-vec</strong></td>
+<td>与 SQLite 同库 JOIN segments + entity_refs + embedding;transaction 一致性免费;单机本地无需独立服务</td>
+</tr>
+<tr>
+<td>ADR-03</td>
+<td>派生视图实现</td>
+<td>实时计算 / <strong>SQLite 表 → markdown 投影 + reindex 重生成</strong></td>
+<td><strong>reindex 重生成</strong></td>
+<td>派生文件可供 LLM 读 + 用户偶尔 cat 查看;实时计算性能不可控;<code>_</code> 前缀 + <code>derived: true</code> 双重守卫</td>
+</tr>
+<tr>
+<td>ADR-04</td>
+<td>concepts 抽取触发</td>
+<td>用户手动 / <strong>worldview / rules 落盘后自动跑 LLM</strong> / 仅审批前临时跑</td>
+<td><strong>落盘后自动跑(reindex worker)</strong></td>
+<td>用户手动易遗漏;临时跑会让 cascade 链断;reindex worker 异步跑不阻塞主流程</td>
+</tr>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

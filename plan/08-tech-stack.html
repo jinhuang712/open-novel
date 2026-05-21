@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>08 — 技术栈锁定与版本策略 - Open Novel</title>
+  <title>08 — 技术栈锁定 - Open Novel</title>
   <link rel="stylesheet" href="../assets/docs.css">
   <script src="../assets/docs-enhance.js" defer></script>
 </head>
@@ -13,271 +13,300 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/08-tech-stack.html</span>
 </nav>
-<h1 id="08-技术栈锁定与版本策略">08 — 技术栈锁定与版本策略</h1>
+
+<h1 id="08-技术栈锁定">08 — 技术栈锁定</h1>
 <blockquote>
-<p>后续代码 commit 以本文档为依据。版本号实查清单见 spec/00。</p>
+<p>后续代码 commit 以本文档为依据。版本号实查清单见 <a href="../spec/00-version-audit.html">spec/00</a>。</p>
 </blockquote>
-<h2 id="锁定的库版本">锁定的库版本</h2>
+
+<h2 id="栈分层">栈分层总览</h2>
+
+<pre class="mermaid">
+flowchart TB
+  subgraph FE["前端"]
+    F1[Next.js 15 App Router]
+    F2[React 19 + TipTap 3.x]
+    F3[Tailwind v4 + shadcn/ui]
+    F4["@ai-sdk/react useChat"]
+    F5[XState v5 + Zustand]
+  end
+
+  subgraph AGENT["服务端 / Agent 层"]
+    A1["Vercel AI SDK 6 (ai@^6.0)<br/>generateText / streamText + stopWhen<br/>tool() + wrapLanguageModel + middleware"]
+    A2["@ai-sdk/deepseek + @ai-sdk/openai-compatible"]
+    A3["自定义 runner × 13<br/>+ cascade controller<br/>+ callJsonAgent<br/>+ context builders<br/>+ memory access guard"]
+  end
+
+  subgraph DATA["数据层"]
+    D1["better-sqlite3 (同步 API)"]
+    D2["sqlite-vec (向量, loadExtension)"]
+    D3["drizzle-orm + drizzle-kit"]
+  end
+
+  FE --> AGENT --> DATA
+</pre>
+
+<h2 id="锁定库">锁定的库版本</h2>
 <table>
 <thead>
-<tr>
-<th>Package</th>
-<th>版本</th>
-<th>锁定策略</th>
-<th>关键说明</th>
-</tr>
+<tr><th>Package</th><th>版本</th><th>锁定策略</th><th>关键说明</th></tr>
 </thead>
-<tbody><tr>
-<td><code>next</code></td>
-<td><code>15.5.x</code></td>
-<td>锁主线 (LTS 到 2026-10)</td>
-<td>不切 v16,v15 LTS 覆盖整个项目周期</td>
-</tr>
-<tr>
-<td><code>react</code> / <code>react-dom</code></td>
-<td><code>19.2.x</code></td>
-<td>锁主线</td>
-<td>Next 15.5 + TipTap 3 + AI SDK 6 共同要求</td>
-</tr>
-<tr>
-<td><code>typescript</code></td>
-<td><code>^5.9</code></td>
-<td>caret</td>
-<td>XState v5 / AI SDK 6 ergonomics 在 5.6+ 最佳</td>
-</tr>
-<tr>
-<td><code>tailwindcss</code></td>
-<td><code>4.2.x</code></td>
-<td>锁主线</td>
-<td>Oxide 重写后 GA,与 v3 不兼容</td>
-</tr>
-<tr>
-<td><code>@tailwindcss/postcss</code></td>
-<td><code>4.2.x</code></td>
-<td>锁主线</td>
-<td>v4 拆分出的独立 PostCSS plugin</td>
-</tr>
-<tr>
-<td><code>@tiptap/{react,pm,starter-kit}</code></td>
-<td><code>3.16.x</code></td>
-<td>锁主线</td>
-<td>v3 与 v2 在我们调用面兼容,SSR 需 <code>immediatelyRender: false</code></td>
-</tr>
-<tr>
-<td><code>mastra</code> / <code>@mastra/core</code></td>
-<td><code>1.4.x</code></td>
-<td>锁主线</td>
-<td>1.0 在 2026-01 发布,1.x 仍在演进,需密切跟踪</td>
-</tr>
-<tr>
-<td><code>@mastra/libsql</code></td>
-<td><code>0.16.x</code></td>
-<td>锁主线</td>
-<td>仍是 0.x;<strong>注意 issue #4507 — 必须显式给 <code>file:</code> URL,绝不用默认路径</strong></td>
-</tr>
-<tr>
-<td><code>@mastra/memory</code></td>
-<td><code>1.4.x</code></td>
-<td>锁主线</td>
-<td>thread+resource 隔离的实现</td>
-</tr>
-<tr>
-<td><code>ai</code> (Vercel AI SDK)</td>
-<td><code>^6.0</code></td>
-<td>caret</td>
-<td>v6 已稳,minor 增量。HITL 接入方案 (<code>needsApproval</code> 一等字段 vs cookbook <code>onToolCall</code> + <code>addToolResult</code>) 详见 spec/00 §B</td>
-</tr>
-<tr>
-<td><code>@ai-sdk/react</code></td>
-<td><code>^6.0</code></td>
-<td>caret</td>
-<td><code>useChat</code> / <code>addToolResult</code> / <code>onToolCall</code></td>
-</tr>
-<tr>
-<td><code>@ai-sdk/deepseek</code></td>
-<td><code>2.0.x</code></td>
-<td>锁主线</td>
-<td>周更频繁。✅ 已实查 (spec/00 §C): model ID <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code>,ctx 1M,max output 384K,原生 JSON mode</td>
-</tr>
-<tr>
-<td><code>xstate</code> / <code>@xstate/react</code></td>
-<td><code>^5.0</code></td>
-<td>caret</td>
-<td>三模式状态机用</td>
-</tr>
-<tr>
-<td><code>zustand</code></td>
-<td><code>^5.0</code></td>
-<td>caret</td>
-<td>客户端 store</td>
-</tr>
-<tr>
-<td><code>react-resizable-panels</code></td>
-<td><code>4.10.x</code></td>
-<td>锁主线</td>
-<td>五区可拖拽布局</td>
-</tr>
-<tr>
-<td><code>ahocorasick</code> (BrunoRB)</td>
-<td><code>^1.0</code></td>
-<td>caret</td>
-<td>10KB JS,实体高亮的字符串多模匹配</td>
-</tr>
-<tr>
-<td><code>gray-matter</code> / <code>unified</code> / <code>remark-*</code></td>
-<td>latest</td>
-<td>caret</td>
-<td>Markdown frontmatter + AST 处理</td>
-</tr>
-<tr>
-<td><code>lucide-react</code></td>
-<td>latest</td>
-<td>caret</td>
-<td>shadcn 默认图标库</td>
-</tr>
-<tr>
-<td><code>cva</code> / <code>clsx</code> / <code>tailwind-merge</code></td>
-<td>latest</td>
-<td>caret</td>
-<td>shadcn 三件套</td>
-</tr>
-<tr>
-<td><code>sonner</code></td>
-<td><code>^2.0</code></td>
-<td>caret</td>
-<td>shadcn 推荐的 toast 库</td>
-</tr>
-<tr>
-<td><code>tw-animate-css</code></td>
-<td>latest</td>
-<td>caret</td>
-<td>Tailwind v4 era 的 shadcn 动画</td>
-</tr>
-</tbody></table>
-<h2 id="锁定策略原则">锁定策略原则</h2>
+<tbody>
+<tr><td><code>next</code></td><td><code>15.5.x</code></td><td>锁主线</td><td>v15 LTS 覆盖整个项目周期</td></tr>
+<tr><td><code>react</code> / <code>react-dom</code></td><td><code>19.2.x</code></td><td>锁主线</td><td>Next 15.5 + TipTap 3 + AI SDK 6 共同要求</td></tr>
+<tr><td><code>typescript</code></td><td><code>^5.9</code></td><td>caret</td><td>XState v5 / AI SDK 6 ergonomics 在 5.6+ 最佳</td></tr>
+<tr><td><code>tailwindcss</code></td><td><code>4.2.x</code></td><td>锁主线</td><td>Oxide 重写后 GA,与 v3 不兼容</td></tr>
+<tr><td><code>@tailwindcss/postcss</code></td><td><code>4.2.x</code></td><td>锁主线</td><td>v4 拆分出的独立 PostCSS plugin</td></tr>
+<tr><td><code>@tiptap/{react,pm,starter-kit}</code></td><td><code>3.16.x</code></td><td>锁主线</td><td>SSR 需 <code>immediatelyRender: false</code></td></tr>
+<tr><td><code>ai</code> (Vercel AI SDK)</td><td><code>^6.0</code></td><td>caret</td><td>v6 已稳;<strong>用 <code>generateText</code> / <code>streamText</code> + <code>stopWhen</code> 自定义终止</strong>,不依赖任何 Agent 框架</td></tr>
+<tr><td><code>@ai-sdk/react</code></td><td><code>^6.0</code></td><td>caret</td><td><code>useChat</code> / <code>addToolResult</code> / <code>onToolCall</code></td></tr>
+<tr><td><code>@ai-sdk/deepseek</code></td><td><code>2.0.x</code></td><td>锁主线</td><td>model ID <code>deepseek-v4-pro</code> / <code>deepseek-v4-flash</code>;ctx 1M,max output 384K,原生 JSON mode(实查见 <a href="../spec/00-version-audit.html">spec/00 §C</a>)</td></tr>
+<tr><td><code>@ai-sdk/openai-compatible</code></td><td>latest</td><td>caret</td><td>DeepSeek 通过此 provider 接入;支持 <code>wrapLanguageModel + middleware</code></td></tr>
+<tr><td><code>better-sqlite3</code></td><td><code>^11.0</code></td><td>caret</td><td>SQLite driver(同步 API);prebuild 跨平台稳;Drizzle 头等公民</td></tr>
+<tr><td><code>drizzle-orm</code></td><td><code>^0.40</code></td><td>caret</td><td>SQL → TS schema 类型化;type-safe query builder</td></tr>
+<tr><td><code>drizzle-kit</code></td><td><code>^0.30</code></td><td>caret</td><td>migration CLI:<code>pnpm drizzle-kit generate</code></td></tr>
+<tr><td><code>sqlite-vec</code></td><td>latest</td><td>caret</td><td>向量扩展,<code>db.loadExtension(sqliteVec.path)</code> 加载;<code>vec0</code> virtual table + <code>MATCH</code> 操作符</td></tr>
+<tr><td><code>xstate</code> / <code>@xstate/react</code></td><td><code>^5.0</code></td><td>caret</td><td>三模式状态机</td></tr>
+<tr><td><code>zustand</code></td><td><code>^5.0</code></td><td>caret</td><td>客户端 store</td></tr>
+<tr><td><code>react-resizable-panels</code></td><td><code>4.10.x</code></td><td>锁主线</td><td>五区可拖拽布局</td></tr>
+<tr><td><code>ahocorasick</code></td><td><code>^1.0</code></td><td>caret</td><td>10KB JS,实体高亮的字符串多模匹配</td></tr>
+<tr><td><code>gray-matter</code> / <code>unified</code> / <code>remark-*</code></td><td>latest</td><td>caret</td><td>Markdown frontmatter + AST 处理</td></tr>
+<tr><td><code>lucide-react</code></td><td>latest</td><td>caret</td><td>shadcn 默认图标库</td></tr>
+<tr><td><code>cva</code> / <code>clsx</code> / <code>tailwind-merge</code></td><td>latest</td><td>caret</td><td>shadcn 三件套</td></tr>
+<tr><td><code>sonner</code></td><td><code>^2.0</code></td><td>caret</td><td>shadcn 推荐的 toast 库</td></tr>
+<tr><td><code>tw-animate-css</code></td><td>latest</td><td>caret</td><td>Tailwind v4 era 的 shadcn 动画</td></tr>
+</tbody>
+</table>
+
+<h2 id="锁定策略">锁定策略原则</h2>
 <ul>
-<li><strong>锁主线 (无 caret)</strong>: 0.x 包、快速演进的 1.x 包、直接决定渲染输出/native binding 的包 — 任何 minor 漂移都可能引起破坏性变更</li>
-<li><strong>caret (<code>^</code>)</strong>: 类型包、稳定版 v5/v6 主流框架包、生态边缘工具</li>
+<li><strong>锁主线(无 caret)</strong>:0.x 包、快速演进的 1.x 包、直接决定渲染输出 / native binding 的包 — 任何 minor 漂移都可能引起破坏性变更</li>
+<li><strong>caret (<code>^</code>)</strong>:类型包、稳定版 v5/v6 主流框架包、生态边缘工具</li>
 <li><code>pnpm-lock.yaml</code> 入库,作为 single-source-of-truth — 任何团队成员安装得到一致的依赖树</li>
 </ul>
+
 <h2 id="集成关键点">集成关键点</h2>
-<h3 id="nextjs-mastra">Next.js + Mastra</h3>
+
+<h3 id="nextjs-better-sqlite3">Next.js + better-sqlite3</h3>
 <ul>
-<li><strong><code>next.config.ts</code></strong> 必须包含 <code>serverExternalPackages: [&#39;mastra&#39;, &#39;@mastra/core&#39;, &#39;@mastra/memory&#39;, &#39;@mastra/libsql&#39;]</code> — 否则 bundler 会试图打包 libsql 的 native 绑定,失败</li>
-<li><strong>所有触 Mastra 的 Route Handler 必须</strong> <code>export const runtime = &#39;nodejs&#39;</code> (Edge runtime 不支持 fs / native bindings)</li>
-<li><strong>globalThis 缓存模式</strong>: dev hot-reload 会反复实例化 mastra,导致 LibSQL 连接泄漏。在 <code>lib/mastra/index.ts</code> 用 <code>globalThis.__openNovelMastra</code> 缓存,模仿 Prisma 的 Next.js dev 范式</li>
+<li><strong><code>next.config.ts</code></strong> 必须包含 <code>serverExternalPackages: ['better-sqlite3']</code> — 否则 bundler 会试图打包 native binding,失败</li>
+<li><strong>所有触 db 的 Route Handler 必须</strong> <code>export const runtime = 'nodejs'</code>(Edge runtime 不支持 fs / native bindings)</li>
+<li><strong>globalThis 缓存模式</strong>:dev hot-reload 会反复实例化 db connection,泄漏 fd。在 <code>lib/db/index.ts</code> 用 <code>globalThis.__openNovelDb</code> 缓存,模仿 Prisma 的 Next.js dev 范式</li>
+<li><strong>WAL mode</strong>:<code>db.pragma('journal_mode = WAL')</code> 启动时设;多 reader 一个 writer,避免 SQLite 写锁竞争</li>
 </ul>
+
 <h3 id="nextjs-tiptap-v3">Next.js + TipTap (v3)</h3>
 <ul>
-<li><strong><code>&#39;use client&#39;</code> 边界</strong>: TipTap 的 <code>useEditor</code>、<code>@tiptap/pm</code>、<code>@tiptap/starter-kit</code> 间接 touch <code>window</code>,host 组件 + adapter 实现都必须 <code>&#39;use client&#39;</code></li>
+<li><strong><code>'use client'</code> 边界</strong>:TipTap 的 <code>useEditor</code>、<code>@tiptap/pm</code>、<code>@tiptap/starter-kit</code> 间接 touch <code>window</code>,host 组件 + adapter 实现都必须 <code>'use client'</code></li>
 <li><strong><code>immediatelyRender: false</code></strong> 是 TipTap 3 在 SSR 下的默认要求,不加会出 hydration warning</li>
-<li><strong>不用 <code>next/dynamic({ ssr: false })</code></strong>: 单 <code>&#39;use client&#39;</code> 已足够,dynamic import 仅在 FCP 出现压力时再考虑</li>
+<li><strong>不用 <code>next/dynamic({ ssr: false })</code></strong>:单 <code>'use client'</code> 已足够,dynamic import 仅在 FCP 出现压力时再考虑</li>
 </ul>
-<h3 id="tailwind-v4-vs-v3-的行为变化">Tailwind v4 vs v3 的行为变化</h3>
+
+<h3 id="tailwind-v4">Tailwind v4 vs v3 行为变化</h3>
 <ul>
-<li><strong>配置位置</strong>: 不再有 <code>tailwind.config.ts</code>;主题、CSS 变量、颜色都在 <code>app/globals.css</code> 的 <code>@theme inline { ... }</code> 块中</li>
-<li><strong>PostCSS plugin</strong>: 从 <code>tailwindcss</code> 主包拆出 — 必须额外装 <code>@tailwindcss/postcss</code></li>
-<li><strong>指令变化</strong>: <code>@tailwind base/components/utilities</code> → 单一 <code>@import &#39;tailwindcss&#39;;</code></li>
-<li><strong><code>@custom-variant dark</code></strong>: dark mode variant 通过 <code>@custom-variant dark (&amp;:is(.dark *))</code> 显式声明</li>
-<li><strong>回退方案</strong>: 若 v4 在某场景阻塞 (&gt;1h),可降到 3.4.x — 改动量约 30 分钟</li>
+<li><strong>配置位置</strong>:不再有 <code>tailwind.config.ts</code>;主题、CSS 变量、颜色都在 <code>app/globals.css</code> 的 <code>@theme inline { ... }</code> 块中</li>
+<li><strong>PostCSS plugin</strong>:从 <code>tailwindcss</code> 主包拆出 — 必须额外装 <code>@tailwindcss/postcss</code></li>
+<li><strong>指令变化</strong>:<code>@tailwind base/components/utilities</code> → 单一 <code>@import 'tailwindcss';</code></li>
+<li><strong><code>@custom-variant dark</code></strong>:dark mode variant 通过 <code>@custom-variant dark (&amp;:is(.dark *))</code> 显式声明</li>
+<li><strong>回退方案</strong>:若 v4 在某场景阻塞(&gt; 1h),可降到 3.4.x — 改动量约 30 分钟</li>
 </ul>
-<h3 id="shadcnui-v4-era">shadcn/ui v4 era</h3>
+
+<h3 id="shadcn-v4">shadcn/ui v4 era</h3>
 <ul>
-<li>跑 <code>pnpm dlx shadcn@latest init</code> 自动识别 Tailwind v4 (但<strong>注意</strong>: 因企业 SSL 拦截 ui.shadcn.com,我们手工写组件,不依赖 CLI fetch)</li>
-<li>锁定的初始化参数: Style=new-york / RSC=true / TSX=true / baseColor=slate / cssVariables=true / iconLibrary=lucide</li>
+<li>跑 <code>pnpm dlx shadcn@latest init</code> 自动识别 Tailwind v4(但<strong>注意</strong>:因企业 SSL 拦截 ui.shadcn.com,我们手工写组件,不依赖 CLI fetch)</li>
+<li>锁定的初始化参数:Style=new-york / RSC=true / TSX=true / baseColor=slate / cssVariables=true / iconLibrary=lucide</li>
 <li><strong><code>components.json</code></strong> 仍要写,作为 shadcn <code>add</code> 命令未来可用的元数据</li>
-<li>初始最小集: <code>button card dialog input label resizable scroll-area separator tabs textarea</code></li>
+<li>初始最小集:<code>button card dialog input label resizable scroll-area separator tabs textarea</code></li>
 </ul>
-<h3 id="libsql-路径治理-issue-4507-兜底">LibSQL 路径治理 (issue #4507 兜底)</h3>
-<ul>
-<li><strong>绝不</strong>用 <code>~</code> 字面量 (Node fs 不展开),始终用 <code>os.homedir()</code></li>
-<li><strong>始终</strong>给 LibSQL <code>file:${absPath}</code> 形式 URL,绝不让它走默认 <code>.mastra/mastra.db</code> (有删档 bug)</li>
-<li>写 <code>lib/storage/paths.ts</code> 集中所有路径解析,W3 直接 import,不重新计算</li>
-</ul>
-<h3 id="deepseek-v4-配置-实查后">DeepSeek V4 配置 (实查后)</h3>
-<p><strong>模型 ID 与能力</strong>:</p>
+
+<h3 id="drizzle-better-sqlite3">Drizzle + better-sqlite3 + sqlite-vec 集成</h3>
+
+<pre><code class="language-ts">// lib/db/index.ts
+import Database from 'better-sqlite3'
+import * as sqliteVec from 'sqlite-vec'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import * as schema from './schema'
+import path from 'node:path'
+import os from 'node:os'
+
+const cached = globalThis as unknown as { __openNovelDb?: ReturnType&lt;typeof createDb&gt; }
+
+function createDb(projectId: string) {
+  const dbPath = path.join(os.homedir(), '.open-novel', 'workspaces', projectId, 'index.db')
+  const sqlite = new Database(dbPath)
+  sqlite.pragma('journal_mode = WAL')
+  sqliteVec.load(sqlite)                                // 加载向量扩展
+  return drizzle(sqlite, { schema })
+}
+
+export function getDb(projectId: string) {
+  if (!cached.__openNovelDb) cached.__openNovelDb = createDb(projectId)
+  return cached.__openNovelDb
+}
+</code></pre>
+
+<p><strong>跨项目连接管理</strong>:每个项目独立 <code>index.db</code> 文件;LRU(3) 缓存 3 个项目的 connection,切换项目时 evict 最旧的。详见 <a href="./04-storage-model.html">plan/04 §连接池</a>。</p>
+
+<h3 id="deepseek-v4-配置">DeepSeek V4 配置</h3>
+
 <table>
 <thead>
-<tr>
-<th>模型</th>
-<th>ID</th>
-<th>ctx</th>
-<th>max output</th>
-<th>用途</th>
-</tr>
+<tr><th>模型</th><th>ID</th><th>ctx</th><th>max output</th><th>用途</th></tr>
 </thead>
-<tbody><tr>
-<td>Pro</td>
-<td><code>deepseek-v4-pro</code></td>
-<td>1M</td>
-<td>384K</td>
-<td>Writer / Validator / Humanizer (核心创作 + 一致性审 + 改写)</td>
-</tr>
-<tr>
-<td>Flash</td>
-<td><code>deepseek-v4-flash</code></td>
-<td>1M</td>
-<td>384K</td>
-<td>Router / Checker / Reflector / ReaderPanel / 工具内 LLM 短调用</td>
-</tr>
-</tbody></table>
-<p><strong>1M ctx 的设计含义</strong>: 普通章节场景下不需要 token 预算控制,把&quot;一致性所需的全部上下文&quot;装齐是头等优先级 — 见 plan/12 §一致性优先 + spec/23 §per-agent 上下文契约。</p>
-<p><strong>JSON 输出模式</strong>(详见 <a href="../spec/24-json-output.html">spec/24-json-output.html</a>):</p>
-<pre><code class="language-ts">import { deepseek } from &#39;@ai-sdk/deepseek&#39;
-import { generateText } from &#39;ai&#39;
+<tbody>
+<tr><td>Pro</td><td><code>deepseek-v4-pro</code></td><td>1M</td><td>384K</td><td>Writer / Validator / Humanizer(核心创作 + 一致性审 + 改写)</td></tr>
+<tr><td>Flash</td><td><code>deepseek-v4-flash</code></td><td>1M</td><td>384K</td><td>Router / Checker / Reflector / ReaderPanel / Hidden Agent 短调用</td></tr>
+</tbody>
+</table>
 
-await generateText({
-  model: deepseek(&#39;deepseek-v4-flash&#39;),
-  messages: [
-    { role: &#39;system&#39;, content: &#39;You are a router. Output valid JSON in the format: { &quot;intent&quot;: &quot;...&quot;, &quot;mode&quot;: &quot;...&quot; }&#39; },
-    { role: &#39;user&#39;, content: &#39;...&#39; },
-  ],
-  providerOptions: {
-    deepseek: {
-      response_format: { type: &#39;json_object&#39; },
-    },
-  },
-  maxTokens: 512,        // 必须基于 zod schema 估算; 不能默认 4096 (会被截断风险/浪费)
+<p><strong>1M ctx 的设计含义</strong>:普通章节场景下不需要 token 预算控制,把"一致性所需的全部上下文"装齐是头等优先级 — 见 <a href="./12-memory-and-context.html">plan/12 §一致性优先</a> + <a href="../spec/23-context-contracts.html">spec/23 §per-agent 上下文契约</a>。</p>
+
+<p><strong>调用形态</strong>(详见 <a href="../spec/24-json-output.html">spec/24</a>):</p>
+
+<pre><code class="language-ts">import { wrapLanguageModel, generateText } from 'ai'
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
+import { deepseekMiddleware } from '@/lib/agents/deepseek-middleware'
+
+const deepseek = createOpenAICompatible({
+  name: 'deepseek',
+  apiKey: process.env.DEEPSEEK_API_KEY!,
+  baseURL: 'https://api.deepseek.com/v1',
+})
+
+export const deepseekPro = wrapLanguageModel({
+  model: deepseek.languageModel('deepseek-v4-pro'),
+  middleware: [deepseekMiddleware],                     // 见 spec/22 §DeepSeek 适配
+})
+
+// JSON 模式调用(Router / Validator / Checker / ...)
+const result = await generateText({
+  model: deepseek.languageModel('deepseek-v4-flash'),
+  messages,
+  providerOptions: { deepseek: { response_format: { type: 'json_object' } } },
+  maxTokens: 512,                                       // 必须基于 zod schema 估算
 })
 </code></pre>
+
+<p><strong>Agent loop 控制</strong>(Writer / Validator 等带工具的 agent):</p>
+
+<pre><code class="language-ts">import { generateText } from 'ai'
+
+const result = await generateText({
+  model: deepseekProMax,
+  messages: ctx.messages,
+  tools: ctx.tools,
+  stopWhen: ({ steps }) => {
+    // 看到 proposal marker 立刻停 — 不依赖 LLM 看 prompt 自觉停
+    const last = steps[steps.length - 1]
+    if (last?.toolResults?.some(r => r.result?.kind === 'proposal')) return true
+    if (steps.length >= 10) return true
+    return false
+  },
+  onStepFinish: async ({ toolResults }) => {
+    await recordTrace(ctx, toolResults)
+  },
+})
+</code></pre>
+
 <p><strong>JSON mode 关键约束</strong>:</p>
 <ul>
-<li>system 或 user prompt 必须含 &quot;json&quot; 字样 + 提供示例</li>
+<li>system 或 user prompt 必须含 "json" 字样 + 提供示例</li>
 <li>DeepSeek 不强制 schema → 应用层 zod 校验 + 失败 retry 1 次,2 次仍败 escalate</li>
 <li><code>max_tokens</code> 必须基于 schema 估算(防 JSON 中途截断 — 大坑)</li>
-<li>偶尔返回空 content → retry + 加 &quot;请确保返回非空 JSON&quot; 后缀</li>
+<li>偶尔返回空 content → retry + 加 "请确保返回非空 JSON" 后缀</li>
 <li>streaming 时拼完整 chunks 再 parse,中间 chunks 不展示给用户</li>
 </ul>
-<h3 id="mastra-memory-配置">Mastra Memory 配置</h3>
-<p>详见 <a href="../spec/22-mastra-memory.html">spec/22 §配置决策</a> + <a href="./12-memory-and-context.html">plan/12 §四层记忆模型</a>:</p>
-<pre><code class="language-ts">new Memory({
-  storage: new LibSQLStore({ url: &#39;file:&#39; + path.join(os.homedir(), &#39;.open-novel&#39;, &#39;runtime.db&#39;) }),
-  options: {
-    lastMessages: 30,        // 1M ctx 下放宽; 30 条原文不会挤压一致性 retrieve
-    semanticRecall: false,   // 默认关
-    workingMemory: false,    // 与&quot;L3 仅 Reflector 写&quot;原则冲突 — 不让 LLM 在 stream 中 upsert 记忆
-  },
-})
+
+<h3 id="应用层-memory-模块">应用层 Memory 模块</h3>
+
+<p>不用任何 Agent 框架的 Memory 抽象,自己写薄薄一层 thread / resource CRUD + 一致性校验。详见 <a href="../spec/22-memory-and-history.html">spec/22 §应用层 memory 模块</a>。</p>
+
+<pre><code class="language-ts">// lib/agents/memory.ts (简化示意)
+import { getDb } from '@/lib/db'
+import { messages } from '@/lib/db/schema'
+import { eq, and, desc } from 'drizzle-orm'
+
+export async function fetchRecent({ projectId, threadId, limit = 30 }) {
+  // 一致性校验:thread 必须以 projectId 开头
+  if (!threadId.startsWith(`proj:${projectId}:`)) {
+    throw new Error('thread/resource projectId mismatch')
+  }
+  const db = getDb(projectId)
+  return await db.select().from(messages)
+    .where(and(eq(messages.threadId, threadId), eq(messages.resource, projectId)))
+    .orderBy(desc(messages.createdAt))
+    .limit(limit)
+}
 </code></pre>
-<p><strong>关键决策汇总</strong>:</p>
+
+<h2 id="版本升级流程">版本升级流程</h2>
 <ul>
-<li>runtime.db = Mastra Memory 全部 thread + messages (跨项目共享单文件,逻辑用 thread/resource 隔离)</li>
-<li>index.db = 每项目一文件,项目数据 (chapters / settings / learnings / approvals / paragraph_anchors / ...) — 与 runtime.db 严格不混</li>
-<li>所有 Agent stream 必经 <code>streamWithGuard</code> (memory-guard) 验证 thread/resource projectId 一致 — 直接调 <code>streamVNext</code> lint 报错</li>
-<li>所有 prompt 装配必经 per-agent context builder (spec/23) — Agent 自拼 prompt 是反模式</li>
+<li>单一 minor bump(e.g. <code>next 15.5.4 → 15.5.7</code>):测试 + lockfile 更新 + commit <code>chore(deps): bump next 15.5.7</code>,无需 doc 更新</li>
+<li>主版本切换(e.g. <code>next 15 → 16</code>):必须先 PR 更新本文档 + plan/spec 受影响章节 + 跑全套验收,然后再 code commit</li>
+<li>从 caret 收紧到锁主线(生产准备时):整体走一遍 doc commit <code>docs(plan/08): tighten version locks for production</code></li>
 </ul>
-<h2 id="版本升级流程-未来">版本升级流程 (未来)</h2>
-<ul>
-<li>单一 minor bump (e.g. <code>next 15.5.4 → 15.5.7</code>):测试 + lockfile 更新 + commit <code>chore(deps): bump next 15.5.7</code>,无需 doc 更新</li>
-<li>主版本切换 (e.g. <code>next 15 → 16</code>):必须先 PR 更新本文档 + plan/spec 受影响章节 + 跑全套验收,然后再 code commit</li>
-<li>从 caret 收紧到锁主线 (生产准备时):整体走一遍 doc commit <code>docs(plan/08): tighten version locks for production</code></li>
-</ul>
+
 <h2 id="不在本期范围">不在本期范围</h2>
 <ul>
-<li>私有包注册表 / npm proxy 配置 (localhost 直连 npmjs)</li>
-<li>多 lockfile 共存 (Yarn / npm) — 强制 pnpm</li>
-<li>跨平台兼容 (我们只测 macOS;Windows / Linux 留待二期)</li>
+<li>私有包注册表 / npm proxy 配置(localhost 直连 npmjs)</li>
+<li>多 lockfile 共存(Yarn / npm)— 强制 pnpm</li>
+<li>跨平台兼容(只测 macOS;Windows / Linux 留待二期)</li>
+<li>云同步 / 多设备(LibSQL embedded replicas 等能力被砍 — 单机本地 SQLite 已够)</li>
+<li>Mastra Agent / Memory / Workflow 等高层抽象(被 P0-1 决策砍掉,详见 <a href="#adr">ADR-A</a>)</li>
 </ul>
-  </main>
+
+<h2 id="关联文档">关联文档</h2>
+<ul>
+<li><strong>上游</strong>:<a href="./01-overview.html">plan/01</a> 系统概览 §关键技术决策汇总</li>
+<li><strong>存储细节</strong>:<a href="./04-storage-model.html">plan/04</a> 存储模型 · <a href="../spec/01-storage-schema.html">spec/01</a> SQLite schema</li>
+<li><strong>实查清单</strong>:<a href="../spec/00-version-audit.html">spec/00</a> 版本审计闸门</li>
+<li><strong>DeepSeek 适配</strong>:<a href="../spec/22-memory-and-history.html">spec/22</a> §DeepSeek middleware</li>
+</ul>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-A</td>
+<td>Agent 框架</td>
+<td>Mastra Agent / LangGraph / OpenAI Agents SDK / Inngest / <strong>裸 AI SDK 6 + stopWhen</strong></td>
+<td><strong>裸 AI SDK 6 + stopWhen + 自定义 runner</strong></td>
+<td>Mastra Agent loop 的隐式行为(工具返回后自动喂回 LLM)与本项目"工具内部跑 15-45s cascade + 跨 HTTP 请求审批" 强冲突;<code>stopWhen</code> 是 AI SDK 6 一等字段,可显式控制"看到 proposal marker 立刻停",彻底消除"用 prompt 嘱咐 LLM 自觉 stop" 的 anti-pattern。LangGraph 控制力够但要换整套生态;Inngest 杀鸡用牛刀</td>
+</tr>
+<tr>
+<td>ADR-B</td>
+<td>数据库</td>
+<td>LibSQL / <strong>SQLite (better-sqlite3)</strong> / node:sqlite</td>
+<td><strong>better-sqlite3</strong></td>
+<td>LibSQL 是 Mastra 推荐而非主动选择;LibSQL 独有的 HTTP API / embedded replicas / sync 本项目都用不上;SQLite 是 30 年公共标准,生态最大,Drizzle 头等公民;同步 API 简化代码;better-sqlite3 prebuild 在企业 SSL 下表现成熟</td>
+</tr>
+<tr>
+<td>ADR-C</td>
+<td>向量能力</td>
+<td>LibSQL native vector / <strong>sqlite-vec</strong> / sqlite-vss / hnswlib-node / Vectra</td>
+<td><strong>sqlite-vec</strong></td>
+<td>与 SQLite 同库,可 SQL JOIN(<a href="../spec/20-context-assembly.html">spec/20</a> / <a href="../spec/21-fact-query.html">spec/21</a> 范式契合);transaction 一致性免费;hnswlib-node / Vectra 都要"两次查询"+ JS merge,与现有 spec 范式不符</td>
+</tr>
+<tr>
+<td>ADR-D</td>
+<td>ORM</td>
+<td>裸 SQL 字符串 / <strong>Drizzle ORM</strong> / Kysely / Prisma</td>
+<td><strong>Drizzle ORM</strong></td>
+<td>本项目 12+ 张表 + 持续 schema 演进,需要 schema 单一事实源;TS 类型从 schema 自动推导,"加字段不漏改";Prisma 不支持 SQLite/LibSQL fork;Kysely 无 migration 工具</td>
+</tr>
+<tr>
+<td>ADR-E</td>
+<td>Worker / Job queue</td>
+<td><strong>进程内 in-memory queue</strong> / bullmq + Redis / Inngest</td>
+<td><strong>进程内 in-memory queue (MVP)</strong></td>
+<td>单机本地工具,无多进程协作需求;bullmq 需要 Redis 部署,过重;未来真有扩展需求再迁 bullmq,接口 <code>queue.add(job)</code> 不变</td>
+</tr>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

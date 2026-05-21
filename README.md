@@ -1,42 +1,47 @@
 # Open Novel
 
-> 基于 DeepSeek V4 的多 Agent 中文长篇小说自动创作系统 — 面向番茄小说平台的"AI IDE"
+> 像 VSCode 一样工作的 AI 中文长篇小说创作工作台 — 始终把用户放在驾驶位的创作助手
 
 ## 这是什么
 
-一个像 VSCode 一样工作的 AI 小说创作工作台。你只需要给一个粗略的故事种子,系统就能配合你完成:
+一个面向番茄小说作者的 AI 创作工作台。你给一个粗略的故事种子,它配合你完成:
 
-- 世界观、大纲、主角资料、章节节奏、爽点安排等**前置设定**的逐项生成与审阅
-- 框选文字 → 让 AI 局部修改
-- 设定中的角色名/地点名**自动高亮 + 跳转引用** (像代码里的 Goto Definition)
-- 一键生成**章节概要 → 章节正文**
-- 一键**去 AI 化**,适配番茄读者口味
-- 多项目并行,数据互不污染
+- **前置设定**: 世界观 / 大纲 / 角色 / 节奏 / 爽点的逐项生成与审阅
+- **章节创作**: 一键章节概要 → 一键章节正文 → 一键去 AI 化
+- **改完连带改**: 改了角色性别,系统自动找出所有相关章节段落,整批审批 + 落盘
+- **边写边查**: 设定中的角色名 / 地点名自动高亮 + 跳转引用(像代码的 Goto Definition)
+- **多项目并行**: 数据互不污染
 
-## 核心特性
+它不是一键生成器,而是 Agent 提议 + 用户审批 + 系统持久的合伙人。
 
-- **多 Agent 协作**: Router / Writer / Checker / Validator / Reflector / Humanizer / **ReaderPanel** 7 个 Agent 各司其职
-- **三种工作模式**: Discuss (检索/对话) / Plan (设定编辑) / Write (正文编辑),Agent 行为严格区分
-- **审批必须**: 任何写入设定/正文的操作都必须先 diff 后落盘,用户点头才生效
-- **一致性守门**: 改了角色性别?Validator 自动扫所有章节列出受影响段落,逐项审批后才落盘
-- **叙事力学诊断**: BeatAnalyzer 输出节奏 / 情绪曲线 / 钩子强度;ArcTracker 检测角色弧光偏离;可调用三幕 / 英雄之旅 / 番茄黄金三章等结构模板
-- **发布前留存预演**: ReaderPanel 5 persona (追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬) 并行模拟读者反应,生成章节风险报告
-- **React 式反馈学习**: 每次审批闭环后 Reflector 提炼经验,后续生成自动注入,越用越懂你
-- **流式透明化**: Agent 推理过程、工具调用、子 Agent 切换在右侧 ThinkingPanel 实时滚动
-- **可定制风格/性格**: Agent 性格、文风、断句节奏全部可调
-- **联网搜索接口预留**: POC 阶段 Mock,二期接入 Bocha (中文) + Tavily (英文)
+## 核心能力
+
+- **多 Agent 协作** — 7 对外 Agent(Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel)+ 6 Hidden Agent(内部 LLM 工具,经 `callJsonAgent` 调用),详见 [plan/02](./plan/02-multi-agent.html)
+- **三种工作模式** — Discuss(只读检索)/ Plan(设定编辑)/ Write(正文编辑),严格闸门
+- **审批必须** — 所有写入走 proposal 模式,用户在 ApprovalCard 整批审 + 勾选 + 编辑;cascade 内部递归 ≤3 轮全在内存,落盘 transaction 原子
+- **一致性守护** — cascade 影响半径由 SQL 出候选 + LLM 二次过滤,整批一次审完
+- **五大网文守则** — 黄金三章 / 人设崩坏 / 节奏崩盘 / 期待感兑现 / 金手指依赖 自动检测;critical 风险用户必须确认才能 approve
+- **叙事力学诊断** — BeatAnalyzer(章内节奏 / 钩子强度)+ ArcTracker(跨章弧光偏离)
+- **发布前留存预演** — ReaderPanel 5 persona(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)并行模拟读者反应
+- **反馈学习** — Reflector per-turn 提炼用户偏好,context builder 按 weight 注入,越用越懂你
+- **流式透明** — Agent 推理过程、工具调用在右侧 ThinkingPanel 实时滚动
+- **联网研究** — 接口预留 + Mock,二期接 Bocha(中文)+ Tavily(英文)
 
 ## 技术栈
 
 | 层 | 选型 | 备注 |
 |---|---|---|
-| 前后端 | Next.js 15 (App Router) + React 19 + TypeScript 5 | 单仓单应用 |
-| Agent 框架 | Mastra 1.x on Vercel AI SDK 6 | `AgentNetwork` + `needsApproval` |
-| LLM | DeepSeek V4 Pro / Flash (via Vercel AI Gateway) | Pro 跑核心创作,Flash 跑路由/检查 |
-| 编辑器 | TipTap 3.x + ProseMirror Decorations + Aho-Corasick | 不用 `Mention` 节点 |
-| 状态机 | XState | 三模式闸门 |
-| 存储 | `.md` (内容) + LibSQL `index.db` (索引/历史/学习) | 用户不可见 sql |
+| 前后端 | Next.js 15 + React 19 + TypeScript 5.9 | 单仓单应用 |
+| Agent loop | Vercel AI SDK 6 (`generateText` / `streamText` + `stopWhen`) | 自定义 13 个 runner,不用 Agent 框架 |
+| LLM | DeepSeek V4 Pro / Flash(直连 API) | Pro=max effort,Flash=default;ctx 1M,max output 384K,原生 JSON mode |
+| 编辑器 | TipTap 3.x + ProseMirror Decorations + Aho-Corasick | 不用 Mention 节点 |
+| 状态机 | XState v5 | 三模式闸门 |
+| 数据库 | better-sqlite3 + Drizzle ORM | 同步 API,WAL mode |
+| 向量 | sqlite-vec(loadExtension) | 与 SQLite 同库可 JOIN |
+| 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
+
+详见 [plan/08-tech-stack](./plan/08-tech-stack.html)。
 
 ## 快速启动
 
@@ -47,7 +52,7 @@ pnpm dev
 ```
 
 首次启动会引导你:
-1. 选 Workspace 路径 (默认 `~/.open-novel/workspaces/`)
+1. 选 Workspace 路径(默认 `~/.open-novel/workspaces/`)
 2. 在 Settings 中填入 DeepSeek API key
 3. 创建第一个项目
 
@@ -55,85 +60,103 @@ pnpm dev
 
 ```
 .
-├── README.md                  # 你正在看的这个
-├── plan/                      # 架构设计 (What / Why)
-├── spec/                      # 实现细节 (How)
-├── assets/                    # 文档样式与统一资产
-├── progress/                  # 实施进度 (When / 进展)
+├── README.md                  # 本文件
+├── index.html                 # 文档入口
+├── todo.html                  # TODO + 已知问题 + 未决问题
+├── CHANGELOG.html             # 跨文档变更流水线
+├── plan/                      # 半技术 PRD(产品向)
+├── spec/                      # 核心技术文档(实施向)
+├── progress/                  # 历史进度档案(后续重构,见 todo.html §1.2)
+├── assets/                    # 文档样式
 ├── app/                       # Next.js 路由 + API
 ├── components/                # 前端组件
 ├── lib/                       # Agent / Tools / Storage / Editor
-└── ~/.open-novel/workspaces/  # 你的小说项目数据 (在用户目录,不在仓库)
+└── ~/.open-novel/workspaces/  # 你的小说项目数据(在用户目录,不在仓库)
 ```
 
 ## 文档导航
 
-### 设计 (plan/)
-- [01-overview.html](./plan/01-overview.html) — 系统概览与关键决策
-- [02-multi-agent.html](./plan/02-multi-agent.html) — 7 Agent 拓扑与职责
-- [03-editor-layer.html](./plan/03-editor-layer.html) — 编辑器分层与 EditorAdapter
-- [04-storage-model.html](./plan/04-storage-model.html) — md+sql 混合存储模型
-- [05-modes-and-approval.html](./plan/05-modes-and-approval.html) — 三模式与审批流
-- [06-cascade-and-reflection.html](./plan/06-cascade-and-reflection.html) — Cascade 一致性与反馈学习
-- [07-ui-layout.html](./plan/07-ui-layout.html) — 五区 UI 布局
-- [08-tech-stack.html](./plan/08-tech-stack.html) — 技术栈锁定与版本策略
-- [09-narrative-engine.html](./plan/09-narrative-engine.html) — 叙事引擎 (BeatAnalyzer + ArcTracker + 模板库)
-- [10-reader-simulator.html](./plan/10-reader-simulator.html) — 读者仿真器 (5 persona ReaderPanel)
-- [11-knowledge-graph.html](./plan/11-knowledge-graph.html) — 知识图谱与 cascade / RAG 地基
-- [12-memory-and-context.html](./plan/12-memory-and-context.html) — Agent 记忆与上下文治理
+### 半技术 PRD (plan/)
 
-### 实现 (spec/)
-- [00-version-audit.html](./spec/00-version-audit.html) — **W3 启动前版本审计闸门** (npm 实查 / DeepSeek model id / AI SDK API 形态)
-- [01-storage-schema.html](./spec/01-storage-schema.html) — SQLite schema 与 frontmatter 规范 (含 zod 强校验 / 编码归一化 / WAL / 连接池)
-- [02-agent-tools.html](./spec/02-agent-tools.html) — Agent 工具签名与契约 (含路径越权防御 / 不可信围栏 / 续写协议 / 结构化输出修复)
-- [03-prompts.html](./spec/03-prompts.html) — Agent prompt 模板
-- [04-streaming-protocol.html](./spec/04-streaming-protocol.html) — SSE 事件协议 (含取消/刷新/重连 + 错误 UX 表 + 长任务进度)
-- [05-entity-highlight.html](./spec/05-entity-highlight.html) — 实体高亮与跳转 (含中文边界 / IME 安全 / trie 重建)
-- [06-approval-flow.html](./spec/06-approval-flow.html) — 审批流 (proposal + 独立 endpoint 模式)
-- [07-mode-state-machine.html](./spec/07-mode-state-machine.html) — XState 状态机 (含 USER_INPUT 处理 + cascade queue)
-- [08-de-ai-pipeline.html](./spec/08-de-ai-pipeline.html) — 去 AI 化 pipeline
-- [09-build-and-tooling.html](./spec/09-build-and-tooling.html) — 构建与工具链
-- [10-narrative-engine.html](./spec/10-narrative-engine.html) — 叙事引擎实现 (BeatAnalyzer / ArcTracker / 模板格式)
-- [11-reader-personas.html](./spec/11-reader-personas.html) — 读者 Persona 与 ReaderPanel 实现 (含失败聚合 + persona 安全围栏)
-- [12-shortcuts.html](./spec/12-shortcuts.html) — 快捷键 Registry + CommandRegistry + IME 闸门 + @file 引用 + 撤销栈语义
-- [13-settings.html](./spec/13-settings.html) — SettingsDialog 8 section + 月度预算 + 项目生命周期 + 学习偏好面板
-- [14-testing.html](./spec/14-testing.html) — 测试策略 (vitest / playwright / LLM golden / CI)
-- [15-onboarding.html](./spec/15-onboarding.html) — 首启引导 (4 步 wizard + 渐进 tooltip + 样例项目)
-- [16-knowledge-schema.html](./spec/16-knowledge-schema.html) — 知识图谱 schema 与 frontmatter 升级
-- [17-paragraph-anchors.html](./spec/17-paragraph-anchors.html) — 段级稳定 ID 与差量 reindex
-- [18-embeddings.html](./spec/18-embeddings.html) — 段级 embedding 与语义检索
-- [19-impact-analysis.html](./spec/19-impact-analysis.html) — 影响半径与 cascade 工具
-- [20-context-assembly.html](./spec/20-context-assembly.html) — 上下文装配工具 assembleContext
-- [21-fact-query.html](./spec/21-fact-query.html) — 事实查询工具 queryFacts
-- [22-mastra-memory.html](./spec/22-mastra-memory.html) — Mastra Memory 落地细节
-- [23-context-contracts.html](./spec/23-context-contracts.html) — Per-agent 上下文契约
-- [24-json-output.html](./spec/24-json-output.html) — JSON 结构化输出统一规约
-- [25-cardinal-rules.html](./spec/25-cardinal-rules.html) — 五大网文守则
+- [01-overview](./plan/01-overview.html) — 系统概览与关键决策
+- [02-multi-agent](./plan/02-multi-agent.html) — 7 对外 + 6 Hidden Agent 拓扑
+- [03-editor-layer](./plan/03-editor-layer.html) — 编辑器分层与 EditorAdapter
+- [04-storage-model](./plan/04-storage-model.html) — Markdown + SQLite 混合存储
+- [05-modes-and-approval](./plan/05-modes-and-approval.html) — 三模式与审批流
+- [06-cascade-and-reflection](./plan/06-cascade-and-reflection.html) — Cascade 一致性与反馈学习
+- [07-ui-layout](./plan/07-ui-layout.html) — 五区 UI 布局
+- [08-tech-stack](./plan/08-tech-stack.html) — 技术栈锁定
+- [09-narrative-engine](./plan/09-narrative-engine.html) — 叙事引擎(BeatAnalyzer + ArcTracker + 模板库)
+- [10-reader-simulator](./plan/10-reader-simulator.html) — 读者仿真器(5 persona ReaderPanel)
+- [11-knowledge-graph](./plan/11-knowledge-graph.html) — 知识图谱
+- [12-memory-and-context](./plan/12-memory-and-context.html) — 记忆与上下文治理
 
-### 进度 (progress/)
-- [README](./progress/README.html) — 日志索引规则
-- [000-init](./progress/000-init.html) — 项目启动记录
-- [001-scaffolding](./progress/001-scaffolding.html) — W2 期 (起始计划 / 收尾 retro)
-- [002-narrative-reader](./progress/002-narrative-reader.html) — 战略升级: 纳入叙事引擎 + 读者仿真器
-- [003-shortcuts-and-settings](./progress/003-shortcuts-and-settings.html) — UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计
-- [004-docs-hardening](./progress/004-docs-hardening.html) — 文档审计加固 (W3 启动前的 day-1 blocker 排查 + 32 个补丁)
-- [005-knowledge-graph](./progress/005-knowledge-graph.html) — 知识图谱专攻 (cascade + RAG 真正可工作的地基)
-- [006-memory-and-context](./progress/006-memory-and-context.html) — 记忆 / 上下文 / JSON / 守则 一致性优先重设计
-- [007-opencode-borrowings](./progress/007-opencode-borrowings.html) — opencode 借鉴落地 + TODO closure
+### 核心技术文档 (spec/)
+
+- [00-version-audit](./spec/00-version-audit.html) — W3 启动前版本审计闸门
+- [01-storage-schema](./spec/01-storage-schema.html) — SQLite schema 与 frontmatter 规范
+- [02-agent-tools](./spec/02-agent-tools.html) — Agent 工具签名与契约
+- [03-prompts](./spec/03-prompts.html) — Agent prompt 模板
+- [04-streaming-protocol](./spec/04-streaming-protocol.html) — SSE 流式协议
+- [05-entity-highlight](./spec/05-entity-highlight.html) — 实体高亮与跳转
+- [06-approval-flow](./spec/06-approval-flow.html) — proposal + 独立 endpoint 审批
+- [07-mode-state-machine](./spec/07-mode-state-machine.html) — XState 状态机
+- [08-de-ai-pipeline](./spec/08-de-ai-pipeline.html) — 去 AI 化 pipeline
+- [09-build-and-tooling](./spec/09-build-and-tooling.html) — 构建与工具链
+- [10-narrative-engine](./spec/10-narrative-engine.html) — 叙事引擎实现
+- [11-reader-personas](./spec/11-reader-personas.html) — ReaderPanel 实现
+- [12-shortcuts](./spec/12-shortcuts.html) — 快捷键 Registry
+- [13-settings](./spec/13-settings.html) — SettingsDialog
+- [14-testing](./spec/14-testing.html) — 测试策略(vitest / playwright / LLM golden / CI)
+- [15-onboarding](./spec/15-onboarding.html) — 首启引导
+- [16-knowledge-schema](./spec/16-knowledge-schema.html) — 知识图谱 schema 与 frontmatter 升级
+- [17-paragraph-anchors](./spec/17-paragraph-anchors.html) — 段级稳定 ID 与差量 reindex
+- [18-embeddings](./spec/18-embeddings.html) — 段级 embedding 与语义检索
+- [19-impact-analysis](./spec/19-impact-analysis.html) — 影响半径与 cascade 工具
+- [20-context-assembly](./spec/20-context-assembly.html) — 上下文装配 assembleContext
+- [21-fact-query](./spec/21-fact-query.html) — 事实查询 queryFacts
+- [22-memory-and-history](./spec/22-memory-and-history.html) — 应用层 memory 模块 + 历史压缩 + 卷级摘要
+- [23-context-contracts](./spec/23-context-contracts.html) — Per-agent 上下文契约
+- [24-json-output](./spec/24-json-output.html) — JSON 结构化输出统一规约
+- [25-cardinal-rules](./spec/25-cardinal-rules.html) — 五大网文守则
+
+### 项目档案
+
+- [todo.html](./todo.html) — TODO + 已知问题 + 未决问题
+- [CHANGELOG.html](./CHANGELOG.html) — 跨文档变更流水线
+
+### 历史进度 (progress/)
+
+- 9 篇历史档案(000-007 + README),角色被 todo.html + CHANGELOG.html 替代,后续将统一重构,见 [todo.html §1.2](./todo.html)
+
+## 设计原则
+
+- **docs-before-code** — 任何代码 commit 之前,对应 plan/spec 必须先有,且用户 approve docs 后才动代码
+- **用户主导** — Agent 提议、用户审批、系统持久;所有写盘动作必经 ApprovalCard
+- **一致性 > 节流** — DeepSeek V4 1M ctx,装齐"一致性所需的全部上下文",不做 token 预算裁剪
+- **影响半径不依赖 LLM** — cascade 候选必须是 SQL 算的,LLM 只做"是否真受影响"二次过滤
+- **三模式严格分离** — discuss 不写,plan 不碰章节,write 不碰设定
+
+完整不变性见 [plan/01 §不变性](./plan/01-overview.html#不变性约束)。
 
 ## 开发约定
 
-1. **每次显著迭代必须 commit**,使用 `git` 直接命令 (不使用 yummy/ym)
-2. **新功能先更新 plan/spec/**,再写代码;实现完成后 progress/ 追加一条
-3. **任何写入用户文件的操作必须经过 ApprovalCard**,不允许 Agent 自动落盘
-4. 三模式严格分离: discuss 不写,plan 不碰章节,write 不碰设定
-5. 输出语言**中文为主**,可夹杂英文术语,但不影响阅读
+1. **每次显著迭代必须 commit**(使用 git 直接命令)
+2. **新功能先更新 plan/spec/**,代码后跟
+3. **任何写入用户文件的操作必须经过 ApprovalCard**,Agent 不能 silent 落盘
+4. 输出语言中文为主,可夹杂英文术语
 
 ## 不在 POC 范围
 
-- 真实联网搜索 (二期接入)
+- 真实联网搜索(二期接入 Bocha + Tavily)
 - 多用户 / 账号系统
-- 番茄小说自动发布 (导出 .md/.txt 让用户手动发)
-- 实时协作 (二期专项设计;POC 不预留 Yjs 接口)
+- 番茄小说自动发布(导出 .md/.txt 让用户手动发)
+- 实时协作(二期专项设计;POC 不预留 Yjs 接口)
 - 移动端
-- Windows 原生支持 (POC macOS/Linux only;Windows 用户可走 WSL)
+- Windows 原生支持(POC macOS / Linux only;Windows 用户走 WSL)
+- 云同步 / 多设备(本地单机优先;LibSQL 等带云同步能力的数据库栈已被砍)
+- Mastra / LangGraph 等 Agent 框架(自定义 runner + AI SDK 6 `stopWhen` 已够;详见 [plan/08 ADR](./plan/08-tech-stack.html#adr))
+
+## 许可
+
+(待补)

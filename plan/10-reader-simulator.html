@@ -13,59 +13,34 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/10-reader-simulator.html</span>
 </nav>
-<h1 id="10-读者仿真器-readerpanel">10 — 读者仿真器 (ReaderPanel)</h1>
+
+<h1 id="10-读者仿真器-readerpanel">10 — 读者仿真器(ReaderPanel)</h1>
 <blockquote>
-<p>把番茄读者的&quot;弃书 / 追更&quot;决策模型化,在每章发布前给作者一份风险报告。<strong>这是 7 个 Agent 里真正贴近番茄留存战的那一个。</strong></p>
+<p>把番茄读者的"弃书 / 追更"决策模型化,在每章发布前给作者一份风险报告。<strong>这是 7 个对外 Agent 里真正贴近番茄留存战的那一个。</strong></p>
 </blockquote>
+
 <h2 id="为什么要有它">为什么要有它</h2>
-<p>番茄的核心游戏不是&quot;写得好&quot;,是&quot;留得住&quot;。平台算法对<strong>首章 30 秒留存、中章追更率、章末停留时间</strong>异常敏感。但作者写自己作品时几乎无法客观自评 — 自己写的逻辑自己看顺,坑自己挖自己看不见,毒点自己习以为常。</p>
-<p>读者仿真器解决的就是<strong>视角缺失</strong>问题: 内置一组多元化的虚拟读者 persona,每章生成后并行跑一遍,各自给出反应 + 风险标记。作者在 ApprovalCard 里看到这些信号后再决定是否调整。</p>
+<p>番茄的核心游戏不是"写得好",是"留得住"。平台算法对<strong>首章 30 秒留存、中章追更率、章末停留时间</strong>异常敏感。但作者写自己作品时几乎无法客观自评 — 自己写的逻辑自己看顺,坑自己挖自己看不见,毒点自己习以为常。</p>
+<p>读者仿真器解决的就是<strong>视角缺失</strong>问题:内置一组多元化的虚拟读者 persona,每章生成后并行跑一遍,各自给出反应 + 风险标记。作者在 ApprovalCard 里看到这些信号后再决定是否调整。</p>
 <p>不是替代真实读者,是<strong>减少与真实读者首次接触前的信息不对称</strong>。</p>
+
 <h2 id="默认-5-个-personas">默认 5 个 Personas</h2>
 <p>每个 persona 是一个<strong>角色化 prompt + 评估维度</strong>:</p>
 <table>
-<thead>
-<tr>
-<th>Persona</th>
-<th>关注什么</th>
-<th>弃书触发</th>
-<th>追更触发</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>追更党</strong></td>
-<td>节奏、爽点、钩子</td>
-<td>一章无爽点 / 章末无悬念</td>
-<td>章末强钩子 + 爽点密度 ≥ 1/2k 字</td>
-</tr>
-<tr>
-<td><strong>逻辑控</strong></td>
-<td>设定一致性、伏笔、推理链</td>
-<td>设定矛盾 / 角色行为反人设</td>
-<td>伏笔回收 / 严谨推理段落</td>
-</tr>
-<tr>
-<td><strong>情感党</strong></td>
-<td>人物关系、情感张力、共鸣点</td>
-<td>角色工具人化 / 感情线突兀</td>
-<td>关系层级推进 / 强共鸣段落</td>
-</tr>
-<tr>
-<td><strong>毒舌读者</strong></td>
-<td>AI 味、老套、文字硬伤</td>
-<td>长句过密 / &quot;在某种程度上&quot; / 二次元梗烂大街</td>
-<td>自然口语 / 新鲜表达</td>
-</tr>
-<tr>
-<td><strong>潜水大佬</strong></td>
-<td>长期吸引力、世界观深度、人物层次</td>
-<td>世界观薄 / 人物扁平</td>
-<td>多层次冲突 / 设定彩蛋</td>
-</tr>
-</tbody></table>
-<p>每个 persona 都有详细 prompt (见 spec/11),输出走 <a href="../spec/24-json-output.html">JSON mode (spec/24)</a> 统一 schema:</p>
+<thead><tr><th>Persona</th><th>关注什么</th><th>弃书触发</th><th>追更触发</th></tr></thead>
+<tbody>
+<tr><td><strong>追更党</strong></td><td>节奏、爽点、钩子</td><td>一章无爽点 / 章末无悬念</td><td>章末强钩子 + 爽点密度 ≥ 1/2k 字</td></tr>
+<tr><td><strong>逻辑控</strong></td><td>设定一致性、伏笔、推理链</td><td>设定矛盾 / 角色行为反人设</td><td>伏笔回收 / 严谨推理段落</td></tr>
+<tr><td><strong>情感党</strong></td><td>人物关系、情感张力、共鸣点</td><td>角色工具人化 / 感情线突兀</td><td>关系层级推进 / 强共鸣段落</td></tr>
+<tr><td><strong>毒舌读者</strong></td><td>AI 味、老套、文字硬伤</td><td>长句过密 / "在某种程度上" / 二次元梗烂大街</td><td>自然口语 / 新鲜表达</td></tr>
+<tr><td><strong>潜水大佬</strong></td><td>长期吸引力、世界观深度、人物层次</td><td>世界观薄 / 人物扁平</td><td>多层次冲突 / 设定彩蛋</td></tr>
+</tbody>
+</table>
+
+<p>每个 persona 都有详细 prompt(见 <a href="../spec/11-reader-personas.html">spec/11</a>),输出走 <a href="../spec/24-json-output.html">JSON mode</a> 统一 schema:</p>
+
 <pre><code class="language-ts">type PersonaReaction = {
-  personaId: &#39;veteran_reader&#39; | &#39;casual_reader&#39; | &#39;rational_reader&#39; | &#39;genre_fan&#39; | &#39;new_reader&#39;
+  personaId: 'veteran_reader' | 'casual_reader' | 'rational_reader' | 'genre_fan' | 'new_reader'
 
   // 整体反应
   overallSentiment: -100 ~ 100      // -100 = 极度排斥, +100 = 强烈追更
@@ -73,17 +48,19 @@
   dropoffRisk: 0 ~ 1                // 弃书风险 (1 = 立刻点右上角)
 
   // 关键标记
-  highlights: { position: number; kind: &#39;爽点&#39; | &#39;钩子&#39; | &#39;亮点&#39;; reason: string }[]
-  warnings: { position: number; kind: &#39;毒点&#39; | &#39;坑&#39; | &#39;突兀&#39; | &#39;AI 味&#39;; severity: &#39;low&#39;|&#39;mid&#39;|&#39;high&#39;; reason: string }[]
+  highlights: { position: number; kind: '爽点' | '钩子' | '亮点'; reason: string }[]
+  warnings: { position: number; kind: '毒点' | '坑' | '突兀' | 'AI 味'; severity: 'low'|'mid'|'high'; reason: string }[]
 
   // 五大守则违反信号 (与 spec/25 对齐)
-  cardinalRulesFlags: (&#39;golden_chapters_drift&#39; | &#39;character_collapse&#39; | &#39;pacing_stall&#39; | &#39;promise_betrayal&#39; | &#39;system_dependency_overflow&#39;)[]
+  cardinalRulesFlags: ('golden_chapters_drift' | 'character_collapse' | 'pacing_stall' | 'promise_betrayal' | 'system_dependency_overflow')[]
 
   // 自由文字反馈 (像真实读者评论)
   naturalLanguageReaction: string
 }
 </code></pre>
-<p>5 个 persona 跑完后聚合成 <strong>章节风险报告</strong> (输出 JSON):</p>
+
+<p>5 个 persona 跑完后聚合成 <strong>章节风险报告</strong>(输出 JSON):</p>
+
 <pre><code class="language-ts">type ChapterRiskReport = {
   chapterId: string
   reactions: PersonaReaction[]
@@ -91,7 +68,7 @@
   averageDropoffRisk: number         // 平均弃书风险
   topRisks: { warning; count: number }[]
   topWins: { highlight; count: number }[]
-  recommendation: &#39;ship&#39; | &#39;minor-tweak&#39; | &#39;major-rework&#39;
+  recommendation: 'ship' | 'minor-tweak' | 'major-rework'
 
   // 五大守则贡献 (各 persona 的 cardinalRulesFlags 聚合)
   cardinalRulesFindings: {
@@ -103,7 +80,9 @@
   }
 }
 </code></pre>
-<p>ReaderPanel 是守则 1/2/3/4/5 的<strong>二审 agent</strong>(主检测在 Validator + Checker + ArcTracker 的算法层;ReaderPanel 是从读者主观感受角度看&quot;这章会不会让人弃书&quot;)。两层都报警 = 这章风险极大;只一层报警 = 警惕但不阻断。聚合规则在 <a href="../spec/25-cardinal-rules.html">spec/25 §ApprovalCard 集成</a>。</p>
+
+<p>ReaderPanel 是守则 1/2/3/4/5 的<strong>二审 agent</strong>(主检测在 Validator + Checker + ArcTracker 的算法层;ReaderPanel 是从读者主观感受角度看"这章会不会让人弃书")。两层都报警 = 这章风险极大;只一层报警 = 警惕但不阻断。聚合规则在 <a href="../spec/25-cardinal-rules.html">spec/25 §ApprovalCard 集成</a>。</p>
+
 <h2 id="触发时机">触发时机</h2>
 <pre class="mermaid">
 flowchart TD
@@ -117,7 +96,9 @@ flowchart TD
   D -->|重写| C
   style RP fill:#fef6e4,stroke:#d9a23a
 </pre>
-<p>ReaderPanel 输出<strong>不是闸门</strong>(<code>needsApproval: false</code>)。它在 ApprovalCard 里以&quot;读者预演&quot;卡片形式展示,作者可参考可忽略。</p>
+
+<p>ReaderPanel 输出<strong>不是闸门</strong>(<code>needsApproval: false</code>)。它在 ApprovalCard 里以"读者预演"卡片形式展示,作者可参考可忽略。</p>
+
 <h2 id="ui-形态">UI 形态</h2>
 <p>ApprovalCard 增加一栏 <strong>章节风险报告</strong>:</p>
 <pre class="mermaid">
@@ -145,11 +126,12 @@ flowchart TB
   style RISK fill:#fbe5e5,stroke:#c33
   style WIN fill:#e5fbe5,stroke:#3a3
 </pre>
-<p>展开后能看到每个 persona 的完整 <code>naturalLanguageReaction</code> (像逐条读者评论)。</p>
+<p>展开后能看到每个 persona 的完整 <code>naturalLanguageReaction</code>(像逐条读者评论)。</p>
+
 <h2 id="自定义-persona">自定义 Persona</h2>
-<p>用户可以在 SettingsDialog → &quot;读者仿真器&quot; tab 添加自定义 persona:</p>
+<p>用户可以在 SettingsDialog → "读者仿真器"tab 添加自定义 persona:</p>
 <pre><code class="language-yaml">id: my-target-reader
-name: &quot;我目标读者群: 25-30 岁男性都市白领&quot;
+name: "我目标读者群: 25-30 岁男性都市白领"
 prompt: |
   你是一个 25-30 岁的男性都市白领,工作日地铁通勤时看番茄...
   关注点: 职场感、励志感、解压感
@@ -157,39 +139,75 @@ prompt: |
 weight: 1.5
 </code></pre>
 <p>自定义 persona 跑在默认 5 个之后,权重可调。</p>
-<h2 id="校准-二期">校准 (二期)</h2>
-<p><strong>当前阶段</strong>: 5 个默认 persona 是基于&quot;番茄热门书读者画像 + 网文社区共识&quot;的合成 prompt。<strong>没有真实留存数据校准</strong>。这是限制,要在 UI 上明确告知用户:&quot;这是模拟读者,不是真实预测&quot;。</p>
-<p><strong>二期</strong>: 接入真实留存数据后:</p>
+
+<h2 id="校准-二期">校准(二期)</h2>
+<p><strong>当前阶段</strong>:5 个默认 persona 是基于"番茄热门书读者画像 + 网文社区共识"的合成 prompt。<strong>没有真实留存数据校准</strong>。这是限制,要在 UI 上明确告知用户:"这是模拟读者,不是真实预测"。</p>
+<p><strong>二期</strong>:接入真实留存数据后:</p>
 <ul>
 <li>通过用户作品的实际章节追订 / 弃书 / 评论数据,反向调整 persona prompt 与权重</li>
-<li>学习个体作者的真实读者画像 (e.g. 你的读者更偏情感党 ≠ 标准网文读者画像)</li>
-<li>引入 reinforcement learning loop: persona 预测 vs 真实表现的 delta 用作 reward</li>
+<li>学习个体作者的真实读者画像(e.g. 你的读者更偏情感党 ≠ 标准网文读者画像)</li>
+<li>引入 reinforcement learning loop:persona 预测 vs 真实表现的 delta 用作 reward</li>
 </ul>
-<p>校准 pipeline 设计放在 spec/11 末尾。</p>
+<p>校准 pipeline 设计放在 <a href="../spec/11-reader-personas.html">spec/11</a> 末尾。</p>
+
 <h2 id="数据落地">数据落地</h2>
 <ul>
 <li><strong>ChapterRiskReport</strong> 存在 <code>index.db.reader_reports</code> 表,关联 chapterId + 时间戳 + persona 版本号</li>
 <li><strong>Custom personas</strong> 存在 <code>~/.open-novel/workspaces/{projectId}/personas/{id}.yaml</code></li>
-<li><strong>历史 reports</strong> 可在&quot;全书概览&quot;页面回看,作者能看到自己作品的风险曲线随时间的变化</li>
+<li><strong>历史 reports</strong> 可在"全书概览"页面回看,作者能看到自己作品的风险曲线随时间的变化</li>
 </ul>
+
 <h2 id="不做什么">不做什么</h2>
 <ul>
-<li><strong>不做实时干预</strong>: 不在编辑器里浮动提示&quot;这段毒点高&quot;,这种侵入会摧毁创作心流。<strong>所有反馈都是章节完成后的批量报告</strong></li>
-<li><strong>不做闸门</strong>: 即使 5 个 persona 都给低分,作者仍可一键发布。我们提供信号不替决策</li>
-<li><strong>不做风险分数排行榜 / gamification</strong>: &quot;你这章 75 分,比你上章好&quot; 这种心理诱导会让作者写作偏向 persona 偏好,失去个人风格。报告只显示标记,不显示总分排名</li>
-<li><strong>不假装是真实预测</strong>: 文案里反复出现&quot;模拟读者&quot;、&quot;非真实预测&quot;、&quot;参考用&quot;,避免作者过度依赖</li>
+<li><strong>不做实时干预</strong>:不在编辑器里浮动提示"这段毒点高",这种侵入会摧毁创作心流。<strong>所有反馈都是章节完成后的批量报告</strong></li>
+<li><strong>不做闸门</strong>:即使 5 个 persona 都给低分,作者仍可一键发布。我们提供信号不替决策</li>
+<li><strong>不做风险分数排行榜 / gamification</strong>:"你这章 75 分,比你上章好"这种心理诱导会让作者写作偏向 persona 偏好,失去个人风格。报告只显示标记,不显示总分排名</li>
+<li><strong>不假装是真实预测</strong>:文案里反复出现"模拟读者"、"非真实预测"、"参考用",避免作者过度依赖</li>
 </ul>
-<h2 id="与现有架构的衔接">与现有架构的衔接</h2>
+
+<h2 id="关联文档">关联文档</h2>
 <ul>
-<li><strong>plan/02-multi-agent.html</strong>: Agent 表追加 ReaderPanel (第 7 个);写章节流程图加上&quot;ReaderPanel → ChapterRiskReport&quot;环节</li>
-<li><strong>plan/05-modes-and-approval.html</strong>: ApprovalCard 描述追加&quot;风险报告&quot;栏</li>
-<li><strong>spec/01-storage-schema.html</strong>: 增加 <code>reader_reports</code> 表 schema</li>
-<li><strong>spec/02-agent-tools.html</strong>: 加 <code>simulateReaders(chapterId)</code> 工具 (Reader Panel 内部用)</li>
-<li><strong>spec/06-approval-flow.html</strong>: ApprovalCard 数据契约扩展</li>
-<li><strong>spec/11-reader-personas.html</strong>: 5 默认 persona prompt + 校准 pipeline</li>
+<li><strong>上游</strong>:<a href="./02-multi-agent.html">plan/02</a> §ReaderPanel · <a href="./05-modes-and-approval.html">plan/05</a> ApprovalCard · <a href="./09-narrative-engine.html">plan/09</a> 叙事引擎</li>
+<li><strong>核心 spec</strong>:<a href="../spec/01-storage-schema.html">spec/01</a> reader_reports 表 · <a href="../spec/02-agent-tools.html">spec/02</a> simulateReaders · <a href="../spec/11-reader-personas.html">spec/11</a> ReaderPanel 实现 · <a href="../spec/24-json-output.html">spec/24</a> PersonaReaction schema · <a href="../spec/25-cardinal-rules.html">spec/25</a> 五大守则</li>
 </ul>
-<h2 id="落地里程碑">落地里程碑</h2>
-<p>W10。去 AI 化能力推迟到 W12 单独里程碑。</p>
-  </main>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-01</td>
+<td>ReaderPanel 是否闸门</td>
+<td>闸门(低分阻断 approve)/ <strong>非闸门(仅报告)</strong></td>
+<td><strong>非闸门</strong></td>
+<td>模拟读者非真实预测,设为闸门会让作者过度依赖且失去个人风格;以 ApprovalCard 风险卡片形式呈现,作者可选择忽略</td>
+</tr>
+<tr>
+<td>ADR-02</td>
+<td>5 默认 persona vs 用户自由配置</td>
+<td>只用户配 / <strong>5 默认 + 用户可加</strong> / 大量内置(20+)</td>
+<td><strong>5 默认 + 用户可加</strong></td>
+<td>5 个覆盖番茄典型读者画像;用户可加目标群 persona;太多会增 token 成本且边际收益小</td>
+</tr>
+<tr>
+<td>ADR-03</td>
+<td>持久化粒度</td>
+<td>仅最新 1 次 / <strong>每次章节生成都存</strong> / 用户选择性存</td>
+<td><strong>每次章节生成都存</strong></td>
+<td>"全书概览"风险曲线需要历史数据;reader_reports 表占用不大;持久化也便于二期校准</td>
+</tr>
+<tr>
+<td>ADR-04</td>
+<td>是否显示总分排名</td>
+<td>显示分数 + 排名 / <strong>只显示标记不显总分排名</strong></td>
+<td><strong>只显标记</strong></td>
+<td>gamification 心理诱导让作者写作偏向 persona 偏好,失去个人风格;只标"哪段毒 / 哪段亮"更建设性</td>
+</tr>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

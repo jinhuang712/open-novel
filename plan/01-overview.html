@@ -13,35 +13,74 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/01-overview.html</span>
 </nav>
+
 <h1 id="01-系统概览">01 — 系统概览</h1>
+
 <h2 id="目标">目标</h2>
 <p>为有志于在番茄小说发表作品的作者,提供一个<strong>像 VSCode 一样工作的 AI 创作工作台</strong>。它不是一键生成器,而是一个<strong>始终把用户放在驾驶位的创作助手</strong>:Agent 提议、用户审批、系统持久。</p>
+
 <h2 id="核心用户场景">核心用户场景</h2>
-<pre><code>1. 输入故事种子 → 生成世界观/大纲/角色等设定 → 用户逐项审阅、修改
-2. 修改某个核心角色资料 → 系统自动扫所有相关章节/设定 → 用户审批 cascade 改动
-3. 一键生成章节概要 → 审 → 一键生成章节正文 → 审 → 一键去 AI 化
-4. 写作中点击角色名 → 跳转到角色资料 → 编辑 → 返回 → 系统已同步引用
-5. 同时维护多个项目,互不污染
-</code></pre>
-<h2 id="7-agent-拓扑">7 Agent 拓扑</h2>
+<ol>
+<li>输入故事种子 → 生成世界观 / 大纲 / 角色等设定 → 用户逐项审阅、修改</li>
+<li>修改某个核心角色资料 → 系统自动扫所有相关章节 / 设定 → 用户审批 cascade 改动</li>
+<li>一键生成章节概要 → 审 → 一键生成章节正文 → 审 → 一键去 AI 化</li>
+<li>写作中点击角色名 → 跳转到角色资料 → 编辑 → 返回 → 系统已同步引用</li>
+<li>同时维护多个项目,互不污染</li>
+</ol>
+
+<h2 id="agent-拓扑">Agent 拓扑</h2>
+
+<p>项目共 <strong>13 个 LLM 调用点</strong>,分两层:</p>
+<ul>
+<li><strong>7 个对外 Agent</strong>:用户视角可感知 / 可在 Settings 中配置模型与 reasoningEffort</li>
+<li><strong>6 个 Hidden Agent</strong>:系统内部 LLM 工具,通过 <code>callJsonAgent</code> 统一调用,不在 Settings 暴露</li>
+</ul>
+
 <pre class="mermaid">
-flowchart TD
-  U([User ChatBox]) -->|prompt + mode| R[Router Flash<br/>模式分流 + 意图识别]
-  R --> W[Writer Pro<br/>吐字]
-  R --> C[Checker Flash<br/>+ 叙事引擎子能力]
-  R --> V[Validator Pro<br/>一致性]
-  C -. BeatAnalyzer / ArcTracker / 模板库 .-> C
-  W --> RP[ReaderPanel Flash NEW<br/>5 persona 仿真]
-  W --> RF[Reflector Flash<br/>反思]
-  W --> H[Humanizer Pro<br/>去 AI 化]
-  C --> RP
-  C --> RF
-  C --> H
-  V --> RP
-  V --> RF
-  V --> H
+flowchart TB
+  U([User ChatBox]) -->|prompt + mode| R
+
+  subgraph PRIMARY["对外 · primary"]
+    R[Router · Flash<br/>意图识别 + 派发]
+    W[Writer · Pro<br/>吐字 / 设定 / 章节]
+  end
+
+  R -->|actions[]| CC([cascade controller])
+  CC --> W
+
+  subgraph SUBAGENT["对外 · subagent (cascade 内并行)"]
+    C[Checker · Flash<br/>风格 + BeatAnalyzer]
+    V[Validator · Pro<br/>一致性 + ArcTracker]
+    RP[ReaderPanel · Flash<br/>5 persona]
+    H[Humanizer · Pro<br/>去 AI 化]
+    RF[Reflector · Flash<br/>per-turn 反思]
+  end
+
+  W --> C
+  W --> V
+  W --> RP
+  W --> H
+  CC -.turn 完结.-> RF
+
+  subgraph HIDDEN["Hidden · callJsonAgent (不在 Settings)"]
+    HA1[extractSemanticDelta]
+    HA2[filterByLLM]
+    HA3[concept-extractor]
+    HA4[compress-messages]
+    HA5[volume-summarizer]
+    HA6[chapter-writer-retry]
+  end
+
+  V -. analyzeImpact .-> HA1
+  V -. analyzeImpact .-> HA2
+  W -. assembleContext .-> HA3
+  CC -. 长 session .-> HA4
+  CC -. 每 20-30 章 .-> HA5
+  CC -. doom-loop retry .-> HA6
 </pre>
-<p>详见: <a href="./02-multi-agent.html">02-multi-agent.html</a> (Agent 详解) / <a href="./09-narrative-engine.html">09-narrative-engine.html</a> (叙事引擎) / <a href="./10-reader-simulator.html">10-reader-simulator.html</a> (读者仿真器) / <a href="./11-knowledge-graph.html">11-knowledge-graph.html</a> (知识图谱:cascade + RAG 真正可工作的地基) / <a href="./12-memory-and-context.html">12-memory-and-context.html</a> (Agent 记忆四层 + per-agent 上下文契约 + 一致性优先);spec 入口见 <a href="../spec/24-json-output.html">spec/24-json-output.html</a> (JSON 结构化输出统一规约) + <a href="../spec/25-cardinal-rules.html">spec/25-cardinal-rules.html</a> (五大网文守则)。</p>
+
+<p>详见 <a href="./02-multi-agent.html">02-multi-agent</a>(Agent 详解)· <a href="./09-narrative-engine.html">09-narrative-engine</a>(叙事引擎)· <a href="./10-reader-simulator.html">10-reader-simulator</a>(读者仿真器)· <a href="./11-knowledge-graph.html">11-knowledge-graph</a>(知识图谱)· <a href="./12-memory-and-context.html">12-memory-and-context</a>(四层记忆 + per-agent 上下文契约)。</p>
+
 <h2 id="数据流概览">数据流概览</h2>
 <pre class="mermaid">
 flowchart TD
@@ -74,47 +113,59 @@ flowchart TD
   W4 --> W5["一次 ApprovalCard<br/>critical 风险: 强制勾 明知违反仍通过 才能 approve<br/>blocking violation 已过 deadline 完全禁用 approve"]
   W5 --> W6["用户决议<br/>后端 transaction 一次写<br/>副作用 含 reindex + Reflector 学 cardinal_rule scope"]
 </pre>
-<p><strong>关键不变性 (跨流程)</strong>:</p>
-<ul>
-<li>所有 stream 必经 <a href="../spec/23-context-contracts.html">per-agent context builder (spec/23)</a>, 不允许 agent 自拼 prompt</li>
-<li>所有结构化输出走 <a href="../spec/24-json-output.html">JSON mode (spec/24)</a>, zod 校验失败 retry + escalate, 不允许 silent fallback</li>
-<li>任何 ChangeSet 落盘前必跑 <a href="../spec/25-cardinal-rules.html">五大守则检测 (spec/25)</a>, critical / blocking 严控不可绕过</li>
-<li>1M ctx 下 (spec/00 §C) 不做 token 预算裁剪 — 一致性 &gt; 节流</li>
-</ul>
-<p><strong>关键交互不变性</strong>: 所有写盘动作必须经过 ApprovalCard 整批审。&quot;内部 cascade 递归&quot;和&quot;用户审批&quot;是两个分离的阶段:递归全在内存,审批在 UI;落盘只在 approve 后,事务原子。</p>
+
+<p><strong>关键交互不变性</strong>:所有写盘动作必须经过 ApprovalCard 整批审。"内部 cascade 递归"和"用户审批"是两个分离的阶段 — 递归全在内存,审批在 UI,落盘只在 approve 后,事务原子。</p>
+
 <h2 id="关键技术决策汇总">关键技术决策汇总</h2>
 <table>
 <thead>
-<tr>
-<th>维度</th>
-<th>选择</th>
-<th>理由</th>
-</tr>
+<tr><th>维度</th><th>选择</th><th>理由</th></tr>
 </thead>
-<tbody><tr>
+<tbody>
+<tr>
 <td>应用架构</td>
 <td>Next.js 15 单应用</td>
 <td>起步快,SSE 一等公民,App Router 与 AI SDK 6 集成最佳</td>
 </tr>
 <tr>
-<td>Agent 框架</td>
-<td>Mastra on AI SDK 6</td>
-<td><code>Memory({ thread, resource })</code> 自带多项目隔离 + Workflow 编排; <strong>不</strong>用 <code>AgentNetwork</code> agents-as-tools — Router 是一次性意图解析器输出 actions[] (见 plan/02 §路由策略)</td>
+<td>LLM 调用层</td>
+<td>Vercel AI SDK 6 (<code>generateText</code> / <code>streamText</code> + <code>stopWhen</code>)</td>
+<td>显式控制工具循环终止条件,不依赖框架隐式 Agent loop;<code>stopWhen</code> callback 是框架级一等字段,可精确控制"看到 proposal marker 立刻停"等业务终止</td>
+</tr>
+<tr>
+<td>Agent 编排</td>
+<td>自定义 runner (13 个函数式) + cascade controller</td>
+<td>业务编排(cascade / 审批 / cardinal-rules / doom-loop / Reflector)用普通 TS 函数显式编排,可见可测,不被 Mastra Agent loop / LangGraph StateGraph 等框架抽象层挡住</td>
 </tr>
 <tr>
 <td>LLM</td>
 <td>DeepSeek V4 Pro/Flash</td>
-<td>实查 (spec/00 §C):ctx <strong>1M tokens</strong>, max output <strong>384K</strong>, 原生 JSON mode (<code>response_format: { type: &#39;json_object&#39; }</code>)。Pro 用于核心创作 (writer/validator/humanizer),Flash 用于辅助 (router/checker/reflector/reader-panel/工具内 LLM),按用量优化</td>
+<td>ctx <strong>1M tokens</strong>, max output <strong>384K</strong>, 原生 JSON mode (<code>response_format: { type: 'json_object' }</code>)。Pro 用于核心创作 (writer / validator / humanizer),Flash 用于辅助 (router / checker / reflector / reader-panel / 工具内 LLM 短调用)</td>
 </tr>
 <tr>
 <td>编辑器</td>
-<td>TipTap + 自定义装饰器 + AC</td>
+<td>TipTap 3.x + 自定义装饰器 + AC trie</td>
 <td>TipTap 中文排版舒服;不用 <code>Mention</code> 节点 (atomic 破坏纯文本流)</td>
 </tr>
 <tr>
 <td>存储</td>
-<td>md (内容) + LibSQL (索引)</td>
-<td>md 人类可读 + Git 友好;sql 处理引用图/历史/学习</td>
+<td>Markdown (产物) + SQLite (索引 + 过程)</td>
+<td>Markdown 人类可读 + Git 友好;SQLite 处理引用图 / 历史 / 学习 / 段锚 / 嵌入向量</td>
+</tr>
+<tr>
+<td>SQLite driver</td>
+<td><code>better-sqlite3</code></td>
+<td>Node 圈 SQLite 性能之王;同步 API 简化代码;企业 SSL 下 prebuild 成熟;与 Drizzle / sqlite-vec 配合最稳</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>Drizzle ORM + drizzle-kit</td>
+<td>TS schema 单一事实源;migration 自动生成;类型推导让"加字段不漏改"</td>
+</tr>
+<tr>
+<td>向量能力</td>
+<td><code>sqlite-vec</code>(loadExtension)</td>
+<td>与 SQLite 同库,可 SQL JOIN segments + entity_refs + embedding;无需独立向量服务</td>
 </tr>
 <tr>
 <td>联网</td>
@@ -126,104 +177,109 @@ flowchart TD
 <td>XState 状态机</td>
 <td>discuss 不写,plan 改设定,write 改章节,严格闸门</td>
 </tr>
-</tbody></table>
-<h2 id="不变性约束-invariants">不变性约束 (Invariants)</h2>
-<p>为保证质量,系统强制以下不变性:</p>
+</tbody>
+</table>
+
+<h2 id="不变性约束">不变性约束 (Invariants)</h2>
+<p>为保证质量,系统强制以下 12 条不变性。这些约束被多个 spec 引用,任何变更必须跨 spec 同步。</p>
+
 <ol>
-<li><strong>写入必须经审批</strong> — 所有 writeSetting / writeChapter 走 proposal 模式,落 <code>approvals</code> 表 status=pending,通过独立 endpoint resolve (见 spec/06)</li>
-<li><strong>设定不可被 Agent 静默修改</strong> — Validator 发现矛盾时只能&quot;提议&quot;修改,不能直接改;最终决定权在用户</li>
-<li><strong>多项目数据零串扰</strong> — Memory 用 <code>resource = projectId</code>,文件用独立目录,数据库用 <code>WHERE project_id = ?</code> 强约束;LibSQL 连接池 LRU(3)</li>
-<li><strong>三模式严格分离</strong> — Router 在每次输入时强校验当前 mode 与可调用工具集</li>
-<li><strong>每个 turn 必反思</strong> — Reflector 在 <code>user_turns.status</code> 转 'done' 时跑一次 (见 plan/06 §Reflector 触发时机),输入是整个 turn 的 user_input + Router actions[] + 所有 action 的决议 (含 edit diff);<strong>cancelled turn 不跑</strong> (用户主动放弃 = 不该入 learnings);per-turn 而非 per-cascade_group 是为了让 Reflector 看到跨 action 因果</li>
-<li><strong>路径越权零信任</strong> — 所有读写工具 execute 第一行强制 <code>safeFromProjectRoot()</code>,不依赖前端校验 (见 spec/02)</li>
-<li><strong>不可信内容围栏</strong> — 所有外部内容 (web / 用户拷贝 .md / 自定义 persona) 拼进 prompt 时用 <code>&lt;&lt;&lt;UNTRUSTED:...&gt;&gt;&gt;</code> 包裹,Agent system prompt 显式声明忽略其中&quot;指令&quot;</li>
-<li><strong>docs-before-code</strong> — 任何代码 commit 之前对应 plan/spec 必须先有,且需用户 approve docs 后才动代码 (项目级 workflow 不变性)</li>
-<li><strong>影响半径不依赖 LLM</strong> — Validator cascade 第一步必须是 SQL 查影响半径 (analyzeImpact step 2);LLM 只做&quot;段是否真受影响&quot;二次过滤。漏 SQL 索引 = bug,不应用 LLM &quot;猜&quot;补救 (见 plan/11 + spec/19)</li>
-<li><strong>派生视图只读</strong> — <code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> 等是 SQLite 表的 markdown 投影,同时具 <code>_</code> 前缀 (FileTree 默认对用户隐藏, 见 plan/04 §目录设计要点) 与 frontmatter <code>derived: true</code> (writeSetting 拒写, 见 spec/16 §派生文件守卫);reindex 自动重生成</li>
-<li><strong>未决 cascade 阻断 write</strong> — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用,弹 dialog 引导处理 (见 spec/16 §Plan Inconsistency Lock)</li>
-<li><strong>段锚点稳定</strong> — 段移动 / 重命名 / 改字不应使 dependencies / paragraph_embeddings 失效;reindex 走&quot;内容签名 + 邻接段对照&quot;维持锚点 (见 spec/17)</li>
-<li><strong>L4 知识图谱是单一事实源</strong> — L1 工作记忆 / L2 会话历史 / L3 项目经验中任何与 L4 冲突的内容,answer 时以 L4 为准 (见 plan/12 §四层记忆模型;例: 历史 message 里说&quot;林溪是男的&quot;,但 L4 character 已改女,以 L4 为准)</li>
-<li><strong>per-agent 上下文契约严格写死,Writer/Validator 必装项不允许省略</strong> — 1M ctx (spec/00 §C) 给的就是奢侈装齐的本钱;一致性所需的全部数据必装,不允许&quot;为节省临时省略&quot;。各 agent 必经对应 context builder (spec/23),不允许 agent 自拼 prompt;真超 1M 时抛 ContextOverflowError 让用户分卷,绝不 silent 砍 retrieve</li>
-<li><strong>L3 learnings 仅 Reflector 可写</strong> — LLM 在 stream 中不允许直接 upsert learnings,只有 Reflector 在 <code>user_turns.status='done'</code> 时写 (per-turn 批次,见 plan/06);读由 context builder 按 weight desc top-8 注入 (见 plan/06 + plan/12);<code>scope=&#39;cardinal_rule&#39;</code> top-1 永远保留不被砍</li>
-<li><strong>结构化输出必走 JSON mode + zod 校验</strong> — Router / Validator / Checker / Reflector / ReaderPanel / 工具内 LLM 调用 (extractSemanticDelta / filterByLLM / concept extractor / compress) 必经 <code>callJsonAgent</code> (spec/24): DeepSeek <code>response_format: json_object</code> + 应用层 zod 校验 + 失败 retry 1 次 + 2 次失败抛 <code>JsonOutputError</code> escalate;不允许&quot;自由发挥再 zod parse&quot;,不允许 silent fallback (那会让 cascade 漏审 / 概念抽取漏 entity)</li>
-<li><strong>五大网文守则不可违反</strong> — 黄金三章 / 人设崩坏 / 节奏崩盘 / 期待感失约 / 金手指依赖 (见 spec/25)。Validator + ReaderPanel + ArcTracker + BeatAnalyzer 自动检测,汇成 <code>CardinalRulesReport</code> 进 ApprovalCard:critical 风险存在用户<strong>必须勾</strong>&quot;明知违反仍通过&quot;才能 approve;blocking violation (已过 deadline 的 critical promise) 完全禁用 approve;不允许 silent commit 违反守则的内容。<code>cardinal-rules.json</code> 阈值用户可微调,但 <code>enabled: true</code> UI 锁死</li>
+<li><strong>写入必须经审批,设定不可被 Agent 静默修改</strong> — 所有 writeSetting / writeChapter 走 proposal 模式,落 <code>approvals</code> 表 status=pending,通过独立 endpoint resolve;Validator 发现矛盾时只能"提议"修改,不能直接改。详见 <a href="../spec/06-approval-flow.html">spec/06</a>。</li>
+
+<li><strong>多项目数据零串扰</strong> — Memory 用 <code>resource = projectId</code>,文件用独立目录,数据库用 <code>WHERE project_id = ?</code> 强约束。详见 <a href="./04-storage-model.html">plan/04</a>。</li>
+
+<li><strong>三模式严格分离</strong> — Router 在每次输入时强校验当前 mode 与可调用工具集;discuss 不持有写工具,plan 不写章节,write 不写设定。详见 <a href="../spec/07-mode-state-machine.html">spec/07</a>。</li>
+
+<li><strong>未决 cascade 阻断 write</strong> — plan 模式产生的 ChangeProposal[] 未全部 resolve 时,write 模式禁用,UI 弹 dialog 引导处理。详见 <a href="../spec/16-knowledge-schema.html">spec/16</a> §Plan Inconsistency Lock。</li>
+
+<li><strong>路径与不可信内容零信任</strong> — 所有读写工具 execute 第一行强制 <code>safeFromProjectRoot()</code>(<a href="../spec/02-agent-tools.html">spec/02</a>);所有外部内容(web / 用户拷贝 md / 自定义 persona)拼进 prompt 时用 <code>&lt;&lt;&lt;UNTRUSTED:...&gt;&gt;&gt;</code> 包裹,Agent system prompt 显式声明忽略其中"指令"。</li>
+
+<li><strong>每个 turn 必反思 (per-turn,cancelled 不跑)</strong> — Reflector 在 <code>user_turns.status</code> 转 'done' 时跑一次(<a href="./06-cascade-and-reflection.html">plan/06</a>),输入是整个 turn 的 user_input + Router actions[] + 所有 action 决议(含 edit diff);<strong>cancelled turn 不跑</strong>(用户主动放弃 = 不该入 learnings);per-turn 而非 per-cascade_group 是为了 Reflector 看到跨 action 因果。</li>
+
+<li><strong>docs-before-code</strong> — 任何代码 commit 之前对应 plan/spec 必须先有,且需用户 approve docs 后才动代码(项目级 workflow 不变性)。</li>
+
+<li><strong>影响半径不依赖 LLM</strong> — Validator cascade 第一步必须是 SQL 查影响半径(analyzeImpact step 2);LLM 只做"段是否真受影响"二次过滤。漏 SQL 索引 = bug,不应用 LLM "猜"补救。详见 <a href="./11-knowledge-graph.html">plan/11</a> + <a href="../spec/19-impact-analysis.html">spec/19</a>。</li>
+
+<li><strong>派生视图只读,段锚点稳定</strong> — <code>relationships/_matrix.md</code> / <code>timeline/_character-ages.md</code> 等是 SQLite 表的 markdown 投影,具 <code>_</code> 前缀(FileTree 隐藏)+ frontmatter <code>derived: true</code>(writeSetting 拒写);段移动 / 重命名 / 改字不应使 dependencies / paragraph_embeddings 失效,reindex 走"内容签名 + 邻接段对照"维持锚点。详见 <a href="./04-storage-model.html">plan/04</a> · <a href="../spec/16-knowledge-schema.html">spec/16</a> · <a href="../spec/17-paragraph-anchors.html">spec/17</a>。</li>
+
+<li><strong>四层记忆,L4 知识图谱是单一事实源</strong> — L1 工作记忆 / L2 会话历史 / L3 项目经验(learnings)中任何与 L4 冲突的内容,answer 时以 L4 为准;L3 learnings <strong>仅 Reflector 可写</strong>(LLM 不能在 stream 中直接 upsert);读由 context builder 按 weight desc top-8 注入,<code>scope='cardinal_rule'</code> top-1 永远保留。详见 <a href="./12-memory-and-context.html">plan/12</a> · <a href="../spec/22-memory-and-history.html">spec/22</a>。</li>
+
+<li><strong>per-agent 上下文契约严格写死,装配必经 context builder</strong> — Writer / Validator 必装项不允许省略;1M ctx 给的就是奢侈装齐的本钱,一致性所需数据必装,不允许"为节省临时省略";各 agent 必经对应 context builder(<a href="../spec/23-context-contracts.html">spec/23</a>),不允许 agent 自拼 prompt;真超 1M 时抛 <code>ContextOverflowError</code> 让用户分卷,绝不 silent 砍 retrieve。</li>
+
+<li><strong>结构化输出必走 JSON mode + zod 校验 + 守则不可绕过</strong> — Router / Validator / Checker / Reflector / ReaderPanel / 工具内 LLM 调用(extractSemanticDelta / filterByLLM / concept extractor / compress)必经 <code>callJsonAgent</code>(<a href="../spec/24-json-output.html">spec/24</a>):DeepSeek <code>response_format: json_object</code> + 应用层 zod 校验 + 失败 retry 1 次 + 2 次失败抛 <code>JsonOutputError</code> escalate;不允许"自由发挥再 zod parse",不允许 silent fallback(那会让 cascade 漏审 / 概念抽取漏 entity)。任何 ChangeSet 落盘前必跑五大守则检测(<a href="../spec/25-cardinal-rules.html">spec/25</a>),critical 风险用户必须勾"明知违反仍通过"才能 approve;blocking violation 完全禁用 approve;<code>cardinal-rules.json</code> 阈值用户可微调但 <code>enabled: true</code> UI 锁死。</li>
 </ol>
+
 <h2 id="与同类产品的差异">与同类产品的差异</h2>
 <table>
 <thead>
-<tr>
-<th>维度</th>
-<th>NovelCrafter / Sudowrite</th>
-<th>Open Novel</th>
-</tr>
+<tr><th>维度</th><th>NovelCrafter / Sudowrite</th><th>Open Novel</th></tr>
 </thead>
-<tbody><tr>
-<td>联网研究</td>
-<td>无 (闭合 Story Bible)</td>
-<td>接口预留,二期开放</td>
+<tbody>
+<tr><td>联网研究</td><td>无 (闭合 Story Bible)</td><td>接口预留,二期开放</td></tr>
+<tr><td>一致性守护</td><td>手动 Codex</td><td>自动 cascade + Validator</td></tr>
+<tr><td>反馈学习</td><td>无</td><td>Reflector 自动持久化经验</td></tr>
+<tr><td>多 Agent</td><td>单 Agent + 模板</td><td><strong>7 对外 + 6 Hidden Agent</strong></td></tr>
+<tr><td>透明度</td><td>黑盒</td><td>全流式可见</td></tr>
+<tr><td>中文</td><td>弱</td><td>一等公民</td></tr>
+<tr><td><strong>叙事力学诊断</strong></td><td>无</td><td><strong>BeatAnalyzer + ArcTracker</strong> (节奏 / 情绪曲线 / 角色弧光偏离)</td></tr>
+<tr><td><strong>发布前留存预演</strong></td><td>无</td><td><strong>ReaderPanel</strong> (5 persona 模拟读者反应,生成章节风险报告)</td></tr>
+<tr><td><strong>结构模板可调用</strong></td><td>无 / 强模板套用</td><td>三幕 / 英雄之旅 / 起承转合 / 番茄黄金三章,可调用不强制</td></tr>
+<tr><td><strong>知识图谱</strong></td><td>静态 Codex (实体卡片)</td><td><strong>6 维图: 实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义</strong></td></tr>
+<tr><td><strong>Cascade 影响范围</strong></td><td>无 / 全人工</td><td><strong>纯 SQL 出候选 + LLM 二次过滤 + 递归 ≤3 层</strong></td></tr>
+<tr><td><strong>写章节上下文</strong></td><td>用户手动选 cards 塞 prompt</td><td><strong>assembleContext</strong> 自动 retrieve + 1M ctx 装齐</td></tr>
+<tr><td><strong>边写边查</strong></td><td>静态搜索 / 跳卡片</td><td><strong>queryFacts</strong> 4 模式 (entity-at / relations-of / mentions-of / semantic-search)</td></tr>
+</tbody>
+</table>
+
+<p>后六条是与"AI 代笔工具"赛道的核心区分点 — 不是写得更好的 AI,是<strong>把世界装进 AI 的合伙人 + 懂叙事的诊断师 + 懂读者的预演场</strong>。</p>
+
+<h2 id="不做什么">不做什么</h2>
+<ul>
+<li><strong>不做实时 LLM 影响分析</strong> — 影响半径必须是 SQL 出候选(不变性 #8)</li>
+<li><strong>不做独立向量数据库</strong> — 不引入 Qdrant / Milvus,向量走 sqlite-vec 与 SQLite 一体</li>
+<li><strong>不做多用户协作 / 多设备同步</strong> — MVP 单机单用户,iCloud / Time Machine / Git 自然备份</li>
+<li><strong>不做 LLM 微调</strong> — Reflector 把"经验"持久化为 RAG 注入,廉价但实用</li>
+<li><strong>不做跨项目知识图谱共享</strong> — 项目级隔离,与 Memory <code>resource = projectId</code> 一致</li>
+</ul>
+
+<h2 id="关联文档">关联文档</h2>
+<ul>
+<li><strong>架构主线</strong>:<a href="./02-multi-agent.html">02-multi-agent</a> · <a href="./04-storage-model.html">04-storage-model</a> · <a href="./05-modes-and-approval.html">05-modes-and-approval</a> · <a href="./06-cascade-and-reflection.html">06-cascade-and-reflection</a> · <a href="./08-tech-stack.html">08-tech-stack</a></li>
+<li><strong>核心能力</strong>:<a href="./09-narrative-engine.html">09-narrative-engine</a> · <a href="./10-reader-simulator.html">10-reader-simulator</a> · <a href="./11-knowledge-graph.html">11-knowledge-graph</a> · <a href="./12-memory-and-context.html">12-memory-and-context</a></li>
+<li><strong>外围</strong>:<a href="./03-editor-layer.html">03-editor-layer</a> · <a href="./07-ui-layout.html">07-ui-layout</a></li>
+<li><strong>跨 spec 守则</strong>:<a href="../spec/24-json-output.html">spec/24</a>(JSON 输出统一规约)· <a href="../spec/25-cardinal-rules.html">spec/25</a>(五大网文守则)</li>
+</ul>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-01</td>
+<td>不变性条数</td>
+<td>17 条(原) / ≤12 条(合并语义重复)/ ≤5 条(激进收敛)</td>
+<td><strong>12 条</strong>(合并语义重叠后,不删减)</td>
+<td>17 条本身就是反不变性,语义重叠点多;但每条都被多 spec 引用,删任何一条都辐射;合并保留语义,数量降到 12 条已是不损信息的最大压缩</td>
 </tr>
 <tr>
-<td>一致性守护</td>
-<td>手动 Codex</td>
-<td>自动 cascade + Validator</td>
+<td>ADR-02</td>
+<td>Agent 拓扑展示</td>
+<td>仅 7 对外(原)/ 7 对外 + 6 Hidden 二分 / 13 拓扑混展</td>
+<td><strong>7 对外 + 6 Hidden 二分</strong></td>
+<td>"7 Agent" 是用户视角(可在 Settings 配模型);Hidden Agent 是工程内部 LLM 封装;混展会让用户误以为可配 13 个,二分让产品视角与工程视角对齐</td>
 </tr>
 <tr>
-<td>反馈学习</td>
-<td>无</td>
-<td>Reflector 自动持久化经验</td>
+<td>ADR-03</td>
+<td>关键不变性中是否点名具体框架</td>
+<td>点名 Mastra / Vercel AI SDK 等 / 只描述抽象不变</td>
+<td><strong>只描述抽象不变</strong></td>
+<td>不变性是产品级硬约束,具体实现栈可能演进;框架名挪到 plan/08 技术栈 + spec/22 实现细节,plan/01 只锁"必须有 memory 隔离"而非"必须用 Mastra Memory"</td>
 </tr>
-<tr>
-<td>多 Agent</td>
-<td>单 Agent + 模板</td>
-<td><strong>7 Agent 协作</strong></td>
-</tr>
-<tr>
-<td>透明度</td>
-<td>黑盒</td>
-<td>全流式可见</td>
-</tr>
-<tr>
-<td>中文</td>
-<td>弱</td>
-<td>一等公民</td>
-</tr>
-<tr>
-<td><strong>叙事力学诊断</strong></td>
-<td>无</td>
-<td><strong>BeatAnalyzer + ArcTracker</strong> (节奏 / 情绪曲线 / 角色弧光偏离)</td>
-</tr>
-<tr>
-<td><strong>发布前留存预演</strong></td>
-<td>无</td>
-<td><strong>ReaderPanel</strong> (5 persona 模拟读者反应,生成章节风险报告)</td>
-</tr>
-<tr>
-<td><strong>结构模板可调用</strong></td>
-<td>无 / 强模板套用</td>
-<td>三幕 / 英雄之旅 / 起承转合 / 番茄黄金三章,可调用不强制</td>
-</tr>
-<tr>
-<td><strong>知识图谱 (W7-W10)</strong></td>
-<td>静态 Codex (实体卡片)</td>
-<td><strong>6 维图: 实体 + 关系 + 时间 + 概念 + 段级依赖 + 语义</strong> (见 plan/11)</td>
-</tr>
-<tr>
-<td><strong>Cascade 影响范围</strong></td>
-<td>无 / 全人工</td>
-<td><strong>纯 SQL 出候选 + LLM 二次过滤 + 递归 ≤3 层</strong> (见 spec/19)</td>
-</tr>
-<tr>
-<td><strong>写章节上下文</strong></td>
-<td>用户手动选 cards 塞 prompt</td>
-<td><strong>assembleContext</strong> 自动 retrieve + token 预算 (见 spec/20)</td>
-</tr>
-<tr>
-<td><strong>边写边查</strong></td>
-<td>静态搜索 / 跳卡片</td>
-<td><strong>queryFacts</strong> 4 模式 (entity-at / relations-of / mentions-of / semantic-search) (见 spec/21)</td>
-</tr>
-</tbody></table>
-<p>后六条是与&quot;AI 代笔工具&quot;赛道的核心区分点 — 我们不是写得更好的 AI,是<strong>把世界装进 AI 的合伙人 + 懂叙事的诊断师 + 懂读者的预演场</strong>。</p>
-  </main>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

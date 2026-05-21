@@ -13,51 +13,34 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/05-modes-and-approval.html</span>
 </nav>
+
 <h1 id="05-三模式与审批流">05 — 三模式与审批流</h1>
+
 <h2 id="三种工作模式">三种工作模式</h2>
 <p>模式是<strong>对 Agent 行为的硬约束</strong>,不是 UI 装饰。</p>
+
 <table>
 <thead>
-<tr>
-<th>模式</th>
-<th>用户场景</th>
-<th>Agent 可读</th>
-<th>Agent 可写</th>
-<th>典型工具</th>
-</tr>
+<tr><th>模式</th><th>用户场景</th><th>Agent 可读</th><th>Agent 可写</th><th>典型工具</th></tr>
 </thead>
-<tbody><tr>
-<td><strong>Discuss</strong></td>
-<td>检索/对话/不确定</td>
-<td>设定 + 章节 + 历史</td>
-<td>无</td>
-<td>readSetting, readChapter, searchEntities, webSearch</td>
-</tr>
-<tr>
-<td><strong>Plan</strong></td>
-<td>改设定</td>
-<td>设定 + 章节 (参考)</td>
-<td>设定 (审批后)</td>
-<td>+ writeSetting (gated)</td>
-</tr>
-<tr>
-<td><strong>Write</strong></td>
-<td>写章节</td>
-<td>设定 + 章节 + 历史</td>
-<td>章节 (审批后)</td>
-<td>+ writeChapter (gated)</td>
-</tr>
-</tbody></table>
-<p><strong>模式间不可通过 LLM 自行切换</strong>;必须用户显式触发。</p>
-<p>切换路径有两种,效果完全一致:</p>
+<tbody>
+<tr><td><strong>Discuss</strong></td><td>检索 / 对话 / 不确定</td><td>设定 + 章节 + 历史</td><td>无</td><td>readSetting, readChapter, searchEntities, webSearch</td></tr>
+<tr><td><strong>Plan</strong></td><td>改设定</td><td>设定 + 章节(参考)</td><td>设定(审批后)</td><td>+ writeSetting(gated)</td></tr>
+<tr><td><strong>Write</strong></td><td>写章节</td><td>设定 + 章节 + 历史</td><td>章节(审批后)</td><td>+ writeChapter(gated)</td></tr>
+</tbody>
+</table>
+
+<p><strong>模式间不可通过 LLM 自行切换</strong>,必须用户显式触发。切换路径有两种,效果完全一致:</p>
 <ol>
 <li><strong>点击</strong> ChatBox 顶部的 <code>[Discuss] [Plan] [Write]</code> toggle</li>
-<li><strong>键盘</strong> 在 ChatBox textarea 焦点内按 <code>Tab</code> (循环正向) 或 <code>Shift+Tab</code> (反向)</li>
+<li><strong>键盘</strong> 在 ChatBox textarea 焦点内按 <code>Tab</code>(循环正向)或 <code>Shift+Tab</code>(反向)</li>
 </ol>
-<p>Tab 切模式是与主流 LLM chat 工具 (ChatGPT / Claude.ai / Cursor) 一致的预期心智 — Tab 不再插入字面 tab 字符。详见 <a href="../spec/12-shortcuts.html">spec/12-shortcuts.html</a> §ChatBox 上下文。</p>
-<p>模式切换在 <code>await_approval</code> 状态下被状态机阻止 — 此时 Tab 与点击都不生效,UI 显示 toast: &quot;完成审批后才能切模式&quot;。</p>
-<p><code>await_approval</code> 状态下接受新 <code>USER_INPUT</code> 也被阻止 — ChatBox textarea 显示 disabled 灰显 + tooltip &quot;完成或取消上方审批后才能继续输入&quot;。详见 <a href="../spec/07-mode-state-machine.html">spec/07-mode-state-machine.html</a> §USER_INPUT 处理。</p>
-<h2 id="状态机-xstate">状态机 (XState)</h2>
+
+<p>Tab 切模式是与主流 LLM chat 工具(ChatGPT / Claude.ai / Cursor)一致的预期心智 — Tab 不再插入字面 tab 字符。详见 <a href="../spec/12-shortcuts.html">spec/12</a> §ChatBox 上下文。</p>
+
+<p>模式切换在 <code>await_approval</code> 状态下被状态机阻止 — Tab 与点击都不生效,UI 显示 toast:"完成审批后才能切模式"。<code>await_approval</code> 下接受新 <code>USER_INPUT</code> 也被阻止 — ChatBox textarea 显示 disabled 灰显 + tooltip "完成或取消上方审批后才能继续输入"。详见 <a href="../spec/07-mode-state-machine.html">spec/07</a> §USER_INPUT 处理。</p>
+
+<h2 id="状态机">状态机(XState)</h2>
 <pre class="mermaid">
 stateDiagram-v2
   [*] --> idle
@@ -90,30 +73,35 @@ stateDiagram-v2
   plan --> idle
   write --> idle
 </pre>
-<h2 id="审批闸门-human-in-the-loop">审批闸门 (Human-in-the-Loop)</h2>
+
+<h2 id="审批闸门">审批闸门(Human-in-the-Loop)</h2>
 <blockquote>
-<p><strong>proposal + 独立 endpoint 模式</strong>: 工具执行时不真正写盘,而是把 proposal 落 <code>approvals</code> 表 (status=pending) 立即返回;Agent loop 看到 proposal 后自然结束 stream;用户审批通过独立 endpoint <code>POST /api/approvals/{id}/resolve</code> 真正落盘。审批悬挂不依赖 stream 长连接。详见 <a href="../spec/06-approval-flow.html">spec/06-approval-flow.html</a>。</p>
+<p><strong>proposal + 独立 endpoint 模式</strong>:工具执行时不真正写盘,而是把 proposal 落 <code>approvals</code> 表(status=pending)立即返回;Agent loop 看到 proposal marker 后由 <code>stopWhen</code> 拦截自然结束 stream;用户审批通过独立 endpoint <code>POST /api/approvals/{id}/resolve</code> 真正落盘。审批悬挂不依赖 stream 长连接。详见 <a href="../spec/06-approval-flow.html">spec/06</a>。</p>
 </blockquote>
+
 <pre><code class="language-ts">export const writeSettingProposal = tool({
-  description: &#39;提议写一个设定文件 (用户审批后才会落盘)&#39;,
+  description: '提议写一个设定文件 (用户审批后才会落盘)',
   inputSchema: z.object({ path: z.string(), content: z.string(), reason: z.string() }),
   execute: async (input, ctx) =&gt; {
     safeFromProjectRoot(ctx.projectId, `settings/${input.path}`)   // 路径越权防御
-    const approvalId = await db.approvals.insert({ tool_call_id: ctx.toolCallId, /* ... */ status: &#39;pending&#39; })
-    return { kind: &#39;proposal&#39;, approvalId, ...input }
+    const approvalId = await db.approvals.insert({ tool_call_id: ctx.toolCallId, /* ... */ status: 'pending' })
+    return { kind: 'proposal', approvalId, ...input }
   },
 })
 </code></pre>
+
 <p>流程:</p>
 <ol>
-<li>Writer 调 writeSettingProposal → execute <strong>内部跑 cascade 递归 ≤3 轮 (spec/19)</strong> → 落整批 ChangeSet 到 approvals 表 (一行) → 返回 <code>{ kind: &#39;proposal&#39;, approvalId, changeSet }</code></li>
-<li>Agent loop 看到 proposal 立刻 stop (Writer prompt 约定),stream 自然结束</li>
-<li>客户端 <code>onToolCall</code> 拦截 result,push 到 <code>useApprovals</code> store,UI 渲染 <code>&lt;ApprovalCard&gt;</code> (整批 ChangeSet,含影响图谱 + 1-3 级 cascade 勾选)</li>
-<li>用户点&quot;同意勾选项&quot; → <code>POST /api/approvals/{id}/resolve { decision: &#39;approved&#39;, accepted_items: [...], edits: {...} }</code>,后端 transaction 一次写所有 accepted + 落 history group + 入队 reindex</li>
-<li>用户点&quot;拒绝全部+反馈&quot; → <code>POST /api/approvals/{id}/resolve { decision: &#39;rejected&#39;, feedback }</code> → 自动发一条 ChatBox 消息让 Agent 重做</li>
-<li><strong>无悬挂超时</strong> — turn 永远 pending 直到用户显式 approve / reject / 点 [取消本次对话] (见 spec/06 §Turn 取消语义);旧版 24h auto-expired 机制已删除</li>
+<li>Writer 调 writeSettingProposal → execute <strong>内部跑 cascade 递归 ≤3 轮</strong>(<a href="../spec/19-impact-analysis.html">spec/19</a>)→ 落整批 ChangeSet 到 approvals 表(一行)→ 返回 <code>{ kind: 'proposal', approvalId, changeSet }</code></li>
+<li>Agent loop 的 <code>stopWhen</code> callback 检测 <code>result.kind === 'proposal'</code> 立刻 stop,stream 自然结束(不依赖 LLM 看 prompt 自觉停)</li>
+<li>客户端 <code>onToolCall</code> 拦截 result,push 到 <code>useApprovals</code> store,UI 渲染 <code>&lt;ApprovalCard&gt;</code>(整批 ChangeSet,含影响图谱 + 1-3 级 cascade 勾选)</li>
+<li>用户点"同意勾选项"→ <code>POST /api/approvals/{id}/resolve { decision: 'approved', accepted_items: [...], edits: {...} }</code>,后端 transaction 一次写所有 accepted + 落 history group + 入队 reindex</li>
+<li>用户点"拒绝全部 + 反馈"→ <code>POST /api/approvals/{id}/resolve { decision: 'rejected', feedback }</code> → 自动发一条 ChatBox 消息让 Agent 重做</li>
+<li><strong>无悬挂超时</strong> — turn 永远 pending 直到用户显式 approve / reject / 点 [取消本次对话](<a href="../spec/06-approval-flow.html">spec/06</a> §Turn 取消语义)</li>
 </ol>
-<p><strong>Turn 取消 + 中断恢复</strong> (见 spec/06 §Turn 取消语义): 浏览器关闭时若有 in-flight turn,启动时 <code>useApprovals.hydrate()</code> 按 <code>user_turns.status IN ('running','awaiting_approval')</code> 拉回所有 in-flight turn 与其 pending approvals,chat box 顶部 banner 列出"继续审"或"取消本次对话"。每个 approval 幂等 (status 检查 + transaction 原子性) — 重复点同意不重复落盘;用户点 [取消本次对话] 走 <code>rollbackTurn</code> 整 turn revert,turn 永远 pending 直到用户显式决议 (无 24h 自动 expired)。</p>
+
+<p><strong>Turn 取消 + 中断恢复</strong>:浏览器关闭时若有 in-flight turn,启动时 <code>useApprovals.hydrate()</code> 按 <code>user_turns.status IN ('running','awaiting_approval')</code> 拉回所有 in-flight turn 与其 pending approvals,chat box 顶部 banner 列出"继续审"或"取消本次对话"。每个 approval 幂等(status 检查 + transaction 原子性)— 重复点同意不重复落盘;用户点 [取消本次对话] 走 <code>rollbackTurn</code> 整 turn revert。</p>
+
 <h2 id="approvalcard-ui-形态">ApprovalCard UI 形态</h2>
 <pre class="mermaid">
 flowchart TB
@@ -140,10 +128,12 @@ flowchart TB
     HDR --> DIFF --> IMP --> L1 --> L2 --> ACT
   end
 </pre>
-<h2 id="cascade-审批-w9-升级-整批审">Cascade 审批 (W9 升级 — 整批审)</h2>
+
+<h2 id="cascade-审批-整批审">Cascade 审批(整批审)</h2>
 <blockquote>
-<p>⚠ <strong>关键交互模型</strong>: cascade 递归在审批<strong>前</strong>的内部循环里完成,用户只看一次最终汇总的 ChangeSet。落盘是后端 transaction 一次写所有勾选项 — 不再&quot;主变更落盘 + cascade 各项再 ApprovalCard&quot;。</p>
+<p>⚠ <strong>关键交互模型</strong>:cascade 递归在审批<strong>前</strong>的内部循环里完成,用户只看一次最终汇总的 ChangeSet。落盘是后端 transaction 一次写所有勾选项 — 不"主变更落盘 + cascade 各项再 ApprovalCard"。</p>
 </blockquote>
+
 <pre class="mermaid">
 flowchart TD
   W1([Writer 出主修改 in-memory]) --> LOOP["内部递归 1-3 轮 plan/06 + spec/19"]
@@ -158,33 +148,72 @@ flowchart TD
   US --> DISK["后端 transaction 一次落盘所有 accepted<br/>主 + 勾选的 cascade"]
   DISK --> SE["副作用<br/>差量 reindex / snapshot / history group / Reflector<br/>plan/04 审批通过后的副作用"]
 </pre>
-<p><strong>不勾选某条 cascade 的语义</strong>: 该 proposal 被显式<strong>搁置</strong>,系统记录但不落盘。后续如果作者写到那段,Validator 会在再下一次 cascade 中重新发现并提议。
-<strong>全部勾不勾选 + reject 全部</strong>: 拒绝整个 ChangeSet,主修改也不落,等于这次修改没发生过。</p>
+
+<p><strong>不勾选某条 cascade 的语义</strong>:该 proposal 被显式<strong>搁置</strong>,系统记录但不落盘。后续如果作者写到那段,Validator 会在再下一次 cascade 中重新发现并提议。</p>
+<p><strong>全部勾不勾选 + reject 全部</strong>:拒绝整个 ChangeSet,主修改也不落,等于这次修改没发生过。</p>
+
 <h2 id="拒绝反馈环">拒绝反馈环</h2>
 <p>ApprovalCard 拒绝时<strong>强制要求填反馈</strong>:</p>
 <ul>
-<li>输入框: &quot;为什么拒绝?&quot;</li>
-<li>例: &quot;改性别后语气还是男性化的,口吻没调整&quot;</li>
+<li>输入框:"为什么拒绝?"</li>
+<li>例:"改性别后语气还是男性化的,口吻没调整"</li>
 <li>Agent 拿到反馈后重新生成,带着拒绝理由进 system prompt</li>
 </ul>
+
 <h2 id="reflector-在闭环中的位置">Reflector 在闭环中的位置</h2>
-<p>每次审批完成 (无论是 approve 还是 reject):</p>
-<pre><code>{ approval_id, action, target, before, after, decision, feedback?, time_to_decide }
-</code></pre>
-<p>入队给 Reflector,Reflector:</p>
-<ul>
-<li>读最近 N 条审批记录</li>
-<li>提炼 1-3 条 generalizable 经验</li>
-<li>写入 <code>learnings</code> 表 (含 weight,初始 1.0,每次相关命中 +0.5)</li>
-<li>后续生成时 Router 把 top-N 经验注入 system prompt</li>
-</ul>
+<p>每次审批完成(无论是 approve 还是 reject)— 但 Reflector 是 <strong>per-turn 触发</strong>(在 turn done 时跑一次,不是 per-approval),详见 <a href="./06-cascade-and-reflection.html">plan/06 §Reflector 触发时机</a>。</p>
+
 <h2 id="审批历史可回溯">审批历史可回溯</h2>
-<p><code>approvals</code> 表保留所有决定。Settings → &quot;审批历史&quot;面板:</p>
+<p><code>approvals</code> 表保留所有决定。Settings → "审批历史"面板:</p>
 <ul>
 <li>时间倒序列出所有审批</li>
-<li>可以&quot;回退某次审批&quot; (执行反向操作 + 写新一条 history)</li>
-<li>可以&quot;导出审批日志&quot; 帮助调试 prompt</li>
+<li>可以"回退某次审批"(按 <code>cascade_group_id</code> 批量逆向)</li>
+<li>可以"导出审批日志"帮助调试 prompt</li>
 </ul>
-  </main>
+
+<h2 id="关联文档">关联文档</h2>
+<ul>
+<li><strong>上游</strong>:<a href="./01-overview.html">plan/01</a> 不变性 #1 / #3 · <a href="./06-cascade-and-reflection.html">plan/06</a> cascade</li>
+<li><strong>核心 spec</strong>:<a href="../spec/06-approval-flow.html">spec/06</a> 审批流 · <a href="../spec/07-mode-state-machine.html">spec/07</a> 状态机 · <a href="../spec/19-impact-analysis.html">spec/19</a> analyzeImpact</li>
+</ul>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-01</td>
+<td>审批挂起方式</td>
+<td>stream 长连接挂 / <strong>独立 endpoint + DB 状态</strong> / Vercel HITL cookbook(addToolResult 回灌)</td>
+<td><strong>独立 endpoint</strong></td>
+<td>用户审批可能拖分钟级,stream 早超时;独立 endpoint 幂等(status 检查),浏览器重连不重复落盘;与 Agent loop 解耦</td>
+</tr>
+<tr>
+<td>ADR-02</td>
+<td>cascade 审批粒度</td>
+<td>整批 1 次审 / 主修改先审再各级 cascade 各 1 次审</td>
+<td><strong>整批 1 次审</strong></td>
+<td>用户审 1 次 vs 审 N 次;落盘前可见全貌可发现"二级 cascade 把另一个角色搞崩";transaction 原子避免半落地</td>
+</tr>
+<tr>
+<td>ADR-03</td>
+<td>Agent loop 终止方式</td>
+<td>prompt 嘱咐 LLM 看到 proposal 自觉停 / <strong>stopWhen callback 显式拦截</strong></td>
+<td><strong>stopWhen callback</strong></td>
+<td>prompt 嘱咐脆弱(LLM 可能多说话 / 又调工具);stopWhen 是 AI SDK 6 一等字段,框架级显式控制</td>
+</tr>
+<tr>
+<td>ADR-04</td>
+<td>无悬挂超时</td>
+<td>24h auto-expired / <strong>永远 pending 直到显式决议</strong></td>
+<td><strong>永远 pending</strong></td>
+<td>用户审批可能跨日(去做饭 / 睡觉);auto-expired 会让"我以为还能审"的用户损失工作;turn 持久化在 DB 不依赖 stream</td>
+</tr>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

@@ -13,25 +13,27 @@
   <a href="../index.html">&larr; Index</a>
   <span>plan/03-editor-layer.html</span>
 </nav>
+
 <h1 id="03-编辑器分层">03 — 编辑器分层</h1>
+
 <h2 id="目标">目标</h2>
 <ul>
-<li>中文长文排版舒服,接近 Word/Notion 阅读体验</li>
-<li>支持自动识别&quot;已写就的&quot;角色名、地点名,实体高亮 + Hover preview + 点击跳转</li>
-<li>装饰器对原始 markdown <strong>零侵入</strong> (不污染文件内容)</li>
+<li>中文长文排版舒服,接近 Word / Notion 阅读体验</li>
+<li>支持自动识别"已写就的"角色名、地点名,实体高亮 + Hover preview + 点击跳转</li>
+<li>装饰器对原始 markdown <strong>零侵入</strong>(不污染文件内容)</li>
 <li>抽象成 <code>EditorAdapter</code>,<strong>未来可换</strong> CodeMirror / Monaco 而业务代码零改动</li>
 </ul>
+
 <h2 id="选型">选型</h2>
-<p><strong>TipTap 3.x (基于 ProseMirror)</strong> + 自定义 ProseMirror 装饰器 + Aho-Corasick 自动机。</p>
-<blockquote>
-<p>历史注: 早期文档草稿写的是 &quot;TipTap 2.x&quot;,但 W2 调研发现 2026-04 现状下稳定版已是 3.16.x。我们使用的 API (<code>useEditor</code> / <code>EditorContent</code> / <code>addProseMirrorPlugins</code> / Decorations) 在 v2/v3 间二进制兼容,本节描述对两版均适用。在 v3 下需要额外注意 SSR: 必须 <code>useEditor({ ..., immediatelyRender: false })</code>。</p>
-</blockquote>
+<p><strong>TipTap 3.x(基于 ProseMirror)</strong> + 自定义 ProseMirror 装饰器 + Aho-Corasick 自动机。SSR 下要求 <code>useEditor({ ..., immediatelyRender: false })</code>。</p>
+
 <p>为什么不用 TipTap 的 <code>Mention</code> 节点:</p>
 <ul>
 <li>Mention 是 atomic node,会插入显式标记节点,破坏纯文本流</li>
-<li>我们的需求是<strong>已经写好的名字被自动识别</strong>,不是&quot;打 <code>@</code> 召唤选择器&quot;</li>
+<li>我们的需求是<strong>已经写好的名字被自动识别</strong>,不是"打 <code>@</code> 召唤选择器"</li>
 <li>ProseMirror 创始人本人推荐这个场景用 <code>addProseMirrorPlugins</code> + Decorations</li>
 </ul>
+
 <h2 id="editoradapter-接口">EditorAdapter 接口</h2>
 <pre><code class="language-ts">// lib/editor/adapter.ts
 export interface EditorAdapter {
@@ -39,17 +41,17 @@ export interface EditorAdapter {
   open(filePath: string): Promise&lt;void&gt;
   save(): Promise&lt;void&gt;
   isDirty(): boolean
-  
+
   // 内容读写
   getContent(): string
   setContent(text: string): void
   getSelection(): { from: number; to: number; text: string } | null
   replaceRange(from: number, to: number, text: string): void
-  
+
   // 实体装饰
   decorateEntities(entities: Entity[]): void
   clearDecorations(): void
-  
+
   // 事件
   onSelectionChange(cb: (sel) =&gt; void): Unsubscribe
   onEntityClick(cb: (entityId: string, pos: { x: number; y: number }) =&gt; void): Unsubscribe
@@ -57,16 +59,19 @@ export interface EditorAdapter {
   onContentChange(cb: (content: string) =&gt; void): Unsubscribe
 }
 </code></pre>
-<p>业务代码 (Editor 组件、ApprovalCard、框选修改) 只与 <code>EditorAdapter</code> 交互。换实现只需替换 <code>lib/editor/tiptap-impl.ts</code>。</p>
+
+<p>业务代码(Editor 组件、ApprovalCard、框选修改)只与 <code>EditorAdapter</code> 交互。换实现只需替换 <code>lib/editor/tiptap-impl.ts</code>。</p>
+
 <h2 id="tiptap-实现要点">TipTap 实现要点</h2>
+
 <h3 id="实体高亮扩展">实体高亮扩展</h3>
 <pre><code class="language-ts">// lib/editor/entity-highlight.ts (草案)
 export const EntityHighlightExtension = Extension.create({
-  name: &#39;entityHighlight&#39;,
+  name: 'entityHighlight',
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: new PluginKey(&#39;entityHighlight&#39;),
+        key: new PluginKey('entityHighlight'),
         state: {
           init: (_, { doc }) =&gt; buildDecorationSet(doc, getCurrentEntities()),
           apply(tr, old) {
@@ -89,43 +94,46 @@ export const EntityHighlightExtension = Extension.create({
   },
 })
 </code></pre>
+
 <h3 id="aho-corasick-字符串多模式匹配">Aho-Corasick 字符串多模式匹配</h3>
 <ul>
-<li>使用 <code>BrunoRB/ahocorasick</code> (10KB,纯 JS,浏览器友好)</li>
-<li>Trie 在 Codex (实体表) 变更时重建,缓存到 <code>useRef</code></li>
+<li>使用 <code>BrunoRB/ahocorasick</code>(10KB,纯 JS,浏览器友好)</li>
+<li>Trie 在 Codex(实体表)变更时重建,缓存到 <code>useRef</code></li>
 <li>单次扫描 O(N + matches),500 实体 + 10K 字 &lt; 5ms</li>
-<li>中文不分词,匹配后用前后字符黑名单做边界裁剪 (如&quot;刘备&quot; 后接&quot;军&quot; 时仍命中,但 &quot;白&quot; 单字默认要求显式开启)</li>
+<li>中文不分词,匹配后用前后字符黑名单做边界裁剪(如"刘备"后接"军"时仍命中,但"白"单字默认要求显式开启)</li>
 </ul>
+
 <h3 id="别名映射">别名映射</h3>
-<p>实体表结构:</p>
 <pre><code class="language-ts">type Entity = {
   id: string
-  canonicalName: string      // &quot;刘备&quot;
-  aliases: string[]           // [&quot;玄德&quot;, &quot;刘玄德&quot;, &quot;皇叔&quot;]
-  category: &#39;character&#39; | &#39;place&#39; | &#39;item&#39; | &#39;org&#39;
-  filePath: string            // &quot;characters/liubei.md&quot;
+  canonicalName: string      // "刘备"
+  aliases: string[]           // ["玄德", "刘玄德", "皇叔"]
+  category: 'character' | 'place' | 'item' | 'org'
+  filePath: string            // "characters/liubei.md"
 }
 </code></pre>
-<p>构建 AC trie 时把 <code>[canonicalName, ...aliases]</code> 全部入桶,每个 pattern 反指 <code>entityId</code>。点击/Hover 行为只看 <code>entityId</code>,所有别名等价。</p>
+<p>构建 AC trie 时把 <code>[canonicalName, ...aliases]</code> 全部入桶,每个 pattern 反指 <code>entityId</code>。点击 / Hover 行为只看 <code>entityId</code>,所有别名等价。</p>
+
 <h3 id="性能策略">性能策略</h3>
 <ul>
-<li><strong>增量扫描</strong>: plugin <code>apply()</code> 中只对 dirty range 重跑 AC,全文扫描只发生在初次加载与 Codex 变更</li>
-<li><strong>Worker 兜底</strong>: 章节 &gt;30K 字时 AC 扔到 Web Worker,主线程只 apply Decorations</li>
-<li><strong>debounce</strong>: 用户连续输入时 100ms 防抖</li>
-<li><strong>Codex 变更 debounce 1s</strong>: 一次连续创建 5 个角色,trie 仅重建一次 (而不是 5 次);详见 spec/05 §AC trie 重建策略</li>
-<li><strong>trie 版本号</strong>: entitySetHash 不变就跳过重建</li>
+<li><strong>增量扫描</strong>:plugin <code>apply()</code> 中只对 dirty range 重跑 AC,全文扫描只发生在初次加载与 Codex 变更</li>
+<li><strong>Worker 兜底</strong>:章节 &gt;30K 字时 AC 扔到 Web Worker,主线程只 apply Decorations</li>
+<li><strong>debounce</strong>:用户连续输入时 100ms 防抖</li>
+<li><strong>Codex 变更 debounce 1s</strong>:一次连续创建 5 个角色,trie 仅重建一次(而不是 5 次);详见 <a href="../spec/05-entity-highlight.html">spec/05</a> §AC trie 重建策略</li>
+<li><strong>trie 版本号</strong>:entitySetHash 不变就跳过重建</li>
 </ul>
-<h3 id="ime-中文输入法-安全">IME (中文输入法) 安全</h3>
+
+<h3 id="ime-中文输入法-安全">IME(中文输入法)安全</h3>
 <ul>
-<li>TipTap Decoration 重算在 <code>view.composing === true</code> 期间<strong>跳过</strong> (仅 mapping 位置,不重新计算 AC) — 避免 composition pending 区间被装饰器穿透导致光标跳/字丢</li>
-<li>ChatBox textarea 与 TipTap 同样要求 — 详见 spec/12 §IME 闸门</li>
+<li>TipTap Decoration 重算在 <code>view.composing === true</code> 期间<strong>跳过</strong>(仅 mapping 位置,不重新计算 AC)— 避免 composition pending 区间被装饰器穿透导致光标跳 / 字丢</li>
+<li>ChatBox textarea 与 TipTap 同样要求 — 详见 <a href="../spec/12-shortcuts.html">spec/12</a> §IME 闸门</li>
 </ul>
+
 <h3 id="富文本粘贴策略">富文本粘贴策略</h3>
-<p>用户从 Word / 微信 / 网页粘贴带格式段落 → TipTap 默认会保留 HTML 格式,污染纯文本流。
-策略: TipTap <code>editor.setOptions({ enablePasteRules: false })</code> + 自定义 paste handler:</p>
+<p>用户从 Word / 微信 / 网页粘贴带格式段落 → TipTap 默认会保留 HTML 格式,污染纯文本流。策略:TipTap <code>editor.setOptions({ enablePasteRules: false })</code> + 自定义 paste handler:</p>
 <pre><code class="language-ts">editorView.props.handleDOMEvents = {
   paste(view, event) {
-    const text = event.clipboardData?.getData(&#39;text/plain&#39;) ?? &#39;&#39;
+    const text = event.clipboardData?.getData('text/plain') ?? ''
     if (text) {
       event.preventDefault()
       view.dispatch(view.state.tr.insertText(text))   // 仅插纯文本
@@ -135,56 +143,82 @@ export const EntityHighlightExtension = Extension.create({
   },
 }
 </code></pre>
-<p>例外: 粘贴自身 (TipTap → TipTap 的内部 paste,如 reorder 段落) 走默认 schema-aware 路径,不剥格式。</p>
+<p>例外:粘贴自身(TipTap → TipTap 的内部 paste,如 reorder 段落)走默认 schema-aware 路径,不剥格式。</p>
+
 <h2 id="goto-definition-ux">Goto Definition UX</h2>
 <table>
-<thead>
-<tr>
-<th>操作</th>
-<th>行为</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Hover (100ms)</td>
-<td>显示 floating-ui 卡片,展示头像/简介/关键属性</td>
-</tr>
-<tr>
-<td>点击</td>
-<td>右栏 split 打开 <code>characters/{id}.md</code> (绝不整页跳转,长篇写作丢上下文是致命的)</td>
-</tr>
-<tr>
-<td>Cmd/Ctrl + Click</td>
-<td>全屏切换到该文件</td>
-</tr>
-<tr>
-<td>右键</td>
-<td>菜单: &quot;Goto Definition&quot; / &quot;Find References&quot; / &quot;Rename Across Project&quot;</td>
-</tr>
-</tbody></table>
+<thead><tr><th>操作</th><th>行为</th></tr></thead>
+<tbody>
+<tr><td>Hover(100ms)</td><td>显示 floating-ui 卡片,展示头像 / 简介 / 关键属性</td></tr>
+<tr><td>点击</td><td>右栏 split 打开 <code>characters/{id}.md</code>(绝不整页跳转,长篇写作丢上下文是致命的)</td></tr>
+<tr><td>Cmd/Ctrl + Click</td><td>全屏切换到该文件</td></tr>
+<tr><td>右键</td><td>菜单:"Goto Definition" / "Find References" / "Rename Across Project"</td></tr>
+</tbody>
+</table>
+
 <h2 id="backlinks-面板">Backlinks 面板</h2>
-<p>打开某个 <code>characters/X.md</code> 时,右栏底部显示&quot;被这些章节引用 (N)&quot;:</p>
+<p>打开某个 <code>characters/X.md</code> 时,右栏底部显示"被这些章节引用(N)":</p>
 <ul>
-<li>数据源: <code>index.db.backlinks</code> 表</li>
-<li>索引时机: 章节保存时由 Worker 离线扫描更新</li>
+<li>数据源:<code>index.db.backlinks</code> 表</li>
+<li>索引时机:章节保存时由 worker 离线扫描更新</li>
 <li>每条带前后 30 字 snippet</li>
 <li>点击跳到对应章节的对应位置</li>
 </ul>
+
 <h2 id="框选修改交互">框选修改交互</h2>
 <ul>
 <li>用户在 TipTap 中框选一段文字</li>
-<li>浮动按钮 &quot;让 AI 修改&quot; 出现 (类似 Notion 的 AI inline)</li>
+<li>浮动按钮"让 AI 修改"出现(类似 Notion 的 AI inline)</li>
 <li>点击 → ChatBox 自动填入 <code>[选中文字] 修改要求: ___</code></li>
-<li>Writer 生成新版 → diff → ApprovalCard (高亮 from/to)</li>
+<li>Writer 生成新版 → diff → ApprovalCard(高亮 from/to)</li>
 <li>同意 → <code>replaceRange(from, to, newText)</code></li>
 </ul>
-<h2 id="编辑器迁移路径-将来切-codemirrormonaco">编辑器迁移路径 (将来切 CodeMirror/Monaco)</h2>
+
+<h2 id="编辑器迁移路径">编辑器迁移路径(将来切 CodeMirror / Monaco)</h2>
 <p>要换编辑器,只需:</p>
 <ol>
 <li>写新的 <code>lib/editor/codemirror-impl.ts</code> 实现 <code>EditorAdapter</code></li>
 <li><code>lib/editor/index.ts</code> 切默认导出</li>
-<li>业务代码 (含 ApprovalCard、框选修改、SearchPanel) 零改动</li>
+<li>业务代码(含 ApprovalCard、框选修改、SearchPanel)零改动</li>
 </ol>
-<p>预计成本: 3-5 天 (主要是装饰器层的迁移,纯文本部分零成本)。</p>
-  </main>
+<p>预计成本:3-5 天(主要是装饰器层的迁移,纯文本部分零成本)。</p>
+
+<h2 id="关联文档">关联文档</h2>
+<ul>
+<li><strong>上游</strong>:<a href="./01-overview.html">plan/01</a> 系统概览 · <a href="./07-ui-layout.html">plan/07</a> UI 布局</li>
+<li><strong>核心 spec</strong>:<a href="../spec/05-entity-highlight.html">spec/05</a> 实体高亮 · <a href="../spec/12-shortcuts.html">spec/12</a> 快捷键(含 IME 闸门 / @file 引用)</li>
+</ul>
+
+<h2 id="adr">ADR · 设计决策</h2>
+<table>
+<thead>
+<tr><th>编号</th><th>决策</th><th>选项</th><th>选择</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>ADR-01</td>
+<td>编辑器框架</td>
+<td>TipTap 3.x / CodeMirror 6 / Monaco / Slate</td>
+<td><strong>TipTap 3.x</strong></td>
+<td>中文长文排版最舒服;ProseMirror 底层成熟;装饰器 API 适合实体高亮场景;Monaco 偏代码,Slate API 不稳</td>
+</tr>
+<tr>
+<td>ADR-02</td>
+<td>实体识别方式</td>
+<td>TipTap Mention 节点 / <strong>ProseMirror Decorations + AC trie</strong></td>
+<td><strong>Decorations + AC trie</strong></td>
+<td>需求是"已写就的名字自动识别"而非"@ 召唤";Mention atomic node 破坏纯文本流且不能自动识别已有文本</td>
+</tr>
+<tr>
+<td>ADR-03</td>
+<td>抽象 EditorAdapter 接口</td>
+<td>直接耦合 TipTap / <strong>抽象适配器</strong></td>
+<td><strong>抽象适配器</strong></td>
+<td>未来如发现 TipTap 性能瓶颈或社区下沉,可换 CodeMirror 而业务代码零改动;接口稳定的代价是少量样板</td>
+</tr>
+</tbody>
+</table>
+
+</main>
 </body>
 </html>

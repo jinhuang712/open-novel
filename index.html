@@ -72,6 +72,7 @@
     }
     .sidebar nav a.spec .anchor-num { color: var(--blue); }
     .sidebar nav a.progress .anchor-num { color: var(--gold); }
+    .sidebar nav a.meta .anchor-num { color: var(--red); }
     #source {
       margin-top: 18px;
       padding-top: 14px;
@@ -144,6 +145,7 @@
     }
     .section.spec .section-header h2 { color: var(--blue); }
     .section.progress .section-header h2 { color: var(--gold); }
+    .section.meta .section-header h2 { color: var(--red); }
     .section-header .label {
       color: var(--muted);
       font-size: 13px;
@@ -181,6 +183,7 @@
     }
     .section.spec .row.is-focus { box-shadow: inset 3px 0 0 var(--blue); }
     .section.progress .row.is-focus { box-shadow: inset 3px 0 0 var(--gold); }
+    .section.meta .row.is-focus { box-shadow: inset 3px 0 0 var(--red); }
 
     .row .num {
       color: var(--accent-strong);
@@ -191,6 +194,7 @@
     }
     .section.spec .row .num { color: var(--blue); }
     .section.progress .row .num { color: var(--gold); }
+    .section.meta .row .num { color: var(--red); }
 
     .row .title {
       font-weight: 650;
@@ -332,13 +336,13 @@
     const DATA = [
       { kind: 'plan', title: 'Plan', label: '架构设计 (What / Why)', items: [
         ['01', './plan/01-overview.html',                '系统概览',        '系统概览与关键决策'],
-        ['02', './plan/02-multi-agent.html',             '多 Agent 拓扑',   '7 Agent 拓扑与职责', 'router writer checker validator reflector humanizer reader'],
+        ['02', './plan/02-multi-agent.html',             '多 Agent 拓扑',   '7 对外 + 6 Hidden Agent 拓扑与职责', 'router writer checker validator reflector humanizer reader hidden subagent'],
         ['03', './plan/03-editor-layer.html',            '编辑器层',        '编辑器分层与 EditorAdapter', 'tiptap'],
         ['04', './plan/04-storage-model.html',           '存储模型',        'md+sql 混合存储模型', 'frontmatter sqlite'],
         ['05', './plan/05-modes-and-approval.html',      '模式与审批',      '三模式与审批流', 'discuss plan write approval'],
         ['06', './plan/06-cascade-and-reflection.html',  'Cascade 与反思',  'Cascade 一致性与反馈学习'],
         ['07', './plan/07-ui-layout.html',               'UI 布局',         '五区 UI 布局'],
-        ['08', './plan/08-tech-stack.html',              '技术栈',          '技术栈锁定与版本策略', 'next mastra deepseek'],
+        ['08', './plan/08-tech-stack.html',              '技术栈',          '技术栈锁定 (AI SDK 6 + better-sqlite3 + Drizzle + sqlite-vec)', 'next deepseek sqlite drizzle stopwhen'],
         ['09', './plan/09-narrative-engine.html',        '叙事引擎',        'BeatAnalyzer + ArcTracker + 模板库'],
         ['10', './plan/10-reader-simulator.html',        '读者仿真器',      '5 persona ReaderPanel'],
         ['11', './plan/11-knowledge-graph.html',         '知识图谱',        '知识图谱与 cascade / RAG 地基'],
@@ -367,7 +371,7 @@
         ['19', './spec/19-impact-analysis.html',         '影响分析',        '影响半径与 cascade 工具'],
         ['20', './spec/20-context-assembly.html',        '上下文装配',      '上下文装配工具 assembleContext'],
         ['21', './spec/21-fact-query.html',              '事实查询',        '事实查询工具 queryFacts'],
-        ['22', './spec/22-mastra-memory.html',           'Mastra Memory',   'Mastra Memory 落地细节'],
+        ['22', './spec/22-memory-and-history.html',      'Memory & History','应用层 memory 模块 + 历史压缩 + 卷级摘要'],
         ['23', './spec/23-context-contracts.html',       '上下文契约',      'Per-agent 上下文契约'],
         ['24', './spec/24-json-output.html',             'JSON 输出',       'JSON 结构化输出统一规约', 'zod'],
         ['25', './spec/25-cardinal-rules.html',          '五大守则',        '五大网文守则'],
@@ -382,6 +386,10 @@
         ['005', './progress/005-knowledge-graph.html',     '知识图谱专攻',    'cascade + RAG 真正可工作的地基'],
         ['006', './progress/006-memory-and-context.html',  '记忆 / 上下文 / JSON / 守则', '一致性优先重设计'],
         ['007', './progress/007-opencode-borrowings.html', 'opencode 借鉴落地', 'opencode 借鉴 + TODO closure'],
+      ]},
+      { kind: 'meta', title: 'Meta', label: '项目档案', items: [
+        ['★',   './todo.html',                             'TODO',            '待办 + 已知问题 + 未决问题'],
+        ['★',   './CHANGELOG.html',                        'CHANGELOG',       '跨文档变更流水线'],
       ]},
     ];
 
