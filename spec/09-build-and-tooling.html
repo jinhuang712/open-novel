@@ -20,7 +20,7 @@
 <p>不用 npm / yarn / bun:</p>
 <ul>
 <li>pnpm 速度快,content-addressable store 共享多项目</li>
-<li>与 Mastra / Next.js 兼容良好</li>
+<li>与 Next.js / better-sqlite3 native bindings 兼容良好</li>
 <li>单 lockfile (<code>pnpm-lock.yaml</code>) 入库</li>
 </ul>
 <h2 id="node-版本">Node 版本</h2>
@@ -43,7 +43,7 @@ flowchart LR
   ROOT --> WS["pnpm-workspace.yaml<br/>单成员工作区,留 monorepo 余地"]
   ROOT --> LOCK["pnpm-lock.yaml<br/>入仓"]
   ROOT --> TSC["tsconfig.json<br/>ES2022 + Bundler resolution + paths @/*"]
-  ROOT --> NEXTC["next.config.ts<br/>serverExternalPackages 声明 mastra"]
+  ROOT --> NEXTC["next.config.ts<br/>serverExternalPackages 声明 better-sqlite3"]
   ROOT --> POST["postcss.config.mjs<br/>Tailwind v4 PostCSS plugin"]
   ROOT --> CMP["components.json<br/>shadcn 元数据"]
   ROOT --> ES[".eslintrc.json<br/>next/core-web-vitals"]
@@ -120,10 +120,8 @@ import type { NextConfig } from &#39;next&#39;
 
 const nextConfig: NextConfig = {
   serverExternalPackages: [
-    &#39;mastra&#39;,
-    &#39;@mastra/core&#39;,
-    &#39;@mastra/memory&#39;,
-    &#39;@mastra/libsql&#39;,
+    &#39;better-sqlite3&#39;,
+    &#39;sqlite-vec&#39;,
   ],
   experimental: {
     typedRoutes: true,
@@ -133,7 +131,7 @@ const nextConfig: NextConfig = {
 export default nextConfig
 </code></pre>
 <ul>
-<li><strong><code>serverExternalPackages</code></strong>: native bindings 不被打包 (libsql / better-sqlite3 等)</li>
+<li><strong><code>serverExternalPackages</code></strong>: native bindings 不被打包 (better-sqlite3 / sqlite-vec 扩展等)</li>
 <li><strong><code>typedRoutes</code></strong>: 让 <code>Link</code> 与 <code>router.push</code> 享受 route 路径类型校验</li>
 <li>不开 <code>experimental.turbo</code> (15.5 Turbopack dev 默认开,build 仍需 webpack)</li>
 </ul>
@@ -154,7 +152,7 @@ export default nextConfig
 </code></pre>
 <p>主题 token 用 <code>oklch()</code> (Tailwind v4 建议),颜色感知更线性,适合明暗切换。</p>
 <h2 id="route-handler-不变性">Route Handler 不变性</h2>
-<p>所有需要文件系统 / Mastra 的 Route 必须:</p>
+<p>所有需要文件系统 / SQLite 的 Route 必须:</p>
 <pre><code class="language-ts">// app/api/X/route.ts
 export const runtime = &#39;nodejs&#39;  // 显式声明,即使是默认值
 
@@ -208,7 +206,7 @@ export function assertUnderHome(p: string): void {
 <td><code>useEditor</code> 没传 <code>immediatelyRender: false</code></td>
 </tr>
 <tr>
-<td>Mastra 包打包错误 (libsql 找不到 .node 文件)</td>
+<td>better-sqlite3 / sqlite-vec 找不到 .node 文件 (打包错误)</td>
 <td><code>next.config.ts</code> 缺少 <code>serverExternalPackages</code></td>
 </tr>
 <tr>
@@ -216,8 +214,8 @@ export function assertUnderHome(p: string): void {
 <td>Route 没有 <code>export const runtime = &#39;nodejs&#39;</code></td>
 </tr>
 <tr>
-<td>dev hot-reload 后 LibSQL 连接异常</td>
-<td><code>lib/mastra/index.ts</code> 没用 <code>globalThis</code> 缓存</td>
+<td>dev hot-reload 后 SQLite connection 泄漏 / 异常</td>
+<td><code>lib/db/index.ts</code> 没用 <code>globalThis</code> 缓存 connection (见 plan/08 §Next.js + better-sqlite3)</td>
 </tr>
 </tbody></table>
   </main>

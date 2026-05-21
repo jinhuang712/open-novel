@@ -418,7 +418,7 @@ CREATE INDEX idx_narrative_target ON narrative_metrics(kind, target_id);
 </tr>
 </tbody></table>
 <p>手动触发: 在角色页面 (<code>characters/X.md</code> 打开后) 顶部 [追踪角色弧光] 按钮调 <code>trackArc({ characterId })</code>。</p>
-<p><strong>性能</strong>: ArcTracker 每次跑 1 个角色 + N 章节;并发限制 = 1 (避免同时多个角色扫导致 LibSQL 写锁竞争)。runOnNewChapter 时只跑当前章节涉及的角色,不全扫。</p>
+<p><strong>性能</strong>: ArcTracker 每次跑 1 个角色 + N 章节;并发限制 = 1 (避免同时多个角色扫导致 SQLite WAL 写锁竞争)。runOnNewChapter 时只跑当前章节涉及的角色,不全扫。</p>
 <h2 id="用户不接受-beatreport-的反馈环">用户不接受 BeatReport 的反馈环</h2>
 <p>UI 在 NarrativeReport 卡片底部加:</p>
 <pre><code>[👍 准确]  [🤔 部分准确]  [👎 不准]    [我自己来标]

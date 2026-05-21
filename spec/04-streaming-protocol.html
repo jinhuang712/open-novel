@@ -214,7 +214,7 @@ export function ChatBox() {
 <p><strong>契约</strong>: 刷新 = 抛弃当前 stream,<strong>不</strong>自动续传 LLM 流 (cookbook 上 SSE reconnect 续传依赖 <code>Last-Event-ID</code> 但 AI SDK 各版本支持不一致,不依赖)。</p>
 <p><strong>用户体验</strong>:</p>
 <ul>
-<li>刷新后 ChatBox 历史消息从 Mastra Memory thread 拉回 (memory 是 server 端落盘的,不依赖 stream)</li>
+<li>刷新后 ChatBox 历史消息从应用层 memory 模块拉回 (memory 是 server 端落盘的,不依赖 stream)</li>
 <li>最后一条若为 <code>partial</code>,UI 标&quot;(已中断)&quot; + 提供&quot;重发&quot;按钮</li>
 <li>已 emit 的 proposal (落 <code>approvals</code> 表) — <code>useApprovals.hydrate()</code> 拉回继续审</li>
 <li>流式中已开始的 fs/db 副作用 — 因为是原子写,不会有半截文件</li>
