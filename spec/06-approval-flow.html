@@ -5,40 +5,1024 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="open-novel-docs-renderer">
   <title>Spec 06 — 审批流 (Human-in-the-Loop) - Open Novel</title>
-  <link rel="stylesheet" href="../assets/docs.css">
-  <script src="../assets/docs-enhance.js" defer></script>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f8f8f7;
+  --surface: #ffffff;
+  --soft: #f2f3f3;
+  --text: #24272b;
+  --muted: #68717b;
+  --faint: #9aa1a8;
+  --border: #dedede;
+  --primary: #566f99;
+  --primary-soft: #f1f3f6;
+  --accent: #52686a;
+  --info: #566f99;
+  --info-soft: #f4f5f7;
+  --warn: #8a6d3b;
+  --warn-soft: #f8f4ea;
+  --danger: #9b4d49;
+  --danger-soft: #faf0ef;
+  --ok: #55745f;
+  --ok-soft: #eef4ef;
+  --code: #f1f2f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 18px;
+  --font-lg: 23px;
+  --font-xl: 30px;
+  --font-title: 38px;
+  --line-tight: 1.25;
+  --line-normal: 1.55;
+  --line-loose: 1.75;
+  --line-code: 1.6;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+  --motion-base: 160ms;
+  --motion-ease: ease;
+  --surface-shadow: none;
+  --toc-width: clamp(220px, 16vw, 300px);
+  --topbar-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #202327;
+    --soft: #262a2f;
+    --text: #eef0f2;
+    --muted: #adb4bd;
+    --faint: #79828d;
+    --border: #3a4047;
+    --primary: #9bb7d9;
+    --primary-soft: #182231;
+    --accent: #9ab4b1;
+    --info: #9bb7d9;
+    --info-soft: #1c2633;
+    --warn: #d4b16d;
+    --warn-soft: #302815;
+    --danger: #df9a96;
+    --danger-soft: #321d1d;
+    --ok: #9cc4a6;
+    --ok-soft: #1b2a20;
+    --code: #15171a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-base)/var(--line-loose) var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+code {
+  padding: 1px 5px;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-sm);
+  line-height: var(--line-code);
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+mark {
+  padding: 0.02em 0.22em;
+  background: var(--warn-soft);
+  border-radius: 3px;
+  color: var(--text);
+}
+
+del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+[data-mark="deprecated"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+[data-mark="term"] {
+  border-bottom: 1px dotted var(--faint);
+  cursor: help;
+}
+
+[data-mark="metric"] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 14px;
+  padding: 0 36px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0;
+}
+
+.brand-logo:hover {
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-org,
+.topbar-project,
+.topbar-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-org,
+.topbar-project {
+  flex: 0 0 auto;
+}
+
+.topbar-doc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.topbar-separator {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-links:empty {
+  display: none;
+}
+
+.topbar-link {
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.sidebar {
+  position: fixed;
+  inset: var(--topbar-height) auto 0 0;
+  width: var(--toc-width);
+  padding: 30px 28px 60px 30px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.nav-title {
+  margin: 0 0 16px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toc {
+  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0 8px 10px;
+  overflow-wrap: anywhere;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.toc a:hover,
+.toc a.active {
+  border-left-color: var(--primary);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc span {
+  color: var(--faint);
+  font: 12px/1.45 var(--mono);
+  white-space: nowrap;
+}
+
+.doc {
+  max-width: 960px;
+  margin-left: var(--toc-width);
+  padding: 96px 52px 84px;
+}
+
+.set-index {
+  max-width: 1120px;
+}
+
+.doc-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-header h1 {
+  margin: 0 0 10px;
+  font-size: var(--font-title);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.doc-kicker {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font: 700 12px/1.25 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font: 12.5px/1.4 var(--mono);
+}
+
+.doc-summary {
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.doc-summary ul {
+  margin: 0;
+}
+
+.doc-section {
+  margin: 46px 0 0;
+  scroll-margin-top: 70px;
+}
+
+.doc-section h2 {
+  margin: 0 0 16px;
+  padding: 4px 0 5px 14px;
+  border-left: 3px solid var(--primary);
+  font-size: var(--font-lg);
+  line-height: var(--line-tight);
+}
+
+.doc-section h3 {
+  margin: 22px 0 8px;
+  font-size: var(--font-md);
+}
+
+.doc-section > :first-child {
+  margin-top: 0;
+}
+
+.section-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+details {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 24px;
+}
+
+li + li {
+  margin-top: 3px;
+}
+
+.callout {
+  margin: 18px 0;
+  padding: 13px 16px;
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+}
+
+.callout p {
+  margin: 6px 0 0;
+}
+
+.callout p:first-child {
+  margin-top: 0;
+}
+
+.callout-info {
+  background: var(--info-soft);
+  border-left-color: var(--info);
+}
+
+.callout-warning {
+  background: var(--warn-soft);
+  border-left-color: var(--warn);
+}
+
+.callout-danger {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.callout-success {
+  background: var(--ok-soft);
+  border-left-color: var(--ok);
+}
+
+table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  box-shadow: var(--surface-shadow);
+  font-size: var(--font-sm);
+}
+
+thead,
+tbody,
+tr {
+  width: 100%;
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table,
+.risk-table,
+.decision-table {
+  width: 100%;
+}
+
+.details-block {
+  margin: 18px 0;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.details-block summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagram {
+  position: relative;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.diagram figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.diagram:hover .diagram-toolbar {
+  opacity: 1;
+}
+
+.code-shell {
+  margin: 16px 0;
+  overflow: hidden;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  color: var(--muted);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+}
+
+.code-status-ok {
+  color: var(--ok);
+}
+
+.code-status-error {
+  color: var(--danger);
+}
+
+.code-copy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.code-status + .code-copy {
+  margin-left: 0;
+}
+
+.code-copy:hover {
+  color: var(--text);
+}
+
+.code-pre {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--font-sm);
+  line-height: var(--line-loose);
+}
+
+.code-line {
+  display: grid;
+  min-width: 100%;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+}
+
+.code-line-number {
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--border);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.code-line-content {
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.participants,
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.participant-card,
+.value-card,
+.action-card {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.action-card {
+  padding: 20px;
+}
+
+.participant-card p,
+.value-card p,
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.source-refs,
+.files,
+.acceptance-criteria {
+  padding-left: 22px;
+}
+
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.chapter-card:hover,
+.chapter-card:focus-within {
+  border-color: var(--primary);
+}
+
+.chapter-card a {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 16px;
+  color: var(--text);
+}
+
+.chapter-card a:hover {
+  text-decoration: none;
+}
+
+.chapter-number {
+  color: var(--faint);
+  font: 700 12px/1.4 var(--mono);
+}
+
+.chapter-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.chapter-title {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.chapter-description {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.set-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.set-section {
+  margin: 46px 0 0;
+}
+
+.set-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 44px 0 0;
+}
+
+.set-pagination-link {
+  display: block;
+  min-height: 82px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  color: var(--text);
+}
+
+.set-pagination-link:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+}
+
+.set-pagination-next {
+  text-align: right;
+}
+
+.set-pagination-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.set-pagination-title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-width: 56px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-questions-block {
+  position: relative;
+  margin: 18px 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.open-questions-header {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.open-question-marker {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--warn);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-question-text {
+  min-width: 0;
+}
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    right: auto;
+    left: 0;
+    order: 1;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+
+  .brand-logo,
+  .brand-logo-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar {
+    position: static;
+    inset: auto;
+    order: 2;
+    width: auto;
+    max-height: 260px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .doc {
+    order: 3;
+    max-width: none;
+    margin-left: 0;
+    padding: 32px 20px 56px;
+  }
+
+  .doc-header h1 {
+    font-size: var(--font-xl);
+  }
+
+  .set-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .set-pagination-next {
+    text-align: left;
+  }
+
+  .code-line {
+    grid-template-columns: 34px minmax(max-content, 1fr);
+  }
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .diagram-toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+    margin-left: 0;
+    padding: 0;
+  }
+}
+
+  </style>
   <!-- Generated by scripts/render_all_docs.py. Preserve body content; rerun renderer after edits. -->
 </head>
 <body>
-  <main class="doc">
-<nav class="doc-meta" aria-label="Document metadata">
-  <a href="../index.html">&larr; Index</a>
-  <span>spec/06-approval-flow.html</span>
-</nav>
-<h1 id="spec-06-审批流-human-in-the-loop">Spec 06 — 审批流 (Human-in-the-Loop)</h1>
-<blockquote>
+<header class="topbar">
+  <a class="brand-logo" href="../index.html" aria-label="Open Novel index">ON</a>
+  <div class="topbar-breadcrumb">
+    <span class="topbar-project">Open Novel</span>
+    <span class="topbar-separator">/</span>
+    <span class="topbar-doc">Spec 06 — 审批流 (Human-in-the-Loop)</span>
+  </div>
+  <span class="topbar-spacer"></span>
+  <nav class="topbar-links" aria-label="Primary">
+    <a class="topbar-link" href="../README.md">README</a>
+    <a class="topbar-link" href="../todo.html">TODO</a>
+    <a class="topbar-link" href="../changelist.html">Changelist</a>
+  </nav>
+</header>
+<aside class="sidebar" aria-label="Document navigation">
+  <p class="nav-title">文档集</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="../index.html"><span>SET</span>全部文档</a></li>
+      <li><a href="../README.md"><span>MD</span>README</a></li>
+      <li><a href="../todo.html"><span>TODO</span>风险</a></li>
+      <li><a href="../changelist.html"><span>LOG</span>变更</a></li>
+    </ol>
+  </nav>
+  <p class="nav-title">本文目录</p>
+  <nav class="toc"><ol>
+<li><a href="#top"><span>00</span>概览</a></li>
+<li><a href="#取消时各时刻的行为"><span>H3</span>取消时各时刻的行为</a></li>
+<li><a href="#rollbackturn-实现"><span>H3</span>rollbackTurn 实现</a></li>
+<li><a href="#幂等-跨进程恢复"><span>H3</span>幂等 + 跨进程恢复</a></li>
+<li><a href="#检测逻辑"><span>H3</span>检测逻辑</a></li>
+<li><a href="#升级到用户的-ui-表现"><span>H3</span>升级到用户的 UI 表现</a></li>
+<li><a href="#与-spec22-subagent-task-id-续跑-的协同"><span>H3</span>与 spec/22 §subagent task_id 续跑 的协同</a></li>
+<li><a href="#重置时机"><span>H3</span>重置时机</a></li>
+<li><a href="#测试-spec14-联动"><span>H3</span>测试 (spec/14 联动)</a></li>
+</ol></nav>
+</aside>
+  <article class="doc" id="top">
+    <header class="doc-header">
+      <p class="doc-kicker">Spec</p>
+      <h1>Spec 06 — 审批流 (Human-in-the-Loop)</h1>
+      <div class="doc-meta" aria-label="Document metadata">
+        <a href="../index.html">Index</a>
+        <span>spec/06-approval-flow.html</span>
+        <span>Generated by <code>scripts/render_all_docs.py</code></span>
+      </div>
+    </header>
+    <main>
+<aside class="callout callout-info">
 <p>本文档采用 <strong>proposal-only tool + 独立 resolve endpoint</strong>。AI SDK 的 <code>onToolCall</code> 只负责把 proposal 推到 UI;用户决议不回灌同一条 stream,而是调用 <code>POST /api/approvals/{id}/resolve</code>。</p>
-</blockquote>
-<h2 id="设计">设计</h2>
+</aside>
+<section class="doc-section" id="设计">
+<h2>设计</h2>
 <p>把&quot;工具生成 proposal → 用户审 → endpoint 决议 → 后端 transaction 落盘&quot;的链路标准化。服务端 proposal 工具不直接写 fs/db 副作用;它只计算完整 ChangeSet,落一条 <code>approvals(status='pending')</code>,然后让 stream 结束等待用户。</p>
-<h2 id="流程时序">流程时序</h2>
-<pre class="mermaid">
-sequenceDiagram
+</section>
+<section class="doc-section" id="流程时序">
+<h2>流程时序</h2>
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">sequenceDiagram
   participant A as Agent
   participant S as Server
   participant C as Client
-  A->>S: writeSettingProposal returns { kind: "proposal" }
-  S->>C: SSE: tool-call-needs-approval
-  Note over C: onToolCall 拦截<br/>渲染 ApprovalCard
+  A-&gt;&gt;S: writeSettingProposal returns { kind: "proposal" }
+  S-&gt;&gt;C: SSE: tool-call-needs-approval
+  Note over C: onToolCall 拦截&lt;br/&gt;渲染 ApprovalCard
   Note over C: 用户点 "同意"
-  C->>S: POST /api/approvals/{id}/resolve
-  S->>S: SQLite transaction 写 accepted_items
-  S->>C: { ok: true }
-  Note over S: cascade controller 推进下一 action 或结束 turn
-</pre>
-<h2 id="服务端实现-cookbook-模式-w9-内部-cascade-递归">服务端实现 (proposal-only + 内部 cascade 递归)</h2>
+  C-&gt;&gt;S: POST /api/approvals/{id}/resolve
+  S-&gt;&gt;S: SQLite transaction 写 accepted_items
+  S-&gt;&gt;C: { ok: true }
+  Note over S: cascade controller 推进下一 action 或结束 turn</code></pre></figure>
+</section>
+<section class="doc-section" id="服务端实现-cookbook-模式-w9-内部-cascade-递归">
+<h2>服务端实现 (proposal-only + 内部 cascade 递归)</h2>
 <p>需要审批的工具<strong>不直接执行 fs/db 副作用</strong>,而是先在内部跑完 cascade 递归 (spec/19),把整批 ChangeSet 落 <code>approvals</code> 表后返回 proposal 给客户端:</p>
-<pre><code class="language-ts">import { tool } from &#39;ai&#39;
+<pre data-language="ts"><code data-language="ts">import { tool } from &#39;ai&#39;
 
 // 工具 &quot;提议&quot;——内部跑 cascade 递归后返回整批 ChangeSet;真正写盘在用户批准后由后端 endpoint 完成
 export const writeSettingProposal = tool({
@@ -89,13 +1073,13 @@ export const writeSettingProposal = tool({
 <li>内部递归 ~15-45s,期间 stream 保持活跃,UI 显示进度;完成后 stream 才结束等审</li>
 </ul>
 <p><strong><code>approvals</code> 表 schema 升级</strong> (在 spec/01 既有 schema 上加):</p>
-<pre><code class="language-sql">ALTER TABLE approvals ADD COLUMN change_set TEXT;       -- JSON,含 main + cascade[] + graph + metadata
+<pre data-language="sql"><code data-language="sql">ALTER TABLE approvals ADD COLUMN change_set TEXT;       -- JSON,含 main + cascade[] + graph + metadata
 ALTER TABLE approvals ADD COLUMN parent_approval_id INTEGER;  -- 二期: 跨多次审批的链路 (当前 ApprovalCard 整批,无需用)
 </code></pre>
 <p>旧 <code>payload</code> / <code>diff</code> / <code>cascade</code> 列保留兼容(读取时 fallback);新逻辑全用 <code>change_set</code>。</p>
 <p><strong>Agent runner 约定</strong>: Writer 在生成完内容后调 <code>writeSettingProposal</code>,工具返回 <code>{ kind: 'proposal' }</code> 后由 AI SDK <code>stopWhen</code> 显式终止本轮,进入&quot;等待审批&quot;状态。stream 不长留挂起,也不等待用户决议回灌。</p>
 <p><strong>真正落盘</strong>: 由独立 endpoint <code>POST /api/approvals/{id}/resolve</code> 处理,接受用户的 <code>accepted_items</code>(勾选了哪些 cascade proposal),按 SQLite transaction 一次写所有 accepted 文件:</p>
-<pre><code class="language-ts">// app/api/approvals/[id]/resolve/route.ts
+<pre data-language="ts"><code data-language="ts">// app/api/approvals/[id]/resolve/route.ts
 export const runtime = &#39;nodejs&#39;
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -163,7 +1147,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 </code></pre>
 <p><strong>事务原子性</strong>: 任一文件写盘失败 → 全部 rollback,UI 收到错误后保留 ApprovalCard 让用户重试。这避免了&quot;主修改落了但 cascade 第 5 项失败,数据半落地&quot;的尴尬状态。</p>
 <p><code>history</code> 表新增三列:</p>
-<pre><code class="language-sql">ALTER TABLE history ADD COLUMN cascade_group_id TEXT;          -- 同 ChangeSet 落盘的所有 history 共享一个 group
+<pre data-language="sql"><code data-language="sql">ALTER TABLE history ADD COLUMN cascade_group_id TEXT;          -- 同 ChangeSet 落盘的所有 history 共享一个 group
 ALTER TABLE history ADD COLUMN cascade_level INTEGER;          -- 0 = 主修改 / 1-3 = cascade 层级
 ALTER TABLE history ADD COLUMN anchor_id TEXT;                 -- 段级 cascade rewrite 的锚点
 CREATE INDEX idx_history_cgroup ON history(cascade_group_id);
@@ -175,8 +1159,10 @@ CREATE INDEX idx_history_cgroup ON history(cascade_group_id);
 <li>独立 endpoint 幂等 (status=&#39;pending&#39; 检查) — 浏览器重连 / 关闭重开场景下重复点击不重复落盘</li>
 <li>与 Agent loop 解耦 — 用户审完 30 分钟后才点同意也合法</li>
 </ol>
-<h2 id="客户端-ui-拦截">客户端 UI 拦截</h2>
-<pre><code class="language-tsx">// components/panels/ChatBox.tsx
+</section>
+<section class="doc-section" id="客户端-ui-拦截">
+<h2>客户端 UI 拦截</h2>
+<pre data-language="tsx"><code data-language="tsx">// components/panels/ChatBox.tsx
 const { messages, sendMessage, status } = useChat({
   api: &#39;/api/chat&#39;,
   body: { projectId, sessionId, mode },
@@ -194,13 +1180,17 @@ const { messages, sendMessage, status } = useChat({
 })
 </code></pre>
 <p>注意:<strong>决议不回灌进同一个 stream</strong>,因为 stream 早结束了。改为独立 endpoint。这是与短挂起 cookbook 最大的差异 — cookbook 假设 stream 短期挂起(秒级),本项目假设审批可能拖分钟级。</p>
-<h2 id="客户端-ui-恢复">客户端 UI 恢复</h2>
+</section>
+<section class="doc-section" id="客户端-ui-恢复">
+<h2>客户端 UI 恢复</h2>
 <p>页面加载时 <code>useApprovals.hydrate()</code> 从 <code>/api/approvals?status=pending</code> 拉回所有未决 ChangeSet。stream 中收到新的 proposal 时只作为即时提示;事实来源仍是 <code>approvals</code> 表。</p>
-<h2 id="approvalcard-组件-整批审w9-升级">ApprovalCard 组件 (整批审,W9 升级)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="approvalcard-组件-整批审w9-升级">
+<h2>ApprovalCard 组件 (整批审,W9 升级)</h2>
+<aside class="callout callout-info">
 <p>整个 ChangeSet (主修改 + 1-3 级 cascade) 在<strong>一个</strong> ApprovalCard 内呈现。每条 proposal 有独立勾选框,默认按 confidence 决定是否勾选 (high/medium 默认勾,low 默认不勾)。用户可手动 toggle、整批同意、整批拒绝。</p>
-</blockquote>
-<pre><code class="language-tsx">// components/panels/ApprovalCard.tsx
+</aside>
+<pre data-language="tsx"><code data-language="tsx">// components/panels/ApprovalCard.tsx
 export function ApprovalCard({ proposal }: { proposal: ApprovalProposal }) {
   const { changeSet } = proposal
   // 每条 proposal 一个 checkbox state + 一个 edits 文本 state
@@ -386,9 +1376,11 @@ async function reject(approvalId: string) {
 <li>❌ 旧:<code>approve(approvalId, { content })</code> 单文件</li>
 <li>✅ 新:<code>approve(approvalId, acceptedItems, edits)</code> 批量勾选 + 各自 edits</li>
 </ul>
-<h2 id="多审批排队">多审批排队</h2>
+</section>
+<section class="doc-section" id="多审批排队">
+<h2>多审批排队</h2>
 <p>同一时刻可能有多个待审 (e.g. cascade 链路),用 Zustand store 维护:</p>
-<pre><code class="language-ts">// lib/store/approvals.ts
+<pre data-language="ts"><code data-language="ts">// lib/store/approvals.ts
 export const useApprovals = create&lt;{
   pending: ApprovalProposal[]                    // 主 + cascade 全在这里,按 createdAt asc
   push: (proposal: ApprovalProposal) =&gt; void
@@ -405,10 +1397,12 @@ export const useApprovals = create&lt;{
 }))
 </code></pre>
 <p>UI 显示<strong>第一个</strong> (按时间),其他角标提示。</p>
-<h2 id="turn-取消语义">Turn 取消语义 (chat box 顶部 [取消本次对话] 按钮)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="turn-取消语义">
+<h2>Turn 取消语义 (chat box 顶部 [取消本次对话] 按钮)</h2>
+<aside class="callout callout-info">
 <p>设计原则: <strong>用户可随时取消 — 一旦取消, 当前 turn 内所有已落盘 changes 全部 revert</strong>。turn 是 transactional checkpoint, 不是 action 是 turn 整体。</p>
-</blockquote>
+</aside>
 <p>用户每次输入 → Router 输出 <code>actions[]</code> → cascade 控制器顺序执行 → 一个或多个 ApprovalCard。整个过程是<strong>一个 user_turn</strong> (见 spec/01 §user_turns 表), chat box 顶部常驻 <strong>[取消本次对话]</strong> 按钮直到该 turn 进入 <code>done</code> / <code>cancelled</code> 终态。</p>
 <p><strong>各 action 决议规则</strong>:</p>
 <ul>
@@ -430,7 +1424,7 @@ export const useApprovals = create&lt;{
 <tr><td>所有 actions 都决议完, turn.status='done'</td><td>所有 approved</td><td>[取消本次对话] <strong>按钮置灰</strong> — 用户改走 §撤销 单条回退</td></tr>
 </tbody></table>
 <h3 id="rollbackturn-实现">rollbackTurn 实现</h3>
-<pre><code class="language-ts">// app/api/turns/[id]/cancel/route.ts
+<pre data-language="ts"><code data-language="ts">// app/api/turns/[id]/cancel/route.ts
 export async function POST(req: Request, { params }: { params: { id: string } }) {
   const turn = await db.userTurns.get(params.id)
   if (!turn) return new Response(JSON.stringify({ error: &#39;not_found&#39; }), { status: 404 })
@@ -473,12 +1467,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 <li><strong>ApprovalCard pending 行为</strong>: <code>POST /api/approvals/{id}/resolve</code> 仍幂等 (status='pending' check), 但不再判 expired</li>
 </ul>
 <p><strong>stream 端</strong>: Mastra Agent 调 writeSettingProposal 后 prompt 显式 stop。stream 在 30s 内自然结束 (proposal emit 完即收尾),不长留挂起。stream 超时不是问题, turn 持久化也不依赖 stream。</p>
-<h2 id="cascade-大批量审-新增">Cascade 大批量审 (新增)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="cascade-大批量审-新增">
+<h2>Cascade 大批量审 (新增)</h2>
+<aside class="callout callout-info">
 <p>audit 发现:100+ cascade 改动需要分页吗?用户能&quot;全选/反选/全过&quot;吗?</p>
-</blockquote>
+</aside>
 <p><strong>UI 升级 BulkApprovalDialog</strong>:</p>
-<pre><code class="language-tsx">&lt;BulkApprovalDialog&gt;
+<pre data-language="tsx"><code data-language="tsx">&lt;BulkApprovalDialog&gt;
   {/* 虚拟滚动,默认 5 项一屏 */}
   &lt;Virtualizer items={cascade} itemSize={80} maxVisible={5}&gt;
     {(item, index) =&gt; (
@@ -512,9 +1508,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 &lt;/BulkApprovalDialog&gt;
 </code></pre>
 <p><code>bulkApprove</code> 内部不再逐条 fetch,而是 <code>POST /api/approvals/bulk { ids, decision }</code>,后端在 transaction 内串行执行,失败回滚。</p>
-<h2 id="持久化">持久化</h2>
+</section>
+<section class="doc-section" id="持久化">
+<h2>持久化</h2>
 <p>每次审批 (无论决策) 都写到 <code>approvals</code> 表 (见 spec/01)。</p>
-<pre><code class="language-ts">async function recordApproval(call, decision, payload?) {
+<pre data-language="ts"><code data-language="ts">async function recordApproval(call, decision, payload?) {
   await db.approvals.insert({
     tool_call_id: call.id,
     agent: call.agent,
@@ -528,9 +1526,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   })
 }
 </code></pre>
-<h2 id="批量审批">批量审批</h2>
+</section>
+<section class="doc-section" id="批量审批">
+<h2>批量审批</h2>
 <p>对长 cascade 链 (&gt;5 项),提供&quot;全选/全拒/逐项&quot;三种模式:</p>
-<pre><code class="language-tsx">&lt;BulkApprovalDialog&gt;
+<pre data-language="tsx"><code data-language="tsx">&lt;BulkApprovalDialog&gt;
   &lt;CheckList items={cascade} /&gt;
   &lt;Actions&gt;
     &lt;Button onClick={() =&gt; bulkApprove(selected)}&gt;批准选中 ({selected.length})&lt;/Button&gt;
@@ -540,9 +1540,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 &lt;/BulkApprovalDialog&gt;
 </code></pre>
 <p>bulkApprove 内部调用 <code>POST /api/approvals/bulk</code>,后端按 approval 顺序在 transaction 中处理。它不回灌 stream。</p>
-<h2 id="与-reflector-联动">与 Reflector 联动</h2>
+</section>
+<section class="doc-section" id="与-reflector-联动">
+<h2>与 Reflector 联动</h2>
 <p>每次审批 resolve 后:</p>
-<pre><code class="language-ts">async function onResolve(call, decision, finalContent) {
+<pre data-language="ts"><code data-language="ts">async function onResolve(call, decision, finalContent) {
   await recordApproval(call, decision, { feedback })
   
   // 入队 Reflector
@@ -559,9 +1561,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 }
 </code></pre>
 <p>Reflector 异步消费 (Worker),不阻塞主链路。</p>
-<h2 id="撤销">撤销</h2>
+</section>
+<section class="doc-section" id="撤销">
+<h2>撤销</h2>
 <p><code>approvals</code> 表支持<strong>单条回退</strong>和<strong>整 turn 回退</strong>两种粒度。整 turn 回退由 §Turn 取消语义 触发, 内部循环调下面这个 <code>rollbackApproval</code>:</p>
-<pre><code class="language-ts">// lib/storage/rollback.ts
+<pre data-language="ts"><code data-language="ts">// lib/storage/rollback.ts
 async function rollbackApproval(tx: Transaction, approvalId: string) {
   const approval = await tx.approvals.get(approvalId)
   if (!approval || approval.status !== &#39;approved&#39;) {
@@ -601,7 +1605,9 @@ async function rollbackApproval(tx: Transaction, approvalId: string) {
 <li><strong>整 turn 回退</strong>: chat box 顶部 [取消本次对话] (turn 未完结时) 或 Settings → 审批历史 → 按 turn_id 分组 → "回退整个 turn" (turn 已完结时)</li>
 </ul>
 <p><strong>派生视图守卫</strong> (plan/01 inv L10): rollbackApproval 写 fs 前必须检查 <code>h.target</code> 对应文件 frontmatter <code>derived: true</code> — 若是, 跳过 fs.writeFile (派生文件由 reindex 重生成, 不应手工回退)。</p>
-<h2 id="安全防护">安全防护</h2>
+</section>
+<section class="doc-section" id="安全防护">
+<h2>安全防护</h2>
 <ul>
 <li><strong>input schema 严格</strong> (Zod 校验失败 → 自动拒绝,不进入审批)</li>
 <li><strong>路径越权防御</strong> (见 spec/02 §safeFromProjectRoot) — 在 execute 第一行强制检查,不依赖前端校验</li>
@@ -610,13 +1616,15 @@ async function rollbackApproval(tx: Transaction, approvalId: string) {
 <li><strong>原子写盘</strong> — <code>fs.writeFile(path + &#39;.tmp&#39;)</code> + <code>fs.rename</code> 避免半截内容;db.history.insert 在同一 transaction</li>
 <li><strong>AbortSignal 检查</strong> — execute 内每次进 fs/db 操作前 <code>if (signal.aborted) return earlyExit()</code>,但<strong>不中断</strong>已开始的 fs.rename (单步原子操作);step 级粒度的取消</li>
 </ul>
-<h2 id="validator-writer-doom-loop-检测-借鉴-opencode-processorts351-374">Validator-Writer doom-loop 检测 (借鉴 opencode <code>processor.ts:351-374</code>)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="validator-writer-doom-loop-检测-借鉴-opencode-processorts351-374">
+<h2>Validator-Writer doom-loop 检测 (借鉴 opencode <code>processor.ts:351-374</code>)</h2>
+<aside class="callout callout-info">
 <p><strong>问题场景</strong>: 用户开启自动 cascade (write 模式 → Writer 写 → Checker / Validator / ReaderPanel 跑 → Validator 拒绝 → Writer 重生成 → Validator 又拒绝 → ...). 如果 Writer 反复给出几乎相同的输出 (LLM 没真正吸收 Validator 的反馈), 就会无限循环烧 token, 用户在前端看到的只是&quot;还在生成&quot;。</p>
-</blockquote>
+</aside>
 <p>opencode 处理类似情况 (<code>processor.ts:351-374</code>): 检测最近 N 个 tool call 是否同名同 input → 触发 <code>permission.ask({permission: &quot;doom_loop&quot;})</code> 让用户决策。我们对应版本: 检测 Writer 自我重写循环。</p>
 <h3 id="检测逻辑">检测逻辑</h3>
-<pre><code class="language-ts">// lib/agents/doom-loop-detector.ts
+<pre data-language="ts"><code data-language="ts">// lib/agents/doom-loop-detector.ts
 const DOOM_LOOP_THRESHOLD = 3
 const SIMILARITY_THRESHOLD = 0.9    // 经验值,可基于实测调整
 
@@ -668,19 +1676,17 @@ export class DoomLoopDetector {
 </ul>
 <h3 id="升级到用户的-ui-表现">升级到用户的 UI 表现</h3>
 <p><code>escalate</code> 时不直接抛 error, 而是把 cascade 流程<strong>暂停在审批入口</strong>, 在 ApprovalCard 顶部显示橙色警告条:</p>
-<pre class="mermaid">
-flowchart TD
-  WARN["Writer 与 Validator 似乎陷入循环<br/>Writer 已重写 3 次但产物高度相似<br/>Validator 反复拒绝, 请人工裁定"]
-  WARN --> ACT{用户选择}
-  ACT --> A1[/"我手改: 进入 chapter editor"/]
-  ACT --> A2[/"强制 approve 第 3 版: 跳过 Validator"/]
-  ACT --> A3[/"放弃本章: 删除草稿"/]
-  WARN -.-> REASONS["Validator 拒绝原因 (3 次累计)<br/>1. 林溪在第 47 章变成女主角后, 称谓'哥'未改<br/>2. 林溪称谓'哥'未改<br/>3. 称谓'哥'出现 3 次未改"]
-</pre>
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">flowchart TD
+  WARN["Writer 与 Validator 似乎陷入循环&lt;br/&gt;Writer 已重写 3 次但产物高度相似&lt;br/&gt;Validator 反复拒绝, 请人工裁定"]
+  WARN --&gt; ACT{用户选择}
+  ACT --&gt; A1[/"我手改: 进入 chapter editor"/]
+  ACT --&gt; A2[/"强制 approve 第 3 版: 跳过 Validator"/]
+  ACT --&gt; A3[/"放弃本章: 删除草稿"/]
+  WARN -.-&gt; REASONS["Validator 拒绝原因 (3 次累计)&lt;br/&gt;1. 林溪在第 47 章变成女主角后, 称谓'哥'未改&lt;br/&gt;2. 林溪称谓'哥'未改&lt;br/&gt;3. 称谓'哥'出现 3 次未改"]</code></pre></figure>
 <p>(三个动作对应 spec/05 §modes-and-approval 的标准动作, 加 &quot;强制 approve 跳过 Validator&quot; 一个新动作)</p>
 <h3 id="与-spec22-subagent-task-id-续跑-的协同">与 spec/22 §subagent task_id 续跑 的协同</h3>
 <p>opencode <code>tool/task.ts</code> 的 <code>task_id</code> 续跑模式: Validator 拒绝后 Writer 重生成应<strong>续上原 threadId</strong> 而不是开新会话, 让 Mastra lastMessages=30 能让 Writer 看到&quot;我刚才被拒了&quot;。这是 doom-loop 检测能不能起作用的前提 — 如果每次重生成都是空白上下文, Writer 当然会一直输出同一个东西。</p>
-<pre><code class="language-ts">// 在 cascade 控制器内 (spec/06 §cascade 流转)
+<pre data-language="ts"><code data-language="ts">// 在 cascade 控制器内 (spec/06 §cascade 流转)
 const writerThreadId = `proj:${projectId}:session:${sessionId}:writer:${chapterId}`
                                                           // 同一 chapter 续用同 thread
 
@@ -706,7 +1712,7 @@ if (validatorReport.contradictions.length &gt; 0) {
 <li>用户切换 chapter → reset (检测器是 per-chapter)</li>
 </ul>
 <h3 id="测试-spec14-联动">测试 (spec/14 联动)</h3>
-<pre><code class="language-ts">describe(&#39;doom-loop detector&#39;, () =&gt; {
+<pre data-language="ts"><code data-language="ts">describe(&#39;doom-loop detector&#39;, () =&gt; {
   it(&#39;3 次完全相同输出 → escalate&#39;, () =&gt; { /* ... */ })
   it(&#39;3 次相似度 0.95 → escalate&#39;, () =&gt; { /* ... */ })
   it(&#39;3 次相似度 0.7 → continue&#39;, () =&gt; { /* ... */ })
@@ -714,6 +1720,9 @@ if (validatorReport.contradictions.length &gt; 0) {
   it(&#39;escalate 后 UI 显示警告条 + 3 项动作 + 拒绝原因列表&#39;, () =&gt; { /* ... */ })
 })
 </code></pre>
-  </main>
+</section>
+    </main>
+    <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>
+  </article>
 </body>
 </html>

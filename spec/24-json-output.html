@@ -5,21 +5,1007 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="open-novel-docs-renderer">
   <title>Spec 24 — JSON 结构化输出统一规约 - Open Novel</title>
-  <link rel="stylesheet" href="../assets/docs.css">
-  <script src="../assets/docs-enhance.js" defer></script>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f8f8f7;
+  --surface: #ffffff;
+  --soft: #f2f3f3;
+  --text: #24272b;
+  --muted: #68717b;
+  --faint: #9aa1a8;
+  --border: #dedede;
+  --primary: #566f99;
+  --primary-soft: #f1f3f6;
+  --accent: #52686a;
+  --info: #566f99;
+  --info-soft: #f4f5f7;
+  --warn: #8a6d3b;
+  --warn-soft: #f8f4ea;
+  --danger: #9b4d49;
+  --danger-soft: #faf0ef;
+  --ok: #55745f;
+  --ok-soft: #eef4ef;
+  --code: #f1f2f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 18px;
+  --font-lg: 23px;
+  --font-xl: 30px;
+  --font-title: 38px;
+  --line-tight: 1.25;
+  --line-normal: 1.55;
+  --line-loose: 1.75;
+  --line-code: 1.6;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+  --motion-base: 160ms;
+  --motion-ease: ease;
+  --surface-shadow: none;
+  --toc-width: clamp(220px, 16vw, 300px);
+  --topbar-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #202327;
+    --soft: #262a2f;
+    --text: #eef0f2;
+    --muted: #adb4bd;
+    --faint: #79828d;
+    --border: #3a4047;
+    --primary: #9bb7d9;
+    --primary-soft: #182231;
+    --accent: #9ab4b1;
+    --info: #9bb7d9;
+    --info-soft: #1c2633;
+    --warn: #d4b16d;
+    --warn-soft: #302815;
+    --danger: #df9a96;
+    --danger-soft: #321d1d;
+    --ok: #9cc4a6;
+    --ok-soft: #1b2a20;
+    --code: #15171a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-base)/var(--line-loose) var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+code {
+  padding: 1px 5px;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-sm);
+  line-height: var(--line-code);
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+mark {
+  padding: 0.02em 0.22em;
+  background: var(--warn-soft);
+  border-radius: 3px;
+  color: var(--text);
+}
+
+del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+[data-mark="deprecated"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+[data-mark="term"] {
+  border-bottom: 1px dotted var(--faint);
+  cursor: help;
+}
+
+[data-mark="metric"] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 14px;
+  padding: 0 36px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0;
+}
+
+.brand-logo:hover {
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-org,
+.topbar-project,
+.topbar-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-org,
+.topbar-project {
+  flex: 0 0 auto;
+}
+
+.topbar-doc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.topbar-separator {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-links:empty {
+  display: none;
+}
+
+.topbar-link {
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.sidebar {
+  position: fixed;
+  inset: var(--topbar-height) auto 0 0;
+  width: var(--toc-width);
+  padding: 30px 28px 60px 30px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.nav-title {
+  margin: 0 0 16px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toc {
+  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0 8px 10px;
+  overflow-wrap: anywhere;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.toc a:hover,
+.toc a.active {
+  border-left-color: var(--primary);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc span {
+  color: var(--faint);
+  font: 12px/1.45 var(--mono);
+  white-space: nowrap;
+}
+
+.doc {
+  max-width: 960px;
+  margin-left: var(--toc-width);
+  padding: 96px 52px 84px;
+}
+
+.set-index {
+  max-width: 1120px;
+}
+
+.doc-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-header h1 {
+  margin: 0 0 10px;
+  font-size: var(--font-title);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.doc-kicker {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font: 700 12px/1.25 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font: 12.5px/1.4 var(--mono);
+}
+
+.doc-summary {
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.doc-summary ul {
+  margin: 0;
+}
+
+.doc-section {
+  margin: 46px 0 0;
+  scroll-margin-top: 70px;
+}
+
+.doc-section h2 {
+  margin: 0 0 16px;
+  padding: 4px 0 5px 14px;
+  border-left: 3px solid var(--primary);
+  font-size: var(--font-lg);
+  line-height: var(--line-tight);
+}
+
+.doc-section h3 {
+  margin: 22px 0 8px;
+  font-size: var(--font-md);
+}
+
+.doc-section > :first-child {
+  margin-top: 0;
+}
+
+.section-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+details {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 24px;
+}
+
+li + li {
+  margin-top: 3px;
+}
+
+.callout {
+  margin: 18px 0;
+  padding: 13px 16px;
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+}
+
+.callout p {
+  margin: 6px 0 0;
+}
+
+.callout p:first-child {
+  margin-top: 0;
+}
+
+.callout-info {
+  background: var(--info-soft);
+  border-left-color: var(--info);
+}
+
+.callout-warning {
+  background: var(--warn-soft);
+  border-left-color: var(--warn);
+}
+
+.callout-danger {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.callout-success {
+  background: var(--ok-soft);
+  border-left-color: var(--ok);
+}
+
+table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  box-shadow: var(--surface-shadow);
+  font-size: var(--font-sm);
+}
+
+thead,
+tbody,
+tr {
+  width: 100%;
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table,
+.risk-table,
+.decision-table {
+  width: 100%;
+}
+
+.details-block {
+  margin: 18px 0;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.details-block summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagram {
+  position: relative;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.diagram figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.diagram:hover .diagram-toolbar {
+  opacity: 1;
+}
+
+.code-shell {
+  margin: 16px 0;
+  overflow: hidden;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  color: var(--muted);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+}
+
+.code-status-ok {
+  color: var(--ok);
+}
+
+.code-status-error {
+  color: var(--danger);
+}
+
+.code-copy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.code-status + .code-copy {
+  margin-left: 0;
+}
+
+.code-copy:hover {
+  color: var(--text);
+}
+
+.code-pre {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--font-sm);
+  line-height: var(--line-loose);
+}
+
+.code-line {
+  display: grid;
+  min-width: 100%;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+}
+
+.code-line-number {
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--border);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.code-line-content {
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.participants,
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.participant-card,
+.value-card,
+.action-card {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.action-card {
+  padding: 20px;
+}
+
+.participant-card p,
+.value-card p,
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.source-refs,
+.files,
+.acceptance-criteria {
+  padding-left: 22px;
+}
+
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.chapter-card:hover,
+.chapter-card:focus-within {
+  border-color: var(--primary);
+}
+
+.chapter-card a {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 16px;
+  color: var(--text);
+}
+
+.chapter-card a:hover {
+  text-decoration: none;
+}
+
+.chapter-number {
+  color: var(--faint);
+  font: 700 12px/1.4 var(--mono);
+}
+
+.chapter-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.chapter-title {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.chapter-description {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.set-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.set-section {
+  margin: 46px 0 0;
+}
+
+.set-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 44px 0 0;
+}
+
+.set-pagination-link {
+  display: block;
+  min-height: 82px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  color: var(--text);
+}
+
+.set-pagination-link:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+}
+
+.set-pagination-next {
+  text-align: right;
+}
+
+.set-pagination-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.set-pagination-title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-width: 56px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-questions-block {
+  position: relative;
+  margin: 18px 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.open-questions-header {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.open-question-marker {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--warn);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-question-text {
+  min-width: 0;
+}
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    right: auto;
+    left: 0;
+    order: 1;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+
+  .brand-logo,
+  .brand-logo-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar {
+    position: static;
+    inset: auto;
+    order: 2;
+    width: auto;
+    max-height: 260px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .doc {
+    order: 3;
+    max-width: none;
+    margin-left: 0;
+    padding: 32px 20px 56px;
+  }
+
+  .doc-header h1 {
+    font-size: var(--font-xl);
+  }
+
+  .set-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .set-pagination-next {
+    text-align: left;
+  }
+
+  .code-line {
+    grid-template-columns: 34px minmax(max-content, 1fr);
+  }
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .diagram-toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+    margin-left: 0;
+    padding: 0;
+  }
+}
+
+  </style>
   <!-- Generated by scripts/render_all_docs.py. Preserve body content; rerun renderer after edits. -->
 </head>
 <body>
-  <main class="doc">
-<nav class="doc-meta" aria-label="Document metadata">
-  <a href="../index.html">&larr; Index</a>
-  <span>spec/24-json-output.html</span>
-</nav>
-<h1 id="spec-24-json-结构化输出统一规约">Spec 24 — JSON 结构化输出统一规约</h1>
-<blockquote>
+<header class="topbar">
+  <a class="brand-logo" href="../index.html" aria-label="Open Novel index">ON</a>
+  <div class="topbar-breadcrumb">
+    <span class="topbar-project">Open Novel</span>
+    <span class="topbar-separator">/</span>
+    <span class="topbar-doc">Spec 24 — JSON 结构化输出统一规约</span>
+  </div>
+  <span class="topbar-spacer"></span>
+  <nav class="topbar-links" aria-label="Primary">
+    <a class="topbar-link" href="../README.md">README</a>
+    <a class="topbar-link" href="../todo.html">TODO</a>
+    <a class="topbar-link" href="../changelist.html">Changelist</a>
+  </nav>
+</header>
+<aside class="sidebar" aria-label="Document navigation">
+  <p class="nav-title">文档集</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="../index.html"><span>SET</span>全部文档</a></li>
+      <li><a href="../README.md"><span>MD</span>README</a></li>
+      <li><a href="../todo.html"><span>TODO</span>风险</a></li>
+      <li><a href="../changelist.html"><span>LOG</span>变更</a></li>
+    </ol>
+  </nav>
+  <p class="nav-title">本文目录</p>
+  <nav class="toc"><ol>
+<li><a href="#top"><span>00</span>概览</a></li>
+<li><a href="#router-输出-actions"><span>H3</span>Router 输出 (actions[] 一次性意图解析, 见 plan/02 §路由策略)</a></li>
+<li><a href="#validator-一致性审-输出"><span>H3</span>Validator 一致性审 输出</a></li>
+<li><a href="#analyzeimpact-llm-filter-spec19-step-3"><span>H3</span>analyzeImpact LLM filter (spec/19 step 3)</a></li>
+<li><a href="#extractsemanticdelta-spec19-step-1"><span>H3</span>extractSemanticDelta (spec/19 step 1)</a></li>
+<li><a href="#checker-beatanalyzer-节奏报告"><span>H3</span>Checker / BeatAnalyzer 节奏报告</a></li>
+<li><a href="#arctracker-弧光报告"><span>H3</span>ArcTracker 弧光报告</a></li>
+<li><a href="#readerpanel-5-persona-仿真"><span>H3</span>ReaderPanel 5 persona 仿真</a></li>
+<li><a href="#reflector-经验提炼"><span>H3</span>Reflector 经验提炼</a></li>
+<li><a href="#concept-extractor-spec16-工具内-llm"><span>H3</span>concept extractor (spec/16 工具内 LLM)</a></li>
+<li><a href="#抽象-deepseekmiddleware-定义在-spec22-deepseek-适配-middleware"><span>H3</span>抽象 deepseekMiddleware (定义在 spec/22 §DeepSeek 适配 middleware)</a></li>
+<li><a href="#各-model-实例统一包装"><span>H3</span>各 model 实例统一包装</a></li>
+<li><a href="#文本-agent-共用同一-model-wrapper"><span>H3</span>文本 agent 共用同一 model wrapper</a></li>
+</ol></nav>
+</aside>
+  <article class="doc" id="top">
+    <header class="doc-header">
+      <p class="doc-kicker">Spec</p>
+      <h1>Spec 24 — JSON 结构化输出统一规约</h1>
+      <div class="doc-meta" aria-label="Document metadata">
+        <a href="../index.html">Index</a>
+        <span>spec/24-json-output.html</span>
+        <span>Generated by <code>scripts/render_all_docs.py</code></span>
+      </div>
+    </header>
+    <main>
+<aside class="callout callout-info">
 <p>项目里所有&quot;分析 / 路由 / 抽取 / 仿真 / 反思&quot;类 Agent 输出<strong>必走 DeepSeek 原生 JSON mode</strong>;只有&quot;创作 / 改写 / 对话&quot;类走自然语言。这一章把&quot;何时走 / 怎么走 / 失败怎么办&quot;写死,后续所有 spec 引用本章。</p>
-</blockquote>
-<h2 id="设计原则">设计原则</h2>
+</aside>
+<section class="doc-section" id="设计原则">
+<h2>设计原则</h2>
 <table>
 <thead>
 <tr>
@@ -52,8 +1038,10 @@
 <td>JSON mode 流式时中间 chunks 不展示给用户;Writer / Humanizer 自然语言流照常展示</td>
 </tr>
 </tbody></table>
-<h2 id="启用方式-vercel-ai-sdk-6-ai-sdkdeepseek">启用方式 (Vercel AI SDK 6 + @ai-sdk/deepseek)</h2>
-<pre><code class="language-ts">import { deepseek } from &#39;@ai-sdk/deepseek&#39;
+</section>
+<section class="doc-section" id="启用方式-vercel-ai-sdk-6-ai-sdkdeepseek">
+<h2>启用方式 (Vercel AI SDK 6 + @ai-sdk/deepseek)</h2>
+<pre data-language="ts"><code data-language="ts">import { deepseek } from &#39;@ai-sdk/deepseek&#39;
 import { generateText } from &#39;ai&#39;
 
 const result = await generateText({
@@ -85,7 +1073,9 @@ const result = await generateText({
 <li>必须含<strong>示例 JSON</strong> (不让模型自由发挥结构)</li>
 <li>不允许 markdown 代码块包裹 (我们 zod parse 会失败,反例:模型回 <code>```json\n{...}\n```</code>)</li>
 </ul>
-<h2 id="各场景-zod-schema-对照表">各场景 zod schema 对照表</h2>
+</section>
+<section class="doc-section" id="各场景-zod-schema-对照表">
+<h2>各场景 zod schema 对照表</h2>
 <table>
 <thead>
 <tr>
@@ -152,7 +1142,7 @@ const result = await generateText({
 </tbody></table>
 <p>详见下面各 schema 章节。</p>
 <h3 id="router-输出-actions">Router 输出 (actions[] 一次性意图解析, 见 plan/02 §路由策略)</h3>
-<pre><code class="language-ts">import { z } from &#39;zod&#39;
+<pre data-language="ts"><code data-language="ts">import { z } from &#39;zod&#39;
 
 export const RouterActionSchema = z.discriminatedUnion(&#39;kind&#39;, [
   // plan 模式产物
@@ -210,7 +1200,7 @@ export type RouterOutput = z.infer&lt;typeof RouterOutputSchema&gt;
 <li>&quot;等下, 先别写第三章&quot; (queue snapshot 显示 writeChapter ch_3 在审批中) → <code>actions=[{ kind: &#39;cancelTurn&#39;, reason: ... }]</code></li>
 </ul>
 <h3 id="validator-一致性审-输出">Validator 一致性审 输出</h3>
-<pre><code class="language-ts">export const ChangeProposalSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const ChangeProposalSchema = z.object({
   anchorId: z.string(),                       // 段锚点 ID (spec/17)
   targetFile: z.string(),                     // 相对 workspace 的 path
   needsChange: z.boolean(),
@@ -251,7 +1241,7 @@ export const ValidatorOutputSchema = z.object({
 </code></pre>
 <p><strong>maxTokens</strong>: 16K(每个 proposal ≈ 200 token,可能 50+ proposals;cardinalRulesReport ≈ 500 token)</p>
 <h3 id="analyzeimpact-llm-filter-spec19-step-3">analyzeImpact LLM filter (spec/19 step 3)</h3>
-<pre><code class="language-ts">export const ImpactFilterCandidateSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const ImpactFilterCandidateSchema = z.object({
   anchorId: z.string(),
   affected: z.boolean(),
   confidence: z.enum([&#39;high&#39;, &#39;medium&#39;, &#39;low&#39;]),
@@ -265,7 +1255,7 @@ export const ImpactFilterBatchOutputSchema = z.object({
 <p><strong>maxTokens</strong>: 2K (5 candidates × ≈ 300 token)</p>
 <p><strong>为什么用 Flash 而不 Pro</strong>: 二次过滤是&quot;段是否真受影响&quot;二元判断,Flash 完全够用;Pro 留给最终 Validator 一致性审。</p>
 <h3 id="extractsemanticdelta-spec19-step-1">extractSemanticDelta (spec/19 step 1)</h3>
-<pre><code class="language-ts">export const SemanticDeltaItemSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const SemanticDeltaItemSchema = z.object({
   field: z.string(),                          // &#39;gender&#39; / &#39;name&#39; / &#39;occupation&#39; / &#39;paragraph[5]&#39; 等
   before: z.string(),
   after: z.string(),
@@ -281,7 +1271,7 @@ export const SemanticDeltaOutputSchema = z.object({
 </code></pre>
 <p><strong>maxTokens</strong>: 1K (典型修改 ≤ 5 个 field, ≈ 200 token/field)</p>
 <h3 id="checker-beatanalyzer-节奏报告">Checker / BeatAnalyzer 节奏报告</h3>
-<pre><code class="language-ts">export const BeatSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const BeatSchema = z.object({
   anchorId: z.string(),
   type: z.enum([&#39;hook&#39;, &#39;conflict&#39;, &#39;climax&#39;, &#39;resolution&#39;, &#39;transition&#39;, &#39;description&#39;, &#39;dialogue&#39;]),
   intensity: z.number().min(0).max(1),         // 情绪强度
@@ -302,7 +1292,7 @@ export const BeatAnalyzerOutputSchema = z.object({
 </code></pre>
 <p><strong>maxTokens</strong>: 4K</p>
 <h3 id="arctracker-弧光报告">ArcTracker 弧光报告</h3>
-<pre><code class="language-ts">export const ArcTrackerOutputSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const ArcTrackerOutputSchema = z.object({
   characterArcs: z.array(z.object({
     characterName: z.string(),
     expectedArc: z.string(),                    // 来自 character.md
@@ -324,7 +1314,7 @@ export const BeatAnalyzerOutputSchema = z.object({
 </code></pre>
 <p><strong>maxTokens</strong>: 4K</p>
 <h3 id="readerpanel-5-persona-仿真">ReaderPanel 5 persona 仿真</h3>
-<pre><code class="language-ts">export const PersonaResponseSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const PersonaResponseSchema = z.object({
   personaId: z.enum([&#39;veteran_reader&#39;, &#39;casual_reader&#39;, &#39;rational_reader&#39;, &#39;genre_fan&#39;, &#39;new_reader&#39;]),
   reaction: z.string().max(500),                 // 阅读到当前章节的反应
   emotionalArc: z.array(z.enum([&#39;intrigued&#39;, &#39;bored&#39;, &#39;confused&#39;, &#39;satisfied&#39;, &#39;angry&#39;, &#39;amused&#39;])),
@@ -348,7 +1338,7 @@ export const ReaderPanelOutputSchema = z.object({
 </code></pre>
 <p><strong>maxTokens</strong>: 8K (5 persona × ≈ 1.5K)</p>
 <h3 id="reflector-经验提炼">Reflector 经验提炼</h3>
-<pre><code class="language-ts">export const LearningItemSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const LearningItemSchema = z.object({
   insight: z.string().min(1).max(300),
   evidence: z.string().max(500),
   scope: z.enum([
@@ -370,7 +1360,7 @@ export const ReflectorOutputSchema = z.object({
 </code></pre>
 <p><strong>maxTokens</strong>: 2K</p>
 <h3 id="concept-extractor-spec16-工具内-llm">concept extractor (spec/16 工具内 LLM)</h3>
-<pre><code class="language-ts">export const ConceptItemSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const ConceptItemSchema = z.object({
   name: z.string().min(1).max(50),
   type: z.enum([&#39;rule&#39;, &#39;taboo&#39;, &#39;invariant&#39;, &#39;theme&#39;, &#39;capability&#39;, &#39;cardinal_rule&#39;]),
   definition: z.string().min(1).max(500),
@@ -383,10 +1373,12 @@ export const ConceptExtractorOutputSchema = z.object({
 })
 </code></pre>
 <p><strong>maxTokens</strong>: 4K</p>
-<h2 id="deepseek-middleware-集成">DeepSeek middleware 集成</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="deepseek-middleware-集成">
+<h2>DeepSeek middleware 集成</h2>
+<aside class="callout callout-info">
 <p>DeepSeek provider 特性由 <code>wrapLanguageModel + transformParams middleware</code> 在 model 实例层统一处理,而不是在每个 agent 调用里 if-else 处理 reasoning_content / cache_control。model 实例本身就是包装好的,<code>callJsonAgent</code> 不感知 DeepSeek 特殊性。</p>
-</blockquote>
+</aside>
 <h3 id="抽象-deepseekmiddleware-定义在-spec22-deepseek-适配-middleware">抽象 deepseekMiddleware (定义在 spec/22 §DeepSeek 适配 middleware)</h3>
 <p>spec/22 已定义 <code>deepseekMiddleware: LanguageModelV2Middleware</code>, 负责:</p>
 <ol>
@@ -394,7 +1386,7 @@ export const ConceptExtractorOutputSchema = z.object({
 <li><code>transformParams</code> 阶段: <code>providerOptions.openaiCompatible.cache_control</code> 标记 system 前 2 段 + 末尾 2 条 (依赖 spec/00 §H verify)</li>
 </ol>
 <h3 id="各-model-实例统一包装">各 model 实例统一包装</h3>
-<pre><code class="language-ts">// lib/agents/llm.ts
+<pre data-language="ts"><code data-language="ts">// lib/agents/llm.ts
 import { wrapLanguageModel } from &#39;ai&#39;
 import { createOpenAICompatible } from &#39;@ai-sdk/openai-compatible&#39;
 import { deepseekMiddleware } from &#39;./deepseek-middleware&#39;   // spec/22
@@ -422,8 +1414,10 @@ export const deepseekFlash = wrapLanguageModel({
 <li><code>callJsonAgent</code>:结构化输出,使用 <code>generateText</code> + JSON mode + zod 校验。</li>
 <li><code>callTextAgent</code>:自然语言输出,使用 <code>streamText</code>,中间 chunks 可展示给用户。</li>
 </ul>
-<h2 id="失败处理-统一-retry-策略">失败处理 (统一 retry 策略)</h2>
-<pre><code class="language-ts">// lib/agents/json-output.ts
+</section>
+<section class="doc-section" id="失败处理-统一-retry-策略">
+<h2>失败处理 (统一 retry 策略)</h2>
+<pre data-language="ts"><code data-language="ts">// lib/agents/json-output.ts
 export async function callJsonAgent&lt;T&gt;({
   model, messages, schema, maxTokens, label, threadId,
 }: {
@@ -484,7 +1478,9 @@ class JsonOutputError extends Error {
   }
 }
 </code></pre>
-<h2 id="escalate-策略-2-次仍败时">escalate 策略 (2 次仍败时)</h2>
+</section>
+<section class="doc-section" id="escalate-策略-2-次仍败时">
+<h2>escalate 策略 (2 次仍败时)</h2>
 <table>
 <thead>
 <tr>
@@ -515,9 +1511,11 @@ class JsonOutputError extends Error {
 </tr>
 </tbody></table>
 <p>不允许&quot;silent fallback to 空 result&quot;— 因为这会让 Validator 漏审、Router 错路由,导致一致性事故。</p>
-<h2 id="streaming-模式衔接-与-spec04-协同">streaming 模式衔接 (与 spec/04 协同)</h2>
+</section>
+<section class="doc-section" id="streaming-模式衔接-与-spec04-协同">
+<h2>streaming 模式衔接 (与 spec/04 协同)</h2>
 <p>JSON mode 在 streaming 时:</p>
-<pre><code class="language-ts">const stream = streamText({ model, messages, providerOptions: { deepseek: { response_format: { type: &#39;json_object&#39; } } }, maxTokens })
+<pre data-language="ts"><code data-language="ts">const stream = streamText({ model, messages, providerOptions: { deepseek: { response_format: { type: &#39;json_object&#39; } } }, maxTokens })
 
 let buffer = &#39;&#39;
 for await (const chunk of stream.textStream) {
@@ -531,7 +1529,9 @@ const parsed = JSON.parse(buffer)
 const validated = schema.parse(parsed)
 </code></pre>
 <p><strong>spec/04 streaming protocol</strong> 要新增 chunk 类型 <code>analyzing</code>,前端识别这种 stream 显示 spinner 而非逐字渲染。</p>
-<h2 id="何时不用-json-mode">何时<strong>不</strong>用 JSON mode</h2>
+</section>
+<section class="doc-section" id="何时不用-json-mode">
+<h2>何时<strong>不</strong>用 JSON mode</h2>
 <table>
 <thead>
 <tr>
@@ -562,15 +1562,19 @@ const validated = schema.parse(parsed)
 </tr>
 </tbody></table>
 <p>这些场景<strong>不</strong>传 <code>response_format: { type: &#39;json_object&#39; }</code>,正常 streaming 输出文本。</p>
-<h2 id="与-spec03-prompts-的协同">与 spec/03 prompts 的协同</h2>
+</section>
+<section class="doc-section" id="与-spec03-prompts-的协同">
+<h2>与 spec/03 prompts 的协同</h2>
 <p>spec/03 各 Agent 的 system prompt 模板<strong>必须包含</strong>:</p>
 <ul>
 <li>输出格式声明 (是 JSON 还是自然语言)</li>
 <li>JSON 格式时,示例 JSON + &quot;请只输出 JSON 对象,不要 markdown 代码块,不要前后说明&quot;</li>
 <li>自然语言时,正常 prompt</li>
 </ul>
-<h2 id="测试-与-spec14-对齐">测试 (与 spec/14 对齐)</h2>
-<pre><code class="language-ts">describe(&#39;json output spec&#39;, () =&gt; {
+</section>
+<section class="doc-section" id="测试-与-spec14-对齐">
+<h2>测试 (与 spec/14 对齐)</h2>
+<pre data-language="ts"><code data-language="ts">describe(&#39;json output spec&#39;, () =&gt; {
   it(&#39;Router 路由意图返回合法 JSON 且符合 schema&#39;, () =&gt; { /* ... */ })
   it(&#39;Validator proposals 字段全填&#39;, () =&gt; { /* ... */ })
   it(&#39;空 content 自动 retry 1 次&#39;, () =&gt; { /* ... */ })
@@ -580,12 +1584,17 @@ const validated = schema.parse(parsed)
   it(&#39;streaming 模式中间 chunks 不渲染给用户&#39;, () =&gt; { /* ... */ })
 })
 </code></pre>
-<h2 id="不解决的问题-待办">不解决的问题 / 待办</h2>
+</section>
+<section class="doc-section" id="不解决的问题-待办">
+<h2>不解决的问题 / 待办</h2>
 <ul>
 <li><strong>Streaming 中实时校验中间 JSON</strong>: 目前是流完再 parse;若需要实时(如 ReaderPanel persona 一个一个出),需要 incremental JSON parser (e.g. partial-json) — 当前不做</li>
 <li><strong>schema 自动估算 maxTokens</strong>: 现在手填,有遗漏风险;后续可写一个 <code>estimateMaxTokensFromSchema(schema)</code> 工具</li>
 <li><strong>JSON mode 输出是否进入会话历史</strong>:默认不写入 <code>runtime.db.messages</code>;只有用户可见的 Router 摘要、Writer/Humanizer 文本或审批反馈摘要进入 L2 history,详见 spec/22 §写入时机</li>
 </ul>
-  </main>
+</section>
+    </main>
+    <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>
+  </article>
 </body>
 </html>

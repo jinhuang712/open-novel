@@ -5,71 +5,1052 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="open-novel-docs-renderer">
   <title>Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact) - Open Novel</title>
-  <link rel="stylesheet" href="../assets/docs.css">
-  <script src="../assets/docs-enhance.js" defer></script>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f8f8f7;
+  --surface: #ffffff;
+  --soft: #f2f3f3;
+  --text: #24272b;
+  --muted: #68717b;
+  --faint: #9aa1a8;
+  --border: #dedede;
+  --primary: #566f99;
+  --primary-soft: #f1f3f6;
+  --accent: #52686a;
+  --info: #566f99;
+  --info-soft: #f4f5f7;
+  --warn: #8a6d3b;
+  --warn-soft: #f8f4ea;
+  --danger: #9b4d49;
+  --danger-soft: #faf0ef;
+  --ok: #55745f;
+  --ok-soft: #eef4ef;
+  --code: #f1f2f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 18px;
+  --font-lg: 23px;
+  --font-xl: 30px;
+  --font-title: 38px;
+  --line-tight: 1.25;
+  --line-normal: 1.55;
+  --line-loose: 1.75;
+  --line-code: 1.6;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+  --motion-base: 160ms;
+  --motion-ease: ease;
+  --surface-shadow: none;
+  --toc-width: clamp(220px, 16vw, 300px);
+  --topbar-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #202327;
+    --soft: #262a2f;
+    --text: #eef0f2;
+    --muted: #adb4bd;
+    --faint: #79828d;
+    --border: #3a4047;
+    --primary: #9bb7d9;
+    --primary-soft: #182231;
+    --accent: #9ab4b1;
+    --info: #9bb7d9;
+    --info-soft: #1c2633;
+    --warn: #d4b16d;
+    --warn-soft: #302815;
+    --danger: #df9a96;
+    --danger-soft: #321d1d;
+    --ok: #9cc4a6;
+    --ok-soft: #1b2a20;
+    --code: #15171a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-base)/var(--line-loose) var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+code {
+  padding: 1px 5px;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-sm);
+  line-height: var(--line-code);
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+mark {
+  padding: 0.02em 0.22em;
+  background: var(--warn-soft);
+  border-radius: 3px;
+  color: var(--text);
+}
+
+del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+[data-mark="deprecated"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+[data-mark="term"] {
+  border-bottom: 1px dotted var(--faint);
+  cursor: help;
+}
+
+[data-mark="metric"] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 14px;
+  padding: 0 36px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0;
+}
+
+.brand-logo:hover {
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-org,
+.topbar-project,
+.topbar-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-org,
+.topbar-project {
+  flex: 0 0 auto;
+}
+
+.topbar-doc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.topbar-separator {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-links:empty {
+  display: none;
+}
+
+.topbar-link {
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.sidebar {
+  position: fixed;
+  inset: var(--topbar-height) auto 0 0;
+  width: var(--toc-width);
+  padding: 30px 28px 60px 30px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.nav-title {
+  margin: 0 0 16px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toc {
+  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0 8px 10px;
+  overflow-wrap: anywhere;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.toc a:hover,
+.toc a.active {
+  border-left-color: var(--primary);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc span {
+  color: var(--faint);
+  font: 12px/1.45 var(--mono);
+  white-space: nowrap;
+}
+
+.doc {
+  max-width: 960px;
+  margin-left: var(--toc-width);
+  padding: 96px 52px 84px;
+}
+
+.set-index {
+  max-width: 1120px;
+}
+
+.doc-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-header h1 {
+  margin: 0 0 10px;
+  font-size: var(--font-title);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.doc-kicker {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font: 700 12px/1.25 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font: 12.5px/1.4 var(--mono);
+}
+
+.doc-summary {
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.doc-summary ul {
+  margin: 0;
+}
+
+.doc-section {
+  margin: 46px 0 0;
+  scroll-margin-top: 70px;
+}
+
+.doc-section h2 {
+  margin: 0 0 16px;
+  padding: 4px 0 5px 14px;
+  border-left: 3px solid var(--primary);
+  font-size: var(--font-lg);
+  line-height: var(--line-tight);
+}
+
+.doc-section h3 {
+  margin: 22px 0 8px;
+  font-size: var(--font-md);
+}
+
+.doc-section > :first-child {
+  margin-top: 0;
+}
+
+.section-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+details {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 24px;
+}
+
+li + li {
+  margin-top: 3px;
+}
+
+.callout {
+  margin: 18px 0;
+  padding: 13px 16px;
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+}
+
+.callout p {
+  margin: 6px 0 0;
+}
+
+.callout p:first-child {
+  margin-top: 0;
+}
+
+.callout-info {
+  background: var(--info-soft);
+  border-left-color: var(--info);
+}
+
+.callout-warning {
+  background: var(--warn-soft);
+  border-left-color: var(--warn);
+}
+
+.callout-danger {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.callout-success {
+  background: var(--ok-soft);
+  border-left-color: var(--ok);
+}
+
+table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  box-shadow: var(--surface-shadow);
+  font-size: var(--font-sm);
+}
+
+thead,
+tbody,
+tr {
+  width: 100%;
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table,
+.risk-table,
+.decision-table {
+  width: 100%;
+}
+
+.details-block {
+  margin: 18px 0;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.details-block summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagram {
+  position: relative;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.diagram figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.diagram:hover .diagram-toolbar {
+  opacity: 1;
+}
+
+.code-shell {
+  margin: 16px 0;
+  overflow: hidden;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  color: var(--muted);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+}
+
+.code-status-ok {
+  color: var(--ok);
+}
+
+.code-status-error {
+  color: var(--danger);
+}
+
+.code-copy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.code-status + .code-copy {
+  margin-left: 0;
+}
+
+.code-copy:hover {
+  color: var(--text);
+}
+
+.code-pre {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--font-sm);
+  line-height: var(--line-loose);
+}
+
+.code-line {
+  display: grid;
+  min-width: 100%;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+}
+
+.code-line-number {
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--border);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.code-line-content {
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.participants,
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.participant-card,
+.value-card,
+.action-card {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.action-card {
+  padding: 20px;
+}
+
+.participant-card p,
+.value-card p,
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.source-refs,
+.files,
+.acceptance-criteria {
+  padding-left: 22px;
+}
+
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.chapter-card:hover,
+.chapter-card:focus-within {
+  border-color: var(--primary);
+}
+
+.chapter-card a {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 16px;
+  color: var(--text);
+}
+
+.chapter-card a:hover {
+  text-decoration: none;
+}
+
+.chapter-number {
+  color: var(--faint);
+  font: 700 12px/1.4 var(--mono);
+}
+
+.chapter-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.chapter-title {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.chapter-description {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.set-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.set-section {
+  margin: 46px 0 0;
+}
+
+.set-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 44px 0 0;
+}
+
+.set-pagination-link {
+  display: block;
+  min-height: 82px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  color: var(--text);
+}
+
+.set-pagination-link:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+}
+
+.set-pagination-next {
+  text-align: right;
+}
+
+.set-pagination-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.set-pagination-title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-width: 56px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-questions-block {
+  position: relative;
+  margin: 18px 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.open-questions-header {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.open-question-marker {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--warn);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-question-text {
+  min-width: 0;
+}
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    right: auto;
+    left: 0;
+    order: 1;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+
+  .brand-logo,
+  .brand-logo-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar {
+    position: static;
+    inset: auto;
+    order: 2;
+    width: auto;
+    max-height: 260px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .doc {
+    order: 3;
+    max-width: none;
+    margin-left: 0;
+    padding: 32px 20px 56px;
+  }
+
+  .doc-header h1 {
+    font-size: var(--font-xl);
+  }
+
+  .set-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .set-pagination-next {
+    text-align: left;
+  }
+
+  .code-line {
+    grid-template-columns: 34px minmax(max-content, 1fr);
+  }
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .diagram-toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+    margin-left: 0;
+    padding: 0;
+  }
+}
+
+  </style>
   <!-- Generated by scripts/render_all_docs.py. Preserve body content; rerun renderer after edits. -->
 </head>
 <body>
-  <main class="doc">
-<nav class="doc-meta" aria-label="Document metadata">
-  <a href="../index.html">&larr; Index</a>
-  <span>spec/19-impact-analysis.html</span>
-</nav>
-<h1 id="spec-19-影响半径与-cascade-工具-analyzeimpact">Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact)</h1>
-<blockquote>
+<header class="topbar">
+  <a class="brand-logo" href="../index.html" aria-label="Open Novel index">ON</a>
+  <div class="topbar-breadcrumb">
+    <span class="topbar-project">Open Novel</span>
+    <span class="topbar-separator">/</span>
+    <span class="topbar-doc">Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact)</span>
+  </div>
+  <span class="topbar-spacer"></span>
+  <nav class="topbar-links" aria-label="Primary">
+    <a class="topbar-link" href="../README.md">README</a>
+    <a class="topbar-link" href="../todo.html">TODO</a>
+    <a class="topbar-link" href="../changelist.html">Changelist</a>
+  </nav>
+</header>
+<aside class="sidebar" aria-label="Document navigation">
+  <p class="nav-title">文档集</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="../index.html"><span>SET</span>全部文档</a></li>
+      <li><a href="../README.md"><span>MD</span>README</a></li>
+      <li><a href="../todo.html"><span>TODO</span>风险</a></li>
+      <li><a href="../changelist.html"><span>LOG</span>变更</a></li>
+    </ol>
+  </nav>
+  <p class="nav-title">本文目录</p>
+  <nav class="toc"><ol>
+<li><a href="#top"><span>00</span>概览</a></li>
+<li><a href="#llm-介入策略"><span>H3</span>LLM 介入策略</a></li>
+<li><a href="#章节区间-helper"><span>H3</span>章节区间 helper</a></li>
+<li><a href="#weight-语义"><span>H3</span>Weight 语义</a></li>
+<li><a href="#filter-prompt-libimpactpromptsfiltermd"><span>H3</span>filter prompt (lib/impact/prompts/filter.md)</a></li>
+<li><a href="#cascade-与五大守则的衔接-spec25"><span>H3</span>Cascade 与五大守则的衔接 (spec/25)</a></li>
+</ol></nav>
+</aside>
+  <article class="doc" id="top">
+    <header class="doc-header">
+      <p class="doc-kicker">Spec</p>
+      <h1>Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact)</h1>
+      <div class="doc-meta" aria-label="Document metadata">
+        <a href="../index.html">Index</a>
+        <span>spec/19-impact-analysis.html</span>
+        <span>Generated by <code>scripts/render_all_docs.py</code></span>
+      </div>
+    </header>
+    <main>
+<aside class="callout callout-info">
 <p>实现 plan/11-knowledge-graph.html L2 算法层第三项 + L3 工具层第一项。本文档定义影响半径计算器 (纯 SQL,不调 LLM)、<code>analyzeImpact</code> 工具签名、LLM 二次过滤流程、递归 cascade 终止条件。</p>
-</blockquote>
-<h2 id="设计原则">设计原则</h2>
+</aside>
+<section class="doc-section" id="设计原则">
+<h2>设计原则</h2>
 <ol>
 <li><strong>影响候选必须由 SQL 出</strong>,不靠 LLM 现场推。漏 SQL 索引 = bug,不应用 LLM &quot;猜&quot;补救</li>
 <li><strong>LLM 仅做&quot;是不是真受影响&quot;的二次判断</strong>,不做&quot;找哪些段受影响&quot;的一次发现</li>
 <li><strong>递归 cascade 必须有终止条件</strong>,且 metric 是&quot;影响半径单调下降&quot;</li>
 <li><strong>置信度全程透传</strong>,UI 据此分级显示</li>
 </ol>
-<h2 id="工作链路-取代-plan06-解决方案">工作链路 (取代 plan/06 §解决方案)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="工作链路-取代-plan06-解决方案">
+<h2>工作链路 (取代 plan/06 §解决方案)</h2>
+<aside class="callout callout-info">
 <p>⚠ <strong>关键交互模型</strong>: 整个 cascade 递归在 <strong>审批之前</strong> 的内部循环里完成。Writer 生成主修改 (in-memory),<code>analyzeImpact</code> 内部递归 ≤3 层把所有 cascade proposal 算清楚,<strong>汇总成一个 ChangeSet 一次审</strong>。用户审完后才落盘。任何&quot;先落盘 → 再触发 cascade&quot;或&quot;逐项 ApprovalCard&quot;的设计都是错的。</p>
-</blockquote>
-<pre class="mermaid">
-flowchart TD
-  W0([Writer agent 出主修改 in-memory]) --> V[Validator agent execute<br/>调 analyzeImpact 工具,传入 main delta]
-  V --> LOOP["analyzeImpact 内部递归循环"]
+</aside>
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">flowchart TD
+  W0([Writer agent 出主修改 in-memory]) --&gt; V[Validator agent execute&lt;br/&gt;调 analyzeImpact 工具,传入 main delta]
+  V --&gt; LOOP["analyzeImpact 内部递归循环"]
 
   subgraph R1["第 1 轮 (round=1, weightFloor=30)"]
     direction TB
-    R1S1["step 1: extractSemanticDelta(main delta)<br/>LLM Flash 抽结构化 delta<br/>(entity-attribute / relation-add / concept-add / paragraph-rewrite ...)"]
-    R1S2["step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)<br/>entity_refs / concept_refs (weight=100)<br/>关系上下游 1 跳 (weight=50-90)<br/>dependencies 锚点上下游 (weight=70)<br/>timeline 区间内引用 (weight=80)<br/>embeddings 语义相关 topK (weight=cos×100)"]
-    R1S3["step 3: filterByLLM — Pro 批 5 段<br/>ChangeProposal[round=1]"]
-    R1S1 --> R1S2 --> R1S3
+    R1S1["step 1: extractSemanticDelta(main delta)&lt;br/&gt;LLM Flash 抽结构化 delta&lt;br/&gt;(entity-attribute / relation-add / concept-add / paragraph-rewrite ...)"]
+    R1S2["step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)&lt;br/&gt;entity_refs / concept_refs (weight=100)&lt;br/&gt;关系上下游 1 跳 (weight=50-90)&lt;br/&gt;dependencies 锚点上下游 (weight=70)&lt;br/&gt;timeline 区间内引用 (weight=80)&lt;br/&gt;embeddings 语义相关 topK (weight=cos×100)"]
+    R1S3["step 3: filterByLLM — Pro 批 5 段&lt;br/&gt;ChangeProposal[round=1]"]
+    R1S1 --&gt; R1S2 --&gt; R1S3
   end
 
-  LOOP --> R1
-  R1 --> WS1["Writer 内部短调用<br/>对每条 needsChange=true proposal 生成 afterText (in-memory)"]
+  LOOP --&gt; R1
+  R1 --&gt; WS1["Writer 内部短调用&lt;br/&gt;对每条 needsChange=true proposal 生成 afterText (in-memory)"]
 
   subgraph R2["第 2 轮 (round=2, weightFloor=60)"]
     direction TB
     R2S1["step 1: extractSemanticDelta(round=1 afterText 集合)"]
-    R2S2["step 2: computeImpactRadius — 必须严格收缩<br/>(候选 ⊆ 第 1 轮剩余)"]
+    R2S2["step 2: computeImpactRadius — 必须严格收缩&lt;br/&gt;(候选 ⊆ 第 1 轮剩余)"]
     R2S3["step 3: filterByLLM, ChangeProposal[round=2]"]
-    R2S1 --> R2S2 --> R2S3
+    R2S1 --&gt; R2S2 --&gt; R2S3
   end
 
-  WS1 --> R2
-  R2 --> WS2[Writer 内部短调用 round=2 afterText]
-  WS2 --> R3["第 3 轮 (round=3, weightFloor=90) 同上"]
+  WS1 --&gt; R2
+  R2 --&gt; WS2[Writer 内部短调用 round=2 afterText]
+  WS2 --&gt; R3["第 3 轮 (round=3, weightFloor=90) 同上"]
 
-  R3 --> TERM{"终止 — 任一成立即停:<br/>a. 候选段集为空<br/>b. 半径未严格收缩<br/>c. round = 3"}
+  R3 --&gt; TERM{"终止 — 任一成立即停:&lt;br/&gt;a. 候选段集为空&lt;br/&gt;b. 半径未严格收缩&lt;br/&gt;c. round = 3"}
 
-  TERM --> SUM["汇总 ChangeSet:<br/>主修改 (cascadeLevel=0)<br/>第 1 轮 ChangeProposal (cascadeLevel=1)<br/>第 2 轮 ChangeProposal (cascadeLevel=2)<br/>第 3 轮 ChangeProposal (cascadeLevel=3)<br/>影响图谱 (节点 + 边,标 cascadeLevel)"]
-  SUM --> RET[analyzeImpact 工具返回<br/>Validator agent 提交给 ApprovalCard]
-  RET --> AC["ApprovalCard 一次呈现整批<br/>用户勾选 + 一键同意 / 部分同意 / 拒绝"]
-  AC --> APR["用户 approve<br/>POST /api/approvals/{id}/resolve"]
-  APR --> COMMIT[后端 transaction<br/>一次落盘所有 accepted 文件]
-  COMMIT --> SIDE["落盘副作用<br/>差量 reindex / snapshot<br/>history group / Reflector"]
-</pre>
+  TERM --&gt; SUM["汇总 ChangeSet:&lt;br/&gt;主修改 (cascadeLevel=0)&lt;br/&gt;第 1 轮 ChangeProposal (cascadeLevel=1)&lt;br/&gt;第 2 轮 ChangeProposal (cascadeLevel=2)&lt;br/&gt;第 3 轮 ChangeProposal (cascadeLevel=3)&lt;br/&gt;影响图谱 (节点 + 边,标 cascadeLevel)"]
+  SUM --&gt; RET[analyzeImpact 工具返回&lt;br/&gt;Validator agent 提交给 ApprovalCard]
+  RET --&gt; AC["ApprovalCard 一次呈现整批&lt;br/&gt;用户勾选 + 一键同意 / 部分同意 / 拒绝"]
+  AC --&gt; APR["用户 approve&lt;br/&gt;POST /api/approvals/{id}/resolve"]
+  APR --&gt; COMMIT[后端 transaction&lt;br/&gt;一次落盘所有 accepted 文件]
+  COMMIT --&gt; SIDE["落盘副作用&lt;br/&gt;差量 reindex / snapshot&lt;br/&gt;history group / Reflector"]</code></pre></figure>
 <p><strong>Writer 内部短调用</strong> 是新加的概念 — 它不走完整的 chat / streaming,直接调 Writer agent 的 generate 模式 (无审批,因为产物只在内存),输入 <code>(原 anchor 文本, proposal.proposedText 或 LLM 第 3 步给的修改建议)</code>,输出 <code>afterText</code>。这次调用本身<strong>不</strong>触发任何工具(包括嵌套 analyzeImpact),纯文本生成,~1-3s。</p>
-<h2 id="step-1-semantic-delta-抽取">Step 1 — Semantic Delta 抽取</h2>
-<pre><code class="language-ts">// lib/impact/delta-extractor.ts
+</section>
+<section class="doc-section" id="step-1-semantic-delta-抽取">
+<h2>Step 1 — Semantic Delta 抽取</h2>
+<pre data-language="ts"><code data-language="ts">// lib/impact/delta-extractor.ts
 export type SemanticDelta =
   | { kind: &#39;entity-attribute&#39;; entityId: string; attribute: string; before: string; after: string }
   | { kind: &#39;entity-relation-add&#39;; sourceId: string; targetId: string; relKind: string; since?: string }
@@ -146,8 +1127,10 @@ export async function extractSemanticDelta(
 <li>正文 → concepts diff: <strong>调 LLM Flash</strong>(必要,因为概念是从自然语言抽出来的)</li>
 <li>正文 → paragraph diff: 不调 LLM(用 anchor diff)</li>
 </ul>
-<h2 id="step-2-sql-影响半径">Step 2 — SQL 影响半径</h2>
-<pre><code class="language-ts">// lib/impact/radius.ts
+</section>
+<section class="doc-section" id="step-2-sql-影响半径">
+<h2>Step 2 — SQL 影响半径</h2>
+<pre data-language="ts"><code data-language="ts">// lib/impact/radius.ts
 export type ImpactRadius = {
   candidateAnchors: { anchorId: string; reason: string; weight: number }[]
   affectedFiles: { filePath: string; reason: string }[]
@@ -296,7 +1279,7 @@ export async function computeImpactRadius(
 }
 </code></pre>
 <h3 id="章节区间-helper">章节区间 helper</h3>
-<pre><code class="language-ts">// SQL 中没有直接支持,在 lib 层提供
+<pre data-language="ts"><code data-language="ts">// SQL 中没有直接支持,在 lib 层提供
 function chapter_within_range(filePath: string, from: string, to: string): boolean {
   // &#39;chapters/050-XX/draft.md&#39; → &#39;050&#39;
   // from = &#39;ch_010&#39; → &#39;010&#39;, to = &#39;ch_080&#39; → &#39;080&#39;
@@ -319,11 +1302,13 @@ db.function(&#39;chapter_within_range&#39;, chapter_within_range)
 <li><code>weight &lt; 30</code> 不进入 LLM filter(降本)</li>
 </ul>
 <p>LLM filter 的输入按 weight 降序,<strong>最多 50 个候选段</strong>(防止 LLM 过载)。超出的按 weight 排序后裁剪,UI 提示&quot;还有 X 段未审&quot;。</p>
-<h2 id="step-3-llm-二次过滤">Step 3 — LLM 二次过滤</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="step-3-llm-二次过滤">
+<h2>Step 3 — LLM 二次过滤</h2>
+<aside class="callout callout-info">
 <p>走 <a href="./24-json-output.html">DeepSeek JSON mode (spec/24)</a> — 用 <code>callJsonAgent</code> 统一 retry / zod 校验 / max_tokens 估算。</p>
-</blockquote>
-<pre><code class="language-ts">// lib/impact/llm-filter.ts
+</aside>
+<pre data-language="ts"><code data-language="ts">// lib/impact/llm-filter.ts
 import { callJsonAgent } from &#39;@/lib/agents/json-output&#39;
 import { ImpactFilterBatchOutputSchema } from &#39;@/lib/agents/schemas&#39;      // spec/24
 
@@ -370,7 +1355,7 @@ export async function filterByLLM(
 </code></pre>
 <p><code>ImpactFilterBatchOutputSchema</code> 见 <a href="./24-json-output.html">spec/24 §analyzeImpact LLM filter</a>。</p>
 <h3 id="filter-prompt-libimpactpromptsfiltermd">filter prompt (<code>lib/impact/prompts/filter.md</code>)</h3>
-<pre><code class="language-markdown">你是 Open Novel 影响过滤器。任务:对一组**候选受影响段**,判定每段是否真的需要改写,并给出建议。
+<pre data-language="markdown"><code data-language="markdown">你是 Open Novel 影响过滤器。任务:对一组**候选受影响段**,判定每段是否真的需要改写,并给出建议。
 
 # 设定改动 (semantic delta)
 {{#deltas}}
@@ -414,9 +1399,11 @@ JSON:
 - 若不确定,confidence=&#39;low&#39; 并给保守的 proposedText
 - 不要超出 deltas 描述的改动范围 (e.g. 改 lin.gender 时不要顺带改其他无关属性)
 </code></pre>
-<h2 id="step-4-输出最终-changeset-影响图谱">Step 4 — 输出最终 ChangeSet + 影响图谱</h2>
+</section>
+<section class="doc-section" id="step-4-输出最终-changeset-影响图谱">
+<h2>Step 4 — 输出最终 ChangeSet + 影响图谱</h2>
 <p><code>analyzeImpact</code> 工具的最终返回 (内部 ≤3 轮递归后汇总):</p>
-<pre><code class="language-ts">type AnalyzeImpactResult = {
+<pre data-language="ts"><code data-language="ts">type AnalyzeImpactResult = {
   proposals: ChangeProposal[]            // 全 cascade 层级合并 (cascadeLevel: 1 / 2 / 3)
   graph: {
     nodes: { id: string; kind: &#39;entity&#39; | &#39;file&#39; | &#39;concept&#39;; label: string; cascadeLevel: number }[]
@@ -466,8 +1453,10 @@ JSON:
 <p>实现:<code>writeSetting</code> 工具 execute 中,若发现修改命中以上类型,在内部递归 cascade 前<strong>先</strong>跑一遍守则相关的全 active 章节扫,把额外发现的 violation 进 ChangeProposal[round=1] 一起进 ApprovalCard。</p>
 <p><strong>性能考虑</strong>: 全章节扫只在守则相关字段改动时触发;普通&quot;性别 / 名字&quot;改动不触发(那些有自己的 cascade 路径)。</p>
 <p>UI 在 ApprovalCard 顶部展示影响图 (Mermaid graph / reactflow),用 cascadeLevel 着色 (主修改红 / 一级橙 / 二级黄 / 三级浅黄),作者一眼看到&quot;这次改动逐层辐射到哪些 entity / 文件&quot;。</p>
-<h2 id="工具签名-注册到-spec02-工具集">工具签名 (注册到 spec/02 工具集)</h2>
-<pre><code class="language-ts">// lib/agents/tools/analyze-impact.ts
+</section>
+<section class="doc-section" id="工具签名-注册到-spec02-工具集">
+<h2>工具签名 (注册到 spec/02 工具集)</h2>
+<pre data-language="ts"><code data-language="ts">// lib/agents/tools/analyze-impact.ts
 export const analyzeImpact = tool({
   description: &#39;分析一次 setting / 章节改动的影响范围,返回 ChangeProposal[] 与影响图谱&#39;,
   inputSchema: z.object({
@@ -493,32 +1482,32 @@ export const analyzeImpact = tool({
 })
 </code></pre>
 <p>工具分配 (附录 spec/02 §工具分配):<strong>Validator</strong>。其他 agent 不得调用。</p>
-<h2 id="递归-cascade-终止条件-在-analyzeimpact-内部循环中">递归 Cascade 终止条件 (在 analyzeImpact 内部循环中)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="递归-cascade-终止条件-在-analyzeimpact-内部循环中">
+<h2>递归 Cascade 终止条件 (在 analyzeImpact 内部循环中)</h2>
+<aside class="callout callout-info">
 <p>注: 递归发生在 analyzeImpact 工具的<strong>单次调用</strong>内部,不是用户跨多个 ApprovalCard 的多次审批。用户只看到一次 ApprovalCard,内部已经迭代到稳态。</p>
-</blockquote>
-<pre class="mermaid">
-flowchart TD
-  IN([analyzeImpact 工具入口<br/>传入 main delta]) --> INIT["round = 1, weightFloor = 30"]
-  INIT --> CIR["computeImpactRadius(weightFloor)<br/>出候选"]
-  CIR --> CHK1{候选空?}
-  CHK1 -->|是| END([break])
-  CHK1 -->|否| FLT["filterByLLM(候选)<br/>ChangeProposal[round]"]
-  FLT --> CHK2{"needsChange=true<br/>proposal 数 = 0?"}
-  CHK2 -->|是 LLM 判全部不需改| END
-  CHK2 -->|否| WSC["Writer 内部短调用<br/>各 proposal 生成 afterText (in-memory)"]
-  WSC --> INC["round += 1"]
-  INC --> CHK3{"round > 3?"}
-  CHK3 -->|是| END
-  CHK3 -->|否| WF["weightFloor += 30<br/>(30 / 60 / 90)"]
-  WF --> NEXT["nextDelta = 把 afterText 集合<br/>算成 paragraph-rewrite + concept-* delta"]
-  NEXT --> CHK4{"半径不严格收缩?<br/>(currSet 不是 prevSet 子集<br/>或 |currSet| ≥ |prevSet|)"}
-  CHK4 -->|是| END
-  CHK4 -->|否| LOOP["delta = nextDelta<br/>continue"]
-  LOOP --> CIR
-</pre>
+</aside>
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">flowchart TD
+  IN([analyzeImpact 工具入口&lt;br/&gt;传入 main delta]) --&gt; INIT["round = 1, weightFloor = 30"]
+  INIT --&gt; CIR["computeImpactRadius(weightFloor)&lt;br/&gt;出候选"]
+  CIR --&gt; CHK1{候选空?}
+  CHK1 --&gt;|是| END([break])
+  CHK1 --&gt;|否| FLT["filterByLLM(候选)&lt;br/&gt;ChangeProposal[round]"]
+  FLT --&gt; CHK2{"needsChange=true&lt;br/&gt;proposal 数 = 0?"}
+  CHK2 --&gt;|是 LLM 判全部不需改| END
+  CHK2 --&gt;|否| WSC["Writer 内部短调用&lt;br/&gt;各 proposal 生成 afterText (in-memory)"]
+  WSC --&gt; INC["round += 1"]
+  INC --&gt; CHK3{"round &gt; 3?"}
+  CHK3 --&gt;|是| END
+  CHK3 --&gt;|否| WF["weightFloor += 30&lt;br/&gt;(30 / 60 / 90)"]
+  WF --&gt; NEXT["nextDelta = 把 afterText 集合&lt;br/&gt;算成 paragraph-rewrite + concept-* delta"]
+  NEXT --&gt; CHK4{"半径不严格收缩?&lt;br/&gt;(currSet 不是 prevSet 子集&lt;br/&gt;或 |currSet| ≥ |prevSet|)"}
+  CHK4 --&gt;|是| END
+  CHK4 --&gt;|否| LOOP["delta = nextDelta&lt;br/&gt;continue"]
+  LOOP --&gt; CIR</code></pre></figure>
 <p><strong>实现伪码</strong>:</p>
-<pre><code class="language-ts">async function runCascadeRecursion(
+<pre data-language="ts"><code data-language="ts">async function runCascadeRecursion(
   projectId: string,
   initialDelta: SemanticDelta[],
 ): Promise&lt;ChangeProposal[]&gt; {
@@ -579,20 +1568,26 @@ flowchart TD
 <li>完成: 整批 K 段 ChangeSet 准备就绪 [查看]&quot;</li>
 </ul>
 <p>用户<strong>不能干预内部循环</strong>(无法&quot;在第 2 轮就提前 approve&quot;),只能等汇总完整批审。如果用户耐心不足,可在 SettingsDialog 调&quot;递归深度上限&quot;= 1 / 2 / 3 (默认 3)。</p>
-<h2 id="取代-plan06-性能考虑">取代 plan/06 §性能考虑</h2>
+</section>
+<section class="doc-section" id="取代-plan06-性能考虑">
+<h2>取代 plan/06 §性能考虑</h2>
 <ul>
 <li>❌ 旧:&quot;按章节范围 ±5 章&quot; — 已删 (治标策略,本 spec 取代)</li>
 <li>❌ 旧:&quot;基于 entity hash 的&#39;已审过&#39;标记&quot; — 已无意义,LLM 二次过滤本就只对未审过段调用</li>
 <li>❌ 旧:&quot;章节级 word_count + entity_count diff 短路&quot; — 改为按 anchor diff 短路 (无段变化即跳过)</li>
 </ul>
-<h2 id="l4-治理-cascade-audit">L4 治理 — Cascade Audit</h2>
+</section>
+<section class="doc-section" id="l4-治理-cascade-audit">
+<h2>L4 治理 — Cascade Audit</h2>
 <p>每次 analyzeImpact 调用记录到 <code>cascade_audits</code> 表。</p>
-<blockquote>
+<aside class="callout callout-info">
 <p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE cascade_audits</code> + INDEX 见 <a href="./01-storage-schema.html#cascade-audits">spec/01 §cascade_audits</a>。</p>
-</blockquote>
+</aside>
 <p><strong>字段摘要</strong>: <code>project_id</code> · <code>triggered_by_approval_id</code> · <code>parent_audit_id</code> (递归层级, FK 自表) · <code>total_candidates</code> · <code>filtered_by_llm</code> · <code>proposals_count</code> · <code>llm_token_cost</code> (Pro tokens 累计) · <code>duration_ms</code> · <code>graph_json</code> (完整影响图)。</p>
 <p>UI: SettingsDialog → &quot;Cascade 历史&quot;显示每次 cascade 的影响图、proposals 数、用户接受率。Reflector 输入也包括 cascade_audits 数据 (用户拒绝某 proposal 时,提炼&quot;这种类型的 cascade 用户倾向 / 不倾向接受&quot;)。</p>
-<h2 id="测试">测试</h2>
+</section>
+<section class="doc-section" id="测试">
+<h2>测试</h2>
 <table>
 <thead>
 <tr>
@@ -632,6 +1627,9 @@ flowchart TD
 <td>cascade_audits 落库正确</td>
 </tr>
 </tbody></table>
-  </main>
+</section>
+    </main>
+    <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>
+  </article>
 </body>
 </html>

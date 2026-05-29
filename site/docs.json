@@ -9,6 +9,8 @@
       "label": "源文件与发布入口",
       "items": [
         ["README", "./README.md", "README", "项目简介、范围、导航与开发约定"],
+        ["PROFILE", "./.cast-docs/project.json", "CAST project profile", "CAST Docs 项目 profile 与样式策略"],
+        ["STYLE", "./assets/docs.css", "CAST style source", "渲染器内联到每个 HTML 的共享样式源"],
         ["TODO", "./site/todo.json", "TODO JSON", "TODO / Known Issues / Open Questions 的渲染源"],
         ["LOG", "./site/changelist.json", "Changelist JSON", "跨文档变更日志的渲染源"],
         ["HTML", "./todo.html", "TODO", "待办、已知问题与未决问题"],

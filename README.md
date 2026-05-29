@@ -47,6 +47,8 @@
 
 本仓库当前是静态 HTML 文档站,核心资料以 `README.md`、`index.html`、`plan/*.html`、`spec/*.html`、`site/*.json`、`todo.html`、`changelist.html` 维护。尚未迁移为逐页 CAST Docs JSON 源文件工作流;本轮文档改写采用 preserve-first guided migration,用 `scripts/render_all_docs.py` 对现有 HTML 正文做全量重包、索引生成与链接校验。
 
+HTML 输出已收敛到 `cast-a-doc` 控制 profile:每个页面都是自包含 HTML,样式从 `assets/docs.css` 内联,统一使用 `article.doc` / `doc-header` / `sidebar` / `topbar` / `doc-section` / `doc-footer` 语义壳,不依赖外部 CSS、外部 JS、CDN 或运行时索引脚本。仓库级 CAST Docs 默认值记录在 `.cast-docs/project.json`;`index.html` 由 `site/docs.json` 静态生成并作为 GitHub Pages 入口维护。
+
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
@@ -76,6 +78,7 @@ pnpm dev
 ├── index.html                 # 文档入口
 ├── todo.html                  # TODO + 已知问题 + 未决问题(由 site/todo.json 渲染)
 ├── changelist.html            # 跨文档变更流水线(由 site/changelist.json 渲染)
+├── .cast-docs/project.json    # CAST Docs 项目 profile
 ├── site/                      # 文档站 manifest + TODO/CHANGELIST 源数据
 ├── scripts/render_all_docs.py # 全量重渲染 + Strict Profile 校验
 ├── plan/                      # 半技术 PRD(产品向)
@@ -140,6 +143,8 @@ pnpm dev
 
 - [todo.html](./todo.html) — TODO + 已知问题 + 未决问题
 - [changelist.html](./changelist.html) — 跨文档变更流水线
+- [.cast-docs/project.json](./.cast-docs/project.json) — CAST Docs 项目 profile
+- [assets/docs.css](./assets/docs.css) — HTML 内联样式源
 - [site/todo.json](./site/todo.json) — TODO 渲染源
 - [site/changelist.json](./site/changelist.json) — Changelist 渲染源
 

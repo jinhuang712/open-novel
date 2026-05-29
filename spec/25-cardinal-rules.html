@@ -5,21 +5,1018 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="open-novel-docs-renderer">
   <title>Spec 25 — 五大网文守则 (Cardinal Rules) - Open Novel</title>
-  <link rel="stylesheet" href="../assets/docs.css">
-  <script src="../assets/docs-enhance.js" defer></script>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f8f8f7;
+  --surface: #ffffff;
+  --soft: #f2f3f3;
+  --text: #24272b;
+  --muted: #68717b;
+  --faint: #9aa1a8;
+  --border: #dedede;
+  --primary: #566f99;
+  --primary-soft: #f1f3f6;
+  --accent: #52686a;
+  --info: #566f99;
+  --info-soft: #f4f5f7;
+  --warn: #8a6d3b;
+  --warn-soft: #f8f4ea;
+  --danger: #9b4d49;
+  --danger-soft: #faf0ef;
+  --ok: #55745f;
+  --ok-soft: #eef4ef;
+  --code: #f1f2f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 18px;
+  --font-lg: 23px;
+  --font-xl: 30px;
+  --font-title: 38px;
+  --line-tight: 1.25;
+  --line-normal: 1.55;
+  --line-loose: 1.75;
+  --line-code: 1.6;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+  --motion-base: 160ms;
+  --motion-ease: ease;
+  --surface-shadow: none;
+  --toc-width: clamp(220px, 16vw, 300px);
+  --topbar-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #202327;
+    --soft: #262a2f;
+    --text: #eef0f2;
+    --muted: #adb4bd;
+    --faint: #79828d;
+    --border: #3a4047;
+    --primary: #9bb7d9;
+    --primary-soft: #182231;
+    --accent: #9ab4b1;
+    --info: #9bb7d9;
+    --info-soft: #1c2633;
+    --warn: #d4b16d;
+    --warn-soft: #302815;
+    --danger: #df9a96;
+    --danger-soft: #321d1d;
+    --ok: #9cc4a6;
+    --ok-soft: #1b2a20;
+    --code: #15171a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-base)/var(--line-loose) var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+code {
+  padding: 1px 5px;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-sm);
+  line-height: var(--line-code);
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+mark {
+  padding: 0.02em 0.22em;
+  background: var(--warn-soft);
+  border-radius: 3px;
+  color: var(--text);
+}
+
+del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+[data-mark="deprecated"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+[data-mark="term"] {
+  border-bottom: 1px dotted var(--faint);
+  cursor: help;
+}
+
+[data-mark="metric"] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 14px;
+  padding: 0 36px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0;
+}
+
+.brand-logo:hover {
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-org,
+.topbar-project,
+.topbar-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-org,
+.topbar-project {
+  flex: 0 0 auto;
+}
+
+.topbar-doc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.topbar-separator {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-links:empty {
+  display: none;
+}
+
+.topbar-link {
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.sidebar {
+  position: fixed;
+  inset: var(--topbar-height) auto 0 0;
+  width: var(--toc-width);
+  padding: 30px 28px 60px 30px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.nav-title {
+  margin: 0 0 16px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toc {
+  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0 8px 10px;
+  overflow-wrap: anywhere;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.toc a:hover,
+.toc a.active {
+  border-left-color: var(--primary);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc span {
+  color: var(--faint);
+  font: 12px/1.45 var(--mono);
+  white-space: nowrap;
+}
+
+.doc {
+  max-width: 960px;
+  margin-left: var(--toc-width);
+  padding: 96px 52px 84px;
+}
+
+.set-index {
+  max-width: 1120px;
+}
+
+.doc-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-header h1 {
+  margin: 0 0 10px;
+  font-size: var(--font-title);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.doc-kicker {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font: 700 12px/1.25 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font: 12.5px/1.4 var(--mono);
+}
+
+.doc-summary {
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.doc-summary ul {
+  margin: 0;
+}
+
+.doc-section {
+  margin: 46px 0 0;
+  scroll-margin-top: 70px;
+}
+
+.doc-section h2 {
+  margin: 0 0 16px;
+  padding: 4px 0 5px 14px;
+  border-left: 3px solid var(--primary);
+  font-size: var(--font-lg);
+  line-height: var(--line-tight);
+}
+
+.doc-section h3 {
+  margin: 22px 0 8px;
+  font-size: var(--font-md);
+}
+
+.doc-section > :first-child {
+  margin-top: 0;
+}
+
+.section-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+details {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 24px;
+}
+
+li + li {
+  margin-top: 3px;
+}
+
+.callout {
+  margin: 18px 0;
+  padding: 13px 16px;
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+}
+
+.callout p {
+  margin: 6px 0 0;
+}
+
+.callout p:first-child {
+  margin-top: 0;
+}
+
+.callout-info {
+  background: var(--info-soft);
+  border-left-color: var(--info);
+}
+
+.callout-warning {
+  background: var(--warn-soft);
+  border-left-color: var(--warn);
+}
+
+.callout-danger {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.callout-success {
+  background: var(--ok-soft);
+  border-left-color: var(--ok);
+}
+
+table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  box-shadow: var(--surface-shadow);
+  font-size: var(--font-sm);
+}
+
+thead,
+tbody,
+tr {
+  width: 100%;
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table,
+.risk-table,
+.decision-table {
+  width: 100%;
+}
+
+.details-block {
+  margin: 18px 0;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.details-block summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagram {
+  position: relative;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.diagram figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.diagram:hover .diagram-toolbar {
+  opacity: 1;
+}
+
+.code-shell {
+  margin: 16px 0;
+  overflow: hidden;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  color: var(--muted);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+}
+
+.code-status-ok {
+  color: var(--ok);
+}
+
+.code-status-error {
+  color: var(--danger);
+}
+
+.code-copy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.code-status + .code-copy {
+  margin-left: 0;
+}
+
+.code-copy:hover {
+  color: var(--text);
+}
+
+.code-pre {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--font-sm);
+  line-height: var(--line-loose);
+}
+
+.code-line {
+  display: grid;
+  min-width: 100%;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+}
+
+.code-line-number {
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--border);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.code-line-content {
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.participants,
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.participant-card,
+.value-card,
+.action-card {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.action-card {
+  padding: 20px;
+}
+
+.participant-card p,
+.value-card p,
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.source-refs,
+.files,
+.acceptance-criteria {
+  padding-left: 22px;
+}
+
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.chapter-card:hover,
+.chapter-card:focus-within {
+  border-color: var(--primary);
+}
+
+.chapter-card a {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 16px;
+  color: var(--text);
+}
+
+.chapter-card a:hover {
+  text-decoration: none;
+}
+
+.chapter-number {
+  color: var(--faint);
+  font: 700 12px/1.4 var(--mono);
+}
+
+.chapter-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.chapter-title {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.chapter-description {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.set-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.set-section {
+  margin: 46px 0 0;
+}
+
+.set-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 44px 0 0;
+}
+
+.set-pagination-link {
+  display: block;
+  min-height: 82px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  color: var(--text);
+}
+
+.set-pagination-link:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+}
+
+.set-pagination-next {
+  text-align: right;
+}
+
+.set-pagination-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.set-pagination-title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-width: 56px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-questions-block {
+  position: relative;
+  margin: 18px 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.open-questions-header {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.open-question-marker {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--warn);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-question-text {
+  min-width: 0;
+}
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    right: auto;
+    left: 0;
+    order: 1;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+
+  .brand-logo,
+  .brand-logo-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar {
+    position: static;
+    inset: auto;
+    order: 2;
+    width: auto;
+    max-height: 260px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .doc {
+    order: 3;
+    max-width: none;
+    margin-left: 0;
+    padding: 32px 20px 56px;
+  }
+
+  .doc-header h1 {
+    font-size: var(--font-xl);
+  }
+
+  .set-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .set-pagination-next {
+    text-align: left;
+  }
+
+  .code-line {
+    grid-template-columns: 34px minmax(max-content, 1fr);
+  }
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .diagram-toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+    margin-left: 0;
+    padding: 0;
+  }
+}
+
+  </style>
   <!-- Generated by scripts/render_all_docs.py. Preserve body content; rerun renderer after edits. -->
 </head>
 <body>
-  <main class="doc">
-<nav class="doc-meta" aria-label="Document metadata">
-  <a href="../index.html">&larr; Index</a>
-  <span>spec/25-cardinal-rules.html</span>
-</nav>
-<h1 id="spec-25-五大网文守则-cardinal-rules">Spec 25 — 五大网文守则 (Cardinal Rules)</h1>
-<blockquote>
+<header class="topbar">
+  <a class="brand-logo" href="../index.html" aria-label="Open Novel index">ON</a>
+  <div class="topbar-breadcrumb">
+    <span class="topbar-project">Open Novel</span>
+    <span class="topbar-separator">/</span>
+    <span class="topbar-doc">Spec 25 — 五大网文守则 (Cardinal Rules)</span>
+  </div>
+  <span class="topbar-spacer"></span>
+  <nav class="topbar-links" aria-label="Primary">
+    <a class="topbar-link" href="../README.md">README</a>
+    <a class="topbar-link" href="../todo.html">TODO</a>
+    <a class="topbar-link" href="../changelist.html">Changelist</a>
+  </nav>
+</header>
+<aside class="sidebar" aria-label="Document navigation">
+  <p class="nav-title">文档集</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="../index.html"><span>SET</span>全部文档</a></li>
+      <li><a href="../README.md"><span>MD</span>README</a></li>
+      <li><a href="../todo.html"><span>TODO</span>风险</a></li>
+      <li><a href="../changelist.html"><span>LOG</span>变更</a></li>
+    </ol>
+  </nav>
+  <p class="nav-title">本文目录</p>
+  <nav class="toc"><ol>
+<li><a href="#top"><span>00</span>概览</a></li>
+<li><a href="#用户原文"><span>H3</span>用户原文</a></li>
+<li><a href="#可观察化指标"><span>H3</span>可观察化指标</a></li>
+<li><a href="#涉及-frontmatter-字段-chaptermd-v2"><span>H3</span>涉及 frontmatter 字段 (chapter.md v2)</a></li>
+<li><a href="#检测器-goldenchapterscheck-在-arctracker"><span>H3</span>检测器 goldenChaptersCheck (在 ArcTracker)</a></li>
+<li><a href="#writer-1-3-章特殊-prompt-增强-在-spec03"><span>H3</span>Writer 1-3 章特殊 prompt 增强 (在 spec/03)</a></li>
+<li><a href="#用户原文-2"><span>H3</span>用户原文</a></li>
+<li><a href="#可观察化指标-2"><span>H3</span>可观察化指标</a></li>
+<li><a href="#涉及-frontmatter-字段-charactermd-v3"><span>H3</span>涉及 frontmatter 字段 (character.md v3)</a></li>
+<li><a href="#检测器-characterintegritycheck-validator-主导-readerpanel-二审"><span>H3</span>检测器 characterIntegrityCheck (Validator 主导, ReaderPanel 二审)</a></li>
+<li><a href="#writer-prompt-强约束"><span>H3</span>Writer prompt 强约束</a></li>
+<li><a href="#用户原文-3"><span>H3</span>用户原文</a></li>
+<li><a href="#可观察化指标-3"><span>H3</span>可观察化指标</a></li>
+<li><a href="#涉及-frontmatter-字段-chaptermd"><span>H3</span>涉及 frontmatter 字段 (chapter.md)</a></li>
+<li><a href="#检测器-pacingcheck-beatanalyzer-arctracker-协同"><span>H3</span>检测器 pacingCheck (BeatAnalyzer + ArcTracker 协同)</a></li>
+<li><a href="#用户原文-4"><span>H3</span>用户原文</a></li>
+<li><a href="#可观察化指标-4"><span>H3</span>可观察化指标</a></li>
+<li><a href="#foreshadowing-promise-metadata"><span>H3</span>Foreshadowing Promise Metadata (dependencies kind=foreshadowing)</a></li>
+<li><a href="#检测器-promiseaccountabilitycheck-validator"><span>H3</span>检测器 promiseAccountabilityCheck (Validator)</a></li>
+<li><a href="#writer-prompt-强约束-2"><span>H3</span>Writer prompt 强约束</a></li>
+<li><a href="#用户原文-5"><span>H3</span>用户原文</a></li>
+<li><a href="#可观察化指标-5"><span>H3</span>可观察化指标</a></li>
+<li><a href="#涉及-frontmatter-字段-chaptermd-2"><span>H3</span>涉及 frontmatter 字段 (chapter.md)</a></li>
+<li><a href="#检测器-protagonistagencycheck-beatanalyzer-arctracker"><span>H3</span>检测器 protagonistAgencyCheck (BeatAnalyzer + ArcTracker)</a></li>
+</ol></nav>
+</aside>
+  <article class="doc" id="top">
+    <header class="doc-header">
+      <p class="doc-kicker">Spec</p>
+      <h1>Spec 25 — 五大网文守则 (Cardinal Rules)</h1>
+      <div class="doc-meta" aria-label="Document metadata">
+        <a href="../index.html">Index</a>
+        <span>spec/25-cardinal-rules.html</span>
+        <span>Generated by <code>scripts/render_all_docs.py</code></span>
+      </div>
+    </header>
+    <main>
+<aside class="callout callout-info">
 <p>网文创作不能踩的五大坑,用户总结。本 spec 把 5 条守则<strong>可机器化</strong>:每条拆成可观察指标 + zod schema + 默认阈值 + 检测器伪码 + 风险报告输出格式。Validator / ReaderPanel / ArcTracker / BeatAnalyzer 各取自己擅长的维度并行扫,结果汇成 <code>risk_report</code> 进 ApprovalCard。</p>
-</blockquote>
-<h2 id="设计原则">设计原则</h2>
+</aside>
+<section class="doc-section" id="设计原则">
+<h2>设计原则</h2>
 <table>
 <thead>
 <tr>
@@ -48,8 +1045,10 @@
 <td>第 1-3 章用更严的阈值变体,见 §黄金三章特规</td>
 </tr>
 </tbody></table>
-<h2 id="项目级配置-cardinal-rulesjson">项目级配置 <code>cardinal-rules.json</code></h2>
-<pre><code class="language-jsonc">// ~/.open-novel/workspaces/{projectId}/cardinal-rules.json
+</section>
+<section class="doc-section" id="项目级配置-cardinal-rulesjson">
+<h2>项目级配置 <code>cardinal-rules.json</code></h2>
+<pre data-language="jsonc"><code data-language="jsonc">// ~/.open-novel/workspaces/{projectId}/cardinal-rules.json
 {
   &quot;version&quot;: 1,
   &quot;goldenChapters&quot;: {
@@ -90,14 +1089,16 @@
 }
 </code></pre>
 <p><strong>zod schema</strong> 在 spec/13-settings.html 加入(用户可在 SettingsDialog 微调阈值,但 <code>enabled: false</code> UI 锁死)。</p>
-<h2 id="守则-1-黄金三章-golden-chapters">守则 1: 黄金三章 (Golden Chapters)</h2>
+</section>
+<section class="doc-section" id="守则-1-黄金三章-golden-chapters">
+<h2>守则 1: 黄金三章 (Golden Chapters)</h2>
 <h3 id="用户原文">用户原文</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p>在黄金三章里反复横跳。开篇前三章基本决定了作品的生死。</p>
-</blockquote>
-<blockquote>
+</aside>
+<aside class="callout callout-info">
 <p>症状:开篇不写主角,大量笔墨描写天气、街景、世界观宏大设定;或主角出场就窝囊废柴好几万字;&quot;开局开会&quot;群角色聊阴谋读者一脸懵。</p>
-</blockquote>
+</aside>
 <h3 id="可观察化指标">可观察化指标</h3>
 <table>
 <thead>
@@ -140,7 +1141,7 @@
 </tr>
 </tbody></table>
 <h3 id="涉及-frontmatter-字段-chaptermd-v2">涉及 frontmatter 字段 (chapter.md v2)</h3>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 chapter_index: 1                          # 派生 (从文件名)
 pov: [&#39;林溪&#39;]                             # POV 角色 list
 pov_breakdown:                            # 派生 (Validator 扫段后填)
@@ -152,7 +1153,7 @@ setting_description_ratio: 0.18           # 派生
 ---
 </code></pre>
 <h3 id="检测器-goldenchapterscheck-在-arctracker">检测器 <code>goldenChaptersCheck</code> (在 ArcTracker)</h3>
-<pre><code class="language-ts">async function goldenChaptersCheck(chapter: Chapter, config: GoldenChaptersConfig) {
+<pre data-language="ts"><code data-language="ts">async function goldenChaptersCheck(chapter: Chapter, config: GoldenChaptersConfig) {
   if (!config.enabled || chapter.chapter_index &gt; config.indexRange[1]) return null
 
   const violations: Violation[] = []
@@ -204,11 +1205,13 @@ setting_description_ratio: 0.18           # 派生
 - &quot;林溪是个软弱的人...&quot;(主角出场就窝囊)
 - &quot;李、王、张、刘四人聚在一起...&quot;(开局开会)
 </code></pre>
-<h2 id="守则-2-人设写崩-character-integrity">守则 2: 人设写崩 (Character Integrity)</h2>
+</section>
+<section class="doc-section" id="守则-2-人设写崩-character-integrity">
+<h2>守则 2: 人设写崩 (Character Integrity)</h2>
 <h3 id="用户原文-2">用户原文</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p>假智谋真降智 / 双标圣母 / 行为逻辑断裂</p>
-</blockquote>
+</aside>
 <h3 id="可观察化指标-2">可观察化指标</h3>
 <table>
 <thead>
@@ -257,7 +1260,7 @@ setting_description_ratio: 0.18           # 派生
 </tr>
 </tbody></table>
 <h3 id="涉及-frontmatter-字段-charactermd-v3">涉及 frontmatter 字段 (character.md v3)</h3>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 name: 林溪
 gender: female
 reader_promises:                          # 已有 (spec/16)
@@ -286,7 +1289,7 @@ arc:                                      # 已有
 ---
 </code></pre>
 <h3 id="检测器-characterintegritycheck-validator-主导-readerpanel-二审">检测器 <code>characterIntegrityCheck</code> (Validator 主导, ReaderPanel 二审)</h3>
-<pre><code class="language-ts">async function characterIntegrityCheck(chapter: Chapter, config: CharacterIntegrityConfig) {
+<pre data-language="ts"><code data-language="ts">async function characterIntegrityCheck(chapter: Chapter, config: CharacterIntegrityConfig) {
   const violations: Violation[] = []
   const characters = await getInvolvedCharacters(chapter)
 
@@ -339,11 +1342,13 @@ arc:                                      # 已有
 - &quot;林溪举起刀,看了看跪在地上求饶的敌人,叹了口气放下了&quot; (对敌轴 0.85 → 0.3, 严重违反)
 - &quot;林溪冷冷地看着兄弟说&#39;你死你的,我走我的&#39;&quot; (对友 0.9 → 0.1, 严重违反)
 </code></pre>
-<h2 id="守则-3-节奏崩盘-pacing">守则 3: 节奏崩盘 (Pacing)</h2>
+</section>
+<section class="doc-section" id="守则-3-节奏崩盘-pacing">
+<h2>守则 3: 节奏崩盘 (Pacing)</h2>
 <h3 id="用户原文-3">用户原文</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p>永远在路上的&quot;升级&quot; / 支线开得比主线还茂密 / 主角长时间缺席</p>
-</blockquote>
+</aside>
 <h3 id="可观察化指标-3">可观察化指标</h3>
 <table>
 <thead>
@@ -380,7 +1385,7 @@ arc:                                      # 已有
 </tr>
 </tbody></table>
 <h3 id="涉及-frontmatter-字段-chaptermd">涉及 frontmatter 字段 (chapter.md)</h3>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 chapter_index: 23
 main_line: true                           # 主线 / 支线
 progress_milestone: &#39;突破筑基&#39;             # null 或 enum: 突破/夺宝/打脸/复仇/升级/觉醒/解谜
@@ -389,7 +1394,7 @@ pov_protagonist_ratio: 1.0                # 派生
 ---
 </code></pre>
 <h3 id="检测器-pacingcheck-beatanalyzer-arctracker-协同">检测器 <code>pacingCheck</code> (BeatAnalyzer + ArcTracker 协同)</h3>
-<pre><code class="language-ts">async function pacingCheck(chapter: Chapter, projectChapters: Chapter[], config: PacingConfig) {
+<pre data-language="ts"><code data-language="ts">async function pacingCheck(chapter: Chapter, projectChapters: Chapter[], config: PacingConfig) {
   const violations: Violation[] = []
   const recentN = projectChapters.slice(-config.rollingWindow)
   const protagonistName = await db.characters.findProtagonist(projectId)
@@ -431,11 +1436,13 @@ pov_protagonist_ratio: 1.0                # 派生
   return violations
 }
 </code></pre>
-<h2 id="守则-4-期待感兑现-promise-accountability">守则 4: 期待感兑现 (Promise Accountability)</h2>
+</section>
+<section class="doc-section" id="守则-4-期待感兑现-promise-accountability">
+<h2>守则 4: 期待感兑现 (Promise Accountability)</h2>
 <h3 id="用户原文-4">用户原文</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p>给了读者一个无法兑现的承诺。&quot;战神归来发现女儿住狗窝&quot;是经典反面教材。</p>
-</blockquote>
+</aside>
 <h3 id="可观察化指标-4">可观察化指标</h3>
 <table>
 <thead>
@@ -463,7 +1470,7 @@ pov_protagonist_ratio: 1.0                # 派生
 </tbody></table>
 <h3 id="foreshadowing-promise-metadata">Foreshadowing Promise Metadata (dependencies kind=foreshadowing)</h3>
 <p>伏笔不是独立物理表。守则 4 读取 <code>dependencies WHERE kind='foreshadowing'</code>;deadline / weight 等字段先放在 <code>dependencies.metadata</code> JSON。若 W3 spike 证明需要索引,再在 <code>dependencies</code> 上升级正式列。</p>
-<pre><code class="language-sql">-- 可选物理列升级;目标表是 dependencies,不是 foreshadowings
+<pre data-language="sql"><code data-language="sql">-- 可选物理列升级;目标表是 dependencies,不是 foreshadowings
 ALTER TABLE dependencies ADD COLUMN deadline_chapter INTEGER;
 ALTER TABLE dependencies ADD COLUMN deadline_word_count INTEGER;
 ALTER TABLE dependencies ADD COLUMN weight TEXT NOT NULL DEFAULT &#39;minor&#39;  -- &#39;critical&#39; | &#39;major&#39; | &#39;minor&#39;
@@ -477,7 +1484,7 @@ ALTER TABLE dependencies ADD COLUMN expected_resolution_pattern TEXT;
 <li><code>minor</code> — 一般伏笔</li>
 </ul>
 <h3 id="检测器-promiseaccountabilitycheck-validator">检测器 <code>promiseAccountabilityCheck</code> (Validator)</h3>
-<pre><code class="language-ts">async function promiseAccountabilityCheck(currentChapter: Chapter, config: PromiseConfig) {
+<pre data-language="ts"><code data-language="ts">async function promiseAccountabilityCheck(currentChapter: Chapter, config: PromiseConfig) {
   const violations: Violation[] = []
   const activePromises = await db.dependencies.findActiveForeshadowings(projectId)  // kind='foreshadowing', status='planted'
 
@@ -531,11 +1538,13 @@ active critical promises (必须按时兑现):
 - 不要让承诺显得&quot;荒诞&quot; — 例:战神回来发现保护不了自己老婆,这种情绪闷棍直接弃书
 - 如果当前章是 deadline 章,必须**兑现**该承诺
 </code></pre>
-<h2 id="守则-5-金手指过度依赖-protagonist-agency">守则 5: 金手指过度依赖 (Protagonist Agency)</h2>
+</section>
+<section class="doc-section" id="守则-5-金手指过度依赖-protagonist-agency">
+<h2>守则 5: 金手指过度依赖 (Protagonist Agency)</h2>
 <h3 id="用户原文-5">用户原文</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p>主角变成只会点击&quot;领取奖励&quot;的工具人。好的故事永远是人的故事。</p>
-</blockquote>
+</aside>
 <h3 id="可观察化指标-5">可观察化指标</h3>
 <table>
 <thead>
@@ -566,7 +1575,7 @@ active critical promises (必须按时兑现):
 </tr>
 </tbody></table>
 <h3 id="涉及-frontmatter-字段-chaptermd-2">涉及 frontmatter 字段 (chapter.md)</h3>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 agency_breakdown:                         # 派生
   active_decision: 0.45                   # 主动决策
   passive_receive: 0.20                   # 被动接收
@@ -576,7 +1585,7 @@ agency_breakdown:                         # 派生
 ---
 </code></pre>
 <h3 id="检测器-protagonistagencycheck-beatanalyzer-arctracker">检测器 <code>protagonistAgencyCheck</code> (BeatAnalyzer + ArcTracker)</h3>
-<pre><code class="language-ts">async function protagonistAgencyCheck(chapter: Chapter, recentChapters: Chapter[], config: AgencyConfig) {
+<pre data-language="ts"><code data-language="ts">async function protagonistAgencyCheck(chapter: Chapter, recentChapters: Chapter[], config: AgencyConfig) {
   const violations: Violation[] = []
 
   // 1. 主动决策段比例
@@ -620,9 +1629,11 @@ async function calculateGoldenFingerDensity(chapters: Chapter[]) {
   return matches / totalWords
 }
 </code></pre>
-<h2 id="风险报告输出-cardinalrulesreport">风险报告输出 (<code>CardinalRulesReport</code>)</h2>
+</section>
+<section class="doc-section" id="风险报告输出-cardinalrulesreport">
+<h2>风险报告输出 (<code>CardinalRulesReport</code>)</h2>
 <p>每次章节生成或 setting 修改后,Validator + ReaderPanel + ArcTracker + BeatAnalyzer 各自跑相关检测,汇总成:</p>
-<pre><code class="language-ts">export const CardinalRulesReportSchema = z.object({
+<pre data-language="ts"><code data-language="ts">export const CardinalRulesReportSchema = z.object({
   goldenChapters: z.object({
     violated: z.boolean(),
     severity: z.enum([&#39;critical&#39;, &#39;major&#39;, &#39;warn&#39;, &#39;none&#39;]),
@@ -646,25 +1657,25 @@ async function calculateGoldenFingerDensity(chapters: Chapter[]) {
   blockingViolations: z.array(z.string()),       // 必须解决才能 approve
 })
 </code></pre>
-<h2 id="approvalcard-集成">ApprovalCard 集成</h2>
-<pre class="mermaid">
-flowchart TD
+</section>
+<section class="doc-section" id="approvalcard-集成">
+<h2>ApprovalCard 集成</h2>
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">flowchart TD
   subgraph CARD ["ApprovalCard (审批卡片)"]
     direction TB
     HEAD["Writer 想写第 23 章 (字数 4823)"]
     DIFF["Diff: ... (章节正文)"]
     subgraph RISK ["五大守则风险报告"]
       direction TB
-      CRIT["critical (1)<br/>人设崩坏: 林溪违反 reader_promise '杀伐果断'<br/>段 ch_023#§5 瞻前顾后不忍下手<br/>value_axis 对敌 实际 0.32 vs baseline 0.85 偏离 0.53 阈值 0.4"]
-      MAJ["major (2)<br/>节奏崩盘: 距上次 milestone (第 18 章 突破金丹) 已 5 章无新 milestone<br/>期待感: critical promise '三年之约' 距 deadline 仅 7 章, 最近 5 章未触及"]
-      WARN["warn (1)<br/>金手指: 滚动 10 章系统奖励段比例 32% 阈值 30%"]
-      CRIT --> MAJ --> WARN
+      CRIT["critical (1)&lt;br/&gt;人设崩坏: 林溪违反 reader_promise '杀伐果断'&lt;br/&gt;段 ch_023#§5 瞻前顾后不忍下手&lt;br/&gt;value_axis 对敌 实际 0.32 vs baseline 0.85 偏离 0.53 阈值 0.4"]
+      MAJ["major (2)&lt;br/&gt;节奏崩盘: 距上次 milestone (第 18 章 突破金丹) 已 5 章无新 milestone&lt;br/&gt;期待感: critical promise '三年之约' 距 deadline 仅 7 章, 最近 5 章未触及"]
+      WARN["warn (1)&lt;br/&gt;金手指: 滚动 10 章系统奖励段比例 32% 阈值 30%"]
+      CRIT --&gt; MAJ --&gt; WARN
     end
-    CHECK{{"我已阅读上述风险, 明知违反仍通过<br/>critical 必勾 checkbox"}}
+    CHECK{{"我已阅读上述风险, 明知违反仍通过&lt;br/&gt;critical 必勾 checkbox"}}
     ACTION["[拒绝 + 反馈]    [同意章节 (Y)]"]
-    HEAD --> DIFF --> RISK --> CHECK --> ACTION
-  end
-</pre>
+    HEAD --&gt; DIFF --&gt; RISK --&gt; CHECK --&gt; ACTION
+  end</code></pre></figure>
 <p><strong>关键 UI 约束</strong>:</p>
 <ul>
 <li><code>critical</code> 数 ≥ 1 时,&quot;同意&quot;按钮<strong>强制要求勾&quot;明知违反仍通过&quot;</strong> checkbox(防 silent commit)</li>
@@ -672,7 +1683,9 @@ flowchart TD
 <li>风险报告每条可点击,跳到对应段(spec/05 entity-highlight 同款锚点跳转)</li>
 </ul>
 <p>详细见 spec/06 §ApprovalCard。</p>
-<h2 id="与-writer-各-agent-的协同">与 Writer / 各 Agent 的协同</h2>
+</section>
+<section class="doc-section" id="与-writer-各-agent-的协同">
+<h2>与 Writer / 各 Agent 的协同</h2>
 <table>
 <thead>
 <tr>
@@ -707,8 +1720,10 @@ flowchart TD
 <td>用户拒绝时,scope=&#39;cardinal_rule&#39; 的 learnings 入库;后续 Writer 注入</td>
 </tr>
 </tbody></table>
-<h2 id="reflector-学习-cardinal-rule-scope">Reflector 学习 cardinal_rule scope</h2>
-<pre><code class="language-ts">// Reflector 输出 schema (spec/24)
+</section>
+<section class="doc-section" id="reflector-学习-cardinal-rule-scope">
+<h2>Reflector 学习 cardinal_rule scope</h2>
+<pre data-language="ts"><code data-language="ts">// Reflector 输出 schema (spec/24)
 {
   insight: &#39;用户多次拒绝 &quot;金手指文本密度过高&quot; — 后续避免 &quot;叮! 恭喜宿主&quot; 模板&#39;,
   evidence: &#39;本批 3 次审批,2 次因 system_overdose 被拒&#39;,
@@ -718,7 +1733,9 @@ flowchart TD
 }
 </code></pre>
 <p>learnings.scope=&#39;cardinal_rule&#39; 的项<strong>永远 top-1 不被砍</strong>(spec/23 §装配),用户最强偏好 = 不能丢。</p>
-<h2 id="阈值微调-ui-settingsdialog">阈值微调 UI (SettingsDialog)</h2>
+</section>
+<section class="doc-section" id="阈值微调-ui-settingsdialog">
+<h2>阈值微调 UI (SettingsDialog)</h2>
 <p>详见 <a href="./13-settings.html">spec/13-settings.html</a> §五大守则阈值面板:</p>
 <ul>
 <li>项目级 5 个守则各自 expandable card</li>
@@ -726,8 +1743,10 @@ flowchart TD
 <li><code>enabled</code> toggle UI 锁死(显示但不可关 — 文档化&quot;为什么不让关&quot;)</li>
 <li>修改阈值即时生效,但<strong>已生成的章节风险报告不重算</strong> (除非用户点&quot;重新评估当前章节&quot;)</li>
 </ul>
-<h2 id="测试-与-spec14-对齐">测试 (与 spec/14 对齐)</h2>
-<pre><code class="language-ts">describe(&#39;cardinal rules&#39;, () =&gt; {
+</section>
+<section class="doc-section" id="测试-与-spec14-对齐">
+<h2>测试 (与 spec/14 对齐)</h2>
+<pre data-language="ts"><code data-language="ts">describe(&#39;cardinal rules&#39;, () =&gt; {
   it(&#39;黄金三章: 第 1 章主角 1000 字内未出场 → critical&#39;, () =&gt; { /* ... */ })
   it(&#39;黄金三章: 1-3 章 POV &lt; 60% → critical&#39;, () =&gt; { /* ... */ })
   it(&#39;人设: value_axis 偏离 baseline &gt; 0.4 → critical&#39;, () =&gt; { /* ... */ })
@@ -739,12 +1758,17 @@ flowchart TD
   it(&#39;ApprovalCard blocking 时同意按钮 disabled (无视 checkbox)&#39;, () =&gt; { /* ... */ })
 })
 </code></pre>
-<h2 id="不解决的问题-待办">不解决的问题 / 待办</h2>
+</section>
+<section class="doc-section" id="不解决的问题-待办">
+<h2>不解决的问题 / 待办</h2>
 <ul>
 <li><strong>守则之间的优先级</strong>: 同章 5 条都违反,UI 怎么排序展示? 当前按 critical &gt; major &gt; warn,同级再按守则索引</li>
 <li><strong>跨语言扩展</strong>: 守则现在为中文网文调优,英文/其他语种网文规则不同,不做</li>
 <li><strong>学习反向 weight</strong>: 用户多次&quot;明知违反仍通过&quot;的话,Reflector 是否应该降阈值? 当前不允许 — 阈值是项目级硬约束,只能用户在 SettingsDialog 显式调,不能 LLM 学习降低</li>
 </ul>
-  </main>
+</section>
+    </main>
+    <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>
+  </article>
 </body>
 </html>

@@ -5,65 +5,1064 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="open-novel-docs-renderer">
   <title>Spec 01 — 存储 Schema - Open Novel</title>
-  <link rel="stylesheet" href="../assets/docs.css">
-  <script src="../assets/docs-enhance.js" defer></script>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f8f8f7;
+  --surface: #ffffff;
+  --soft: #f2f3f3;
+  --text: #24272b;
+  --muted: #68717b;
+  --faint: #9aa1a8;
+  --border: #dedede;
+  --primary: #566f99;
+  --primary-soft: #f1f3f6;
+  --accent: #52686a;
+  --info: #566f99;
+  --info-soft: #f4f5f7;
+  --warn: #8a6d3b;
+  --warn-soft: #f8f4ea;
+  --danger: #9b4d49;
+  --danger-soft: #faf0ef;
+  --ok: #55745f;
+  --ok-soft: #eef4ef;
+  --code: #f1f2f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 18px;
+  --font-lg: 23px;
+  --font-xl: 30px;
+  --font-title: 38px;
+  --line-tight: 1.25;
+  --line-normal: 1.55;
+  --line-loose: 1.75;
+  --line-code: 1.6;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+  --motion-base: 160ms;
+  --motion-ease: ease;
+  --surface-shadow: none;
+  --toc-width: clamp(220px, 16vw, 300px);
+  --topbar-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #202327;
+    --soft: #262a2f;
+    --text: #eef0f2;
+    --muted: #adb4bd;
+    --faint: #79828d;
+    --border: #3a4047;
+    --primary: #9bb7d9;
+    --primary-soft: #182231;
+    --accent: #9ab4b1;
+    --info: #9bb7d9;
+    --info-soft: #1c2633;
+    --warn: #d4b16d;
+    --warn-soft: #302815;
+    --danger: #df9a96;
+    --danger-soft: #321d1d;
+    --ok: #9cc4a6;
+    --ok-soft: #1b2a20;
+    --code: #15171a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-base)/var(--line-loose) var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+code {
+  padding: 1px 5px;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-sm);
+  line-height: var(--line-code);
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+mark {
+  padding: 0.02em 0.22em;
+  background: var(--warn-soft);
+  border-radius: 3px;
+  color: var(--text);
+}
+
+del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+[data-mark="deprecated"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+[data-mark="term"] {
+  border-bottom: 1px dotted var(--faint);
+  cursor: help;
+}
+
+[data-mark="metric"] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 14px;
+  padding: 0 36px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0;
+}
+
+.brand-logo:hover {
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-org,
+.topbar-project,
+.topbar-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-org,
+.topbar-project {
+  flex: 0 0 auto;
+}
+
+.topbar-doc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.topbar-separator {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-links:empty {
+  display: none;
+}
+
+.topbar-link {
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.sidebar {
+  position: fixed;
+  inset: var(--topbar-height) auto 0 0;
+  width: var(--toc-width);
+  padding: 30px 28px 60px 30px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.nav-title {
+  margin: 0 0 16px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toc {
+  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0 8px 10px;
+  overflow-wrap: anywhere;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.toc a:hover,
+.toc a.active {
+  border-left-color: var(--primary);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc span {
+  color: var(--faint);
+  font: 12px/1.45 var(--mono);
+  white-space: nowrap;
+}
+
+.doc {
+  max-width: 960px;
+  margin-left: var(--toc-width);
+  padding: 96px 52px 84px;
+}
+
+.set-index {
+  max-width: 1120px;
+}
+
+.doc-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-header h1 {
+  margin: 0 0 10px;
+  font-size: var(--font-title);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.doc-kicker {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font: 700 12px/1.25 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font: 12.5px/1.4 var(--mono);
+}
+
+.doc-summary {
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.doc-summary ul {
+  margin: 0;
+}
+
+.doc-section {
+  margin: 46px 0 0;
+  scroll-margin-top: 70px;
+}
+
+.doc-section h2 {
+  margin: 0 0 16px;
+  padding: 4px 0 5px 14px;
+  border-left: 3px solid var(--primary);
+  font-size: var(--font-lg);
+  line-height: var(--line-tight);
+}
+
+.doc-section h3 {
+  margin: 22px 0 8px;
+  font-size: var(--font-md);
+}
+
+.doc-section > :first-child {
+  margin-top: 0;
+}
+
+.section-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+details {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 24px;
+}
+
+li + li {
+  margin-top: 3px;
+}
+
+.callout {
+  margin: 18px 0;
+  padding: 13px 16px;
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+}
+
+.callout p {
+  margin: 6px 0 0;
+}
+
+.callout p:first-child {
+  margin-top: 0;
+}
+
+.callout-info {
+  background: var(--info-soft);
+  border-left-color: var(--info);
+}
+
+.callout-warning {
+  background: var(--warn-soft);
+  border-left-color: var(--warn);
+}
+
+.callout-danger {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.callout-success {
+  background: var(--ok-soft);
+  border-left-color: var(--ok);
+}
+
+table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  box-shadow: var(--surface-shadow);
+  font-size: var(--font-sm);
+}
+
+thead,
+tbody,
+tr {
+  width: 100%;
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table,
+.risk-table,
+.decision-table {
+  width: 100%;
+}
+
+.details-block {
+  margin: 18px 0;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.details-block summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagram {
+  position: relative;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.diagram figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.diagram:hover .diagram-toolbar {
+  opacity: 1;
+}
+
+.code-shell {
+  margin: 16px 0;
+  overflow: hidden;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  color: var(--muted);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+}
+
+.code-status-ok {
+  color: var(--ok);
+}
+
+.code-status-error {
+  color: var(--danger);
+}
+
+.code-copy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.code-status + .code-copy {
+  margin-left: 0;
+}
+
+.code-copy:hover {
+  color: var(--text);
+}
+
+.code-pre {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--font-sm);
+  line-height: var(--line-loose);
+}
+
+.code-line {
+  display: grid;
+  min-width: 100%;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+}
+
+.code-line-number {
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--border);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.code-line-content {
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.participants,
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.participant-card,
+.value-card,
+.action-card {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.action-card {
+  padding: 20px;
+}
+
+.participant-card p,
+.value-card p,
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.source-refs,
+.files,
+.acceptance-criteria {
+  padding-left: 22px;
+}
+
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.chapter-card:hover,
+.chapter-card:focus-within {
+  border-color: var(--primary);
+}
+
+.chapter-card a {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 16px;
+  color: var(--text);
+}
+
+.chapter-card a:hover {
+  text-decoration: none;
+}
+
+.chapter-number {
+  color: var(--faint);
+  font: 700 12px/1.4 var(--mono);
+}
+
+.chapter-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.chapter-title {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.chapter-description {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.set-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.set-section {
+  margin: 46px 0 0;
+}
+
+.set-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 44px 0 0;
+}
+
+.set-pagination-link {
+  display: block;
+  min-height: 82px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  color: var(--text);
+}
+
+.set-pagination-link:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+}
+
+.set-pagination-next {
+  text-align: right;
+}
+
+.set-pagination-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.set-pagination-title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-width: 56px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-questions-block {
+  position: relative;
+  margin: 18px 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.open-questions-header {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.open-question-marker {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--warn);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-question-text {
+  min-width: 0;
+}
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    right: auto;
+    left: 0;
+    order: 1;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+
+  .brand-logo,
+  .brand-logo-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar {
+    position: static;
+    inset: auto;
+    order: 2;
+    width: auto;
+    max-height: 260px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .doc {
+    order: 3;
+    max-width: none;
+    margin-left: 0;
+    padding: 32px 20px 56px;
+  }
+
+  .doc-header h1 {
+    font-size: var(--font-xl);
+  }
+
+  .set-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .set-pagination-next {
+    text-align: left;
+  }
+
+  .code-line {
+    grid-template-columns: 34px minmax(max-content, 1fr);
+  }
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .diagram-toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+    margin-left: 0;
+    padding: 0;
+  }
+}
+
+  </style>
   <!-- Generated by scripts/render_all_docs.py. Preserve body content; rerun renderer after edits. -->
 </head>
 <body>
-  <main class="doc">
-<nav class="doc-meta" aria-label="Document metadata">
-  <a href="../index.html">&larr; Index</a>
-  <span>spec/01-storage-schema.html</span>
-</nav>
-<h1 id="spec-01-存储-schema">Spec 01 — 存储 Schema</h1>
-<h2 id="文件系统约定">文件系统约定</h2>
-<blockquote>
+<header class="topbar">
+  <a class="brand-logo" href="../index.html" aria-label="Open Novel index">ON</a>
+  <div class="topbar-breadcrumb">
+    <span class="topbar-project">Open Novel</span>
+    <span class="topbar-separator">/</span>
+    <span class="topbar-doc">Spec 01 — 存储 Schema</span>
+  </div>
+  <span class="topbar-spacer"></span>
+  <nav class="topbar-links" aria-label="Primary">
+    <a class="topbar-link" href="../README.md">README</a>
+    <a class="topbar-link" href="../todo.html">TODO</a>
+    <a class="topbar-link" href="../changelist.html">Changelist</a>
+  </nav>
+</header>
+<aside class="sidebar" aria-label="Document navigation">
+  <p class="nav-title">文档集</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="../index.html"><span>SET</span>全部文档</a></li>
+      <li><a href="../README.md"><span>MD</span>README</a></li>
+      <li><a href="../todo.html"><span>TODO</span>风险</a></li>
+      <li><a href="../changelist.html"><span>LOG</span>变更</a></li>
+    </ol>
+  </nav>
+  <p class="nav-title">本文目录</p>
+  <nav class="toc"><ol>
+<li><a href="#top"><span>00</span>概览</a></li>
+<li><a href="#projectjson-非-markdownjson"><span>H3</span>project.json (非 markdown,JSON)</a></li>
+<li><a href="#character-settingscharactersidmd"><span>H3</span>Character (settings/characters/{id}.md)</a></li>
+<li><a href="#worldview-outline-beats"><span>H3</span>Worldview / Outline / Beats</a></li>
+<li><a href="#chapter-draft-chaptersnnn-xxdraftmd"><span>H3</span>Chapter Draft (chapters/{NNN-XX}/draft.md)</a></li>
+<li><a href="#entities"><span>H3</span>entities</a></li>
+<li><a href="#entity-refs-实体在何处被提及"><span>H3</span>entity_refs (实体在何处被提及)</a></li>
+<li><a href="#backlinks-反向索引在某文件打开时用"><span>H3</span>backlinks (反向索引,在某文件打开时用)</a></li>
+<li><a href="#history"><span>H3</span>history</a></li>
+<li><a href="#learnings"><span>H3</span>learnings</a></li>
+<li><a href="#user-turns"><span>H3</span>user_turns (用户对话 turn 级状态, 见 spec/06 §Turn 取消语义)</a></li>
+<li><a href="#approvals"><span>H3</span>approvals</a></li>
+<li><a href="#traces-流式日志归档可选-ingest-自-jsonl"><span>H3</span>traces (流式日志归档,可选 ingest 自 JSONL)</a></li>
+<li><a href="#entity-relations"><span>H3</span>entity_relations</a></li>
+<li><a href="#entity-timeline"><span>H3</span>entity_timeline</a></li>
+<li><a href="#concepts"><span>H3</span>concepts</a></li>
+<li><a href="#concept-refs"><span>H3</span>concept_refs</a></li>
+<li><a href="#dependencies"><span>H3</span>dependencies</a></li>
+<li><a href="#dependencies-别名-foreshadowings"><span>H3</span>别名: foreshadowings</a></li>
+<li><a href="#paragraph-anchors"><span>H3</span>paragraph_anchors</a></li>
+<li><a href="#paragraph-embeddings"><span>H3</span>paragraph_embeddings</a></li>
+<li><a href="#setting-snapshots"><span>H3</span>setting_snapshots</a></li>
+<li><a href="#reindex-failures"><span>H3</span>reindex_failures</a></li>
+<li><a href="#cascade-audits"><span>H3</span>cascade_audits</a></li>
+<li><a href="#volume-summaries"><span>H3</span>volume_summaries</a></li>
+<li><a href="#prompt-traces"><span>H3</span>prompt_traces</a></li>
+<li><a href="#narrative-metrics"><span>H3</span>narrative_metrics</a></li>
+<li><a href="#reader-reports"><span>H3</span>reader_reports</a></li>
+</ol></nav>
+</aside>
+  <article class="doc" id="top">
+    <header class="doc-header">
+      <p class="doc-kicker">Spec</p>
+      <h1>Spec 01 — 存储 Schema</h1>
+      <div class="doc-meta" aria-label="Document metadata">
+        <a href="../index.html">Index</a>
+        <span>spec/01-storage-schema.html</span>
+        <span>Generated by <code>scripts/render_all_docs.py</code></span>
+      </div>
+    </header>
+    <main>
+<section class="doc-section" id="文件系统约定">
+<h2>文件系统约定</h2>
+<aside class="callout callout-info">
 <p><strong>W7 升级</strong>: settings/ 目录大幅拆分,详见 plan/04 §存储位置 + plan/11-knowledge-graph.html。本节只列顶层结构,详细子目录看 plan/04。</p>
-</blockquote>
-<pre class="mermaid">
-flowchart TD
-  ROOT(["~/.open-novel/"]) --> RUNTIME["runtime.db<br/>应用层 thread/messages 跨项目会话"]
-  ROOT --> GSET["settings.json<br/>全局设置 (API key 等)"]
-  ROOT --> SNAP["'.snapshots/{projectId}/{ts}/'<br/>设定快照 (spec/16 §Snapshot)"]
-  ROOT --> WS["workspaces/"]
-  WS --> PROJ["'{projectId}/'<br/>proj_{slug}_{shortId}"]
-  PROJ --> PJSON["project.json"]
-  PROJ --> SETTINGS["settings/<br/>详细子目录见 plan/04"]
-  PROJ --> CHAPTERS["chapters/"]
-  PROJ --> IDB["index.db<br/>SQLite per-project"]
-  PROJ --> SHDB["session_history.db<br/>过程日志,见 spec/27"]
-  PROJ --> TRACE["trace/<br/>'{YYYY-MM-DD}-{sessionId}.jsonl'"]
+</aside>
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">flowchart TD
+  ROOT(["~/.open-novel/"]) --&gt; RUNTIME["runtime.db&lt;br/&gt;应用层 thread/messages 跨项目会话"]
+  ROOT --&gt; GSET["settings.json&lt;br/&gt;全局设置 (API key 等)"]
+  ROOT --&gt; SNAP["'.snapshots/{projectId}/{ts}/'&lt;br/&gt;设定快照 (spec/16 §Snapshot)"]
+  ROOT --&gt; WS["workspaces/"]
+  WS --&gt; PROJ["'{projectId}/'&lt;br/&gt;proj_{slug}_{shortId}"]
+  PROJ --&gt; PJSON["project.json"]
+  PROJ --&gt; SETTINGS["settings/&lt;br/&gt;详细子目录见 plan/04"]
+  PROJ --&gt; CHAPTERS["chapters/"]
+  PROJ --&gt; IDB["index.db&lt;br/&gt;SQLite per-project"]
+  PROJ --&gt; SHDB["session_history.db&lt;br/&gt;过程日志,见 spec/27"]
+  PROJ --&gt; TRACE["trace/&lt;br/&gt;'{YYYY-MM-DD}-{sessionId}.jsonl'"]
 
   subgraph SET ["settings/ 子目录"]
     direction TB
-    S1["worldview/<br/>geography / history / politics / economy<br/>technology / culture / religion / rules"]
-    S2["outline/<br/>master + volumes/* + chapter-outlines/_registry"]
+    S1["worldview/&lt;br/&gt;geography / history / politics / economy&lt;br/&gt;technology / culture / religion / rules"]
+    S2["outline/&lt;br/&gt;master + volumes/* + chapter-outlines/_registry"]
     S3["characters/{id}.md"]
     S4["factions/{id}.md"]
     S5["organizations/{id}.md"]
-    S6["locations/<br/>regions / cities / buildings / landmarks"]
+    S6["locations/&lt;br/&gt;regions / cities / buildings / landmarks"]
     S7["items/{id}.md"]
     S8["events/{id}.md"]
-    S9["timeline/<br/>era / story-clock / character-ages"]
-    S10["relationships/<br/>_matrix.md (派生) + notes/{id}.md"]
-    S11["story-lines/<br/>main.md + subplots/{id}.md"]
+    S9["timeline/&lt;br/&gt;era / story-clock / character-ages"]
+    S10["relationships/&lt;br/&gt;_matrix.md (派生) + notes/{id}.md"]
+    S11["story-lines/&lt;br/&gt;main.md + subplots/{id}.md"]
     S12["foreshadowing/{id}.md"]
     S13["chapter-arcs/{id}.md"]
-    S14["power-system/<br/>overview / tiers / techniques / artifacts"]
+    S14["power-system/&lt;br/&gt;overview / tiers / techniques / artifacts"]
     S15["glossary/_index.md"]
-    S16["beats.md / taboos.md / themes.md<br/>reader-promises.md"]
+    S16["beats.md / taboos.md / themes.md&lt;br/&gt;reader-promises.md"]
   end
-  SETTINGS -.-> SET
+  SETTINGS -.-&gt; SET
 
   subgraph CHAP ["chapters/ 子目录"]
     direction TB
     C1["'{NNN-{slug}}/'"]
-    C1 --> C2["outline.md"]
-    C1 --> C3["draft.md"]
-    C1 --> C4["meta.json"]
+    C1 --&gt; C2["outline.md"]
+    C1 --&gt; C3["draft.md"]
+    C1 --&gt; C4["meta.json"]
   end
-  CHAPTERS -.-> CHAP
-</pre>
+  CHAPTERS -.-&gt; CHAP</code></pre></figure>
 <p>文件命名规则:</p>
 <ul>
 <li><code>projectId</code>: 5-32 字符,<code>/^proj_[a-z0-9-]{1,24}_[a-f0-9]{4}$/</code></li>
@@ -72,9 +1071,11 @@ flowchart TD
 <li>章节目录: <code>{order:3pad}-{slug}</code>,e.g. <code>001-zhongsheng-na-yi-ye</code></li>
 </ul>
 <p>slug 由 LLM 生成 (不超过 8 个字符的拼音/英文,fallback 到 hash 前 6 位)。</p>
-<h2 id="frontmatter-公共字段">frontmatter 公共字段</h2>
+</section>
+<section class="doc-section" id="frontmatter-公共字段">
+<h2>frontmatter 公共字段</h2>
 <p>所有 markdown 文件必须有:</p>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 id: &lt;唯一 id&gt;
 type: worldview | outline | beats | character | place | chapter
 created_at: ISO 8601
@@ -82,9 +1083,11 @@ updated_at: ISO 8601
 source: writer-agent | user-edit | imported
 ---
 </code></pre>
-<h2 id="各类型-frontmatter-schema">各类型 frontmatter Schema</h2>
+</section>
+<section class="doc-section" id="各类型-frontmatter-schema">
+<h2>各类型 frontmatter Schema</h2>
 <h3 id="projectjson-非-markdownjson">project.json (非 markdown,JSON)</h3>
-<pre><code class="language-ts">type Project = {
+<pre data-language="ts"><code data-language="ts">type Project = {
   id: string                          // proj_xxx_yyyy
   name: string                        // 显示名
   slug: string
@@ -105,10 +1108,10 @@ source: writer-agent | user-edit | imported
 }
 </code></pre>
 <h3 id="character-settingscharactersidmd">Character (<code>settings/characters/{id}.md</code>)</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p><strong>W7 升级 (_schemaVersion 1 → 2)</strong>: 加 initial_state / relations / reader_promises / taboos 字段,age 移入 initial_state。完整 zod 见 spec/16 §character.md frontmatter 升级。</p>
-</blockquote>
-<pre><code class="language-yaml">---
+</aside>
+<pre data-language="yaml"><code data-language="yaml">---
 id: char_lin_a3f2
 type: character
 canonical_name: 林川
@@ -159,7 +1162,7 @@ source: writer-agent
 ...
 </code></pre>
 <h3 id="worldview-outline-beats">Worldview / Outline / Beats</h3>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 id: world_main
 type: worldview
 title: 2010 年北京互联网圈
@@ -171,7 +1174,7 @@ source: writer-agent
 正文...
 </code></pre>
 <h3 id="chapter-draft-chaptersnnn-xxdraftmd">Chapter Draft (<code>chapters/{NNN-XX}/draft.md</code>)</h3>
-<pre><code class="language-yaml">---
+<pre data-language="yaml"><code data-language="yaml">---
 id: ch_001
 type: chapter
 order: 1
@@ -188,9 +1191,11 @@ source: writer-agent
 
 林川猛地从床上坐起来...
 </code></pre>
-<h2 id="sqlite-schema-indexdb-per-project">SQLite Schema (<code>index.db</code> per-project)</h2>
+</section>
+<section class="doc-section" id="sqlite-schema-indexdb-per-project">
+<h2>SQLite Schema (<code>index.db</code> per-project)</h2>
 <h3 id="entities">entities</h3>
-<pre><code class="language-sql">CREATE TABLE entities (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE entities (
   id TEXT PRIMARY KEY,                -- char_lin_a3f2
   canonical_name TEXT NOT NULL,
   aliases TEXT NOT NULL DEFAULT &#39;[]&#39;, -- JSON array
@@ -204,10 +1209,10 @@ CREATE INDEX idx_entities_category ON entities(category);
 CREATE INDEX idx_entities_canonical ON entities(canonical_name);
 </code></pre>
 <h3 id="entity-refs-实体在何处被提及">entity_refs (实体在何处被提及)</h3>
-<blockquote>
+<aside class="callout callout-info">
 <p>⚠ <strong>历史命名修正</strong>: 早期文档草稿里用 <code>references</code> — <code>REFERENCES</code> 是 SQL 保留字,建表时不加引号会语法错误。统一改为 <code>entity_refs</code>。所有 plan/spec 文档中提到此表的位置都已同步。</p>
-</blockquote>
-<pre><code class="language-sql">CREATE TABLE entity_refs (
+</aside>
+<pre data-language="sql"><code data-language="sql">CREATE TABLE entity_refs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entity_id TEXT NOT NULL,
   source_file TEXT NOT NULL,          -- chapters/001-XX/draft.md
@@ -223,7 +1228,7 @@ CREATE INDEX idx_refs_entity ON entity_refs(entity_id);
 CREATE INDEX idx_refs_source ON entity_refs(source_file);
 </code></pre>
 <h3 id="backlinks-反向索引在某文件打开时用">backlinks (反向索引,在某文件打开时用)</h3>
-<pre><code class="language-sql">CREATE TABLE backlinks (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE backlinks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   target_file TEXT NOT NULL,          -- characters/lin.md (被引用的文件)
   source_file TEXT NOT NULL,          -- chapters/001-XX/draft.md
@@ -237,7 +1242,7 @@ CREATE INDEX idx_back_target ON backlinks(target_file);
 </code></pre>
 <p>UI 显示&quot;被 N 处引用&quot;时按 <code>source_file</code> group 计数,而不是 row count。</p>
 <h3 id="history">history</h3>
-<pre><code class="language-sql">CREATE TABLE history (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   action TEXT NOT NULL,               -- write_setting | write_chapter | rename | delete
   target TEXT NOT NULL,               -- file path
@@ -258,7 +1263,7 @@ CREATE INDEX idx_history_target ON history(target);
 <li>index.db 体积超 100MB 时,启动 prune Worker 把 90 天前的 history 导出到 <code>archive/history-{YYYY-MM}.jsonl.gz</code> 后删表行</li>
 </ul>
 <h3 id="learnings">learnings</h3>
-<pre><code class="language-sql">CREATE TABLE learnings (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE learnings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   scope TEXT NOT NULL,                -- project | global | chapter:001
   insight TEXT NOT NULL,
@@ -272,7 +1277,7 @@ CREATE INDEX idx_history_target ON history(target);
 CREATE INDEX idx_learnings_scope ON learnings(scope);
 </code></pre>
 <h3 id="user-turns">user_turns (用户对话 turn 级状态, 见 spec/06 §Turn 取消语义)</h3>
-<pre><code class="language-sql">CREATE TABLE user_turns (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE user_turns (
   id TEXT PRIMARY KEY,                       -- ulid
   session_id TEXT NOT NULL,                  -- 关联应用层 thread proj:X:session:Y 的 session 部分 (见 spec/22 §thread/session)
   user_input TEXT NOT NULL,                  -- 用户原话 (Reflector 训练用)
@@ -297,7 +1302,7 @@ CREATE INDEX idx_user_turns_active ON user_turns(status) WHERE status IN (&#39;r
 <li>rehydrate 时按 <code>status IN ('running', 'awaiting_approval')</code> 拉所有 in-flight turn 恢复 UI</li>
 </ul>
 <h3 id="approvals">approvals</h3>
-<pre><code class="language-sql">CREATE TABLE approvals (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE approvals (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   turn_id TEXT NOT NULL REFERENCES user_turns(id),   -- 归属 turn (新增 — 用于 rollbackTurn)
   tool_call_id TEXT NOT NULL UNIQUE,
@@ -315,11 +1320,11 @@ CREATE INDEX idx_user_turns_active ON user_turns(status) WHERE status IN (&#39;r
 CREATE INDEX idx_approvals_status ON approvals(status);
 CREATE INDEX idx_approvals_turn ON approvals(turn_id);
 </code></pre>
-<blockquote>
+<aside class="callout callout-info">
 <p><strong>schema 演进</strong>: <code>turn_id</code> / <code>change_set</code> / <code>accepted_items</code> 是 W9+ 加的列 (spec/06 整批审 + Turn 取消语义), 旧 <code>payload</code> / <code>diff</code> 列保留兼容。<code>status='reverted'</code> 是 W9+ 新值, 由 <code>rollbackApproval</code> 写入 (见 spec/06 §撤销)。</p>
-</blockquote>
+</aside>
 <h3 id="traces-流式日志归档可选-ingest-自-jsonl">traces (流式日志归档,可选 ingest 自 JSONL)</h3>
-<pre><code class="language-sql">CREATE TABLE traces (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE traces (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   session_id TEXT NOT NULL,
   ts TEXT NOT NULL,
@@ -329,7 +1334,9 @@ CREATE INDEX idx_approvals_turn ON approvals(turn_id);
 );
 CREATE INDEX idx_traces_session ON traces(session_id);
 </code></pre>
-<h2 id="索引刷新流程">索引刷新流程</h2>
+</section>
+<section class="doc-section" id="索引刷新流程">
+<h2>索引刷新流程</h2>
 <p>每次 <code>writeSetting</code> / <code>writeChapter</code> 落盘后异步执行:</p>
 <ol>
 <li>解析 frontmatter → upsert 到 <code>entities</code> (若 type ∈ {character, place, item, org})</li>
@@ -338,7 +1345,9 @@ CREATE INDEX idx_traces_session ON traces(session_id);
 <li>写一条 <code>history</code> 记录</li>
 </ol>
 <p>整个过程在 Worker 中执行,不阻塞 UI。</p>
-<h2 id="数据迁移">数据迁移</h2>
+</section>
+<section class="doc-section" id="数据迁移">
+<h2>数据迁移</h2>
 <p>未来 schema 变更时:</p>
 <ul>
 <li><code>index.db</code> 启动时检查 <code>PRAGMA user_version</code>,小于当前版本则跑迁移脚本</li>
@@ -347,12 +1356,14 @@ CREATE INDEX idx_traces_session ON traces(session_id);
 <li>markdown frontmatter 变更时,Worker 启动时扫一遍批量升级 (有版本不变性 — frontmatter 字段 <code>_schemaVersion: 1</code> 决定走哪个升级路径)</li>
 <li>用户开启时若发现 <code>index.db</code> 存在但 schema 比当前代码版本<strong>更新</strong> (作者降级了 app),弹错并 refuse 启动该项目;不做静默&quot;读一半&quot;</li>
 </ul>
-<h2 id="frontmatter-zod-schema-强制-新增">frontmatter Zod Schema 强制 (新增)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="frontmatter-zod-schema-强制-新增">
+<h2>frontmatter Zod Schema 强制 (新增)</h2>
+<aside class="callout callout-info">
 <p>audit 发现:目前各 .md 的 frontmatter 字段只在文档中描述,没有运行时校验。用户外部编辑器写 <code>gender: 男</code> 而非 <code>male</code>,下游 ArcTracker / Validator 处理这个不一致没规则。</p>
-</blockquote>
+</aside>
 <p><code>lib/storage/frontmatter-schema.ts</code>:</p>
-<pre><code class="language-ts">import { z } from &#39;zod&#39;
+<pre data-language="ts"><code data-language="ts">import { z } from &#39;zod&#39;
 
 const isoDate = z.string().datetime({ offset: true })
 
@@ -385,12 +1396,14 @@ export const chapterFrontmatter = z.object({ /* ... */ })
 <li>用户主动点 &quot;修复&quot; → 弹一个表单,把异常字段引导用户改正,然后 writeSetting 落盘</li>
 </ul>
 <p><strong>写策略</strong>: 任何 writeSetting/writeChapter 在落盘前 <code>parse</code> (非 safeParse) — 失败立刻拒绝,绝不让坏数据落盘</p>
-<h2 id="文件编码归一化-新增">文件编码归一化 (新增)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="文件编码归一化-新增">
+<h2>文件编码归一化 (新增)</h2>
+<aside class="callout callout-info">
 <p>audit 发现:.md 文件 BOM / CRLF/LF / 编码处理完全没规范。用户在 Windows 外部编辑后回写带 BOM 或 CRLF — frontmatter 解析失败 / Aho-Corasick offset 偏移 (CR 占 1 字节) / diff 全红。</p>
-</blockquote>
+</aside>
 <p><code>lib/storage/text.ts</code>:</p>
-<pre><code class="language-ts">export function normalizeForRead(raw: Buffer | string): string {
+<pre data-language="ts"><code data-language="ts">export function normalizeForRead(raw: Buffer | string): string {
   let s = typeof raw === &#39;string&#39; ? raw : raw.toString(&#39;utf8&#39;)
   // 1. 剥 BOM
   if (s.charCodeAt(0) === 0xFEFF) s = s.slice(1)
@@ -410,12 +1423,14 @@ export function normalizeForWrite(content: string): string {
 }
 </code></pre>
 <p>所有 <code>readSetting / readChapter / fs.readFile</code> 包装层调 <code>normalizeForRead</code>,所有 <code>writeSetting / writeChapter</code> 调 <code>normalizeForWrite</code>。<strong>UTF-8 之外的编码 (GB2312 / GBK) 一律 reject</strong> — 不支持,避免复杂度。检测到非 UTF-8 时 UI 提示用户先在外部转码。</p>
-<h2 id="sqlite-wal-mode-并发写-新增">SQLite WAL Mode + 并发写 (新增)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="sqlite-wal-mode-并发写-新增">
+<h2>SQLite WAL Mode + 并发写 (新增)</h2>
+<aside class="callout callout-info">
 <p>audit 发现:多 Agent 并行 reindex 时未指定隔离级别,同时 5 个 cascade 并发各自 trigger reindex 会导致 SQLite 写锁竞争。</p>
-</blockquote>
+</aside>
 <p>每次打开 <code>index.db</code> 时:</p>
-<pre><code class="language-ts">db.exec(`
+<pre data-language="ts"><code data-language="ts">db.exec(`
   PRAGMA journal_mode = WAL;        -- better-sqlite3 + WAL: 多 reader 一个 writer (见 plan/08 §Next.js + better-sqlite3)
   PRAGMA synchronous = NORMAL;      -- WAL 下 NORMAL 已足够安全
   PRAGMA foreign_keys = ON;
@@ -423,12 +1438,14 @@ export function normalizeForWrite(content: string): string {
 `)
 </code></pre>
 <p><strong>Worker 单例模式</strong>: 所有 reindex / history insert 走同一个 Worker 单线程 (<code>lib/storage/reindex-worker.ts</code>),不允许两个 reindex 并发同一项目。Worker 内部用队列串行,避免 PRAGMA busy_timeout 真正触发。</p>
-<h2 id="better-sqlite3-连接池-新增">better-sqlite3 连接池 (P0-1 修正)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="better-sqlite3-连接池-新增">
+<h2>better-sqlite3 连接池 (P0-1 修正)</h2>
+<aside class="callout callout-info">
 <p>audit 发现:每项目独立 <code>index.db</code>,用户切项目时旧 DB 连接释放策略未定。Node FD ulimit 256,同时打开 5 个项目就贴边。P0-1 把 LibSQL 换成 better-sqlite3 后, connection 是同步 native binding, 不再是 LibSQL HTTP client。</p>
-</blockquote>
+</aside>
 <p><code>lib/storage/db-pool.ts</code> (LRU 策略, 与 plan/08 §Drizzle + better-sqlite3 + sqlite-vec 的 <code>lib/db/index.ts</code> 配合):</p>
-<pre><code class="language-ts">import { LRUCache } from &#39;lru-cache&#39;
+<pre data-language="ts"><code data-language="ts">import { LRUCache } from &#39;lru-cache&#39;
 import Database from &#39;better-sqlite3&#39;
 import * as sqliteVec from &#39;sqlite-vec&#39;
 import path from &#39;node:path&#39;
@@ -469,10 +1486,12 @@ export function closeAll(): void {
 </code></pre>
 <p><strong>项目切换时</strong>: LRU 自然淘汰 (无需显式 delete; 触达 max=3 时最久未用的自动 close)。<strong>项目删除时</strong>: 显式调 <code>closeProjectConnections(projectId)</code> 后再 fs.rm 项目目录 (见 spec/13 §项目生命周期)。</p>
 <p><strong>dev hot-reload 安全</strong>: 在 <code>lib/db/index.ts</code> 用 <code>globalThis.__openNovelDbPool</code> 缓存 pool 实例, 模仿 Prisma 的 Next.js dev 范式 (详 plan/08 §globalThis 缓存模式)。</p>
-<h2 id="index-db-全表-schema-主权">§index.db 全表 schema (Wave 4 主权区) — 全表索引目录</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="index-db-全表-schema-主权">
+<h2>§index.db 全表 schema (Wave 4 主权区) — 全表索引目录</h2>
+<aside class="callout callout-info">
 <p><strong>Wave 4 · 方案 C (2026-05-22)</strong>: spec/01 是 <code>index.db</code> <strong>所有表的完整 CREATE TABLE 主权区</strong>。跨项目会话库 <code>runtime.db</code> 的 threads / messages / compressed_messages / archived_threads 由 <a href="./22-memory-and-history.html">spec/22</a> 主权维护;每项目过程库 <code>session_history.db</code> 由 <a href="./27-session-history.html">spec/27</a> 主权维护。其他 spec 仅保留字段摘要 + 用途说明 + 指针。如本文件与各 spec 的 <code>index.db</code> 字段描述不一致, <strong>以本文件为准</strong>。</p>
-</blockquote>
+</aside>
 <table>
 <thead>
 <tr><th>表名</th><th>本文件锚点</th><th>用途</th><th>关联 spec</th></tr>
@@ -505,15 +1524,16 @@ export function closeAll(): void {
 </tbody>
 </table>
 <p><strong>共 24 张 index.db 表</strong>。前 10 张 (entities ~ traces) + narrative_feedback + entity_match_feedback 已在本文件上方 / 下方定义; W7+ 新增 14 张表(含 paragraph_anchors / paragraph_embeddings / volume_summaries 等)的完整 CREATE TABLE 见下文 §W7+ 新增表 schema 主权区。<code>runtime.db</code> 的 <code>archived_threads</code> / <code>compressed_messages</code> 不在本目录内,见 spec/22。</p>
-
-<h2 id="w7-新增表-schema-主权区">§W7+ 新增表 schema (主权定义)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="w7-新增表-schema-主权区">
+<h2>§W7+ 新增表 schema (主权定义)</h2>
+<aside class="callout callout-info">
 <p>以下 14 张表的完整 <code>CREATE TABLE</code> 在此处定义。各表上方注明原定义出处 (Wave 4 主权迁移); 字段语义 / 枚举 / 查询模式 / lint 规则等详情仍在各对应 spec, 通过指针访问。</p>
-</blockquote>
+</aside>
 
 <h3 id="entity-relations">entity_relations</h3>
 <p><em>原定义在 spec/16 §表 1; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE entity_relations (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE entity_relations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   source_id TEXT NOT NULL,                -- char_lin_a3f2
   target_id TEXT NOT NULL,                -- char_zhang_b1c4
@@ -541,7 +1561,7 @@ CREATE INDEX idx_rel_active ON entity_relations(source_id, since_chapter, until_
 
 <h3 id="entity-timeline">entity_timeline</h3>
 <p><em>原定义在 spec/16 §表 2; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE entity_timeline (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE entity_timeline (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   entity_id TEXT NOT NULL,
   attribute TEXT NOT NULL,                -- age/location/mood/power_level/status/affiliation/wealth/social_rank/key_possession (见 spec/16 §attribute 枚举)
@@ -564,7 +1584,7 @@ CREATE INDEX idx_tl_validity ON entity_timeline(entity_id, valid_from_chapter, v
 
 <h3 id="concepts">concepts</h3>
 <p><em>原定义在 spec/16 §表 3; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE concepts (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE concepts (
   id TEXT PRIMARY KEY,                    -- concept_no_phone_x1y2
   category TEXT NOT NULL,                 -- 'tech' | 'magic' | 'taboo' | 'glossary' | 'rule' | 'culture'
   semantic TEXT NOT NULL,                 -- 'absent' | 'present' | 'restricted' | 'mandatory' | 'unique'
@@ -586,7 +1606,7 @@ CREATE INDEX idx_concepts_status ON concepts(status);
 
 <h3 id="concept-refs">concept_refs</h3>
 <p><em>原定义在 spec/16 §表 4; Wave 4 主权移至此处。与 entity_refs 对称结构, 但索引概念表面词。</em></p>
-<pre><code class="language-sql">CREATE TABLE concept_refs (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE concept_refs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   concept_id TEXT NOT NULL,
   source_file TEXT NOT NULL,
@@ -608,7 +1628,7 @@ CREATE INDEX idx_cref_violations ON concept_refs(is_violation) WHERE is_violatio
 
 <h3 id="dependencies">dependencies</h3>
 <p><em>原定义在 spec/16 §表 5; Wave 4 主权移至此处。跨文件 / 跨设定显式依赖。</em></p>
-<pre><code class="language-sql">CREATE TABLE dependencies (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE dependencies (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL,                     -- foreshadowing | payoff | callback | promise | constraint (见 spec/16 §kind 枚举)
   source_file TEXT NOT NULL,              -- foreshadowing/001-pocket-watch.md
@@ -628,16 +1648,16 @@ CREATE INDEX idx_dep_kind ON dependencies(kind);
 </code></pre>
 <p>kind / status 枚举 + lint 增强规则 (deadline / weight / promiseAccountabilityCheck 联动 spec/25) 详 spec/16 §表 5。</p>
 
-<h4 id="dependencies-别名-foreshadowings">别名: <code>foreshadowings</code></h4>
-<blockquote>
+<h3 id="dependencies-别名-foreshadowings">别名: <code>foreshadowings</code></h3>
+<aside class="callout callout-info">
 <p>在 <a href="./25-cardinal-rules.html">spec/25</a> / <a href="./19-impact-analysis.html">spec/19</a> / <a href="./23-context-contracts.html">spec/23</a> / <a href="../plan/12-memory-and-context.html">plan/12</a> 等文档中, <code>foreshadowings</code> 表 ≡ <code>dependencies WHERE kind = 'foreshadowing'</code>。它<strong>不是独立物理表</strong>, 而是一个语义别名 / 业务视图。</p>
 <p>spec/25 的 promise deadline / weight / expected_resolution_pattern 在实施层是 <code>dependencies.metadata</code> JSON 字段的逻辑结构,而非独立 <code>foreshadowings</code> 物理表。如未来要把这些字段升级为正式列,必须在本表 <code>dependencies</code> 上 ALTER,并同步 spec/25 / spec/19 / spec/23 / plan/12。</p>
 <p><code>db.dependencies.findActiveForeshadowings()</code> 是 <code>dependencies WHERE kind='foreshadowing' AND status IN (...)</code> 的便捷封装。禁止新增独立 <code>foreshadowings</code> 表。</p>
-</blockquote>
+</aside>
 
 <h3 id="paragraph-anchors">paragraph_anchors</h3>
 <p><em>原定义在 spec/16 §表 6 + spec/17:90 (完整版含 W7 软删除 / signature / offset); Wave 4 主权移至此处, spec/17 重复声明改为指针。本处采用 spec/17 完整版 (字段最全)。</em></p>
-<pre><code class="language-sql">CREATE TABLE paragraph_anchors (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE paragraph_anchors (
   anchor_id TEXT PRIMARY KEY,             -- 算法见 spec/17 §稳定 ID
   file_path TEXT NOT NULL,
   paragraph_index INTEGER NOT NULL,       -- 当前段在文件中的顺序 (1-based)
@@ -661,7 +1681,7 @@ CREATE INDEX idx_anchors_double_link ON paragraph_anchors(prev_anchor, next_anch
 
 <h3 id="paragraph-embeddings">paragraph_embeddings</h3>
 <p><em>原定义在 spec/16 §表 7 + spec/18:28 重复声明 acknowledged; Wave 4 主权移至此处, spec/16 / spec/18 重复声明改为指针。<strong>本处采用 spec/18 含 <code>norm</code> 字段的确认版</strong> (用于 cosine 加速)。</em></p>
-<pre><code class="language-sql">CREATE TABLE paragraph_embeddings (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE paragraph_embeddings (
   anchor_id TEXT PRIMARY KEY,
   embedding BLOB NOT NULL,                -- F32 array little-endian, 长度 = embedding model dim
   model_name TEXT NOT NULL,               -- 'bge-m3' / 'deepseek-embedding-v1' / 'text-embedding-3-small'
@@ -678,7 +1698,7 @@ CREATE INDEX idx_emb_model ON paragraph_embeddings(model_name);
 
 <h3 id="setting-snapshots">setting_snapshots</h3>
 <p><em>原定义在 spec/16 §Snapshot; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE setting_snapshots (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE setting_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id TEXT NOT NULL,
   triggered_by_approval_id INTEGER,       -- 哪次审批触发
@@ -694,7 +1714,7 @@ CREATE INDEX idx_snap_project ON setting_snapshots(project_id, created_at DESC);
 
 <h3 id="reindex-failures">reindex_failures</h3>
 <p><em>原定义在 spec/17 §reindex Worker §失败回滚; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE reindex_failures (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE reindex_failures (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   file_path TEXT NOT NULL,
   error TEXT NOT NULL,
@@ -707,7 +1727,7 @@ CREATE INDEX idx_snap_project ON setting_snapshots(project_id, created_at DESC);
 
 <h3 id="cascade-audits">cascade_audits</h3>
 <p><em>原定义在 spec/19 §L4 治理; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE cascade_audits (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE cascade_audits (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   project_id TEXT NOT NULL,
   triggered_by_approval_id INTEGER NOT NULL,
@@ -727,7 +1747,7 @@ CREATE INDEX idx_cascade_project ON cascade_audits(project_id, created_at DESC);
 
 <h3 id="volume-summaries">volume_summaries</h3>
 <p><em>原定义在 spec/22 §卷级摘要; Wave 4 主权移至此处。</em></p>
-<pre><code class="language-sql">CREATE TABLE volume_summaries (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE volume_summaries (
   id TEXT PRIMARY KEY,
   volume_index INTEGER NOT NULL,                    -- 第几卷 (与 chapter.volume 对齐)
   chapter_range_start TEXT NOT NULL,                -- 例 ch_001
@@ -752,7 +1772,7 @@ CREATE INDEX idx_cascade_project ON cascade_audits(project_id, created_at DESC);
 
 <h3 id="prompt-traces">prompt_traces</h3>
 <p><em>原定义在 spec/23 §调试与遥测; Wave 4 主权移至此处。开发期工具, 生产可关 (<code>settings.dev.tracePrompts</code>)。</em></p>
-<pre><code class="language-sql">CREATE TABLE prompt_traces (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE prompt_traces (
   id TEXT PRIMARY KEY,
   thread_id TEXT,
   agent_name TEXT,
@@ -768,7 +1788,7 @@ CREATE INDEX idx_cascade_project ON cascade_audits(project_id, created_at DESC);
 
 <h3 id="narrative-metrics">narrative_metrics</h3>
 <p><em>原定义在 spec/10 §SQLite Schema 追加; Wave 4 主权移至此处。BeatReport / ArcReport 落表。</em></p>
-<pre><code class="language-sql">CREATE TABLE narrative_metrics (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE narrative_metrics (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   kind TEXT NOT NULL,                   -- 'beat' | 'arc'
   target_id TEXT NOT NULL,              -- chapterId 或 characterId
@@ -783,7 +1803,7 @@ CREATE INDEX idx_narrative_target ON narrative_metrics(kind, target_id);
 
 <h3 id="reader-reports">reader_reports</h3>
 <p><em>原定义在 spec/11 §SQLite Schema 追加; Wave 4 主权移至此处。ChapterRiskReport 落表。</em></p>
-<pre><code class="language-sql">CREATE TABLE reader_reports (
+<pre data-language="sql"><code data-language="sql">CREATE TABLE reader_reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   chapter_id TEXT NOT NULL,             -- chapter id (无外键 — 不在 entities 表)
   report TEXT NOT NULL,                 -- JSON (ChapterRiskReport)
@@ -794,15 +1814,18 @@ CREATE INDEX idx_narrative_target ON narrative_metrics(kind, target_id);
 );
 </code></pre>
 <p>ChapterRiskReport 完整 schema (Zod) + 5 persona 并行聚合策略 详 spec/11 §simulateReaders 工具 §chapterRiskReportSchema。</p>
-
-<h2 id="迁移与版本">迁移与版本</h2>
+</section>
+<section class="doc-section" id="迁移与版本">
+<h2>迁移与版本</h2>
 <p>迁移脚本 <code>002-knowledge-graph.ts</code> (spec/16 §迁移段) 创建 entity_relations / entity_timeline / concepts / concept_refs / dependencies / paragraph_anchors / paragraph_embeddings / setting_snapshots (W7 user_version = 2)。</p>
 <p>后续 W8+ <code>index.db</code> 表 (reindex_failures / cascade_audits / volume_summaries / prompt_traces / narrative_metrics / reader_reports) 的迁移脚本见各自 spec, 累计 user_version 逐步 bump。<code>runtime.db</code> 的 archived_threads / compressed_messages 迁移归 spec/22。</p>
-<h2 id="narrative-feedback">narrative_feedback</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="narrative-feedback">
+<h2>narrative_feedback</h2>
+<aside class="callout callout-info">
 <p>用户在 BeatReport 上不同意 AI 的判读 (如&quot;AI 标这段是冲突点, 我觉得不是&quot;) 时点 [我自己来标] 弹简化标注 UI, 落到本表。当前仅记录, 二期 Reflector 读这些反馈推断该用户的&quot;个性化爽点 / 钩子定义&quot;, 写回 learnings 表注入 BeatAnalyzer prompt。</p>
-</blockquote>
-<pre><code class="language-sql">CREATE TABLE narrative_feedback (
+</aside>
+<pre data-language="sql"><code data-language="sql">CREATE TABLE narrative_feedback (
   id TEXT PRIMARY KEY,
   chapter_id TEXT NOT NULL,                             -- ch_xxx
   beat_report_id TEXT,                                  -- 关联当时 BeatReport (若可追溯, NULL = 用户主动标的)
@@ -826,11 +1849,13 @@ CREATE INDEX idx_narrative_feedback_unconsumed ON narrative_feedback(consumed_by
 <li>写回 <code>consumed_by_reflector_at = now()</code> 防重复处理</li>
 </ul>
 <p><strong>清理策略</strong>: 无, 永久保留。每条都是宝贵的&quot;个性化样本&quot;。</p>
-<h2 id="entity-match-feedback">entity_match_feedback</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="entity-match-feedback">
+<h2>entity_match_feedback</h2>
+<aside class="callout callout-info">
 <p>entity highlight 在编辑器里给某些词加下划线 + 悬浮显示 entity 信息时, 偶发会误命中 (如把&quot;小米&quot;识别成手机品牌, 但小说里是角色名)。用户右键&quot;不是这个 entity&quot; 落到本表。</p>
-</blockquote>
-<pre><code class="language-sql">CREATE TABLE entity_match_feedback (
+</aside>
+<pre data-language="sql"><code data-language="sql">CREATE TABLE entity_match_feedback (
   id TEXT PRIMARY KEY,
   entity_id TEXT NOT NULL REFERENCES entities(id),     -- 被错认的 entity
   matched_text TEXT NOT NULL,                          -- 文中实际命中的字符串 (e.g. &quot;小米&quot;)
@@ -854,26 +1879,35 @@ CREATE INDEX idx_entity_match_feedback_unapplied ON entity_match_feedback(applie
 <li>同 entity_id + 不同 matched_text → 仅累积, 由用户 SettingsDialog &quot;实体词库 &gt; 已收集反馈&quot; 手动审</li>
 </ul>
 <p><strong>清理策略</strong>: 永久保留, 体积小 (每条几百 byte)。</p>
-<h2 id="迁移脚本">迁移脚本</h2>
+</section>
+<section class="doc-section" id="迁移脚本">
+<h2>迁移脚本</h2>
 <p><code>007-feedback-tables.ts</code> (W6 day-1):</p>
-<pre><code class="language-sql">PRAGMA user_version = 7;
+<pre data-language="sql"><code data-language="sql">PRAGMA user_version = 7;
 -- 创建 narrative_feedback 与 entity_match_feedback (上文)
 -- 现有项目自动升级
 </code></pre>
-<h2 id="entity-refs-concept-refs-段锚化-w7-升级">entity_refs / concept_refs 段锚化 (W7 升级)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="entity-refs-concept-refs-段锚化-w7-升级">
+<h2>entity_refs / concept_refs 段锚化 (W7 升级)</h2>
+<aside class="callout callout-info">
 <p>spec/17 §entity_refs / concept_refs 改造 详细说明。简言之:在原 entity_refs 之上新增两列:</p>
-</blockquote>
-<pre><code class="language-sql">ALTER TABLE entity_refs ADD COLUMN anchor_id TEXT REFERENCES paragraph_anchors(anchor_id);
+</aside>
+<pre data-language="sql"><code data-language="sql">ALTER TABLE entity_refs ADD COLUMN anchor_id TEXT REFERENCES paragraph_anchors(anchor_id);
 ALTER TABLE entity_refs ADD COLUMN intra_paragraph_offset INTEGER;  -- 段内字符 offset
 
 CREATE INDEX idx_refs_anchor ON entity_refs(anchor_id);
 </code></pre>
 <p>迁移脚本 (<code>004-paragraph-anchors.ts</code>) 重扫所有现有 entity_refs,按 file_path + position_from 反查所属 anchor,populate 新两列。<code>concept_refs</code> 在 spec/16 表创建时已含此结构,无需 ALTER。</p>
-<h2 id="索引刷新流程-w7-升级">索引刷新流程 (W7 升级)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="索引刷新流程-w7-升级">
+<h2>索引刷新流程 (W7 升级)</h2>
+<aside class="callout callout-info">
 <p>W7 引入 paragraph_anchors (spec/17) 后, <code>entity_refs</code> 的 reindex 策略不变: 始终 DELETE WHERE source_file = X + AC trie 全部重扫。文件级全量扫对 entity_refs 而言足够廉价且正确, 不依赖不稳定的 anchor diff。paragraph_anchors 的维护与 embeddings 的差量更新见 spec/17 和 spec/18, 不在此处重复。</p>
-</blockquote>
-  </main>
+</aside>
+</section>
+    </main>
+    <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>
+  </article>
 </body>
 </html>

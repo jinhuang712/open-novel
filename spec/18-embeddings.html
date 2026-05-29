@@ -5,36 +5,1022 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="generator" content="open-novel-docs-renderer">
   <title>Spec 18 — 段级 Embedding 与语义检索 - Open Novel</title>
-  <link rel="stylesheet" href="../assets/docs.css">
-  <script src="../assets/docs-enhance.js" defer></script>
+  <style>
+:root {
+  color-scheme: light dark;
+  --bg: #f8f8f7;
+  --surface: #ffffff;
+  --soft: #f2f3f3;
+  --text: #24272b;
+  --muted: #68717b;
+  --faint: #9aa1a8;
+  --border: #dedede;
+  --primary: #566f99;
+  --primary-soft: #f1f3f6;
+  --accent: #52686a;
+  --info: #566f99;
+  --info-soft: #f4f5f7;
+  --warn: #8a6d3b;
+  --warn-soft: #f8f4ea;
+  --danger: #9b4d49;
+  --danger-soft: #faf0ef;
+  --ok: #55745f;
+  --ok-soft: #eef4ef;
+  --code: #f1f2f2;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 8px 20px rgba(15, 23, 42, 0.07);
+  --shadow-lg: 0 16px 44px rgba(15, 23, 42, 0.12);
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  --mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", monospace;
+  --font-xs: 11px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 18px;
+  --font-lg: 23px;
+  --font-xl: 30px;
+  --font-title: 38px;
+  --line-tight: 1.25;
+  --line-normal: 1.55;
+  --line-loose: 1.75;
+  --line-code: 1.6;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+  --motion-base: 160ms;
+  --motion-ease: ease;
+  --surface-shadow: none;
+  --toc-width: clamp(220px, 16vw, 300px);
+  --topbar-height: 56px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191c;
+    --surface: #202327;
+    --soft: #262a2f;
+    --text: #eef0f2;
+    --muted: #adb4bd;
+    --faint: #79828d;
+    --border: #3a4047;
+    --primary: #9bb7d9;
+    --primary-soft: #182231;
+    --accent: #9ab4b1;
+    --info: #9bb7d9;
+    --info-soft: #1c2633;
+    --warn: #d4b16d;
+    --warn-soft: #302815;
+    --danger: #df9a96;
+    --danger-soft: #321d1d;
+    --ok: #9cc4a6;
+    --ok-soft: #1b2a20;
+    --code: #15171a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--font-base)/var(--line-loose) var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code,
+pre {
+  font-family: var(--mono);
+}
+
+code {
+  padding: 1px 5px;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 0.88em;
+}
+
+pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  overflow: auto;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-sm);
+  line-height: var(--line-code);
+}
+
+pre code {
+  display: block;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+mark {
+  padding: 0.02em 0.22em;
+  background: var(--warn-soft);
+  border-radius: 3px;
+  color: var(--text);
+}
+
+del {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+u {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+[data-mark="deprecated"] {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+[data-mark="term"] {
+  border-bottom: 1px dotted var(--faint);
+  cursor: help;
+}
+
+[data-mark="metric"] {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  height: var(--topbar-height);
+  align-items: center;
+  gap: 14px;
+  padding: 0 36px;
+  background: color-mix(in srgb, var(--bg) 94%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+}
+
+.brand-logo {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--primary);
+  border-radius: var(--radius-md);
+  color: var(--surface);
+  font: 800 12px/1 var(--mono);
+  letter-spacing: 0;
+}
+
+.brand-logo:hover {
+  text-decoration: none;
+}
+
+.brand-logo-image {
+  display: block;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.topbar-breadcrumb {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-org,
+.topbar-project,
+.topbar-doc {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-org,
+.topbar-project {
+  flex: 0 0 auto;
+}
+
+.topbar-doc {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.topbar-separator {
+  flex: 0 0 auto;
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.topbar-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.topbar-links:empty {
+  display: none;
+}
+
+.topbar-link {
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+.topbar-pill {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.sidebar {
+  position: fixed;
+  inset: var(--topbar-height) auto 0 0;
+  width: var(--toc-width);
+  padding: 30px 28px 60px 30px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.nav-title {
+  margin: 0 0 16px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toc {
+  margin: 0 0 24px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toc li {
+  margin: 0;
+}
+
+.toc a {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 8px 0 8px 10px;
+  overflow-wrap: anywhere;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.toc a:hover,
+.toc a.active {
+  border-left-color: var(--primary);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.toc span {
+  color: var(--faint);
+  font: 12px/1.45 var(--mono);
+  white-space: nowrap;
+}
+
+.doc {
+  max-width: 960px;
+  margin-left: var(--toc-width);
+  padding: 96px 52px 84px;
+}
+
+.set-index {
+  max-width: 1120px;
+}
+
+.doc-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc-header h1 {
+  margin: 0 0 10px;
+  font-size: var(--font-title);
+  letter-spacing: 0;
+  line-height: 1.18;
+}
+
+.doc-kicker {
+  margin: 0 0 10px;
+  color: var(--primary);
+  font: 700 12px/1.25 var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 12px;
+  margin-top: 14px;
+  color: var(--muted);
+  font: 12.5px/1.4 var(--mono);
+}
+
+.doc-summary {
+  margin: 18px 0;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.doc-summary ul {
+  margin: 0;
+}
+
+.doc-section {
+  margin: 46px 0 0;
+  scroll-margin-top: 70px;
+}
+
+.doc-section h2 {
+  margin: 0 0 16px;
+  padding: 4px 0 5px 14px;
+  border-left: 3px solid var(--primary);
+  font-size: var(--font-lg);
+  line-height: var(--line-tight);
+}
+
+.doc-section h3 {
+  margin: 22px 0 8px;
+  font-size: var(--font-md);
+}
+
+.doc-section > :first-child {
+  margin-top: 0;
+}
+
+.section-empty {
+  color: var(--muted);
+  font-style: italic;
+}
+
+p,
+ul,
+ol,
+dl,
+table,
+figure,
+details {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 24px;
+}
+
+li + li {
+  margin-top: 3px;
+}
+
+.callout {
+  margin: 18px 0;
+  padding: 13px 16px;
+  background: var(--info-soft);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+}
+
+.callout p {
+  margin: 6px 0 0;
+}
+
+.callout p:first-child {
+  margin-top: 0;
+}
+
+.callout-info {
+  background: var(--info-soft);
+  border-left-color: var(--info);
+}
+
+.callout-warning {
+  background: var(--warn-soft);
+  border-left-color: var(--warn);
+}
+
+.callout-danger {
+  background: var(--danger-soft);
+  border-left-color: var(--danger);
+}
+
+.callout-success {
+  background: var(--ok-soft);
+  border-left-color: var(--ok);
+}
+
+table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 18px 0;
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  border-collapse: collapse;
+  box-shadow: var(--surface-shadow);
+  font-size: var(--font-sm);
+}
+
+thead,
+tbody,
+tr {
+  width: 100%;
+}
+
+th,
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: var(--soft);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+.data-table,
+.risk-table,
+.decision-table {
+  width: 100%;
+}
+
+.details-block {
+  margin: 18px 0;
+  padding: 0 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.details-block summary {
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.diagram {
+  position: relative;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.diagram figcaption {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.diagram svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+.diagram-toolbar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity var(--motion-base) var(--motion-ease);
+}
+
+.diagram:hover .diagram-toolbar {
+  opacity: 1;
+}
+
+.code-shell {
+  margin: 16px 0;
+  overflow: hidden;
+  background: var(--code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-language {
+  color: var(--muted);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+}
+
+.code-status-ok {
+  color: var(--ok);
+}
+
+.code-status-error {
+  color: var(--danger);
+}
+
+.code-copy {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+}
+
+.code-status + .code-copy {
+  margin-left: 0;
+}
+
+.code-copy:hover {
+  color: var(--text);
+}
+
+.code-pre {
+  margin: 0;
+  padding: 12px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--font-sm);
+  line-height: var(--line-loose);
+}
+
+.code-line {
+  display: grid;
+  min-width: 100%;
+  grid-template-columns: 42px minmax(max-content, 1fr);
+}
+
+.code-line-number {
+  padding: 0 10px 0 0;
+  border-right: 1px solid var(--border);
+  color: var(--faint);
+  text-align: right;
+  user-select: none;
+}
+
+.code-line-content {
+  padding: 0 14px;
+  white-space: pre;
+}
+
+.participants,
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.participant-card,
+.value-card,
+.action-card {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.action-card {
+  padding: 20px;
+}
+
+.participant-card p,
+.value-card p,
+.action-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.source-refs,
+.files,
+.acceptance-criteria {
+  padding-left: 22px;
+}
+
+.chapter-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.chapter-card:hover,
+.chapter-card:focus-within {
+  border-color: var(--primary);
+}
+
+.chapter-card a {
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) minmax(0, 1fr);
+  gap: 12px;
+  padding: 15px 16px;
+  color: var(--text);
+}
+
+.chapter-card a:hover {
+  text-decoration: none;
+}
+
+.chapter-number {
+  color: var(--faint);
+  font: 700 12px/1.4 var(--mono);
+}
+
+.chapter-content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.chapter-title {
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.chapter-description {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.set-grid {
+  display: grid;
+  gap: 22px;
+}
+
+.set-section {
+  margin: 46px 0 0;
+}
+
+.set-pagination {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 44px 0 0;
+}
+
+.set-pagination-link {
+  display: block;
+  min-height: 82px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  color: var(--text);
+}
+
+.set-pagination-link:hover {
+  border-color: var(--primary);
+  text-decoration: none;
+}
+
+.set-pagination-next {
+  text-align: right;
+}
+
+.set-pagination-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--faint);
+  font: 700 11px/1 var(--mono);
+  text-transform: uppercase;
+}
+
+.set-pagination-title {
+  display: block;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.status-pill {
+  display: inline-flex;
+  min-width: 56px;
+  min-height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  background: var(--primary-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-questions-block {
+  position: relative;
+  margin: 18px 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+}
+
+.open-questions-header {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.open-question-marker {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--warn);
+  font: 700 11px/1 var(--mono);
+}
+
+.open-question-text {
+  min-width: 0;
+}
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-sm);
+  text-align: center;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 760px) {
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    right: auto;
+    left: 0;
+    order: 1;
+    height: auto;
+    flex-wrap: wrap;
+    padding: 12px 18px;
+  }
+
+  .brand-logo,
+  .brand-logo-image {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sidebar {
+    position: static;
+    inset: auto;
+    order: 2;
+    width: auto;
+    max-height: 260px;
+    padding: 16px 18px;
+    overflow-y: auto;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .doc {
+    order: 3;
+    max-width: none;
+    margin-left: 0;
+    padding: 32px 20px 56px;
+  }
+
+  .doc-header h1 {
+    font-size: var(--font-xl);
+  }
+
+  .set-pagination {
+    grid-template-columns: 1fr;
+  }
+
+  .set-pagination-next {
+    text-align: left;
+  }
+
+  .code-line {
+    grid-template-columns: 34px minmax(max-content, 1fr);
+  }
+}
+
+@media print {
+  .sidebar,
+  .topbar,
+  .diagram-toolbar {
+    display: none !important;
+  }
+
+  .doc {
+    max-width: none;
+    margin-left: 0;
+    padding: 0;
+  }
+}
+
+  </style>
   <!-- Generated by scripts/render_all_docs.py. Preserve body content; rerun renderer after edits. -->
 </head>
 <body>
-  <main class="doc">
-<nav class="doc-meta" aria-label="Document metadata">
-  <a href="../index.html">&larr; Index</a>
-  <span>spec/18-embeddings.html</span>
-</nav>
-<h1 id="spec-18-段级-embedding-与语义检索">Spec 18 — 段级 Embedding 与语义检索</h1>
-<blockquote>
+<header class="topbar">
+  <a class="brand-logo" href="../index.html" aria-label="Open Novel index">ON</a>
+  <div class="topbar-breadcrumb">
+    <span class="topbar-project">Open Novel</span>
+    <span class="topbar-separator">/</span>
+    <span class="topbar-doc">Spec 18 — 段级 Embedding 与语义检索</span>
+  </div>
+  <span class="topbar-spacer"></span>
+  <nav class="topbar-links" aria-label="Primary">
+    <a class="topbar-link" href="../README.md">README</a>
+    <a class="topbar-link" href="../todo.html">TODO</a>
+    <a class="topbar-link" href="../changelist.html">Changelist</a>
+  </nav>
+</header>
+<aside class="sidebar" aria-label="Document navigation">
+  <p class="nav-title">文档集</p>
+  <nav class="toc">
+    <ol>
+      <li><a href="../index.html"><span>SET</span>全部文档</a></li>
+      <li><a href="../README.md"><span>MD</span>README</a></li>
+      <li><a href="../todo.html"><span>TODO</span>风险</a></li>
+      <li><a href="../changelist.html"><span>LOG</span>变更</a></li>
+    </ol>
+  </nav>
+  <p class="nav-title">本文目录</p>
+  <nav class="toc"><ol>
+<li><a href="#top"><span>00</span>概览</a></li>
+<li><a href="#决议依据"><span>H3</span>决议依据</a></li>
+<li><a href="#model-切换迁移"><span>H3</span>model 切换迁移</a></li>
+<li><a href="#批量优化"><span>H3</span>批量优化</a></li>
+<li><a href="#1-朴素-sql-起步"><span>H3</span>1. 朴素 SQL (起步)</a></li>
+<li><a href="#2-性能阈值"><span>H3</span>2. 性能阈值</a></li>
+<li><a href="#3-检索结果鲁棒性"><span>H3</span>3. 检索结果鲁棒性</a></li>
+<li><a href="#与-entity-refs-concept-refs-双索引互补"><span>H3</span>与 entity_refs / concept_refs 双索引互补</a></li>
+<li><a href="#与-paragraph-anchors-的-lifecycle-联动"><span>H3</span>与 paragraph_anchors 的 lifecycle 联动</a></li>
+</ol></nav>
+</aside>
+  <article class="doc" id="top">
+    <header class="doc-header">
+      <p class="doc-kicker">Spec</p>
+      <h1>Spec 18 — 段级 Embedding 与语义检索</h1>
+      <div class="doc-meta" aria-label="Document metadata">
+        <a href="../index.html">Index</a>
+        <span>spec/18-embeddings.html</span>
+        <span>Generated by <code>scripts/render_all_docs.py</code></span>
+      </div>
+    </header>
+    <main>
+<aside class="callout callout-info">
 <p>实现 plan/11-knowledge-graph.html L2 算法层第二项。本文档定义段级向量索引、增量计算、检索 API、模型选型对比。</p>
-</blockquote>
-<h2 id="用途">用途</h2>
+</aside>
+<section class="doc-section" id="用途">
+<h2>用途</h2>
 <p>段级 embedding 服务三个核心场景:</p>
 <ol>
 <li><strong><code>assembleContext</code> 工具 (spec/20)</strong>:Writer 写章节前,把章节 outline 做 query,从已写章节里 topK 检索&quot;语义相关段&quot;,注入 prompt</li>
 <li><strong><code>queryFacts</code> 工具 (spec/21) §semantic-search 模式</strong>:作者主动查&quot;林川以前对女上司说过什么类似台词&quot;</li>
 <li><strong><code>analyzeImpact</code> 工具 (spec/19) §rewriting candidates</strong>:Validator 拿 setting 改动后,可附带&quot;语义最相关的 N 段&quot;作为补充候选</li>
 </ol>
-<h2 id="paragraph-embeddings-表-确认-schema">paragraph_embeddings 表 (Wave 4 schema 指针)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="paragraph-embeddings-表-确认-schema">
+<h2>paragraph_embeddings 表 (Wave 4 schema 指针)</h2>
+<aside class="callout callout-info">
 <p><strong>Schema 主权 (Wave 4)</strong>: 完整 <code>CREATE TABLE paragraph_embeddings</code> (含本 spec 确认的 <code>norm REAL</code> 字段 + INDEX) 见 <a href="./01-storage-schema.html#paragraph-embeddings">spec/01 §paragraph_embeddings</a>。本节确认 schema 的版本已成为 spec/01 主权版。</p>
-</blockquote>
+</aside>
 <p><strong>字段摘要</strong>: <code>anchor_id</code> (PK + FK paragraph_anchors) · <code>embedding</code> (BLOB, F32 little-endian, 直接 buffer dump; 读时 <code>new Float32Array(buffer)</code> 还原) · <code>model_name</code> (bge-m3 / deepseek-v1 / text-embedding-3-small) · <code>model_dim</code> (1024 / 1536 / 3072) · <code>content_hash</code> (增量更新) · <code>norm</code> (预计算 L2 norm, cosine 加速)。</p>
-<h2 id="选型对比-锁-bge-m3-本地">选型对比 (锁 BGE-M3 本地)</h2>
-<blockquote>
+</section>
+<section class="doc-section" id="选型对比-锁-bge-m3-本地">
+<h2>选型对比 (锁 BGE-M3 本地)</h2>
+<aside class="callout callout-info">
 <p><strong>决议</strong>: 锁 <strong>BGE-M3 本地</strong>。理由 = 0 边际成本 (重算自由) + 隐私 (创作隐私是网文作者强诉求) + 中文质量第一 (BAAI 出品)。代价: 启动需 Ollama (~600MB 二进制依赖)。Fallback 顺序: DeepSeek embedding (复用 API key) → OpenAI text-embedding-3-small。</p>
-</blockquote>
+</aside>
 <table>
 <thead>
 <tr>
@@ -125,8 +1111,10 @@
 <li>切换后入队全量 reindex,逐段重算,旧 model_name 行批量删除</li>
 <li>UI 显示&quot;重建索引中... 67/120 章&quot;</li>
 </ul>
-<h2 id="接入抽象层">接入抽象层</h2>
-<pre><code class="language-ts">// lib/embeddings/index.ts
+</section>
+<section class="doc-section" id="接入抽象层">
+<h2>接入抽象层</h2>
+<pre data-language="ts"><code data-language="ts">// lib/embeddings/index.ts
 export interface EmbeddingProvider {
   name: string
   dim: number
@@ -151,7 +1139,7 @@ export function getEmbeddingProvider(): EmbeddingProvider {
 }
 </code></pre>
 <p>具体实现 (Ollama 本地端) 示例:</p>
-<pre><code class="language-ts">// lib/embeddings/bge-m3.ts
+<pre data-language="ts"><code data-language="ts">// lib/embeddings/bge-m3.ts
 export class BgeM3Provider implements EmbeddingProvider {
   name = &#39;bge-m3&#39;
   dim = 1024
@@ -181,8 +1169,10 @@ export class BgeM3Provider implements EmbeddingProvider {
 }
 </code></pre>
 <p>启动时检查 <code>isAvailable()</code>;不可用时降级到 DeepSeek,再不可用降级到 &quot;embeddings 不工作,语义检索功能 disabled,但其他功能照常&quot;。</p>
-<h2 id="增量计算">增量计算</h2>
-<pre><code class="language-ts">// lib/embeddings/incremental.ts
+</section>
+<section class="doc-section" id="增量计算">
+<h2>增量计算</h2>
+<pre data-language="ts"><code data-language="ts">// lib/embeddings/incremental.ts
 export async function reembedAnchor(projectId: string, anchorId: string, text: string) {
   const provider = getEmbeddingProvider()
   if (!await provider.isAvailable()) return  // 降级 silent
@@ -205,7 +1195,7 @@ export async function reembedAnchor(projectId: string, anchorId: string, text: s
 <p>调用入口在 spec/17 §reindex Worker 升级 §applyAnchorDiff 的 <code>enqueueParagraphRescan</code> 内。</p>
 <h3 id="批量优化">批量优化</h3>
 <p>reindex 时若有 ≥ 5 段需要重算,合并一次 batch:</p>
-<pre><code class="language-ts">async function reembedBatch(projectId: string, items: { anchorId: string; text: string }[]) {
+<pre data-language="ts"><code data-language="ts">async function reembedBatch(projectId: string, items: { anchorId: string; text: string }[]) {
   const provider = getEmbeddingProvider()
   const embs = await provider.embed(items.map(i =&gt; i.text))
   const tx = await db.beginTransaction()
@@ -217,10 +1207,12 @@ export async function reembedAnchor(projectId: string, anchorId: string, text: s
   } catch (e) { await tx.rollback(); throw e }
 }
 </code></pre>
-<h2 id="检索-api">检索 API</h2>
+</section>
+<section class="doc-section" id="检索-api">
+<h2>检索 API</h2>
 <h3 id="1-朴素-sql-起步">1. 朴素 SQL (起步)</h3>
 <p>未上 sqlite-vss / LibSQL vector 时,直接读全部 embeddings 在 JS 层计算 cosine:</p>
-<pre><code class="language-ts">// lib/embeddings/search.ts
+<pre data-language="ts"><code data-language="ts">// lib/embeddings/search.ts
 export async function semanticSearch(
   projectId: string,
   query: string,
@@ -289,7 +1281,7 @@ export async function semanticSearch(
 </tr>
 </tbody></table>
 <p>起步用朴素扫描;若 Demo 项目突破 20K 段,<strong>升级路径</strong>:</p>
-<pre><code class="language-sql">-- sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath()), 见 plan/08 §Drizzle + better-sqlite3 + sqlite-vec)
+<pre data-language="sql"><code data-language="sql">-- sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath()), 见 plan/08 §Drizzle + better-sqlite3 + sqlite-vec)
 CREATE VIRTUAL TABLE paragraph_embeddings_vec USING vec0(
   embedding FLOAT[1024]
 );
@@ -303,29 +1295,31 @@ CREATE VIRTUAL TABLE paragraph_embeddings_vec USING vec0(
 <li>&lt; 0.7 = 噪声</li>
 </ul>
 <p><code>semanticSearch</code> 默认丢弃 &lt; 0.6 结果(可配置)。topK 取的是绝对最高,即使全是 &lt; 0.6,也可能返回(由调用方决定是否使用)。</p>
-<h2 id="与其他系统对接">与其他系统对接</h2>
+</section>
+<section class="doc-section" id="与其他系统对接">
+<h2>与其他系统对接</h2>
 <h3 id="与-entity-refs-concept-refs-双索引互补">与 entity_refs / concept_refs 双索引互补</h3>
 <p>embeddings 解决&quot;语义相关&quot;(同义、近义),entity_refs / concept_refs 解决&quot;显式提及&quot;。assembleContext 工具的 retrieve 链路同时用两类索引,合并去重(详见 spec/20)。</p>
 <h3 id="与-paragraph-anchors-的-lifecycle-联动">与 paragraph_anchors 的 lifecycle 联动</h3>
-<pre class="mermaid">
-flowchart TD
+<figure class="diagram"><figcaption>Mermaid source</figcaption><pre data-language="mermaid"><code data-language="mermaid">flowchart TD
   EVT{anchor 事件}
-  EVT -->|unchanged| U[embedding 不动]
-  EVT -->|modified| M["enqueueParagraphRescan"]
-  M --> M2[reembedAnchor]
-  EVT -->|rewritten| RW1["旧 anchor 软删"]
-  RW1 --> RW2["CASCADE 删 paragraph_embeddings 行<br/>(FK ON DELETE CASCADE)"]
-  RW2 --> RW3[新 anchor]
-  RW3 --> RW4[reembedAnchor]
-  EVT -->|deleted| DEL["软删 anchor<br/>embedding 一并 cascade 删"]
-  EVT -->|added| ADD[reembedAnchor]
-</pre>
+  EVT --&gt;|unchanged| U[embedding 不动]
+  EVT --&gt;|modified| M["enqueueParagraphRescan"]
+  M --&gt; M2[reembedAnchor]
+  EVT --&gt;|rewritten| RW1["旧 anchor 软删"]
+  RW1 --&gt; RW2["CASCADE 删 paragraph_embeddings 行&lt;br/&gt;(FK ON DELETE CASCADE)"]
+  RW2 --&gt; RW3[新 anchor]
+  RW3 --&gt; RW4[reembedAnchor]
+  EVT --&gt;|deleted| DEL["软删 anchor&lt;br/&gt;embedding 一并 cascade 删"]
+  EVT --&gt;|added| ADD[reembedAnchor]</code></pre></figure>
 <p>软删 anchor (deleted_at != NULL) 是否保留 embedding?</p>
 <ul>
 <li>保留 (deleted_at != NULL 时不参与检索,但供&quot;恢复&quot;路径)</li>
 <li>30 天硬删 anchor 时一并 CASCADE 删 embedding</li>
 </ul>
-<h2 id="离线-降级行为">离线 / 降级行为</h2>
+</section>
+<section class="doc-section" id="离线-降级行为">
+<h2>离线 / 降级行为</h2>
 <table>
 <thead>
 <tr>
@@ -347,7 +1341,9 @@ flowchart TD
 </tr>
 </tbody></table>
 <p>降级语义:<strong>embedding 是&quot;锦上添花&quot;,不应使主流程瘫痪</strong>。具体的 entity_refs / concept_refs / dependencies 不依赖 embedding。</p>
-<h2 id="测试">测试</h2>
+</section>
+<section class="doc-section" id="测试">
+<h2>测试</h2>
 <table>
 <thead>
 <tr>
@@ -382,10 +1378,15 @@ flowchart TD
 <td>5K / 20K 段规模朴素 cosine 耗时;W8 末填表</td>
 </tr>
 </tbody></table>
-<h2 id="已决策项">已决策项</h2>
+</section>
+<section class="doc-section" id="已决策项">
+<h2>已决策项</h2>
 <p>✅ <strong>embedding 模型选型</strong>: 锁 <strong>BGE-M3 本地</strong>, fallback 1 = DeepSeek, fallback 2 = OpenAI (见 §选型对比 + §决议依据)
 ✅ <strong>vector 索引路径</strong>: 优先 <strong>sqlite-vec</strong> extension → 朴素 cosine 回退 (P0-1 修正; W3 Spike 2 验证后定稿; 见 §决议条款 实施顺序)
 ✅ <strong>embedding model 升级时的全量重算成本上限</strong>: 阈值 <strong>1000 段以上必弹 UI 提示</strong>, 显示 &quot;切换 model 将重算 N 段, 预计 X 分钟, 确认?&quot;; 1000 段以下静默重算</p>
-  </main>
+</section>
+    </main>
+    <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>
+  </article>
 </body>
 </html>

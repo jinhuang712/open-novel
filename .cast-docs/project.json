@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "name": "open-novel",
+  "displayOwner": "Open Novel",
+  "defaultLocale": "zh-CN",
+  "defaultDocumentType": "engineering-spec",
+  "defaultScenario": "none",
+  "owner": "Open Novel",
+  "audience": ["engineering", "product"],
+  "output": {
+    "defaultDir": ".",
+    "localDir": ".cast-docs/out",
+    "filenamePattern": "{slug}.html"
+  },
+  "styleProfile": {
+    "theme": "cast-default",
+    "density": "comfortable",
+    "surface": "bordered",
+    "accent": "blue"
+  }
+}
