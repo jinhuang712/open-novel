@@ -43,6 +43,17 @@
 
 详见 [plan/08-tech-stack](./plan/08-tech-stack.html)。
 
+## 文档状态
+
+本仓库当前是静态 HTML 文档站,核心资料以 `README.md`、`index.html`、`plan/*.html`、`spec/*.html`、`todo.html`、`CHANGELOG.html` 维护。尚未迁移为 CAST Docs JSON 源文件工作流;本轮文档改写采用 preserve-first guided migration,直接收敛现有 HTML 文档中的实现口径。
+
+当前实现方向已统一为:
+
+- **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
+- **L2 会话记忆**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/22](./spec/22-memory-and-history.html)
+- **Schema 主权**: `spec/01` 维护 `index.db`;`spec/22` 维护 `runtime.db`;`plan/04` 区分每项目 `session_history.db` 的过程数据职责
+- **待实查闸门**: W3 代码前仍需执行 [spec/00](./spec/00-version-audit.html) 的版本与 native binding audit
+
 ## 快速启动
 
 ```bash
@@ -93,7 +104,7 @@ pnpm dev
 
 ### 核心技术文档 (spec/)
 
-- [00-version-audit](./spec/00-version-audit.html) — W3 启动前版本审计闸门
+- [00-version-audit](./spec/00-version-audit.html) — W3 启动前版本 / DeepSeek / native binding 审计闸门
 - [01-storage-schema](./spec/01-storage-schema.html) — SQLite schema 与 frontmatter 规范
 - [02-agent-tools](./spec/02-agent-tools.html) — Agent 工具签名与契约
 - [03-prompts](./spec/03-prompts.html) — Agent prompt 模板

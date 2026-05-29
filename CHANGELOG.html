@@ -19,6 +19,36 @@
 <p>本文件仅记录 <strong>跨文档变更流水线</strong>。每条 = 一次有意义的变更意图(可跨多文档)。设计决策(为什么这么改)见各 plan/spec 文档底部 ADR 表;待办与未关闭风险见 <a href="./todo.html">todo.html</a>。本日志从 2026-05-21 文档体系重整开始;此前历史见 <code>progress/</code>。</p>
 </blockquote>
 
+<h2 id="2026-05-30-guided-migration">2026-05-30 · guided migration · Memory/History 文档收敛</h2>
+
+<table>
+<thead>
+<tr><th>变更</th><th>影响文档</th><th>关联</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>spec/22</code> 从过渡态 Mastra Memory 文档重写为应用层 memory 模块规格:定义 <code>runtime.db</code> threads/messages/compressed_messages/archived_threads、thread/resource guard、写入时机、历史压缩、卷级摘要和跨进程恢复。</td>
+<td><code>spec/22</code></td>
+<td><code>plan/12</code> L2 会话记忆</td>
+</tr>
+<tr>
+<td><code>spec/23</code> 调整上下文装配边界: L2 历史由 <code>appMemory.fetchRecent</code> 显式读取;runner 不再隐式追加 lastMessages;文本 agent 经 <code>callTextAgent</code> / AI SDK <code>streamText</code> 衔接。</td>
+<td><code>spec/23</code></td>
+<td><code>spec/22</code> · <code>spec/24</code></td>
+</tr>
+<tr>
+<td>清理实现误导项:状态机事件适配从 Mastra <code>streamVNext</code> 改为统一 Agent runner;测试策略中的 Mastra mock 改为 DeepSeek + 应用层 runner 边界;存储图修正 <code>runtime.db</code> / <code>session_history.db</code> 职责。</td>
+<td><code>spec/07</code> <code>spec/14</code> <code>spec/01</code></td>
+<td>避免实现阶段继续沿旧框架路径接线</td>
+</tr>
+<tr>
+<td>同步顶层导航与项目记忆,记录本轮 guided migration 的范围和仍保留的后续清理项。</td>
+<td><code>README.md</code> <code>index.html</code> <code>todo.html</code> <code>CHANGELOG.html</code></td>
+<td>cast-a-start preserve-first 改写</td>
+</tr>
+</tbody>
+</table>
+
 <h2 id="2026-05-22-turn-2">2026-05-22 · Turn 2 · plan/ 全篇升级</h2>
 
 <table>

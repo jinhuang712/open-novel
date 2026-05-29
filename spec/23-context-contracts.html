@@ -43,7 +43,7 @@
 </tr>
 <tr>
 <td><strong>不允许 agent 自拼 prompt</strong></td>
-<td>必经 context builder;直接调 streamVNext 是反模式</td>
+<td>必经 context builder;直接裸调 <code>generateText</code> / <code>streamText</code> 是反模式</td>
 </tr>
 <tr>
 <td><strong>JSON 输出走 JSON mode</strong></td>
@@ -96,10 +96,11 @@ export async function buildBaseContext(input: BaseContextInput, agentName: strin
   const others = allLearnings.filter(l =&gt; l.scope !== &#39;cardinal_rule&#39;)
   const learnings = [...cardinalRuleLearnings.slice(0, 1), ...others].slice(0, 8)
 
-  // 3. L2 mastra_messages (lastMessages 30, 见 spec/22)
-  const recentMessages = await mastraMemory.fetchRecent({
+  // 3. L2 应用层 memory messages (lastMessages 30, 见 spec/22)
+  const recentMessages = await appMemory.fetchRecent({
+    projectId: input.projectId,
     threadId: input.threadId,
-    limit: settings.mastraMemory.lastMessages,
+    limit: settings.memory.lastMessages,
   })
 
   return { learnings, recentMessages }
@@ -213,7 +214,7 @@ function checkContextSize(report: TokenReport, agentName: string) {
 }
 </code></pre>
 <p><strong>输出形态</strong>: 自然语言流式 (不走 JSON mode)
-<strong>maxTokens</strong>: 不显式设(Writer 章节正文流式输出),交给 Mastra 自然结束 (<code>finishReason=&#39;stop&#39;</code>)</p>
+<strong>maxTokens</strong>: 不显式设(Writer 章节正文流式输出),由 AI SDK <code>streamText</code> 的 <code>finishReason</code> 判定自然结束或截断。</p>
 <p><strong>典型 token 占用</strong> (估算):</p>
 <ul>
 <li>chapter outline + previous tail: ≈ 4K</li>
@@ -371,7 +372,7 @@ function checkContextSize(report: TokenReport, agentName: string) {
     cascadeChainSiblings: input.cascadeChainSiblingApprovals,      // 同 cascade 链路其他审批
   }
 
-  // 不装 mastra_messages, 不装 L4 — 纯学习场景
+  // 不装应用层 memory messages, 不装 L4 — 纯学习场景
   const systemPrompt = buildReflectorSystemPrompt(REFLECTOR_BASE_PROMPT, retrieved)
 
   const messages: ModelMessage[] = [
@@ -414,7 +415,7 @@ function checkContextSize(report: TokenReport, agentName: string) {
   { role: &#39;system&#39;, content: systemPrompt },                       // base + agent 特化 + L3 learnings
   { role: &#39;system&#39;, content: retrievedBlock },                     // L4 retrieve (按 agent 契约)
   { role: &#39;assistant&#39;, content: &#39;&lt;历史摘要&gt;...&#39; },                  // optional, 仅 compressedMessages.enabled 时
-  ...recentMessages,                                                // L2 mastra_messages 最近 N 条
+  ...recentMessages,                                                // L2 应用层 memory 最近 N 条
   { role: &#39;user&#39;, content: &#39;(上次提议被拒, 原因: ...)&#39; },           // optional rejection
   { role: &#39;user&#39;, content: userInput },
 ]
@@ -466,20 +467,21 @@ ${block}`
 <li>警示色: total &gt; 800K 黄色,&gt; 950K 红色</li>
 </ul>
 <p>(开发期工具,生产可关 — <code>settings.dev.tracePrompts</code>)</p>
-<h2 id="与-mastra-streamvnext-的衔接">与 Mastra streamVNext 的衔接</h2>
+<h2 id="与-ai-sdk-agent-runner-的衔接">与 AI SDK agent runner 的衔接</h2>
 <pre><code class="language-ts">import { streamWithGuard } from &#39;@/lib/agents/memory-guard&#39;
 
 const ctx = await buildWriterWriteContext(input)
 
-const stream = await streamWithGuard(writerAgent, ctx.messages, {
-  memory: { thread: ctx.threadId, resource: projectId },
-  providerOptions: ctx.metadata.jsonMode
-    ? { deepseek: { response_format: { type: &#39;json_object&#39; } } }
-    : undefined,
-  // system 已经在 messages[0] 了, 不再传 system 参数
+const stream = await callTextAgent({
+  label: &#39;writer.write&#39;,
+  model: deepseekProMax,
+  projectId,
+  threadId: ctx.threadId,
+  messages: ctx.messages,
+  // system 已经在 messages[0] 了, 不再单独传 system 参数
 })
 
-await db.runtime.prompt_traces.insert({
+await db.workspace(projectId).promptTraces.insert({
   id: ulid(),
   thread_id: ctx.threadId,
   agent_name: input.agentName,
@@ -491,12 +493,12 @@ await db.runtime.prompt_traces.insert({
   created_at: Date.now(),
 })
 </code></pre>
-<p><strong>注意</strong>:<code>streamVNext</code> 时<strong>不</strong>自己再 inject lastMessages — 因为我们已经手工塞 recent_messages 了。具体策略:Mastra <code>lastMessages: 30</code> 配置只用于其他直接调 streamVNext 的场景(若有);通过 context builder 装配的 messages 数组要求 Mastra <strong>不重复 append</strong>。详见 spec/22 §与 Mastra 的衔接细节。</p>
-<h2 id="与-mastra-14x-lastmessages-重复风险">与 Mastra 1.4.x lastMessages 重复风险</h2>
+<p><strong>注意</strong>:runner 不再自动追加历史消息。所有 L2 history 都由 context builder 显式调用 <code>appMemory.fetchRecent</code> 后放进 <code>messages</code>。这样可以避免框架层重复注入 lastMessages,也让 Router 只取最近 5 条、Writer 取 30 条等差异化策略可见可测。</p>
+<h2 id="应用层-lastmessages-读取边界">应用层 lastMessages 读取边界</h2>
 <blockquote>
-<p>spec/00 audit 项: <code>Memory.options.lastMessages: 30</code> 与 streamVNext 显式传 messages 数组的交互。如果 Mastra 会 dedupe 那 OK;如果会重复 append 30 条历史就要切到 <code>lastMessages: 0</code> + 自己装配。</p>
+<p>lastMessages 是 memory 模块的读取参数,不是 LLM provider 或 Agent runtime 的隐式行为。任何调用如果没有经过 context builder,就不会获得历史消息。</p>
 </blockquote>
-<p>默认 Mastra 不重复(基于其设计意图),如发现重复则切换。</p>
+<p>默认值为 30,Router 可在自己的 builder 中降到最近 5 条。测试需要覆盖每个 agent 的读取数量,防止历史上下文被静默扩大或缩小。</p>
 <h2 id="与五大守则的协同-spec25">与五大守则的协同 (spec/25)</h2>
 <p>Writer / Validator / Checker / ReaderPanel 的 context builder 都装配了 <code>cardinalRulesConfig</code> + 相关派生数据 (chaptersSinceLastMilestone / valueAxes / activeForeshadowings + 等)。这些数据进入 system prompt 后,模型生成时即&quot;看见&quot;守则约束。</p>
 <p>后续 Validator + ReaderPanel + ArcTracker + BeatAnalyzer 跑检测器,产出 <code>CardinalRulesReport</code> (spec/25 §风险报告输出) 进 ApprovalCard。</p>
@@ -507,7 +509,7 @@ await db.runtime.prompt_traces.insert({
   it(&#39;Validator 装 full timeline 不漏一个相关 entity&#39;, () =&gt; { /* ... */ })
   it(&#39;Checker 不装 entity / relations / timeline (它不需要)&#39;, () =&gt; { /* ... */ })
   it(&#39;Humanizer 不装 entity / relations / timeline (它不需要)&#39;, () =&gt; { /* ... */ })
-  it(&#39;Reflector 不装 mastra_messages (它是写入者)&#39;, () =&gt; { /* ... */ })
+  it(&#39;Reflector 不装应用层 memory messages (它是写入者)&#39;, () =&gt; { /* ... */ })
   it(&#39;Router 仅装最近 5 条 messages&#39;, () =&gt; { /* ... */ })
   it(&#39;总 token &gt; 1M 时抛 ContextOverflowError + 详细诊断&#39;, () =&gt; { /* ... */ })
   it(&#39;总 token &gt; 800K 时 logger.warn + UI toast&#39;, () =&gt; { /* ... */ })
@@ -518,7 +520,7 @@ await db.runtime.prompt_traces.insert({
 <h2 id="不解决的问题-待办">不解决的问题 / 待办</h2>
 <ul>
 <li><strong>DeepSeek V4 真实 tokenizer</strong>: 默认 tiktoken + 5% margin,实查 (spec/00 §A) 后微调</li>
-<li><strong>Mastra <code>lastMessages</code> 与显式 messages 重复风险</strong>: spec/00 audit 一并核对</li>
+<li><strong>应用层 lastMessages 读取边界</strong>: 每个 agent 的读取数量必须由 context builder 显式定义并测试</li>
 <li><strong>超长章节的 retrieve 实操</strong>: 单章 50K+ 字时 readRecentChapters 5 章可能 250K+,context builder 不裁但要监控;若高频触发警报再单开专题</li>
 <li><strong>streaming 中途的 token 监控</strong>: 装配前算 total;若 tool call 后台返回大量数据可能再次接近上限,设计 <code>onToolCall</code> hook 在结果回写前对超大 tool result 做摘要 (W11+)</li>
 <li><strong>多模态 (图)</strong>: 完全不考虑,纯文本</li>

@@ -381,9 +381,9 @@ export const ConceptExtractorOutputSchema = z.object({
 })
 </code></pre>
 <p><strong>maxTokens</strong>: 4K</p>
-<h2 id="deepseek-middleware-集成-借鉴-opencode-sessionllmts391-405">DeepSeek middleware 集成 (借鉴 opencode <code>session/llm.ts:391-405</code>)</h2>
+<h2 id="deepseek-middleware-集成">DeepSeek middleware 集成</h2>
 <blockquote>
-<p>opencode 用 <code>wrapLanguageModel + transformParams middleware</code> 注入 DeepSeek round-trip (<code>provider/transform.ts</code>), 而不是在每个 agent 调用里 if-else 处理 reasoning_content / cache_control。<strong>我们采用同一 pattern</strong>: model 实例本身就是包装好的, callJsonAgent 不感知 DeepSeek 特殊性。</p>
+<p>DeepSeek provider 特性由 <code>wrapLanguageModel + transformParams middleware</code> 在 model 实例层统一处理,而不是在每个 agent 调用里 if-else 处理 reasoning_content / cache_control。model 实例本身就是包装好的,<code>callJsonAgent</code> 不感知 DeepSeek 特殊性。</p>
 </blockquote>
 <h3 id="抽象-deepseekmiddleware-定义在-spec22-deepseek-适配-middleware">抽象 deepseekMiddleware (定义在 spec/22 §DeepSeek 适配 middleware)</h3>
 <p>spec/22 已定义 <code>deepseekMiddleware: LanguageModelV2Middleware</code>, 负责:</p>
@@ -414,10 +414,11 @@ export const deepseekFlash = wrapLanguageModel({
 })
 </code></pre>
 <p>callJsonAgent 接受这些包装后的 model 实例, 不再自己处理 DeepSeek 特殊字段。</p>
-<h3 id="若-mastra-不接受-wraplanguagemodel-包装">若 Mastra 不接受 wrapLanguageModel 包装</h3>
+<h3 id="文本-agent-共用同一-model-wrapper">文本 agent 共用同一 model wrapper</h3>
+<p>Writer / Humanizer / discuss 自由回答不走 JSON mode,但仍使用同一批包装后的 DeepSeek model。差异只在调用 helper:</p>
 <ul>
-<li><strong>方案 A</strong> (优先): callJsonAgent 已经直调 Vercel AI SDK <code>generateText</code>, 不走 Mastra Agent。路径 = 全部走 callJsonAgent (Mastra 仅保留 Memory + Workflow), Writer / Humanizer 这两个 NL 流式 agent 也包一层 callTextAgent (本节扩展) 直接走 streamText。</li>
-<li><strong>方案 B</strong>: 不用 middleware, 在 callJsonAgent 内部手动调 <code>transformParams</code> 等价逻辑, 每次调用前修改 messages。</li>
+<li><code>callJsonAgent</code>:结构化输出,使用 <code>generateText</code> + JSON mode + zod 校验。</li>
+<li><code>callTextAgent</code>:自然语言输出,使用 <code>streamText</code>,中间 chunks 可展示给用户。</li>
 </ul>
 <h2 id="失败处理-统一-retry-策略">失败处理 (统一 retry 策略)</h2>
 <pre><code class="language-ts">// lib/agents/json-output.ts
@@ -429,7 +430,7 @@ export async function callJsonAgent&lt;T&gt;({
   schema: z.ZodSchema&lt;T&gt;
   maxTokens: number
   label: string                                    // 用于 trace / 错误信息
-  threadId?: string                                // 可选 — 续 thread (subagent task_id 续跑模式, 借 opencode tool/task.ts)
+  threadId?: string                                // 可选 — 续 thread / writer subthread
 }): Promise&lt;T&gt; {
   for (let attempt = 1; attempt &lt;= 2; attempt++) {
     const result = await generateText({
@@ -581,7 +582,7 @@ const validated = schema.parse(parsed)
 <ul>
 <li><strong>Streaming 中实时校验中间 JSON</strong>: 目前是流完再 parse;若需要实时(如 ReaderPanel persona 一个一个出),需要 incremental JSON parser (e.g. partial-json) — 当前不做</li>
 <li><strong>schema 自动估算 maxTokens</strong>: 现在手填,有遗漏风险;后续可写一个 <code>estimateMaxTokensFromSchema(schema)</code> 工具</li>
-<li><strong>JSON mode 与 Mastra Memory 的 message 序列化</strong>: Mastra 自动把 assistant content 写进 mastra_messages,JSON 字符串正常存,UI 翻看历史时需要 pretty-print(spec/22 §UI 翻看历史细节)</li>
+<li><strong>JSON mode 输出是否进入会话历史</strong>:默认不写入 <code>runtime.db.messages</code>;只有用户可见的 Router 摘要、Writer/Humanizer 文本或审批反馈摘要进入 L2 history,详见 spec/22 §写入时机</li>
 </ul>
   </main>
 </body>

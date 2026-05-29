@@ -261,9 +261,9 @@ export function useModeMachine() {
   &quot;savedAt&quot;: &quot;2026-04-29T12:30:45Z&quot;
 }
 </code></pre>
-<h2 id="与-mastra-agent-的协同">与 Mastra Agent 的协同</h2>
-<p>Mastra Agent 的 <code>streamVNext</code> 触发的事件 (tool-call / handoff / finish) 通过适配器转成机器的 events:</p>
-<pre><code class="language-ts">const stream = await routerAgent.streamVNext(messages, { /* ... */ })
+<h2 id="与-agent-runner-的协同">与 Agent runner 的协同</h2>
+<p>AI SDK runner 触发的事件(tool-call / finish / error)通过适配器转成机器 events。状态机不关心底层是 <code>generateText</code>、<code>streamText</code> 还是 JSON helper,只消费统一事件:</p>
+<pre><code class="language-ts">const stream = await callTextAgent({ label: 'writer', messages, projectId, threadId })
 for await (const chunk of stream.fullStream) {
   switch (chunk.type) {
     case &#39;tool-call&#39;:

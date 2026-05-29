@@ -23,7 +23,7 @@ flowchart TD
       E2E["E2E (Playwright)<br/>少量 — 核心 user flow,可选"]
     end
     subgraph MID["中层"]
-      INT["集成 (vitest + msw)<br/>中量 — Route Handlers + Mastra agent + 工具流"]
+      INT["集成 (vitest + msw)<br/>中量 — Route Handlers + AI SDK runner + 工具流"]
     end
     subgraph BOT["底层"]
       UNIT["单元 (vitest)<br/>大量 — lib/* 纯函数 + state machine + reducer"]
@@ -58,7 +58,7 @@ flowchart TD
 <td>LLM 拦截</td>
 <td><strong>msw</strong> (Mock Service Worker)</td>
 <td>(实查)</td>
-<td>拦截 fetch,模拟 DeepSeek/Mastra responses</td>
+<td>拦截 fetch,模拟 DeepSeek responses 和应用层 runner 边界</td>
 </tr>
 <tr>
 <td>状态机</td>

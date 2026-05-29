@@ -226,7 +226,7 @@
 </tr>
 <tr>
 <td>P2-3</td>
-<td>spec/01 是"存储 schema 主权",但 spec/16 / spec/18 / spec/22 / plan/04 重复定义多张表,跨文档同步成本高</td>
+<td><strong>[部分收敛]</strong> <code>spec/22</code> 已改为 <code>runtime.db</code> schema 主权; <code>spec/01</code> 继续作为 <code>index.db</code> schema 主权。仍需后续统一 <code>spec/16</code> / <code>spec/18</code> 中的重复表定义边界。</td>
 <td><code>spec/01</code> · <code>spec/16</code> · <code>spec/18</code> · <code>spec/22</code></td>
 </tr>
 <tr>
@@ -236,7 +236,7 @@
 </tr>
 <tr>
 <td>P2-5</td>
-<td>历史压缩(compressed_messages) + 卷级摘要(volume_summaries) + tool 输出 prune 三套省 ctx 机制并存,优先级与组合 debug 视图未定</td>
+<td><strong>[已定优先级,待 UI/debug 落地]</strong> <code>spec/22</code> 已明确三者边界: compressed_messages 只管长 session 对话片段且默认关; volume_summaries 管项目/卷长期上下文; tool output prune 只裁剪中间产物。组合 debug 视图仍未设计。</td>
 <td><code>spec/22</code></td>
 </tr>
 <tr>
@@ -246,7 +246,7 @@
 </tr>
 <tr>
 <td>P2-7</td>
-<td>跨进程恢复语义在 4 个 spec 重复(spec/07 / spec/22 / spec/06 / plan/12),字段略有差异</td>
+<td><strong>[部分收敛]</strong> <code>spec/22</code> 已把 threadId / sessionId / recent messages / project checkpoint 的恢复顺序定为主流程; <code>spec/07</code> 仍是状态机恢复主权。后续需要补一个实现级接口表,避免 spec/06 / plan/12 重复描述漂移。</td>
 <td>多文档</td>
 </tr>
 <tr>
@@ -273,9 +273,9 @@
 </tr>
 <tr>
 <td>OQ-2</td>
-<td>spec/01 是否真的成为 schema 主权(把 spec/16 / spec/18 / spec/22 重复定义的表全收回);还是允许每个 spec 自己定义自己关心的表</td>
-<td><code>spec/01</code> · P2-3 关联</td>
-<td>当前现状:分散定义。P0-1 阶段不动,待 spec 整理主题专门讨论</td>
+<td>schema 主权是否继续拆分为 <code>spec/01 = index.db</code>、<code>spec/22 = runtime.db</code>、<code>plan/04 = session_history.db</code>;还是收敛到单一 schema 目录</td>
+<td><code>spec/01</code> · <code>spec/22</code> · P2-3 关联</td>
+<td>当前暂定:按数据库职责拆分主权,但所有跨引用必须明确表归属</td>
 </tr>
 <tr>
 <td>OQ-3</td>
