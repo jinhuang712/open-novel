@@ -45,13 +45,14 @@
 
 ## 文档状态
 
-本仓库当前是静态 HTML 文档站,核心资料以 `README.md`、`index.html`、`plan/*.html`、`spec/*.html`、`todo.html`、`CHANGELOG.html` 维护。尚未迁移为 CAST Docs JSON 源文件工作流;本轮文档改写采用 preserve-first guided migration,直接收敛现有 HTML 文档中的实现口径。
+本仓库当前是静态 HTML 文档站,核心资料以 `README.md`、`index.html`、`plan/*.html`、`spec/*.html`、`site/*.json`、`todo.html`、`changelist.html` 维护。尚未迁移为逐页 CAST Docs JSON 源文件工作流;本轮文档改写采用 preserve-first guided migration,用 `scripts/render_all_docs.py` 对现有 HTML 正文做全量重包、索引生成与链接校验。
 
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
 - **L2 会话记忆**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/22](./spec/22-memory-and-history.html)
-- **Schema 主权**: `spec/01` 维护 `index.db`;`spec/22` 维护 `runtime.db`;`plan/04` 区分每项目 `session_history.db` 的过程数据职责
+- **Schema 主权**: `spec/01` 维护 `index.db`;`spec/22` 维护 `runtime.db`;`spec/27` 维护每项目 `session_history.db`
+- **编排主权**: `spec/26` 维护 cascade controller / `user_turn` actions / 取消恢复语义;`spec/06` 只维护审批 resolve / rollback endpoint
 - **待实查闸门**: W3 代码前仍需执行 [spec/00](./spec/00-version-audit.html) 的版本与 native binding audit
 
 ## 快速启动
@@ -73,8 +74,10 @@ pnpm dev
 .
 ├── README.md                  # 本文件
 ├── index.html                 # 文档入口
-├── todo.html                  # TODO + 已知问题 + 未决问题
-├── CHANGELOG.html             # 跨文档变更流水线
+├── todo.html                  # TODO + 已知问题 + 未决问题(由 site/todo.json 渲染)
+├── changelist.html            # 跨文档变更流水线(由 site/changelist.json 渲染)
+├── site/                      # 文档站 manifest + TODO/CHANGELIST 源数据
+├── scripts/render_all_docs.py # 全量重渲染 + Strict Profile 校验
 ├── plan/                      # 半技术 PRD(产品向)
 ├── spec/                      # 核心技术文档(实施向)
 ├── progress/                  # 历史进度档案(后续重构,见 todo.html §1.2)
@@ -130,15 +133,19 @@ pnpm dev
 - [23-context-contracts](./spec/23-context-contracts.html) — Per-agent 上下文契约
 - [24-json-output](./spec/24-json-output.html) — JSON 结构化输出统一规约
 - [25-cardinal-rules](./spec/25-cardinal-rules.html) — 五大网文守则
+- [26-cascade-controller](./spec/26-cascade-controller.html) — user_turn actions、审批队列、取消与恢复的编排主权
+- [27-session-history](./spec/27-session-history.html) — session_history.db 过程数据 schema 与保留策略
 
 ### 项目档案
 
 - [todo.html](./todo.html) — TODO + 已知问题 + 未决问题
-- [CHANGELOG.html](./CHANGELOG.html) — 跨文档变更流水线
+- [changelist.html](./changelist.html) — 跨文档变更流水线
+- [site/todo.json](./site/todo.json) — TODO 渲染源
+- [site/changelist.json](./site/changelist.json) — Changelist 渲染源
 
 ### 历史进度 (progress/)
 
-- 9 篇历史档案(000-007 + README),角色被 todo.html + CHANGELOG.html 替代,后续将统一重构,见 [todo.html §1.2](./todo.html)
+- 9 篇历史档案(000-007 + README),角色被 todo.html + changelist.html 替代,后续将统一重构,见 [todo.html §1.2](./todo.html)
 
 ## 设计原则
 
