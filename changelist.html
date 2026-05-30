@@ -402,6 +402,16 @@ u {
   margin: 0;
 }
 
+.index-summary {
+  display: grid;
+  gap: 10px;
+  max-width: 920px;
+}
+
+.index-summary p {
+  margin: 0;
+}
+
 .doc-section {
   margin: 46px 0 0;
   scroll-margin-top: 70px;
@@ -762,6 +772,114 @@ tr:last-child td {
   gap: 22px;
 }
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overview-card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.overview-card:hover,
+.overview-card:focus-within {
+  border-color: var(--primary);
+}
+
+.overview-card a {
+  display: grid;
+  min-height: 210px;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 10px;
+  padding: 18px;
+  color: var(--text);
+}
+
+.overview-card a:hover {
+  text-decoration: none;
+}
+
+.overview-card-label,
+.overview-card-count {
+  color: var(--faint);
+  font: 700 12px/1.35 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.overview-card-title {
+  overflow-wrap: anywhere;
+  font-size: var(--font-md);
+  font-weight: 800;
+  line-height: var(--line-tight);
+}
+
+.overview-card-description {
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.overview-card-action {
+  color: var(--primary);
+  font-weight: 700;
+  line-height: var(--line-tight);
+}
+
+.section-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.index-column-section {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.index-column-section h2 {
+  margin-bottom: 8px;
+  font-size: var(--font-md);
+}
+
+.index-column-section .doc-meta {
+  margin-top: 0;
+}
+
+.index-column-section > p {
+  margin: 10px 0 14px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.index-column-section .chapter-list {
+  gap: 8px;
+}
+
+.index-column-section .chapter-card a {
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+
+.index-column-section .chapter-description {
+  font-size: var(--font-xs);
+}
+
 .set-section {
   margin: 46px 0 0;
 }
@@ -918,6 +1036,18 @@ img {
     font-size: var(--font-xl);
   }
 
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-card a {
+    min-height: auto;
+  }
+
   .set-pagination {
     grid-template-columns: 1fr;
   }
@@ -992,6 +1122,26 @@ img {
 <aside class="callout callout-info">
 <p>本文件仅记录 <strong>跨文档变更流水线</strong>。每条 = 一次有意义的变更意图(可跨多文档)。设计决策(为什么这么改)见各 plan/spec 文档底部 ADR 表;待办与未关闭风险见 <a href="./todo.html">todo.html</a>。本日志从 2026-05-21 文档体系重整开始;此前历史见 <code>progress/</code>。</p>
 </aside>
+<section class="doc-section" id="2026-05-30-index-document-map">
+<h2>2026-05-30 · index · 首页文档地图</h2>
+<table>
+<thead>
+<tr><th>变更</th><th>影响文档</th><th>关联</th></tr>
+</thead>
+<tbody>
+<tr>
+<td>扩充 <code>index.html</code> 顶部说明,明确 Open Novel 文档站的阅读顺序:先看 Plan 理解设计取舍,再看 Spec 对齐实现约束,最后用 Progress 追溯决策历史。</td>
+<td><code>scripts/render_all_docs.py</code> <code>index.html</code> <code>README.md</code></td>
+<td>首页 UX 反馈:入口缺少描述</td>
+</tr>
+<tr>
+<td>新增三列文档地图,以 Plan / Spec / Progress 三张概览卡展示文档集结构;下方详细文档清单也改为三列并排,让主分组关系在首页一眼可见。</td>
+<td><code>assets/docs.css</code> 全部 <code>*.html</code></td>
+<td>首页 UX 反馈:三列更适合展示主文档分组</td>
+</tr>
+</tbody>
+</table>
+</section>
 <section class="doc-section" id="2026-05-30-index-reader-navigation">
 <h2>2026-05-30 · index · 首页读者入口收敛</h2>
 <table>

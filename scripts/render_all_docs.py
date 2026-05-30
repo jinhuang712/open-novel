@@ -473,6 +473,29 @@ def render_index(manifest: dict) -> str:
         ("TODO", "./todo.html", "待办、已知问题与未决问题"),
         ("Changelist", "./changelist.html", "跨文档变更流水线"),
     ]
+    section_summaries = {
+        "plan": (
+            "Plan",
+            "产品与架构意图",
+            "从创作工作流、Agent 拓扑、数据模型、模式闸门和 UI 布局解释为什么这样设计。",
+            "./plan/01-overview.html",
+            "从系统概览开始",
+        ),
+        "spec": (
+            "Spec",
+            "实现契约",
+            "把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。",
+            "./spec/00-version-audit.html",
+            "进入实施闸门",
+        ),
+        "progress": (
+            "Progress",
+            "迁移与决策历史",
+            "保留项目启动、阶段收尾、文档审计和架构收敛记录,用于追溯设计变化。",
+            "./progress/README.html",
+            "查看历史索引",
+        ),
+    }
     quick_html = "\n".join(
         f"""<li class="chapter-card">
           <a href="{html.escape(href)}">
@@ -485,6 +508,23 @@ def render_index(manifest: dict) -> str:
         </li>"""
         for label, href, desc in quick_links
     )
+    overview_cards: list[str] = []
+    for section in sections:
+        kind = section["kind"]
+        if kind not in section_summaries:
+            continue
+        label, title, desc, href, action = section_summaries[kind]
+        overview_cards.append(
+            f"""<li class="overview-card">
+          <a href="{html.escape(href)}">
+            <span class="overview-card-label">{html.escape(label)}</span>
+            <span class="overview-card-title">{html.escape(title)}</span>
+            <span class="overview-card-count">{len(section["items"])} docs</span>
+            <span class="overview-card-description">{html.escape(desc)}</span>
+            <span class="overview-card-action">{html.escape(action)}</span>
+          </a>
+        </li>"""
+        )
     section_html: list[str] = []
     for section in sections:
         cards: list[str] = []
@@ -502,7 +542,7 @@ def render_index(manifest: dict) -> str:
         </li>"""
             )
         section_html.append(
-            f"""<section class="doc-section set-section" id="{html.escape(section["kind"])}">
+            f"""<section class="doc-section set-section index-column-section" id="{html.escape(section["kind"])}">
       <header>
         <h2>{html.escape(section["title"])}</h2>
         <p class="doc-meta">{html.escape(section["kind"])} · {len(section["items"])} docs</p>
@@ -540,7 +580,10 @@ def render_index(manifest: dict) -> str:
     <header class="doc-header">
       <p class="doc-kicker">Open Novel Documentation Set</p>
       <h1>Open Novel</h1>
-      <p class="doc-summary">AI 中文长篇小说创作工作台的产品计划、技术规格、迁移记录和执行档案。首页只展示读者会直接打开的文档入口,维护源文件保留在仓库中,不进入主目录。</p>
+      <div class="doc-summary index-summary">
+        <p>Open Novel 是面向中文长篇小说创作的 AI 工作台文档集。这里不是代码 API 目录,而是把产品承诺、架构边界、实现契约和历史迁移记录放在同一个可发布入口里,方便从 GitHub Pages 直接阅读。</p>
+        <p>阅读顺序建议先看 Plan 理解设计取舍,再看 Spec 对齐实现约束,最后用 Progress 追溯为什么留下这些决策。维护源文件保留在仓库中,不进入首页主目录。</p>
+      </div>
       <div class="doc-meta" aria-label="Document metadata">
         <span>{total} docs</span>
         <span>{len(sections)} sections</span>
@@ -548,13 +591,24 @@ def render_index(manifest: dict) -> str:
       </div>
     </header>
     <main>
+      <section class="doc-section set-section" id="document-map">
+        <h2>文档地图</h2>
+        <ul class="overview-grid">
+{chr(10).join(overview_cards)}
+        </ul>
+      </section>
       <section class="doc-section set-section" id="quick-links">
         <h2>关键入口</h2>
         <ul class="chapter-list">
 {quick_html}
         </ul>
       </section>
+      <section class="doc-section set-section" id="document-library">
+        <h2>文档清单</h2>
+        <div class="section-columns">
 {chr(10).join(section_html)}
+        </div>
+      </section>
     </main>
     <footer class="doc-footer">Open Novel docs · static CAST render · GitHub Pages ready</footer>
   </article>

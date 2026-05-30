@@ -402,6 +402,16 @@ u {
   margin: 0;
 }
 
+.index-summary {
+  display: grid;
+  gap: 10px;
+  max-width: 920px;
+}
+
+.index-summary p {
+  margin: 0;
+}
+
 .doc-section {
   margin: 46px 0 0;
   scroll-margin-top: 70px;
@@ -762,6 +772,114 @@ tr:last-child td {
   gap: 22px;
 }
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.overview-card {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--surface-shadow);
+  transition: border-color var(--motion-base) var(--motion-ease);
+}
+
+.overview-card:hover,
+.overview-card:focus-within {
+  border-color: var(--primary);
+}
+
+.overview-card a {
+  display: grid;
+  min-height: 210px;
+  grid-template-rows: auto auto auto 1fr auto;
+  gap: 10px;
+  padding: 18px;
+  color: var(--text);
+}
+
+.overview-card a:hover {
+  text-decoration: none;
+}
+
+.overview-card-label,
+.overview-card-count {
+  color: var(--faint);
+  font: 700 12px/1.35 var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.overview-card-title {
+  overflow-wrap: anywhere;
+  font-size: var(--font-md);
+  font-weight: 800;
+  line-height: var(--line-tight);
+}
+
+.overview-card-description {
+  color: var(--muted);
+  font-size: var(--font-sm);
+  line-height: var(--line-normal);
+}
+
+.overview-card-action {
+  color: var(--primary);
+  font-weight: 700;
+  line-height: var(--line-tight);
+}
+
+.section-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.index-column-section {
+  min-width: 0;
+  margin: 0;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.index-column-section h2 {
+  margin-bottom: 8px;
+  font-size: var(--font-md);
+}
+
+.index-column-section .doc-meta {
+  margin-top: 0;
+}
+
+.index-column-section > p {
+  margin: 10px 0 14px;
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+.index-column-section .chapter-list {
+  gap: 8px;
+}
+
+.index-column-section .chapter-card a {
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+
+.index-column-section .chapter-description {
+  font-size: var(--font-xs);
+}
+
 .set-section {
   margin: 46px 0 0;
 }
@@ -918,6 +1036,18 @@ img {
     font-size: var(--font-xl);
   }
 
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-card a {
+    min-height: auto;
+  }
+
   .set-pagination {
     grid-template-columns: 1fr;
   }
@@ -978,7 +1108,10 @@ img {
     <header class="doc-header">
       <p class="doc-kicker">Open Novel Documentation Set</p>
       <h1>Open Novel</h1>
-      <p class="doc-summary">AI 中文长篇小说创作工作台的产品计划、技术规格、迁移记录和执行档案。首页只展示读者会直接打开的文档入口,维护源文件保留在仓库中,不进入主目录。</p>
+      <div class="doc-summary index-summary">
+        <p>Open Novel 是面向中文长篇小说创作的 AI 工作台文档集。这里不是代码 API 目录,而是把产品承诺、架构边界、实现契约和历史迁移记录放在同一个可发布入口里,方便从 GitHub Pages 直接阅读。</p>
+        <p>阅读顺序建议先看 Plan 理解设计取舍,再看 Spec 对齐实现约束,最后用 Progress 追溯为什么留下这些决策。维护源文件保留在仓库中,不进入首页主目录。</p>
+      </div>
       <div class="doc-meta" aria-label="Document metadata">
         <span>49 docs</span>
         <span>3 sections</span>
@@ -986,6 +1119,38 @@ img {
       </div>
     </header>
     <main>
+      <section class="doc-section set-section" id="document-map">
+        <h2>文档地图</h2>
+        <ul class="overview-grid">
+<li class="overview-card">
+          <a href="./plan/01-overview.html">
+            <span class="overview-card-label">Plan</span>
+            <span class="overview-card-title">产品与架构意图</span>
+            <span class="overview-card-count">12 docs</span>
+            <span class="overview-card-description">从创作工作流、Agent 拓扑、数据模型、模式闸门和 UI 布局解释为什么这样设计。</span>
+            <span class="overview-card-action">从系统概览开始</span>
+          </a>
+        </li>
+<li class="overview-card">
+          <a href="./spec/00-version-audit.html">
+            <span class="overview-card-label">Spec</span>
+            <span class="overview-card-title">实现契约</span>
+            <span class="overview-card-count">28 docs</span>
+            <span class="overview-card-description">把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。</span>
+            <span class="overview-card-action">进入实施闸门</span>
+          </a>
+        </li>
+<li class="overview-card">
+          <a href="./progress/README.html">
+            <span class="overview-card-label">Progress</span>
+            <span class="overview-card-title">迁移与决策历史</span>
+            <span class="overview-card-count">9 docs</span>
+            <span class="overview-card-description">保留项目启动、阶段收尾、文档审计和架构收敛记录,用于追溯设计变化。</span>
+            <span class="overview-card-action">查看历史索引</span>
+          </a>
+        </li>
+        </ul>
+      </section>
       <section class="doc-section set-section" id="quick-links">
         <h2>关键入口</h2>
         <ul class="chapter-list">
@@ -1027,7 +1192,10 @@ img {
         </li>
         </ul>
       </section>
-<section class="doc-section set-section" id="plan">
+      <section class="doc-section set-section" id="document-library">
+        <h2>文档清单</h2>
+        <div class="section-columns">
+<section class="doc-section set-section index-column-section" id="plan">
       <header>
         <h2>Plan</h2>
         <p class="doc-meta">plan · 12 docs</p>
@@ -1144,7 +1312,7 @@ img {
         </li>
       </ul>
     </section>
-<section class="doc-section set-section" id="spec">
+<section class="doc-section set-section index-column-section" id="spec">
       <header>
         <h2>Spec</h2>
         <p class="doc-meta">spec · 28 docs</p>
@@ -1405,7 +1573,7 @@ img {
         </li>
       </ul>
     </section>
-<section class="doc-section set-section" id="progress">
+<section class="doc-section set-section index-column-section" id="progress">
       <header>
         <h2>Progress</h2>
         <p class="doc-meta">progress · 9 docs</p>
@@ -1495,6 +1663,8 @@ img {
         </li>
       </ul>
     </section>
+        </div>
+      </section>
     </main>
     <footer class="doc-footer">Open Novel docs · static CAST render · GitHub Pages ready</footer>
   </article>

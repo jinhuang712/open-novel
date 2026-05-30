@@ -47,7 +47,7 @@
 
 本仓库当前是静态 HTML 文档站,核心资料以 `README.md`、`index.html`、`plan/*.html`、`spec/*.html`、`site/*.json`、`todo.html`、`changelist.html` 维护。尚未迁移为逐页 CAST Docs JSON 源文件工作流;本轮文档改写采用 preserve-first guided migration,用 `scripts/render_all_docs.py` 对现有 HTML 正文做全量重包、索引生成与链接校验。
 
-HTML 输出已收敛到 `cast-a-doc` 控制 profile:每个页面都是自包含 HTML,样式从 `assets/docs.css` 内联,统一使用 `article.doc` / `doc-header` / `sidebar` / `topbar` / `doc-section` / `doc-footer` 语义壳,不依赖外部 CSS、外部 JS、CDN 或运行时索引脚本。仓库级 CAST Docs 默认值记录在 `.cast-docs/project.json`;`index.html` 由 `site/docs.json` 静态生成并作为 GitHub Pages 入口维护,但首页只展示读者会直接打开的项目、plan、spec、progress、TODO 与 Changelist 入口;CAST profile、样式源和 JSON 源留在仓库维护层,不在首页主目录罗列。GitHub Pages 站内的 README 导航统一跳转到 GitHub README,避免直接打开本地 Markdown 原文。
+HTML 输出已收敛到 `cast-a-doc` 控制 profile:每个页面都是自包含 HTML,样式从 `assets/docs.css` 内联,统一使用 `article.doc` / `doc-header` / `sidebar` / `topbar` / `doc-section` / `doc-footer` 语义壳,不依赖外部 CSS、外部 JS、CDN 或运行时索引脚本。仓库级 CAST Docs 默认值记录在 `.cast-docs/project.json`;`index.html` 由 `site/docs.json` 静态生成并作为 GitHub Pages 入口维护,首页用文档地图三列展示 Plan、Spec、Progress,并只展示读者会直接打开的项目、TODO 与 Changelist 入口;CAST profile、样式源和 JSON 源留在仓库维护层,不在首页主目录罗列。GitHub Pages 站内的 README 导航统一跳转到 GitHub README,避免直接打开本地 Markdown 原文。
 
 当前实现方向已统一为:
 
