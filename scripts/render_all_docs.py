@@ -467,10 +467,10 @@ def render_index(manifest: dict) -> str:
         for section in sections
     )
     quick_links = [
-        ("README", "./README.md", "项目简介、技术栈、导航和开发约定"),
+        ("概览", "./plan/01-overview.html", "先看产品定位、关键决策和不变性"),
+        ("技术闸门", "./spec/00-version-audit.html", "W3 启动前版本、DeepSeek 与 native binding 审计"),
         ("TODO", "./todo.html", "待办、已知问题与未决问题"),
         ("Changelist", "./changelist.html", "跨文档变更流水线"),
-        ("Manifest", "./site/docs.json", "文档集索引源"),
     ]
     quick_html = "\n".join(
         f"""<li class="chapter-card">
@@ -539,7 +539,7 @@ def render_index(manifest: dict) -> str:
     <header class="doc-header">
       <p class="doc-kicker">Open Novel Documentation Set</p>
       <h1>Open Novel</h1>
-      <p class="doc-summary">AI 中文长篇小说创作工作台的产品计划、技术规格、迁移记录和执行档案。这个入口由 <code>site/docs.json</code> 维护,每次渲染会同步生成全部静态 HTML。</p>
+      <p class="doc-summary">AI 中文长篇小说创作工作台的产品计划、技术规格、迁移记录和执行档案。首页只展示读者会直接打开的文档入口,维护源文件保留在仓库中,不进入主目录。</p>
       <div class="doc-meta" aria-label="Document metadata">
         <span>{total} docs</span>
         <span>{len(sections)} sections</span>
@@ -555,7 +555,7 @@ def render_index(manifest: dict) -> str:
       </section>
 {chr(10).join(section_html)}
     </main>
-    <footer class="doc-footer">Open Novel docs · index source <code>site/docs.json</code> · renderer <code>scripts/render_all_docs.py</code></footer>
+    <footer class="doc-footer">Open Novel docs · static CAST render · GitHub Pages ready</footer>
   </article>
 </body>
 </html>
@@ -655,9 +655,12 @@ def validate_strict_profile(manifest: dict) -> list[str]:
         if not path.exists():
             failures.append(f"strict profile missing: {path.relative_to(ROOT)}")
     index = read_text(ROOT / "index.html") if (ROOT / "index.html").exists() else ""
-    for href in ["README.md", "plan/01-overview.html", "spec/00-version-audit.html", "site/todo.json", "site/changelist.json", "todo.html", "changelist.html"]:
+    for href in ["README.md", "plan/01-overview.html", "spec/00-version-audit.html", "todo.html", "changelist.html"]:
         if href not in index:
             failures.append(f"index.html does not link {href}")
+    for href in [".cast-docs/project.json", "assets/docs.css", "site/docs.json", "site/todo.json", "site/changelist.json"]:
+        if href in index:
+            failures.append(f"index.html exposes internal maintenance link {href}")
     for path in html_paths_from_manifest(manifest):
         if not path.exists():
             continue
