@@ -1196,7 +1196,7 @@ img {
     <header class="doc-header">
       <p class="doc-kicker">Open Novel Documentation Set</p>
       <h1>Open Novel</h1>
-      <div class="doc-summary index-summary">
+      <div class="doc-summary">
         <p>Open Novel 是面向中文长篇小说创作的 AI 工作台文档集。这里不是代码 API 目录,而是把产品承诺、架构边界、实现契约和历史迁移记录放在同一个可发布入口里,方便从 GitHub Pages 直接阅读。</p>
         <p>阅读顺序建议先看 Plan 理解设计取舍,再看 Spec 对齐实现约束,最后用 Progress 追溯为什么留下这些决策。维护源文件保留在仓库中,不进入首页主目录。</p>
       </div>
@@ -1209,32 +1209,32 @@ img {
     <main>
       <section class="doc-section set-section" id="document-map">
         <h2>文档地图</h2>
-        <ul class="overview-grid">
-<li class="overview-card">
+        <ul class="chapter-list">
+<li class="chapter-card">
           <a href="./plan/01-overview.html">
-            <span class="overview-card-label">Plan</span>
-            <span class="overview-card-title">产品与架构意图</span>
-            <span class="overview-card-count">12 docs</span>
-            <span class="overview-card-description">从创作工作流、Agent 拓扑、数据模型、模式闸门和 UI 布局解释为什么这样设计。</span>
-            <span class="overview-card-action">从系统概览开始</span>
+            <span class="chapter-number">Plan</span>
+            <span class="chapter-content">
+              <span class="chapter-title">产品与架构意图</span>
+              <span class="chapter-description">从创作工作流、Agent 拓扑、数据模型、模式闸门和 UI 布局解释为什么这样设计。 · 12 docs · 从系统概览开始</span>
+            </span>
           </a>
         </li>
-<li class="overview-card">
+<li class="chapter-card">
           <a href="./spec/00-version-audit.html">
-            <span class="overview-card-label">Spec</span>
-            <span class="overview-card-title">实现契约</span>
-            <span class="overview-card-count">28 docs</span>
-            <span class="overview-card-description">把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。</span>
-            <span class="overview-card-action">进入实施闸门</span>
+            <span class="chapter-number">Spec</span>
+            <span class="chapter-content">
+              <span class="chapter-title">实现契约</span>
+              <span class="chapter-description">把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。 · 28 docs · 进入实施闸门</span>
+            </span>
           </a>
         </li>
-<li class="overview-card">
+<li class="chapter-card">
           <a href="./progress/README.html">
-            <span class="overview-card-label">Progress</span>
-            <span class="overview-card-title">迁移与决策历史</span>
-            <span class="overview-card-count">9 docs</span>
-            <span class="overview-card-description">保留项目启动、阶段收尾、文档审计和架构收敛记录,用于追溯设计变化。</span>
-            <span class="overview-card-action">查看历史索引</span>
+            <span class="chapter-number">Progress</span>
+            <span class="chapter-content">
+              <span class="chapter-title">迁移与决策历史</span>
+              <span class="chapter-description">保留项目启动、阶段收尾、文档审计和架构收敛记录,用于追溯设计变化。 · 9 docs · 查看历史索引</span>
+            </span>
           </a>
         </li>
         </ul>
@@ -1282,8 +1282,8 @@ img {
       </section>
       <section class="doc-section set-section" id="document-library">
         <h2>文档清单</h2>
-        <div class="section-columns">
-<section class="doc-section set-section index-column-section" id="plan">
+        <div class="columns">
+<section class="doc-section set-section" id="plan">
       <header>
         <h2>Plan</h2>
         <p class="doc-meta">plan · 12 docs</p>
@@ -1400,7 +1400,7 @@ img {
         </li>
       </ul>
     </section>
-<section class="doc-section set-section index-column-section" id="spec">
+<section class="doc-section set-section" id="spec">
       <header>
         <h2>Spec</h2>
         <p class="doc-meta">spec · 28 docs</p>
@@ -1661,7 +1661,7 @@ img {
         </li>
       </ul>
     </section>
-<section class="doc-section set-section index-column-section" id="progress">
+<section class="doc-section set-section" id="progress">
       <header>
         <h2>Progress</h2>
         <p class="doc-meta">progress · 9 docs</p>

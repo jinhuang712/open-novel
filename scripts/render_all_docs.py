@@ -370,6 +370,32 @@ def render_mermaid_svg(source: str) -> str:
     return svg
 
 
+def render_cast_safe_svg(title: str, labels: list[str]) -> str:
+    labels = [label for label in labels if label]
+    if not labels:
+        labels = ["图形已渲染"]
+    labels = labels[:8]
+    width = 760
+    row_height = 54
+    height = 92 + row_height * len(labels)
+    parts = [
+        '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10z" fill="#8a929b"></path></marker></defs>',
+        f'<rect x="24" y="24" width="{width - 48}" height="{height - 48}" rx="8" fill="#f8f8f7" stroke="#dedede" stroke-width="1"></rect>',
+    ]
+    x = 64
+    for index, label in enumerate(labels):
+        y = 62 + index * row_height
+        parts.append(f'<circle cx="{x}" cy="{y - 4}" r="7" fill="#dce8f8" stroke="#9aa1a8" stroke-width="1"></circle>')
+        parts.append(
+            f'<text x="{x + 22}" y="{y}" font-size="13" fill="#2f3439">{html.escape(label[:70])}</text>'
+        )
+        if index < len(labels) - 1:
+            parts.append(
+                f'<line x1="{x}" y1="{y + 8}" x2="{x}" y2="{y + row_height - 18}" stroke="#8a929b" stroke-width="2" marker-end="url(#arrow)"></line>'
+            )
+    return f'<svg viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{html.escape(title, quote=True)}">{"".join(parts)}</svg>'
+
+
 def render_mermaid_figure(raw_source: str) -> str:
     raw_source = html.unescape(raw_source).strip()
     if not raw_source:
@@ -389,6 +415,28 @@ def normalize_mermaid(match: re.Match[str]) -> str:
     return render_mermaid_figure(match.group(1))
 
 
+def normalize_existing_diagram_figure(match: re.Match[str]) -> str:
+    figure = match.group(0)
+    caption_match = re.search(r"<figcaption[^>]*>(.*?)</figcaption>", figure, flags=re.S | re.I)
+    caption = strip_tags(caption_match.group(1)) if caption_match else "Diagram"
+    raw_text = strip_tags(figure)
+    labels = [
+        item.strip()
+        for item in re.split(r"\s{2,}|[·•|→]+|\n+", raw_text)
+        if item.strip() and item.strip() != caption
+    ]
+    if len(labels) < 2:
+        labels = [caption, "图形内容已从 Mermaid 渲染"]
+    download_match = re.search(r'data-download-name="([^"]+)"', figure)
+    download_name = download_match.group(1) if download_match else "open-novel-diagram"
+    return (
+        f'<figure class="diagram svg-figure" data-download-name="{html.escape(download_name, quote=True)}">'
+        f'<figcaption>{html.escape(caption)}</figcaption>'
+        f"{render_cast_safe_svg(caption, labels)}"
+        "</figure>"
+    )
+
+
 def normalize_blockquote(match: re.Match[str]) -> str:
     return f'<aside class="callout callout-info">\n{match.group(1).strip()}\n</aside>'
 
@@ -404,7 +452,7 @@ def normalize_body_html(inner: str) -> str:
 
     def protect_generated_figure(match: re.Match[str]) -> str:
         token = f"__OPEN_NOVEL_RENDERED_DIAGRAM_{len(protected_blocks)}__"
-        protected_blocks.append(match.group(0))
+        protected_blocks.append(normalize_existing_diagram_figure(match))
         return token
 
     inner = re.sub(
@@ -674,13 +722,13 @@ def render_index(manifest: dict) -> str:
             continue
         label, title, desc, href, action = section_summaries[kind]
         overview_cards.append(
-            f"""<li class="overview-card">
+            f"""<li class="chapter-card">
           <a href="{html.escape(href)}">
-            <span class="overview-card-label">{html.escape(label)}</span>
-            <span class="overview-card-title">{html.escape(title)}</span>
-            <span class="overview-card-count">{len(section["items"])} docs</span>
-            <span class="overview-card-description">{html.escape(desc)}</span>
-            <span class="overview-card-action">{html.escape(action)}</span>
+            <span class="chapter-number">{html.escape(label)}</span>
+            <span class="chapter-content">
+              <span class="chapter-title">{html.escape(title)}</span>
+              <span class="chapter-description">{html.escape(desc)} · {len(section["items"])} docs · {html.escape(action)}</span>
+            </span>
           </a>
         </li>"""
         )
@@ -701,7 +749,7 @@ def render_index(manifest: dict) -> str:
         </li>"""
             )
         section_html.append(
-            f"""<section class="doc-section set-section index-column-section" id="{html.escape(section["kind"])}">
+            f"""<section class="doc-section set-section" id="{html.escape(section["kind"])}">
       <header>
         <h2>{html.escape(section["title"])}</h2>
         <p class="doc-meta">{html.escape(section["kind"])} · {len(section["items"])} docs</p>
@@ -739,7 +787,7 @@ def render_index(manifest: dict) -> str:
     <header class="doc-header">
       <p class="doc-kicker">Open Novel Documentation Set</p>
       <h1>Open Novel</h1>
-      <div class="doc-summary index-summary">
+      <div class="doc-summary">
         <p>Open Novel 是面向中文长篇小说创作的 AI 工作台文档集。这里不是代码 API 目录,而是把产品承诺、架构边界、实现契约和历史迁移记录放在同一个可发布入口里,方便从 GitHub Pages 直接阅读。</p>
         <p>阅读顺序建议先看 Plan 理解设计取舍,再看 Spec 对齐实现约束,最后用 Progress 追溯为什么留下这些决策。维护源文件保留在仓库中,不进入首页主目录。</p>
       </div>
@@ -752,7 +800,7 @@ def render_index(manifest: dict) -> str:
     <main>
       <section class="doc-section set-section" id="document-map">
         <h2>文档地图</h2>
-        <ul class="overview-grid">
+        <ul class="chapter-list">
 {chr(10).join(overview_cards)}
         </ul>
       </section>
@@ -764,7 +812,7 @@ def render_index(manifest: dict) -> str:
       </section>
       <section class="doc-section set-section" id="document-library">
         <h2>文档清单</h2>
-        <div class="section-columns">
+        <div class="columns">
 {chr(10).join(section_html)}
         </div>
       </section>
