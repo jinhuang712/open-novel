@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "site" / "docs.json"
 TODO_SOURCE = ROOT / "site" / "todo.json"
 CHANGELIST_SOURCE = ROOT / "site" / "changelist.json"
+DIAGRAM_SOURCE = ROOT / "site" / "diagram-sources.json"
 STYLE_SOURCE = ROOT / "assets" / "docs.css"
 MERMAID_CACHE = ROOT / ".cast-docs" / "cache" / "mermaid"
 CAST_A_DOC_ROOT = Path.home() / ".codex" / "skills" / "cast-a-doc"
@@ -168,6 +169,14 @@ def write_text(path: Path, text: str) -> None:
 
 def load_manifest() -> dict:
     return json.loads(read_text(MANIFEST))
+
+
+def load_diagram_sources() -> dict[str, list[str]]:
+    if not DIAGRAM_SOURCE.exists():
+        return {}
+    data = json.loads(read_text(DIAGRAM_SOURCE))
+    items = data.get("items", {})
+    return {str(path): list(sources) for path, sources in items.items()}
 
 
 def html_paths_from_manifest(manifest: dict) -> list[Path]:
@@ -371,10 +380,10 @@ def render_mermaid_svg(source: str) -> str:
 
 
 def render_cast_safe_svg(title: str, labels: list[str]) -> str:
-    labels = [label for label in labels if label]
+    labels = [label for label in labels if label and not re.match(r"^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram)\b", label, flags=re.I)]
     if not labels:
         labels = ["图形已渲染"]
-    labels = labels[:8]
+    labels = labels[:12]
     width = 760
     row_height = 54
     height = 92 + row_height * len(labels)
@@ -396,12 +405,66 @@ def render_cast_safe_svg(title: str, labels: list[str]) -> str:
     return f'<svg viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="{html.escape(title, quote=True)}">{"".join(parts)}</svg>'
 
 
-def render_mermaid_figure(raw_source: str) -> str:
+def clean_mermaid_label(label: str) -> str:
+    label = html.unescape(label)
+    label = re.sub(r"&lt;br\s*/?&gt;|<br\s*/?>", " / ", label, flags=re.I)
+    label = re.sub(r"<[^>]+>", " ", label)
+    label = re.sub(r"^[\[\]{}()/\"'`]+|[\[\]{}()/\"'`]+$", "", label)
+    label = re.sub(r"\s+", " ", label).strip()
+    if not label:
+        return ""
+    if re.match(r"^(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram)\b", label, flags=re.I):
+        return ""
+    if label.startswith("#my-svg") or "font-family:" in label:
+        return ""
+    return label
+
+
+def labels_from_mermaid_source(source: str) -> list[str]:
+    source = html.unescape(source)
+    patterns = [
+        r"subgraph\s+[A-Za-z0-9_]+\s*\[\"([^\"]+)\"\]",
+        r"\[/\"([^\"]+)\"/\]",
+        r"\[\"([^\"]+)\"\]",
+        r"\[([^\]\n]+)\]",
+        r"\(\[([^\]\n]+)\]\)",
+        r"\(([^\)\n]+)\)",
+        r"\{([^}\n]+)\}",
+        r"\|([^|\n]+)\|",
+    ]
+    labels: list[str] = []
+    seen: set[str] = set()
+    for pattern in patterns:
+        for match in re.finditer(pattern, source):
+            label = clean_mermaid_label(match.group(1))
+            if label and label not in seen:
+                seen.add(label)
+                labels.append(label)
+    return labels
+
+
+def infer_mermaid_title(source: str, labels: list[str]) -> str:
+    lower = source.lower()
+    if "approvalcard" in lower or "approv" in lower:
+        return "审批流程图"
+    if "router" in lower and "writer" in lower:
+        return "Agent 协作流程图"
+    if "sqlite" in lower or "index.db" in lower or "runtime.db" in lower or "session_history" in lower:
+        return "数据结构图"
+    if "settings" in lower or "api key" in lower or "model" in lower:
+        return "Settings 配置图"
+    if labels:
+        return f"流程图 · {labels[0][:28]}"
+    return "流程图"
+
+
+def render_mermaid_figure(raw_source: str, caption: str | None = None) -> str:
     raw_source = html.unescape(raw_source).strip()
     if not raw_source:
         return ""
-    svg = render_mermaid_svg(raw_source)
-    summary = raw_source.splitlines()[0].strip() or "Mermaid diagram"
+    labels = labels_from_mermaid_source(raw_source)
+    summary = caption or infer_mermaid_title(raw_source, labels)
+    svg = render_cast_safe_svg(summary, labels)
     download_name = "open-novel-diagram-" + hashlib.sha256(raw_source.encode("utf-8")).hexdigest()[:10]
     return (
         f'<figure class="diagram svg-figure" data-download-name="{download_name}">'
@@ -446,13 +509,17 @@ def filter_classes(match: re.Match[str]) -> str:
     return f' class="{" ".join(classes)}"' if classes else ""
 
 
-def normalize_body_html(inner: str) -> str:
+def normalize_body_html(inner: str, *, diagram_sources: list[str] | None = None) -> str:
     """Constrain preserved legacy body HTML to the CAST Docs HTML profile."""
     protected_blocks: list[str] = []
+    source_queue = list(diagram_sources or [])
 
     def protect_generated_figure(match: re.Match[str]) -> str:
         token = f"__OPEN_NOVEL_RENDERED_DIAGRAM_{len(protected_blocks)}__"
-        protected_blocks.append(normalize_existing_diagram_figure(match))
+        if source_queue:
+            protected_blocks.append(render_mermaid_figure(source_queue.pop(0)))
+        else:
+            protected_blocks.append(normalize_existing_diagram_figure(match))
         return token
 
     inner = re.sub(
@@ -578,7 +645,8 @@ def render_doc(path: Path, title: str, inner: str, *, nav_path: str | None = Non
     prefix = rel_prefix(path)
     rel = nav_path or path.relative_to(ROOT).as_posix()
     display_title, body_inner = split_primary_heading(inner, title)
-    body_inner = normalize_body_html(body_inner)
+    diagram_sources = load_diagram_sources().get(path.relative_to(ROOT).as_posix(), [])
+    body_inner = normalize_body_html(body_inner, diagram_sources=diagram_sources)
     enhancement = diagram_viewer_enhancement(body_inner)
     toc = build_toc(body_inner)
     style = inline_style()
@@ -948,6 +1016,10 @@ def validate_strict_profile(manifest: dict) -> list[str]:
         if 'class="diagram svg-figure"' in text:
             diagram_figures = re.findall(r"<figure\b[^>]*\bclass=\"diagram svg-figure\"[^>]*>.*?</figure>", text, flags=re.S | re.I)
             for index, figure in enumerate(diagram_figures, start=1):
+                if re.search(r"<figcaption>\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram)\b", figure, flags=re.I):
+                    failures.append(f"{rel}: diagram figure {index} caption exposes Mermaid source syntax")
+                if re.search(r"<text\b[^>]*>\s*(flowchart|graph|sequenceDiagram|classDiagram|stateDiagram)\b", figure, flags=re.I):
+                    failures.append(f"{rel}: diagram figure {index} body exposes Mermaid source syntax")
                 if re.search(r"<img\b[^>]*\bsrc=[\"']data:image/svg\+xml", figure, flags=re.I):
                     failures.append(f"{rel}: diagram figure {index} uses a static SVG image fallback")
                 if not re.search(r"<svg\b", figure, flags=re.I):

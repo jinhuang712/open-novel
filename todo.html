@@ -1172,7 +1172,7 @@ img {
   <div class="topbar-breadcrumb">
     <span class="topbar-project">Open Novel</span>
     <span class="topbar-separator">/</span>
-    <span class="topbar-doc">TODO · 待办与已知问题</span>
+    <span class="topbar-doc">TODO · 文档清零与开放问题</span>
   </div>
   <span class="topbar-spacer"></span>
   <nav class="topbar-links" aria-label="Primary">
@@ -1194,20 +1194,12 @@ img {
   <p class="nav-title">本文目录</p>
   <nav class="toc"><ol>
 <li><a href="#top"><span>00</span>概览</a></li>
-<li><a href="#todo-doc-pending-upgrade"><span>H3</span>1.1 文档体例升级 (后续 P0 触碰时随主题做)</a></li>
-<li><a href="#todo-progress-restructure"><span>H3</span>1.2 progress/ 重构 (P0 系列收尾后做)</a></li>
-<li><a href="#todo-tech-conflicts"><span>H3</span>1.3 已修矛盾清单 (Wave 1 + Wave 3, 2026-05-22 已完成)</a></li>
-<li><a href="#todo-spike"><span>H3</span>1.4 W3 启动前 spike 验证 (代码实施前必跑)</a></li>
-<li><a href="#todo-schema-sovereignty"><span>H3</span>1.5 Schema 主权清理 (P2-3, Wave 4 · 方案 C, 2026-05-22 已完成)</a></li>
-<li><a href="#known-p0"><span>H3</span>2.1 P0 级未关闭</a></li>
-<li><a href="#known-p1"><span>H3</span>2.2 P1 级未关闭</a></li>
-<li><a href="#known-p2"><span>H3</span>2.3 P2 级未关闭</a></li>
 </ol></nav>
 </aside>
   <article class="doc" id="top">
     <header class="doc-header">
       <p class="doc-kicker">Project TODO</p>
-      <h1>TODO · 待办与已知问题</h1>
+      <h1>TODO · 文档清零与开放问题</h1>
       <div class="doc-meta" aria-label="Document metadata">
         <a href="./index.html">Index</a>
         <span>todo.html</span>
@@ -1215,281 +1207,65 @@ img {
       </div>
     </header>
     <main>
-<aside class="callout callout-info">
-<p>本文件由 AI 维护。每次 plan/spec/progress 改动后同步更新。仅承担 <strong>待办 (TODO) + 已知问题 (Known Issues) + 未决问题 (Open Questions)</strong> 三个职责;跨文档变更流水线见 <a href="./changelist.html">changelist.html</a>;设计决策记录在各 plan/spec 文档底部 ADR 表。</p>
+<aside class="callout callout-success">
+<p><strong>文档类 TODO 已清零。</strong> 2026-06-02 已按 <code>site/docs.json</code> 对 53 个发布 HTML 与 README / TODO / Changelist 源做全量审计:历史 spec 体例升级、progress 角色混乱、已关闭 P0/P1/P2 项仍挂 TODO、README 陈旧导航和图表源码标题残留均已处理或转入 changelist 记录。</p>
+<p>本页只保留<strong>不能靠文档改写直接解决</strong>的代码实施前验证、产品决策和后续架构实测项。已关闭的历史问题不再留在 TODO 活跃区,请从 <a href="./changelist.html">changelist.html</a> 追溯。</p>
 </aside>
-<section class="doc-section" id="todo-list">
-<h2>1 · 待办 (TODO)</h2>
-<h3 id="todo-doc-pending-upgrade">1.1 文档体例升级 (后续 P0 触碰时随主题做)</h3>
-<p>以下 12 篇 <code>spec/</code> 未在 P0-1 范围,体例仍是旧版,等后续主题触碰时同步升级:</p>
-<ul>
-<li><code>spec/03-prompts.html</code></li>
-<li><code>spec/04-streaming-protocol.html</code></li>
-<li><code>spec/05-entity-highlight.html</code></li>
-<li><code>spec/08-de-ai-pipeline.html</code></li>
-<li><code>spec/09-build-and-tooling.html</code></li>
-<li><code>spec/10-narrative-engine.html</code></li>
-<li><code>spec/11-reader-personas.html</code></li>
-<li><code>spec/12-shortcuts.html</code></li>
-<li><code>spec/13-settings.html</code> (注:含 "学习偏好面板" 段,在 Reflector 简化后需要删除或大改;P0-1 阶段先保留旧版,待此篇触碰时处理)</li>
-<li><code>spec/14-testing.html</code></li>
-<li><code>spec/15-onboarding.html</code></li>
-<li><code>spec/25-cardinal-rules.html</code></li>
-</ul>
-<p><strong>本轮范围</strong>: 此 12 篇体例升级 + 名单外的 14 篇 spec 同样缺尾部模板 (§关联文档 + §ADR), 统一推迟到后续清理周期批量处理。</p>
-
-<h3 id="todo-progress-restructure">1.2 progress/ 重构 (P0 系列收尾后做)</h3>
-<p>9 篇 <code>progress/</code> 文档目前的角色混乱(既是事后记录,又是前置 plan,retro 区块全部空着)。<strong>P0 系列全部收尾后</strong>,统一重构 progress/:</p>
-<ul>
-<li>000-007 + README 现状保留为历史档案</li>
-<li>新 progress 只承担"重大决策的全过程回溯"角色,不再承担 rolling plan</li>
-<li>未来仅写 008+,记录每次重大决策的回溯</li>
-</ul>
-
-<h3 id="todo-tech-conflicts">1.3 已修矛盾清单 (Wave 1 + Wave 3, 2026-05-22 已完成)</h3>
-<p><strong>[已完成]</strong> 以下 6 个 spec 的 P0-1 漂移 (Mastra / LibSQL → better-sqlite3 / sqlite-vec / AI SDK 6) 已全部修正。本表保留作历史记录, 便于后续审计与回溯。</p>
+<section class="doc-section" id="active-todo-zero">
+<h2>1 · 当前文档待办</h2>
 <table>
-<thead>
-<tr><th>文档</th><th>矛盾点</th><th>需要改成</th></tr>
-</thead>
+<thead><tr><th>类别</th><th>状态</th><th>说明</th></tr></thead>
 <tbody>
-<tr>
-<td><code>spec/04-streaming-protocol</code></td>
-<td>L217 &quot;ChatBox 历史消息从 Mastra Memory thread 拉回&quot;</td>
-<td>改为 &quot;从应用层 memory 模块拉回&quot;</td>
-</tr>
-<tr>
-<td><code>spec/09-build-and-tooling</code></td>
-<td>L23 &quot;与 Mastra / Next.js 兼容良好&quot; · L126 <code>@mastra/libsql</code> 列在 <code>serverExternalPackages</code> · L136 注释提 libsql · L157 &quot;需要 Mastra 的 Route&quot; · L211 &quot;Mastra 包打包错误 (libsql 找不到 .node 文件)&quot; · L219 &quot;dev hot-reload 后 LibSQL 连接异常&quot; · L220 <code>lib/mastra/index.ts</code> 排查路径</td>
-<td>全部替换为 <code>better-sqlite3</code>;Mastra 引用删除;打包问题相应改写</td>
-</tr>
-<tr>
-<td><code>spec/10-narrative-engine</code></td>
-<td>L421 &quot;避免同时多个角色扫导致 LibSQL 写锁竞争&quot;</td>
-<td>改为 &quot;避免 SQLite WAL 写锁竞争&quot;</td>
-</tr>
-<tr>
-<td><code>spec/11-reader-personas</code></td>
-<td>L49 <code>import { Agent } from &#39;@mastra/core/agent&#39;</code></td>
-<td>改为 <code>callJsonAgent</code> 风格,删 Mastra import</td>
-</tr>
-<tr>
-<td><code>spec/13-settings</code></td>
-<td>L341 <code>pool.delete(projectId)</code> close LibSQL · L353 &quot;LibSQL 必须先 close&quot; (迁移 workspace) · L423/426/482 &quot;Mastra 1.x&quot; / &quot;LibSQL / 等&quot; / &quot;Mastra agents 实例化&quot; · 整段 &quot;学习偏好面板&quot; L484-516(33 行) · 跨文件 stub: <code>index.html:365</code> / <code>progress/004-docs-hardening.html:119</code> / <code>plan/06-cascade-and-reflection.html:167</code></td>
-<td>改为 better-sqlite3 connection close;移除 Mastra 引用;删 &quot;学习偏好面板&quot; 段;同步 3 处跨文件 stub</td>
-</tr>
-<tr>
-<td><code>spec/18-embeddings</code></td>
-<td>L297 &amp; L397 &quot;优先 LibSQL native vector&quot; (违 P0-1 改用 sqlite-vec 决议;本 spec 在 P0-1 wave 已触碰但残留漂移)</td>
-<td>改为 &quot;sqlite-vec (主) → 朴素 cosine (回退)&quot;</td>
-</tr>
-</tbody>
-</table>
-
-<h3 id="todo-spike">1.4 W3 启动前 spike 验证 (代码实施前必跑)</h3>
-<table>
-<thead>
-<tr><th>Spike</th><th>目标</th><th>失败回退</th></tr>
-</thead>
-<tbody>
-<tr>
-<td>Spike 1 · AI SDK 6 <code>stopWhen</code> 端到端</td>
-<td>验证 <code>generateText({ stopWhen })</code> 在 tool result 含 marker 时能拦截 + LLM 不继续生成;<code>onStepFinish</code> 每步都拿到 toolCalls / toolResults;<code>maxSteps</code> 与 <code>stopWhen</code> 协同</td>
-<td>纯手写 <code>while</code> runner(代码量翻倍但可控)</td>
-</tr>
-<tr>
-<td>Spike 2 · <code>sqlite-vec</code> + <code>better-sqlite3</code> + Drizzle</td>
-<td>macOS arm64 / Linux x64 跑 <code>db.loadExtension(sqliteVec.path)</code>;<code>vec0</code> virtual table CRUD;Drizzle raw SQL 调 vec0 操作;与普通表 JOIN</td>
-<td>(a) 老版 <code>sqlite-vss</code> (b) <code>hnswlib-node</code> 独立索引(放弃 JOIN)</td>
-</tr>
-<tr>
-<td>Spike 3 · <code>better-sqlite3</code> + Next.js 协同</td>
-<td>Route Handler 内同步 db 调用不阻塞 event loop(实际数据量);WAL + 并发写不死锁;dev hot-reload 不泄漏 connection</td>
-<td>Worker thread 隔离写操作</td>
-</tr>
-</tbody>
-</table>
-
-<h3 id="todo-schema-sovereignty">1.5 Schema 主权清理 (P2-3, Wave 4 · 方案 C, 2026-05-22 已完成)</h3>
-<p><strong>[已完成]</strong> 落地情况:</p>
-<ul>
-<li>✅ <strong>spec/01 §index.db 全表 schema 主权区</strong>: 加全表索引目录 (26 张表) + 完整 CREATE TABLE 主权区 (16 张 W7+ 新增表迁入)</li>
-<li>✅ <strong>3 处重复 CREATE TABLE 已删</strong>:
-  <ul>
-    <li><code>learnings</code>: <code>plan/06:117</code> 重复定义已删, 改指 <code>spec/01 §learnings</code></li>
-    <li><code>paragraph_anchors</code>: <code>spec/17:90</code> 重复定义已删, 改指 <code>spec/01 §paragraph_anchors</code> (含完整版字段 content_signature / start_offset / end_offset / deleted_at + 4 INDEX)</li>
-    <li><code>paragraph_embeddings</code>: <code>spec/18:28</code> 重复定义已删, 改指 <code>spec/01 §paragraph_embeddings</code> (含 spec/18 确认版 norm 字段)</li>
-  </ul>
-</li>
-<li>✅ <strong>8 个 spec 摘要化</strong>: spec/16 / 17 / 18 / 19 / 22 / 23 / 10 / 11 各自的 CREATE TABLE 改为字段摘要 + 用途 + 指针</li>
-<li>✅ <strong>foreshadowings 别名</strong>: <code>spec/22:42</code> prose 中 &quot;foreshadowings&quot; 已删; spec/01 §dependencies 加 <strong>别名说明</strong> — <code>foreshadowings</code> 表 ≡ <code>dependencies WHERE kind=&#39;foreshadowing&#39;</code>, 非独立物理表 (spec/25 ALTER 语句目标是 dependencies.metadata JSON 字段)</li>
-<li>✅ <strong>spec/01 自身 LibSQL drift 修正</strong>: runtime.db Mastra 注释 / user_turns Mastra thread / PRAGMA 注释 / <code>LibSQL 连接池</code> 整段 (改写为 better-sqlite3 + sqlite-vec 版本 + globalThis 缓存)</li>
-</ul>
-<p><strong>[已完成]</strong> 本轮已把发布文档中的 <code>foreshadowings</code> 物理表口径收敛为 <code>dependencies(kind=foreshadowing)</code> 逻辑视图:spec/19 / spec/23 / spec/25 已同步;progress/ 历史档案保留原文。</p>
+<tr><td>文档重写 / CAST 化</td><td><strong>0 open</strong></td><td>所有 manifest 页面已重渲染到 CAST shell;Mermaid 作者源恢复到 <code>site/diagram-sources.json</code>,渲染器禁止图表 caption / body 暴露 Mermaid 方向声明等源码首行。</td></tr>
+<tr><td>文档导航 / 索引</td><td><strong>0 open</strong></td><td>README、index、progress README、TODO、Changelist 的职责边界已收敛;README 不再指向过期 progress 重构项。</td></tr>
+<tr><td>已关闭历史项</td><td><strong>0 open</strong></td><td>Embedding provider、schema 主权拆分、cascade controller 主权、reindex 失败语义、analyzeImpact Writer 边界等已决事项从 TODO 活跃区移除,保留在 changelist / 对应 spec 中。</td></tr>
+</tbody></table>
 </section>
-<section class="doc-section" id="known-issues">
-<h2>2 · 已知问题 (Known Issues)</h2>
-<p>P0/P1 风险中目前 <strong>已识别但未关闭</strong> 的项。</p>
-
-<h3 id="known-p0">2.1 P0 级未关闭</h3>
+<section class="doc-section" id="open-verification">
+<h2>2 · 实施前开放验证</h2>
+<p>以下项需要真实代码、依赖或运行数据验证。文档已给出暂定策略,但不能在文档层直接关闭。</p>
 <table>
-<thead>
-<tr><th>编号</th><th>问题</th><th>关联</th><th>解决路径</th></tr>
-</thead>
+<thead><tr><th>优先级</th><th>问题</th><th>关联文档</th><th>回头解决方式</th></tr></thead>
 <tbody>
-<tr>
-<td>P0-2</td>
-<td>DeepSeek <code>cache_control</code> 字段服务端识别情况未实查</td>
-<td><code>spec/00 §H</code> · <code>spec/03</code> stable header 设计</td>
-<td>W3 day-1 实测;若不支持降级为仅头部稳定排布,不影响功能只增 token 成本</td>
-</tr>
-<tr>
-<td>P0-3</td>
-<td>1M ctx + per-agent 装齐契约的实际 token 成本未基线化</td>
-<td><code>spec/23</code> · <code>plan/12</code></td>
-<td>W3 实测;Writer 写章节单次调用估算 165K,真实 tokenizer 可能偏差 ±10-30%(tiktoken vs DeepSeek)</td>
-</tr>
-<tr>
-<td><del>P0-4</del></td>
-<td><del>整 turn 回退反向 reindex 失败语义未定</del></td>
-<td><code>spec/26</code> §回滚与 Reindex 失败语义</td>
-<td><strong>[已关闭]</strong> 回滚 transaction 成功即视为用户产物恢复;reindex 失败进入 <code>needs_reindex_repair</code>,不反向污染源文件状态</td>
-</tr>
-<tr>
-<td><del>P0-5</del></td>
-<td><del><code>analyzeImpact</code> 内嵌 Writer 短调用的边界未明</del></td>
-<td><code>spec/19</code> §工作链路 · <code>spec/26</code></td>
-<td><strong>[已关闭]</strong> cascade controller 拥有 action 编排;analyzeImpact 只产出 in-memory ChangeSet,Writer 短调用禁用写工具</td>
-</tr>
-</tbody>
-</table>
-
-<h3 id="known-p1">2.2 P1 级未关闭</h3>
-<table>
-<thead>
-<tr><th>编号</th><th>问题</th><th>关联</th></tr>
-</thead>
-<tbody>
-<tr>
-<td>P1-3</td>
-<td>better-sqlite3 多 connection / LRU 策略待 spike 后定(原 LibSQL LRU(3) 结论错误,实际应按"项目数 × 数据库文件数"重算)</td>
-<td><code>plan/04</code> §连接池</td>
-</tr>
-<tr>
-<td>P1-4</td>
-<td><code>derived: true</code> 派生文件守卫的实施细节(写盘 / rollback / chokidar 三处都要查)</td>
-<td><code>plan/01</code> 不变性 · <code>spec/06</code> · <code>spec/16</code></td>
-</tr>
-<tr>
-<td>P1-5</td>
-<td>Reflector 并发安全未定义(多 turn 几乎同时完成时 learnings 表并发 upsert)</td>
-<td><code>plan/06</code> · <code>spec/22</code></td>
-</tr>
-<tr>
-<td>P1-6</td>
-<td>doom-loop 相似度阈值 0.9 是经验值,缺 metrics 反馈机制</td>
-<td><code>spec/06</code> §doom-loop detector</td>
-</tr>
-<tr>
-<td>P1-7</td>
-<td><code>callJsonAgent</code> retry 2 次 + escalate 是 13 个 agent 统一出口的关键路径单点;与 doom-loop detector 两套 retry 叠加可能形成"escalate → 用户 retry → 再 escalate" 循环</td>
-<td><code>spec/24</code> · <code>spec/06</code></td>
-</tr>
-<tr>
-<td>P1-8</td>
-<td><code>ContextOverflowError</code> 抛错后无兜底("分卷"未设计)</td>
-<td><code>spec/23</code> · <code>plan/12</code> §不解决</td>
-</tr>
-<tr>
-<td>P1-9</td>
-<td><code>extractSemanticDelta</code> 对中长篇正文 diff 的 LLM 单次稳定性依赖,失败时整 cascade 链断,缺降级</td>
-<td><code>spec/19</code> step 1</td>
-</tr>
-</tbody>
-</table>
-
-<h3 id="known-p2">2.3 P2 级未关闭</h3>
-<table>
-<thead>
-<tr><th>编号</th><th>问题</th><th>关联</th></tr>
-</thead>
-<tbody>
-<tr>
-<td><del>P2-1</del></td>
-<td><del>状态机与 cascade controller 的所有权混乱(cascade 控制器没有专门 spec,职责散落)</del></td>
-<td><strong>[已关闭]</strong> 新增 <code>spec/26</code> 作为 cascade controller 主权文档;spec/07 只管 UI 状态,spec/06 只管审批 endpoint,spec/19 只管影响分析。</td>
-</tr>
-<tr>
-<td>P2-2</td>
-<td>Router 一次性意图解析 vs chat box 顶部 <code>[取消本次对话]</code> 两条取消路径并存,语义可能不一致</td>
-<td><code>plan/02</code> · <code>spec/06</code> §Turn 取消语义 · <code>spec/24</code></td>
-</tr>
-<tr>
-<td>P2-3</td>
-<td><strong>[部分收敛]</strong> <code>spec/22</code> 已改为 <code>runtime.db</code> schema 主权; <code>spec/01</code> 继续作为 <code>index.db</code> schema 主权。仍需后续统一 <code>spec/16</code> / <code>spec/18</code> 中的重复表定义边界。</td>
-<td><code>spec/01</code> · <code>spec/16</code> · <code>spec/18</code> · <code>spec/22</code></td>
-</tr>
-<tr>
-<td>P2-4</td>
-<td>大量魔法常数硬编码(doom-loop 0.9 / cascade ≤3 / weight 阈值 30→60→90 / lastMessages=30 / TOOL_OUTPUT_MAX_CHARS=2000 / tokenBudget 软警 800K / 5% tokenizer margin / chapter ID 3 位 padded 等)未 settings 暴露</td>
-<td>多文档</td>
-</tr>
-<tr>
-<td>P2-5</td>
-<td><strong>[已定优先级,待 UI/debug 落地]</strong> <code>spec/22</code> 已明确三者边界: compressed_messages 只管长 session 对话片段且默认关; volume_summaries 管项目/卷长期上下文; tool output prune 只裁剪中间产物。组合 debug 视图仍未设计。</td>
-<td><code>spec/22</code></td>
-</tr>
-<tr>
-<td>P2-6</td>
-<td>测试体系是空的:<code>spec/14</code> 写了测试策略,但 progress 没有 vitest / playwright 落地;<code>spec/00 §A-§J</code> 五项 audit 全部未跑</td>
-<td><code>spec/14</code> · <code>spec/00</code></td>
-</tr>
-<tr>
-<td>P2-7</td>
-<td><strong>[部分收敛]</strong> <code>spec/22</code> 已把 threadId / sessionId / recent messages / project checkpoint 的恢复顺序定为主流程; <code>spec/07</code> 仍是状态机恢复主权。后续需要补一个实现级接口表,避免 spec/06 / plan/12 重复描述漂移。</td>
-<td>多文档</td>
-</tr>
-<tr>
-<td>P2-8</td>
-<td>段锚点 + 差量 reindex + paragraph_embeddings 形成强耦合算法栈,锚点失稳会让知识图谱半瘫</td>
-<td><code>spec/17</code> · <code>spec/18</code> · <code>spec/19</code> · <code>spec/20</code> · <code>spec/21</code></td>
-</tr>
-</tbody>
-</table>
+<tr><td>P0</td><td>DeepSeek <code>cache_control</code> 字段服务端识别情况未实查。</td><td><a href="./spec/00-version-audit.html">spec/00 §H</a> · <a href="./spec/03-prompts.html">spec/03</a></td><td>W3 day-1 最小复现;若不支持,降级为稳定头部排布,功能不变但 token 成本上升。</td></tr>
+<tr><td>P0</td><td>1M context + per-agent 装齐契约的真实 token 成本未基线化。</td><td><a href="./spec/23-context-contracts.html">spec/23</a> · <a href="./plan/12-memory-and-context.html">plan/12</a></td><td>用 DeepSeek tokenizer / 真实请求记录基线;校验 Writer 单次章节调用估算 165K 是否偏离。</td></tr>
+<tr><td>P0</td><td>AI SDK 6 <code>stopWhen</code> + tool result marker + <code>onStepFinish</code> 的端到端行为未跑通。</td><td><a href="./spec/00-version-audit.html">spec/00</a> · <a href="./plan/08-tech-stack.html">plan/08</a></td><td>写最小 runner spike;若 <code>stopWhen</code> 不可靠,回退纯手写 while runner。</td></tr>
+<tr><td>P0</td><td><code>sqlite-vec</code> + <code>better-sqlite3</code> + Drizzle 在 macOS arm64 / Linux x64 的 native binding 与 JOIN 行为未实测。</td><td><a href="./spec/00-version-audit.html">spec/00</a> · <a href="./spec/18-embeddings.html">spec/18</a></td><td>跑 <code>db.loadExtension(sqliteVec.path)</code>、<code>vec0</code> CRUD、普通表 JOIN;失败再评估 sqlite-vss / hnswlib-node。</td></tr>
+<tr><td>P0</td><td><code>better-sqlite3</code> 在 Next.js Route Handler 中的同步调用、WAL 并发写与 dev hot-reload connection 泄漏未实测。</td><td><a href="./spec/00-version-audit.html">spec/00</a> · <a href="./plan/04-storage-model.html">plan/04</a></td><td>做 Route Handler 并发写 spike;失败时把写操作隔离到 worker thread。</td></tr>
+</tbody></table>
 </section>
-<section class="doc-section" id="open-questions">
-<h2>3 · 未决问题 (Open Questions)</h2>
-<p>等用户决策的悬挂问题。</p>
-
+<section class="doc-section" id="open-architecture-decisions">
+<h2>3 · 后续架构决策</h2>
 <table>
-<thead>
-<tr><th>编号</th><th>问题</th><th>关联</th><th>暂定立场</th></tr>
-</thead>
+<thead><tr><th>优先级</th><th>问题</th><th>关联</th><th>暂定处理</th></tr></thead>
 <tbody>
-<tr>
-<td><del>OQ-1</del></td>
-<td><del>Embedding provider 最终选(BGE-M3 / DeepSeek / OpenAI)</del></td>
-<td><code>spec/18</code></td>
-<td><strong>[已关闭]</strong> spec/18 §决议 (L41-44) 已锁 <strong>BGE-M3 本地</strong>;fallback 顺序 DeepSeek embedding → OpenAI text-embedding-3-small;详 spec/18 §已决策项 L395-398</td>
-</tr>
-<tr>
-<td><del>OQ-2</del></td>
-<td><del>schema 主权是否继续拆分为 <code>spec/01 = index.db</code>、<code>spec/22 = runtime.db</code>、<code>plan/04 = session_history.db</code>;还是收敛到单一 schema 目录</del></td>
-<td><code>spec/01</code> · <code>spec/22</code> · <code>spec/27</code></td>
-<td><strong>[已关闭]</strong> 按数据库职责拆分主权:<code>spec/01=index.db</code>,<code>spec/22=runtime.db</code>,<code>spec/27=session_history.db</code>。</td>
-</tr>
-<tr>
-<td>OQ-3</td>
-<td>plan/01 不变性已合并到 12 条,是否还需要二次激进收敛(≤8 / ≤5)</td>
-<td><code>plan/01</code></td>
-<td>Turn 1.5 已落地 12 条;用户使用后若感觉"不变性仍然太多",再讨论激进收敛</td>
-</tr>
-</tbody>
-</table>
+<tr><td>P1</td><td>better-sqlite3 多 connection / LRU 策略仍需按“项目数 × 数据库文件数”重算。</td><td><a href="./plan/04-storage-model.html">plan/04 §连接池</a></td><td>待 native binding spike 后定默认上限和关闭策略。</td></tr>
+<tr><td>P1</td><td><code>derived: true</code> 派生文件守卫的写盘、rollback、chokidar 三处实现细节仍需统一。</td><td><a href="./plan/01-overview.html">plan/01</a> · <a href="./spec/06-approval-flow.html">spec/06</a> · <a href="./spec/16-knowledge-schema.html">spec/16</a></td><td>代码前补一张实现级接口表,避免守卫只停留在原则。</td></tr>
+<tr><td>P1</td><td>Reflector 并发安全未定义:多个 turn 几乎同时完成时 <code>learnings</code> upsert 冲突。</td><td><a href="./plan/06-cascade-and-reflection.html">plan/06</a> · <a href="./spec/22-memory-and-history.html">spec/22</a></td><td>实现前明确 transaction / queue / conflict merge 策略。</td></tr>
+<tr><td>P1</td><td>doom-loop 阈值 0.9、<code>callJsonAgent</code> retry 2 次与用户 retry 可能叠加成循环。</td><td><a href="./spec/06-approval-flow.html">spec/06</a> · <a href="./spec/24-json-output.html">spec/24</a></td><td>增加 metrics 与 retry budget;避免 escalate → retry → 再 escalate 的无效循环。</td></tr>
+<tr><td>P1</td><td><code>ContextOverflowError</code> 后的“分卷”兜底未设计。</td><td><a href="./spec/23-context-contracts.html">spec/23</a> · <a href="./plan/12-memory-and-context.html">plan/12</a></td><td>先保留为显式失败;进入长篇真实压测后再设计分卷策略。</td></tr>
+<tr><td>P1</td><td><code>extractSemanticDelta</code> 对中长篇正文 diff 的单次 LLM 稳定性依赖过高。</td><td><a href="./spec/19-impact-analysis.html">spec/19</a></td><td>需要降级路径:分段 delta、规则预筛或人工确认。</td></tr>
+<tr><td>P2</td><td>取消路径仍有两套入口:Router action 与 ChatBox 顶部“取消本次对话”。</td><td><a href="./plan/02-multi-agent.html">plan/02</a> · <a href="./spec/06-approval-flow.html">spec/06</a> · <a href="./spec/24-json-output.html">spec/24</a></td><td>实现前统一为同一个 <code>rollbackTurn</code> 语义。</td></tr>
+<tr><td>P2</td><td>魔法常数尚未系统化暴露或归档:doom-loop 0.9、cascade ≤3、weight 阈值、lastMessages=30、tokenBudget 软警等。</td><td>多文档</td><td>先保留硬编码默认;Settings/debug 设计时统一归档。</td></tr>
+<tr><td>P2</td><td>测试策略已有 spec,但实际 vitest / playwright / LLM golden / spec/00 audit 尚未落地。</td><td><a href="./spec/14-testing.html">spec/14</a> · <a href="./spec/00-version-audit.html">spec/00</a></td><td>开始代码实施后作为第一批工程化任务。</td></tr>
+<tr><td>P2</td><td>段锚点、差量 reindex、paragraph_embeddings 强耦合,锚点失稳会拖垮知识图谱。</td><td><a href="./spec/17-paragraph-anchors.html">spec/17</a> · <a href="./spec/18-embeddings.html">spec/18</a> · <a href="./spec/19-impact-analysis.html">spec/19</a></td><td>需要真实章节样本和 mutation 测试后校准。</td></tr>
+</tbody></table>
 </section>
-<section class="doc-section" id="changelog-ref">
-<h2>4 · 变更日志</h2>
-<p>跨文档变更流水线见 <a href="./changelist.html">changelist.html</a>。本文件不重复维护。</p>
+<section class="doc-section" id="audit-log">
+<h2>4 · 本轮文档审计记录</h2>
+<table>
+<thead><tr><th>检查项</th><th>结果</th><th>落地</th></tr></thead>
+<tbody>
+<tr><td>发布文档清单</td><td>53 个 HTML artifact,来自 <code>site/docs.json</code> + index / TODO / changelist / CHANGELOG 兼容页。</td><td>通过 <code>scripts/render_all_docs.py --validate</code> 和 CAST HTML validator 复核。</td></tr>
+<tr><td>图表源码残留</td><td>发现 63 个 figure caption/body 仍显示 Mermaid 方向声明等源码首行。</td><td>恢复 63 段 Mermaid 作者源到 <code>site/diagram-sources.json</code>;渲染器改为语义 caption + CAST 安全 SVG。</td></tr>
+<tr><td>README / progress 角色</td><td>README 仍指向过期 progress 重构说明,progress README 仍像 rolling plan 模板。</td><td>README 改为历史档案说明;progress README 改为归档规则。</td></tr>
+<tr><td>已关闭项挂 TODO</td><td>P0-4、P0-5、P2-1、OQ-1、OQ-2 等已关闭事项仍在 TODO 活跃区。</td><td>移出活跃 TODO,由 changelist 和对应 spec 承担历史追溯。</td></tr>
+<tr><td>不确定事项</td><td>代码 / 依赖 / 运行数据才能验证的事项无法凭文档关闭。</td><td>保留在本页 §2 / §3,作为回头解决的开放问题。</td></tr>
+</tbody></table>
+</section>
+<section class="doc-section" id="changelist-link">
+<h2>5 · 变更日志</h2>
+<p>跨文档变更流水线见 <a href="./changelist.html">changelist.html</a>。本文件只维护当前开放问题。</p>
 </section>
     </main>
     <footer class="doc-footer">Open Novel docs · CAST-style static render · rerun <code>python3 scripts/render_all_docs.py --validate</code> after edits.</footer>

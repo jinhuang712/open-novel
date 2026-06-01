@@ -1207,9 +1207,20 @@ img {
       </div>
     </header>
     <main>
+<section class="doc-section" id="2026-06-02-docs-todo-zero">
+<h2>2026-06-02 · docs audit · TODO 清零与图表修复</h2>
+<table>
+<thead><tr><th>变更</th><th>影响文档</th><th>关联</th></tr></thead>
+<tbody>
+<tr><td>按 <code>site/docs.json</code> 对发布文档集做逐篇审计,把文档重写 / CAST 化 / progress 角色混乱 / 已关闭事项挂 TODO 等文档类待办清零;TODO 活跃区只保留代码实施前必须实测或用户回头决策的问题。</td><td><code>site/todo.json</code> <code>todo.html</code> <code>README.md</code> <code>progress/README.html</code></td><td>用户要求“完成 todo 的清零,整个项目的检查;不确定项落入 todo 回头解决”。</td></tr>
+<tr><td>恢复 63 段 Mermaid 作者源到 <code>site/diagram-sources.json</code>,并更新渲染器:图表重新渲染时使用语义 caption 与 CAST 安全 SVG,禁止 caption 或图表正文继续暴露 Mermaid 方向声明等源码首行。</td><td><code>scripts/render_all_docs.py</code> <code>site/diagram-sources.json</code> 全部含图表的 plan/spec HTML</td><td>此前图表以文字源码呈现问题的后续彻底修复;避免重新渲染后再次退化。</td></tr>
+<tr><td>将 <code>progress/README.html</code> 从 rolling plan 模板改为历史档案索引;README 同步去掉过期重构表述,并把未声明许可证改成明确风险说明。</td><td><code>README.md</code> <code>progress/README.html</code></td><td>文档角色主权收敛:当前待办归 TODO,跨文档变更归 Changelist,progress 只做追溯。</td></tr>
+<tr><td>把已关闭的 P0/P2/OQ 历史项移出 TODO 活跃区,例如 cascade controller 主权、schema 主权拆分、Embedding provider、reindex 失败语义与 analyzeImpact Writer 边界;真实未知项保留为开放验证 / 后续架构决策。</td><td><code>site/todo.json</code> <code>todo.html</code></td><td>避免 TODO 同时承载历史回溯和当前风险,降低后续 agent 误判。</td></tr>
+</tbody></table>
 <aside class="callout callout-info">
 <p>本文件仅记录 <strong>跨文档变更流水线</strong>。每条 = 一次有意义的变更意图(可跨多文档)。设计决策(为什么这么改)见各 plan/spec 文档底部 ADR 表;待办与未关闭风险见 <a href="./todo.html">todo.html</a>。本日志从 2026-05-21 文档体系重整开始;此前历史见 <code>progress/</code>。</p>
 </aside>
+</section>
 <section class="doc-section" id="2026-05-30-mermaid-svg-render">
 <h2>2026-05-30 · renderer · Mermaid SVG 图表</h2>
 <table>
@@ -1218,9 +1229,9 @@ img {
 </thead>
 <tbody>
 <tr>
-<td>将 Mermaid 源码块从纯文本 <code>pre[data-language=mermaid]</code> 改为构建期编译的内联 SVG figure,并注入 <code>cast-a-doc</code> renderer-owned diagram viewer,支持点击放大、缩放拖拽和 SVG/PNG 下载;页面不再依赖 Mermaid CDN/runtime,也不再把 flowchart 源码作为正文展示。</td>
+<td>将 Mermaid 源码块从纯文本 <code>pre[data-language=mermaid]</code> 改为构建期编译的内联 SVG figure,并注入 <code>cast-a-doc</code> renderer-owned diagram viewer,支持点击放大、缩放拖拽和 SVG/PNG 下载;页面不再依赖 Mermaid CDN/runtime,也不再把图表源码作为正文展示。</td>
 <td><code>scripts/render_all_docs.py</code> <code>assets/docs.css</code> 全部包含图表的 <code>*.html</code></td>
-<td>图表渲染反馈:flow chart 不应是纯文本状态</td>
+<td>图表渲染反馈:流程图不应是纯文本状态</td>
 </tr>
 <tr>
 <td>同步 Strict Profile 校验:禁止生成 <code>Mermaid source</code> 和 <code>data-language="mermaid"</code> 残留,禁止静态 <code>data:image/svg+xml</code> 图像回退,并要求 diagram figure 包含内联 SVG 与 CAST diagram viewer hook。</td>

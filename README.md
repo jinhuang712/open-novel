@@ -83,7 +83,7 @@ pnpm dev
 ├── scripts/render_all_docs.py # 全量重渲染 + Mermaid SVG viewer + Strict Profile 校验
 ├── plan/                      # 半技术 PRD(产品向)
 ├── spec/                      # 核心技术文档(实施向)
-├── progress/                  # 历史进度档案(后续重构,见 todo.html §1.2)
+├── progress/                  # 历史进度档案(只做追溯,不再承担 rolling plan)
 ├── assets/                    # 文档样式
 ├── app/                       # Next.js 路由 + API
 ├── components/                # 前端组件
@@ -150,7 +150,7 @@ pnpm dev
 
 ### 历史进度 (progress/)
 
-- 9 篇历史档案(000-007 + README),角色被 todo.html + changelist.html 替代,后续将统一重构,见 [todo.html §1.2](./todo.html)
+- 9 篇历史档案(000-007 + README),只保留阶段过程、偏差和决策追溯;当前待办与跨文档变更分别以 [todo.html](./todo.html) 和 [changelist.html](./changelist.html) 为准。
 
 ## 设计原则
 
@@ -182,4 +182,4 @@ pnpm dev
 
 ## 许可
 
-(待补)
+当前仓库尚未声明开源许可证;发布或复用前需要由项目所有者补充正式 LICENSE。

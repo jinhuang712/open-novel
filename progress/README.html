@@ -1207,47 +1207,16 @@ img {
       </div>
     </header>
     <main>
-<p>记录每周/每个里程碑的实施进展。每次显著迭代必须在这里追加一条。</p>
-<h2>命名规则</h2>
-<pre><code>NNN-{slug}.md
-</code></pre>
+<aside class="callout callout-info">
+<p><strong>定位已收敛:</strong> <code>progress/</code> 只作为历史档案保留,用于追溯项目启动、阶段偏差和重大设计变化。当前待办以 <a href="../todo.html">todo.html</a> 为准;跨文档变更以 <a href="../changelist.html">changelist.html</a> 为准。</p>
+<p>后续不再把 progress 当作 rolling plan 或任务模板使用。若发生新的重大方向变化,优先更新对应 plan/spec、TODO 与 changelist;只有需要完整复盘决策过程时才追加新的 progress 档案。</p>
+</aside>
+<h2>归档规则</h2>
 <ul>
-<li><code>NNN</code>: 三位数字,从 000 起,递增</li>
-<li><code>slug</code>: 简短英文标识 (init / scaffolding / agent-loop / etc.)</li>
+<li><strong>保留内容</strong>:当时的目标、偏差、风险、关键决策和关联 commit。</li>
+<li><strong>不再承担</strong>:活跃 TODO、未来计划排期、未决问题主权和变更日志主权。</li>
+<li><strong>读取方式</strong>:先看当前 plan/spec 与 TODO,再用 progress 追溯为什么形成这些决策。</li>
 </ul>
-<p>例:</p>
-<ul>
-<li><code>000-init.md</code> — 项目启动</li>
-<li><code>001-scaffolding.md</code> — Next.js 骨架</li>
-<li><code>002-storage-layer.md</code> — 存储层</li>
-<li>...</li>
-</ul>
-<h2>单条进度日志模板</h2>
-<pre data-language="markdown"><code data-language="markdown"># NNN — 标题
-
-**日期**: YYYY-MM-DD
-**周次**: WX
-**主要 Owner**: 自己
-
-## 本期目标
-- [ ] 任务 1
-- [ ] 任务 2
-
-## 实际完成
-- ✅ 已完成 1
-- ⏸ 部分完成 (50%): 详细说明
-- ❌ 未完成 / 遇到阻塞: 详细说明
-
-## 关键决策
-列出本期做出的非显然技术决策与原因。
-
-## 下期计划
-- 下一步要做的事
-- 已知风险
-
-## 关联 commit
-- `&lt;sha&gt;` 一句话描述
-</code></pre>
 <h2>索引</h2>
 <table>
 <thead>
