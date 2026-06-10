@@ -354,7 +354,7 @@ async function semanticRelevantSegs(
 
 ## Step 7 — 相关设定索引 (全 18 子目录 _index.md + 顶层 scalar)
 
-> **[info]** 取所有 settings/ 子目录的 `_index.md` 给 Agent 一目了然 — 这些是 Agent 面向的索引文件 (`_` 前缀对用户默认隐藏, 见 plan/04 §_ 前缀文件约定), Writer 写章节前看到整个项目设定地形, 需细节时显式调 `readSetting` 工具取具体子文件。
+> **[info]** 取所有 settings/ 子目录的 `_index.md` 给 Agent 一目了然 — 这些是 Agent 面向的索引文件 (`_` 前缀对用户默认隐藏, 见 [spec/16 §设定目录契约](./16-knowledge-schema.md#设定目录契约)), Writer 写章节前看到整个项目设定地形, 需细节时显式调 `readSetting` 工具取具体子文件。
 
 ```ts
 async function relevantSettingsIndexes(projectId: string): Promise<WorldviewSection[]> {
@@ -571,4 +571,4 @@ Writer 在生成正文时:
 
 ✅ **token 计数策略**: 简化估算 (text.length / 1.5, 误差 10-15%)。理由 = DeepSeek V4 1M ctx 下 budget 精度容忍度高 (一致性优先, 不做 token budget 控制); `@dqbd/tiktoken` 二进制 ~3MB 且 DeepSeek tokenizer 真实精度未知, 装了也不一定准。若 prune / volume_summary 触发频次明显与估算偏离, 切 tiktoken。
 
-✅ **设定索引 retrieve 策略**: 全 18 个子目录 `_index.md` + 顶层 scalar (taboos / themes / reader-promises) + `worldview/rules.md`。理由 = 1M ctx 下 18 份 _index.md 合计 5-10K token 远不挤压上下文; `_` 前缀的索引文件是 Agent 面向 (对用户默认隐藏, 见 plan/04), 全量注入符合 inv L14 "一致性所需的全部数据必装"; "智能选择子目录" 会引入"选错索引 = Writer 不知道有 power-system" 的错误源。若单 _index.md 真扩到 > 200K (极少数巨型奇幻项目), 再做反查 — 触发条件是规模而非性能。
+✅ **设定索引 retrieve 策略**: 全 18 个子目录 `_index.md` + 顶层 scalar (taboos / themes / reader-promises) + `worldview/rules.md`。理由 = 1M ctx 下 18 份 _index.md 合计 5-10K token 远不挤压上下文; `_` 前缀的索引文件是 Agent 面向 (对用户默认隐藏, 见 [spec/16 §设定目录契约](./16-knowledge-schema.md#设定目录契约)), 全量注入符合 inv L14 "一致性所需的全部数据必装"; "智能选择子目录" 会引入"选错索引 = Writer 不知道有 power-system" 的错误源。若单 _index.md 真扩到 > 200K (极少数巨型奇幻项目), 再做反查 — 触发条件是规模而非性能。

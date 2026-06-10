@@ -30,7 +30,7 @@ flowchart TD
     S6["locations/<br/>regions / cities / buildings / landmarks"]
     S7["items/{id}.md"]
     S8["events/{id}.md"]
-    S9["timeline/<br/>era / story-clock / character-ages"]
+    S9["timeline/<br/>era / story-clock / _character-ages.md"]
     S10["relationships/<br/>_matrix.md (派生) + notes/{id}.md"]
     S11["story-lines/<br/>main.md + subplots/{id}.md"]
     S12["foreshadowing/{id}.md"]
@@ -514,6 +514,8 @@ export function closeAll(): void {
   pool.clear()
 }
 ```
+
+**注**: 示意代码从简, 只展示 `index.db`。实际实现中 pool 的 value 持有 `{ indexDb, sessionHistoryDb }` 两个 handle, `dispose` / `closeProjectConnections` / `closeAll` 时两个一并 close (与下方"connection 范围"一致)。
 
 **项目切换时**: LRU 自然淘汰 (无需显式 delete; 触达 max=3 时最久未用的自动 close)。**项目删除时**: 显式调 `closeProjectConnections(projectId)` 后再 fs.rm 项目目录 (见 spec/13 §项目生命周期)。
 
