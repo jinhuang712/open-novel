@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open Novel · 主界面:纸面 + 召唤式表面</title>
+<title>Open Novel · 主界面:章节轨 · 纸面 · 状态点</title>
 <script>
 (function () {
   var saved = localStorage.getItem('onovel-theme');
@@ -14,67 +14,56 @@
 <link rel="stylesheet" href="tokens.css">
 <style>
   body { overflow: hidden; }
-  .app { display: flex; flex-direction: column; height: calc(100vh - 42px); min-width: 1080px; position: relative; }
+  .app { display: flex; height: calc(100vh - 42px); min-width: 980px; position: relative; }
 
-  /* ===== Tabs (常驻) ===== */
-  .tabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 10px 0; background: var(--bg-app); border-bottom: 1px solid var(--border); flex: none; }
-  .tab { display: flex; align-items: center; gap: 7px; padding: 7px 14px; font-size: 12.5px; color: var(--text-secondary); border-radius: var(--radius-md) var(--radius-md) 0 0; border: 1px solid transparent; border-bottom: none; cursor: pointer; }
-  .tab:hover { background: var(--bg-hover); }
-  .tab.active { background: var(--bg-surface); color: var(--text-primary); border-color: var(--border); box-shadow: inset 0 2px 0 var(--accent); margin-bottom: -1px; padding-bottom: 8px; }
-  .tab.preview { font-style: italic; }
-  .dirty-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--accent); flex: none; }
-  .tab .close { color: var(--text-tertiary); font-size: 13px; line-height: 1; }
-  .tab-add { padding: 6px 10px; color: var(--text-tertiary); cursor: pointer; border-radius: var(--radius-sm); }
-  .tab-add:hover { background: var(--bg-hover); color: var(--text-primary); }
+  /* ===== 章节轨 (常驻 44px) ===== */
+  .rail { width: 44px; flex: none; display: flex; flex-direction: column; align-items: center; padding: 14px 0 12px; gap: 4px; border-right: 1px solid var(--border); }
+  .rail-btn { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-sm); color: var(--text-tertiary); cursor: pointer; background: none; border: none; flex: none; }
+  .rail-btn:hover { color: var(--text-primary); background: var(--bg-hover); }
+  .rail-btn svg { width: 17px; height: 17px; }
+  .rail-vol { font-size: 10px; color: var(--text-tertiary); letter-spacing: .06em; margin: 10px 0 6px; }
+  .rail-ch { position: relative; width: 100%; height: 30px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); cursor: pointer; flex: none; }
+  .rail-ch:hover { color: var(--text-secondary); }
+  .rail-ch.cur { color: var(--text-primary); }
+  .rail-ch.cur::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--accent); }
+  .rail-ch .d { position: absolute; top: 5px; right: 9px; width: 4px; height: 4px; border-radius: 99px; background: var(--accent); }
+  .rail-ch .v { position: absolute; bottom: 4px; width: 4px; height: 4px; border-radius: 99px; background: var(--danger); }
+  .rail-spacer { flex: 1; }
 
-  .body { display: flex; flex: 1; min-height: 0; }
+  /* ===== 库面板 (召唤式 320px) ===== */
+  .lib { width: 0; flex: none; overflow: hidden; border-right: 1px solid transparent; display: flex; flex-direction: column; transition: width var(--dur-base) var(--ease); }
+  .lib.open { width: 320px; border-right-color: var(--border); }
+  .lib-inner { width: 320px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .lib-cats { display: flex; gap: 16px; padding: 16px 20px 10px; font-size: 12.5px; color: var(--text-secondary); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .lib-cat { cursor: pointer; padding-bottom: 8px; margin-bottom: -11px; border-bottom: 2px solid transparent; }
+  .lib-cat:hover { color: var(--text-primary); }
+  .lib-cat.on { color: var(--text-primary); font-weight: 500; border-bottom-color: var(--accent); }
+  .lib-list { flex: 1; overflow-y: auto; padding: 8px 8px 12px; }
+  .lib-row { position: relative; display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; color: var(--text-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .lib-row:hover { color: var(--text-primary); background: var(--bg-hover); border-radius: var(--radius-sm); }
+  .lib-row.on { color: var(--text-primary); }
+  .lib-row.on::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 2px; background: var(--accent); }
+  .lib-row .meta { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .lib-row .num { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); width: 24px; flex: none; }
+  .lib-sect { padding: 10px 12px 4px; font-size: 10.5px; letter-spacing: .08em; color: var(--text-tertiary); }
+  .lib-foot { padding: 10px 20px; font-size: 11px; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+  .qp { padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; }
+  .qp input { font: inherit; font-size: 12.5px; color: var(--text-primary); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 7px 10px; outline: none; }
+  .qp input:focus { border-color: var(--accent); }
+  .qp-types { display: flex; gap: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .qp-type { cursor: pointer; padding-bottom: 4px; border-bottom: 2px solid transparent; }
+  .qp-type.on { color: var(--text-primary); border-bottom-color: var(--accent); }
+  .qp-r { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 8px 0; border-top: 1px solid var(--border); line-height: 1.7; }
+  .qp-r b { color: var(--text-primary); font-weight: 500; }
+  .ln-row { display: flex; gap: 10px; padding: 9px 12px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; border-bottom: 1px solid var(--border); }
+  .ln-row .w { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); flex: none; padding-top: 2px; }
 
-  /* ===== 导航抽屉 (召唤式, 推开) ===== */
-  .navdrawer { width: 0; flex: none; display: flex; overflow: hidden; background: var(--bg-sunken); border-right: 1px solid transparent; transition: width var(--dur-base) var(--ease); }
-  .navdrawer.open { width: 288px; border-right-color: var(--border); }
-  .catbar { width: 48px; flex: none; display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 2px; border-right: 1px solid var(--border); }
-  .cat-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); color: var(--text-tertiary); cursor: pointer; position: relative; flex: none; }
-  .cat-item:hover { color: var(--text-secondary); background: var(--bg-hover); }
-  .cat-item.active { color: var(--text-primary); }
-  .cat-item.active::before { content: ""; position: absolute; left: -4px; top: 9px; bottom: 9px; width: 2.5px; border-radius: 2px; background: var(--accent); }
-  .cat-item svg { width: 21px; height: 21px; }
-  .cat-spacer { flex: 1; }
-  .filetree { width: 240px; flex: none; display: flex; flex-direction: column; font-size: 13px; }
-  .ft-header { padding: 12px 16px 6px; font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--text-tertiary); white-space: nowrap; }
-  .ft-list { flex: 1; overflow-y: auto; padding: 0 8px; }
-  .ft-row { display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 8px; border-radius: var(--radius-sm); color: var(--text-secondary); cursor: pointer; position: relative; white-space: nowrap; }
-  .ft-row:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .ft-row.active { background: var(--bg-active); color: var(--text-primary); font-weight: 500; }
-  .ft-row.active::before { content: ""; position: absolute; left: -4px; top: 5px; bottom: 5px; width: 2.5px; border-radius: 2px; background: var(--accent); }
-  .ft-row .num { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); width: 26px; flex: none; }
-  .ft-foot { padding: 10px 16px; font-size: 11px; color: var(--text-tertiary); border-top: 1px dashed var(--border); white-space: normal; }
-  .ft-foot:empty { display: none; }
-
-  /* 非文件类目: 查询面板 / 已学偏好 */
-  .qp { padding: 4px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
-  .qp input { font: inherit; font-size: 12.5px; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 7px 10px; outline: none; width: 100%; box-sizing: border-box; }
-  .qp input:focus { box-shadow: 0 0 0 3px var(--focus-ring); border-color: var(--accent); }
-  .qp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-  .qp-chip { font-size: 11px; padding: 2px 9px; border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; color: var(--text-secondary); }
-  .qp-chip.on { background: var(--accent-subtle); color: var(--accent-text); border-color: transparent; font-weight: 600; }
-  .qp-result { font-family: var(--font-mono); font-size: 11px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; color: var(--text-secondary); line-height: 1.6; }
-  .qp-result b { color: var(--text-primary); font-weight: 500; }
-  .learn-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-radius: var(--radius-sm); color: var(--text-secondary); line-height: 1.5; }
-  .learn-row:hover { background: var(--bg-hover); }
-  .learn-row .w { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-text); background: var(--accent-subtle); border-radius: 999px; padding: 1px 7px; flex: none; margin-top: 2px; }
-
-  /* ===== 纸面 (常驻) ===== */
-  .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg-surface); }
-  .breadcrumb { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 20px; font-size: 12px; color: var(--text-tertiary); border-bottom: 1px solid var(--border); flex: none; background: var(--bg-app); }
-  .breadcrumb .seg { cursor: pointer; border-radius: var(--radius-sm); padding: 1px 4px; }
-  .breadcrumb .seg:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .breadcrumb b { color: var(--text-secondary); font-weight: 500; }
-  .wordcount { margin-left: auto; font-family: var(--font-mono); font-size: 11px; }
-
-  .editor { flex: 1; overflow-y: auto; padding: 40px 0 120px; position: relative; }
-  .paper { max-width: 720px; margin: 0 auto; padding: 0 48px; font-size: 16px; line-height: 1.8; }
-  .paper h2 { font-family: var(--font-serif); font-size: 22px; font-weight: 600; margin: 0 0 24px; }
-  .paper p { margin: 0 0 0.9em; position: relative; }
+  /* ===== 纸面 ===== */
+  .mid { flex: 1; min-width: 0; overflow-y: auto; position: relative; }
+  .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); padding: 84px 60px 160px; box-sizing: border-box; }
+  .vol-line { font-size: 12px; color: var(--text-tertiary); margin: 0 0 8px; }
+  .paper h2 { font-family: var(--font-serif); font-size: 23px; font-weight: 600; margin: 0 0 34px; }
+  .paper p { margin: 0 0 0.9em; font-size: 16px; line-height: 1.8; position: relative; }
 
   .ent { border-bottom: 1.5px solid; padding-bottom: 1px; cursor: pointer; }
   .ent-char { border-color: var(--entity-character); }
@@ -83,184 +72,168 @@
   .ent-org { border-color: var(--entity-org); }
   .ent:hover { background: var(--bg-hover); }
   .violation { border-bottom: 1.5px dashed var(--entity-violation); cursor: pointer; }
-  .vmarker { position: absolute; right: 3px; width: 4px; height: 14px; border-radius: 2px; background: var(--entity-violation); opacity: .85; cursor: pointer; }
+  .vmark { position: fixed; right: 2px; width: 4px; height: 14px; border-radius: 2px; background: var(--entity-violation); opacity: .8; cursor: pointer; }
 
-  .selection { background: var(--accent-subtle); border-radius: 3px; box-shadow: 0 0 0 1px var(--focus-ring); position: relative; }
-  .float-toolbar { position: absolute; display: inline-flex; gap: 2px; padding: 4px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); transform: translateY(-44px); font-size: 12.5px; white-space: nowrap; z-index: 20; }
-  .float-toolbar button { font: inherit; border: none; background: none; color: var(--text-primary); padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; gap: 5px; align-items: center; }
+  .selection { background: var(--accent-subtle); border-radius: 2px; position: relative; }
+  .float-toolbar { position: absolute; display: inline-flex; gap: 2px; padding: 3px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); transform: translateY(-42px); font-size: 12.5px; white-space: nowrap; z-index: 20; }
+  .float-toolbar button { font: inherit; border: none; background: none; color: var(--text-primary); padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer; }
   .float-toolbar button:hover { background: var(--bg-hover); }
   .float-toolbar .spark { color: var(--accent); }
 
-  .hovercard { position: absolute; right: 56px; top: 150px; width: 270px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 14px; z-index: 30; font-size: 13px; display: none; }
-  .hovercard.show { display: block; }
-  .hovercard .hc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .hovercard .avatar { width: 28px; height: 28px; border-radius: 99px; background: var(--info-subtle); color: var(--entity-character); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex: none; }
-  .hovercard .name { font-weight: 600; }
-  .hovercard .alias { color: var(--text-tertiary); font-size: 12px; }
-  .hovercard p { margin: 4px 0 10px; color: var(--text-secondary); line-height: 1.55; }
-  .hc-demo-tag { position: absolute; top: -9px; right: 12px; font-size: 10px; background: var(--accent-subtle); color: var(--accent-text); padding: 1px 8px; border-radius: 99px; }
+  /* 旁注 (纸面右缘) */
+  .note { position: absolute; width: 190px; font-size: 12px; line-height: 1.55; color: var(--text-secondary); border-left: 2px solid var(--entity-character); padding: 2px 0 2px 12px; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); transform: translateY(4px); z-index: 30; }
+  .note.show { opacity: 1; pointer-events: auto; transform: none; }
+  .note .n-name { color: var(--text-primary); font-weight: 500; }
+  .note .n-kind { font-family: var(--font-mono); font-size: 10px; color: var(--text-tertiary); margin-left: 6px; }
+  .note .n-open { display: inline-block; margin-top: 5px; font-size: 11.5px; color: var(--accent-text); cursor: pointer; }
+  .note .n-open:hover { text-decoration: underline; }
+  .note.danger { border-left-color: var(--danger); }
+  .note.danger .n-name { color: var(--danger); }
 
-  /* ===== Agent 状态线 (常驻) ===== */
-  .statusline { display: flex; align-items: center; gap: 14px; height: 32px; padding: 0 14px; font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--border); background: var(--bg-app); flex: none; cursor: default; transition: background var(--dur-base) var(--ease); }
-  .statusline.clickable { cursor: pointer; }
-  .statusline.approval { background: var(--accent-subtle); color: var(--accent-text); font-weight: 500; }
-  .statusline.error { color: var(--danger); }
-  .mode-chip { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
-  .mode-chip .dot { width: 7px; height: 7px; border-radius: 99px; }
-  .sl-violation { color: var(--danger); cursor: pointer; }
-  .sl-right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-  .sl-pulse { width: 8px; height: 8px; border-radius: 99px; background: var(--agent-writer); animation: pulse 1.2s infinite; flex: none; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
-  .sl-progress { display: inline-flex; align-items: center; gap: 8px; }
-  .sl-track { width: 110px; height: 4px; border-radius: 99px; background: var(--bg-active); overflow: hidden; }
-  .sl-fill { height: 100%; width: 60%; border-radius: 99px; background: var(--accent); }
-  .summon-btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 12px; border: none; background: none; color: var(--accent-text); cursor: pointer; padding: 3px 8px; border-radius: var(--radius-sm); }
-  .summon-btn:hover { background: var(--bg-hover); }
+  /* 左下微标 */
+  .micro { position: fixed; left: 58px; bottom: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); z-index: 40; display: flex; gap: 14px; }
+  .micro:hover { color: var(--text-secondary); }
+  .micro .mv { color: var(--danger); cursor: pointer; }
 
-  /* ===== Trace 抽屉 (召唤式, 推开) ===== */
-  .tracedrawer { width: 0; flex: none; background: var(--bg-sunken); border-left: 1px solid transparent; display: flex; flex-direction: column; min-height: 0; overflow: hidden; transition: width var(--dur-base) var(--ease); }
-  .tracedrawer.open { width: 400px; border-left-color: var(--border); }
-  .tp-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
-  .tp-cost { font-weight: 400; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
-  .tp-header .acts { margin-left: auto; display: flex; gap: 4px; }
-  .thinking { flex: 1; overflow-y: auto; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 376px; }
-  .agent-block { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 12.5px; overflow: hidden; }
-  .agent-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; }
-  .agent-dot { width: 8px; height: 8px; border-radius: 99px; flex: none; }
-  .agent-head .time { margin-left: auto; font-weight: 400; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
-  .agent-body { padding: 0 12px 10px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; }
-  .tool-row { font-family: var(--font-mono); font-size: 11px; background: var(--bg-sunken); border-radius: var(--radius-sm); padding: 5px 8px; color: var(--text-secondary); }
-  .tool-row b { color: var(--text-primary); font-weight: 500; }
-  details.tool-json summary { cursor: pointer; list-style: none; }
-  details.tool-json pre { margin: 6px 0 0; padding: 8px; background: var(--bg-app); border-radius: var(--radius-sm); overflow-x: auto; font-size: 10.5px; line-height: 1.5; }
-  .done-check { color: var(--success); font-size: 12px; }
+  /* ===== 状态点 ===== */
+  .dotzone { position: fixed; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; z-index: 50; font-size: 12px; color: var(--text-secondary); }
+  .dotzone .label { display: flex; align-items: center; gap: 10px; opacity: 0; transition: opacity var(--dur-base) var(--ease); white-space: nowrap; }
+  .dotzone .label.show { opacity: 1; }
+  .dotzone .cancel { color: var(--text-tertiary); cursor: pointer; border: none; background: none; font: inherit; font-size: 11.5px; padding: 0; }
+  .dotzone .cancel:hover { color: var(--danger); }
+  .dotzone .track { width: 90px; height: 3px; border-radius: 99px; background: var(--bg-active); overflow: hidden; }
+  .dotzone .fill { display: block; height: 100%; width: 60%; background: var(--accent); }
+  .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--text-tertiary); cursor: pointer; flex: none; transition: background var(--dur-base) var(--ease); }
+  .dot.run { background: var(--accent); animation: breathe 2.4s ease-in-out infinite; }
+  .dot.approval { background: var(--accent); }
+  .dot.error { background: var(--danger); }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+  @media (prefers-reduced-motion: reduce) { .dot.run { animation: none; } }
+  .dotzone .appr { color: var(--accent-text); font-weight: 500; cursor: pointer; }
+  .dotzone .err { color: var(--danger); cursor: pointer; }
 
-  /* ===== Composer (召唤式悬浮) ===== */
-  .composer { position: fixed; left: 50%; bottom: 56px; transform: translateX(-50%) translateY(16px); width: 640px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; z-index: 60; opacity: 0; pointer-events: none; transition: opacity var(--dur-base) var(--ease), transform var(--dur-base) var(--ease); }
-  .composer.open { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
-  .composer.locked .chat-input, .composer.locked .mode-toggle { opacity: .5; pointer-events: none; }
-  .lock-note { display: none; font-size: 11.5px; color: var(--warning); }
-  .composer.locked .lock-note { display: block; }
-  .chat-top { display: flex; align-items: center; gap: 8px; }
-  .mode-toggle { display: inline-flex; background: var(--bg-app); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 2px; }
-  .mode-toggle button { font: inherit; font-size: 12px; border: none; background: none; padding: 4px 14px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
-  .mode-toggle button.on { background: var(--bg-surface); box-shadow: var(--shadow-sm); font-weight: 600; }
-  .mode-toggle button.on[data-mode="discuss"] { color: var(--text-primary); }
-  .mode-toggle button.on[data-mode="plan"] { color: var(--info); }
-  .mode-toggle button.on[data-mode="write"] { color: var(--accent-text); }
-  .comp-pin { margin-left: auto; font-size: 12px; color: var(--text-tertiary); background: none; border: none; cursor: pointer; font-family: inherit; padding: 2px 6px; border-radius: var(--radius-sm); }
-  .comp-pin:hover { background: var(--bg-hover); color: var(--text-primary); }
-  .chat-input { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 8px; }
-  .chat-input:focus-within { box-shadow: 0 0 0 3px var(--focus-ring); border-color: var(--accent); }
-  .chat-input textarea { border: none; background: none; resize: none; font: inherit; font-size: 13.5px; color: var(--text-primary); outline: none; min-height: 44px; }
-  .chat-foot { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-tertiary); }
-  .chat-foot .send { margin-left: auto; }
+  /* ===== Trace 面板 (召唤式 380px) ===== */
+  .trace { width: 0; flex: none; overflow: hidden; border-left: 1px solid transparent; transition: width var(--dur-base) var(--ease); display: flex; flex-direction: column; }
+  .trace.open { width: 380px; border-left-color: var(--border); }
+  .trace-inner { width: 380px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .tr-head { display: flex; align-items: baseline; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .tr-head .t { font-size: 12.5px; font-weight: 600; color: var(--text-primary); }
+  .tr-head .cost { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .tr-head .acts { margin-left: auto; display: flex; gap: 2px; }
+  .tr-body { flex: 1; overflow-y: auto; padding: 4px 18px 16px; }
+  .ag { padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  .ag-h { display: flex; align-items: center; gap: 8px; font-weight: 500; color: var(--text-primary); }
+  .ag-dot { width: 7px; height: 7px; border-radius: 99px; flex: none; }
+  .ag-h .time { margin-left: auto; font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); font-weight: 400; }
+  .ag-b { margin-top: 8px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; }
+  .tool { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 4px 0 4px 15px; border-left: 1px solid var(--border-strong); }
+  .tool b { color: var(--text-primary); font-weight: 500; }
+  details.tj summary { cursor: pointer; list-style: none; }
+  details.tj pre { margin: 6px 0 0 15px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; font-size: 10.5px; line-height: 1.5; color: var(--text-secondary); }
+  .done { color: var(--success); font-size: 11px; }
+
+  /* ===== 输入条 (召唤式) ===== */
+  .composer { position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%) translateY(8px); width: 600px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 12px 14px 10px; z-index: 60; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); display: flex; flex-direction: column; gap: 8px; }
+  .composer.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+  .composer textarea { border: none; background: none; resize: none; font: inherit; font-size: 13.5px; color: var(--text-primary); outline: none; min-height: 40px; }
+  .comp-foot { display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--text-tertiary); }
+  .modes { display: flex; gap: 14px; }
+  .mode { cursor: pointer; padding-bottom: 3px; border-bottom: 2px solid transparent; }
+  .mode:hover { color: var(--text-primary); }
+  .mode.on { color: var(--text-primary); font-weight: 500; border-bottom-color: var(--accent); }
+  .comp-foot .hint { font-size: 10.5px; font-family: var(--font-mono); }
+  .comp-foot .send { margin-left: auto; }
+  .comp-lock { display: none; font-size: 11.5px; color: var(--warning); }
+  .composer.locked .comp-lock { display: block; }
+  .composer.locked textarea, .composer.locked .comp-foot { opacity: .45; pointer-events: none; }
 
   /* ===== 审批聚焦卡 ===== */
-  .approval-layer { position: fixed; inset: 42px 0 0; background: var(--bg-overlay); z-index: 70; display: none; align-items: center; justify-content: center; }
-  .approval-layer.open { display: flex; }
-  .approval-card { width: 560px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: 18px 20px 16px; font-size: 13px; }
-  .ap-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .ap-head .title { font-weight: 600; font-size: 14px; }
-  .ap-head .close { margin-left: auto; border: none; background: none; color: var(--text-tertiary); font-size: 16px; cursor: pointer; }
-  .ap-path { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); background: var(--bg-sunken); border-radius: var(--radius-sm); padding: 3px 8px; display: inline-block; margin-bottom: 10px; }
-  .diff { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 10px; }
-  .diff .del { background: var(--diff-del-bg); color: var(--diff-del-text); padding: 3px 10px; }
-  .diff .add { background: var(--diff-add-bg); color: var(--diff-add-text); padding: 3px 10px; }
-  .ap-cascade { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); background: var(--warning-subtle); border-radius: var(--radius-md); padding: 8px 12px; margin-bottom: 14px; }
-  .ap-cascade a { color: var(--accent-text); text-decoration: none; margin-left: auto; white-space: nowrap; }
-  .ap-cascade a:hover { text-decoration: underline; }
-  .ap-actions { display: flex; gap: 8px; align-items: center; }
-  .ap-actions .hint { margin-left: auto; font-size: 11px; color: var(--text-tertiary); }
+  .ap-layer { position: fixed; inset: 42px 0 0; background: var(--bg-overlay); z-index: 70; display: none; align-items: center; justify-content: center; }
+  .ap-layer.open { display: flex; }
+  .ap-card { width: 540px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 20px 22px 16px; font-size: 13px; }
+  .ap-t { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .ap-t .title { font-weight: 600; font-size: 14.5px; color: var(--text-primary); }
+  .ap-t .close { margin-left: auto; border: none; background: none; color: var(--text-tertiary); font-size: 15px; cursor: pointer; }
+  .ap-path { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 14px; }
+  .diff { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 12px; }
+  .diff .del { background: var(--diff-del-bg); color: var(--diff-del-text); padding: 4px 12px; }
+  .diff .add { background: var(--diff-add-bg); color: var(--diff-add-text); padding: 4px 12px; }
+  .ap-cas { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--text-secondary); padding: 8px 0 14px; }
+  .ap-cas a { color: var(--accent-text); text-decoration: none; margin-left: auto; white-space: nowrap; }
+  .ap-cas a:hover { text-decoration: underline; }
+  .ap-act { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border); padding-top: 14px; }
+  .ap-act .hint { margin-left: auto; font-size: 10.5px; font-family: var(--font-mono); color: var(--text-tertiary); }
 
-  .toast-zone { position: fixed; left: 50%; transform: translateX(-50%); bottom: 180px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast-zone { position: fixed; left: 50%; transform: translateX(-50%); bottom: 130px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 </style>
 </head>
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
-  <span class="proto-title">01 · 主界面:纸面 + 召唤式表面</span>
+  <span class="proto-title">01 · 主界面:章节轨 · 纸面 · 状态点</span>
   <span>文档: design/01-main-layout.md</span>
   <span class="spacer"></span>
-  <button class="btn btn-sm" onclick="toggleNav()">导航 (Cmd+B)</button>
+  <button class="btn btn-sm" onclick="toggleLib()">库 (Cmd+B)</button>
   <button class="btn btn-sm" onclick="toggleTrace()">Trace (Cmd+J)</button>
-  <button class="btn btn-sm" onclick="toggleComposer()">对话 (Cmd+L)</button>
-  <button class="btn btn-sm" onclick="toggleHover()">hover 卡演示</button>
-  <span style="display:inline-flex;gap:2px;align-items:center">状态线:
+  <button class="btn btn-sm" onclick="toggleComposer()">输入 (Cmd+L)</button>
+  <span style="display:inline-flex;gap:2px;align-items:center">状态点:
     <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
   </span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="app">
-  <div class="tabs">
-    <div class="tab"><span>林溪.md</span><span class="close">×</span></div>
-    <div class="tab active"><span>第 12 章 · 雨夜来客.md</span><span class="dirty-dot" title="未保存"></span></div>
-    <div class="tab preview" title="单击预览模式,双击转永久"><span>outline.md</span><span class="close">×</span></div>
-    <div class="tab-add">＋</div>
+  <div class="rail">
+    <button class="rail-btn" title="库 (Cmd+B)" onclick="toggleLib()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+    <div class="rail-vol" title="第三卷 · 重生七年">卷三</div>
+    <div class="rail-ch" title="009 · 旧仓库的钥匙" onclick="toast('切到 009(演示)')">009</div>
+    <div class="rail-ch" title="010 · 第一次交锋" onclick="toast('切到 010(演示)')">010</div>
+    <div class="rail-ch" title="011 · 融资酒局" onclick="toast('切到 011(演示)')">011</div>
+    <div class="rail-ch cur" title="012 · 雨夜来客 · 未保存"><span>012</span><span class="d" title="未保存"></span><span class="v" title="1 violation"></span></div>
+    <div class="rail-ch" title="013 · 概要 · 反转伏笔" onclick="toast('切到 013(演示)')">013</div>
+    <div class="rail-spacer"></div>
+    <button class="rail-btn" title="新手指引 → 05 号原型" onclick="location.href='05-onboarding.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></button>
+    <button class="rail-btn" title="Settings (Cmd+,) → 04 号原型" onclick="location.href='04-settings.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></button>
   </div>
 
-  <div class="body">
-    <div class="navdrawer" id="navdrawer">
-      <div class="catbar">
-        <div class="cat-item" data-cat="outline" title="大纲 (Cmd+1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></div>
-        <div class="cat-item" data-cat="characters" title="角色 (Cmd+2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></div>
-        <div class="cat-item" data-cat="worldview" title="世界观"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9z"/></svg></div>
-        <div class="cat-item active" data-cat="chapters" title="章节 (Cmd+3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 4v13a3 3 0 0 0 3 3"/><path d="M9 9h6M9 13h4"/></svg></div>
-        <div class="cat-item" data-cat="query" title="查询面板 (Cmd+4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></div>
-        <div class="cat-item" data-cat="learnings" title="已学到的偏好 (Cmd+5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 5.4L20 9l-4.4 3.9L17 19l-5-3.2L7 19l1.4-6.1L4 9l5.8-.6z"/></svg></div>
-        <div class="cat-spacer"></div>
-        <div class="cat-item" title="新手指引 → 05 号原型" onclick="location.href='05-onboarding.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></div>
-        <div class="cat-item" title="Settings (Cmd+,) → 04 号原型" onclick="location.href='04-settings.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></div>
-      </div>
-      <div class="filetree">
-        <div class="ft-header" id="ftHeader">章节 · CHAPTERS/</div>
-        <div class="ft-list" id="ftList"></div>
-        <div class="ft-foot" id="ftFoot"></div>
-      </div>
+  <div class="lib" id="lib">
+    <div class="lib-inner">
+      <div class="lib-cats" id="libCats"></div>
+      <div class="lib-list" id="libList"></div>
+      <div class="lib-foot" id="libFoot"></div>
     </div>
+  </div>
 
-    <div class="mid">
-      <div class="breadcrumb"><span class="seg" onclick="toggleNav()" title="点击打开导航抽屉">chapters</span> <span>/</span> <b>第 12 章 · 雨夜来客.md</b><span class="wordcount">本章 3,214 字 · 选中 26 字</span></div>
-
-      <div class="editor" id="editor">
-        <div class="hovercard" id="hovercard">
-          <span class="hc-demo-tag">hover 100ms 演示</span>
-          <div class="hc-head"><span class="avatar">陆</span><span class="name">陆沉</span><span class="alias">(沉哥 / 陆先生)</span></div>
-          <span class="badge badge-info">角色</span>
-          <p>纵横资本合伙人,林溪重生前的最大对手。表面儒雅,实则记仇,左手腕有一道旧疤——只在下雨天隐隐作痛。</p>
-          <button class="btn btn-sm">打开 characters/lu-chen.md →</button>
-        </div>
-        <span class="vmarker" style="top: 58%" title="violation · 第 5 段(滚动条 marker)" onclick="toast('跳到第 5 段')"></span>
-
-        <div class="paper">
-          <h2>第 12 章 · 雨夜来客</h2>
-          <p>雨下到第三天,<span class="ent ent-place">知微书馆</span>的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。<span class="ent ent-char">林溪</span>把最后一摞服务器报价单推到桌角,揉了揉眉心。</p>
-          <p>门铃响的时候是凌晨一点十四分。</p>
-          <p>来人收了伞,雨水顺着伞尖在地板上积出一小滩。<span class="ent ent-char" onclick="toggleHover()">陆沉</span>就站在那滩水后面,西装笔挺得不像一个深夜造访的人。"林总,"他笑了笑,"我替<span class="ent ent-org">守夜人会</span>带个话。"</p>
-          <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span>让 AI 修改 <kbd>Cmd+K</kbd></button><button>查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
-          <p>"带话之前,先把东西还我。"她目光落在对方手里的<span class="ent ent-item">青铜罗盘</span>上——盘面上的<span class="violation" title="concept: 灵气 — ⛔ 此世界不存在,命中表面词">灵气</span>纹路在灯下泛着不正常的青色。</p>
-          <p>陆沉挑了挑眉,没接话,只是把罗盘放在了吧台上,推过来。</p>
-        </div>
-      </div>
-
-      <div class="statusline" id="statusline"></div>
+  <div class="mid" id="mid">
+    <span class="vmark" style="top: 56%" title="violation · 第 5 段" onclick="toast('跳到第 5 段')"></span>
+    <div class="paper" id="paper">
+      <p class="vol-line">第三卷 · 重生七年</p>
+      <h2>第 12 章 · 雨夜来客</h2>
+      <p>雨下到第三天,<span class="ent ent-place" data-note="zhiwei">知微书馆</span>的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。<span class="ent ent-char" data-note="linxi">林溪</span>把最后一摞服务器报价单推到桌角,揉了揉眉心。</p>
+      <p>门铃响的时候是凌晨一点十四分。</p>
+      <p>来人收了伞,雨水顺着伞尖在地板上积出一小滩。<span class="ent ent-char" data-note="luchen">陆沉</span>就站在那滩水后面,西装笔挺得不像一个深夜造访的人。"林总,"他笑了笑,"我替<span class="ent ent-org" data-note="shouye">守夜人会</span>带个话。"</p>
+      <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span> 让 AI 修改 <kbd>Cmd+K</kbd></button><button>查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
+      <p>"带话之前,先把东西还我。"她目光落在对方手里的<span class="ent ent-item" data-note="luopan">青铜罗盘</span>上——盘面上的<span class="violation" data-note="lingqi">灵气</span>纹路在灯下泛着不正常的青色。</p>
+      <p>陆沉挑了挑眉,没接话,只是把罗盘放在了吧台上,推过来。</p>
     </div>
+    <div class="note" id="note"></div>
+  </div>
 
-    <div class="tracedrawer" id="tracedrawer">
-      <div class="tp-header">Trace <span class="tp-cost">本 turn $0.025 · 24.6K tok</span>
-        <span class="acts"><button class="btn btn-ghost btn-sm">复制 trace</button><button class="btn btn-ghost btn-sm">折叠全部</button></span>
+  <div class="trace" id="trace">
+    <div class="trace-inner">
+      <div class="tr-head"><span class="t">Trace</span><span class="cost">本 turn $0.025 · 24.6K tok · 已保存 01:12</span>
+        <span class="acts"><button class="btn btn-ghost btn-sm">复制</button><button class="btn btn-ghost btn-sm">折叠</button></span>
       </div>
-      <div class="thinking">
-        <div class="agent-block">
-          <div class="agent-head"><span class="agent-dot" style="background:var(--agent-router)"></span>Router <span style="font-weight:400;color:var(--text-tertiary)">(Flash)</span><span class="done-check">✓</span><span class="time">0.8s</span></div>
-          <div class="agent-body"><div>意图: 修改主角性别 → 委派 Writer + Validator(并行)· actions[2]</div></div>
+      <div class="tr-body">
+        <div class="ag">
+          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-router)"></span>Router <span class="done">✓</span><span class="time">0.8s</span></div>
+          <div class="ag-b"><div>意图: 修改主角性别 → 委派 Writer + Validator(并行)· actions[2]</div></div>
         </div>
-        <div class="agent-block">
-          <div class="agent-head"><span class="agent-dot" style="background:var(--agent-writer)"></span>Writer <span style="font-weight:400;color:var(--text-tertiary)">(Pro)</span><span class="sl-pulse"></span><span class="time">12.3s</span></div>
-          <div class="agent-body">
-            <div class="tool-row"><b>readSetting</b>('characters/lin.md') → 1,234 字</div>
-            <details class="tool-json"><summary class="tool-row" style="cursor:pointer"><b>writeSettingProposal</b>(…) → proposal ap_3e9d ▸ 展开 JSON</summary>
+        <div class="ag">
+          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-writer)"></span>Writer <span class="time">12.3s</span></div>
+          <div class="ag-b">
+            <div class="tool"><b>readSetting</b>('characters/lin.md') → 1,234 字</div>
+            <details class="tj"><summary class="tool"><b>writeSettingProposal</b>(…) → proposal ap_3e9d ▸ JSON</summary>
 <pre>{
   "kind": "proposal",
   "approvalId": "ap_3e9d",
@@ -271,11 +244,11 @@
             <div>生成 diff(流式 · 第 2/3 段)…</div>
           </div>
         </div>
-        <div class="agent-block">
-          <div class="agent-head"><span class="agent-dot" style="background:var(--agent-validator)"></span>Validator <span style="font-weight:400;color:var(--text-tertiary)">(Pro)</span><span class="done-check">✓</span><span class="time">8.9s</span></div>
-          <div class="agent-body">
-            <div class="tool-row"><b>analyzeImpact</b>(outline.md) → 3 处引用</div>
-            <div class="tool-row"><b>analyzeImpact</b>(chapters/*) → 5 处冲突</div>
+        <div class="ag" style="border-bottom:none">
+          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-validator)"></span>Validator <span class="done">✓</span><span class="time">8.9s</span></div>
+          <div class="ag-b">
+            <div class="tool"><b>analyzeImpact</b>(outline.md) → 3 处引用</div>
+            <div class="tool"><b>analyzeImpact</b>(chapters/*) → 5 处冲突</div>
             <div>影响半径收敛 · 共 8 段候选进入 ChangeSet</div>
           </div>
         </div>
@@ -284,39 +257,37 @@
   </div>
 </div>
 
+<div class="micro" id="micro"><span>3,214 字</span><span>已保存 01:12</span><span class="mv" onclick="toast('跳到第 5 段')">⚠ 1</span></div>
+
+<div class="dotzone" id="dotzone">
+  <span class="label" id="dotLabel"></span>
+  <span class="dot" id="dot"></span>
+</div>
+
 <div class="composer" id="composer">
-  <div class="chat-top">
-    <div class="mode-toggle" id="modeToggle">
-      <button data-mode="discuss">Discuss</button>
-      <button data-mode="plan" class="on">Plan</button>
-      <button data-mode="write">Write</button>
-    </div>
-    <button class="comp-pin" title="pin 为常驻(记忆选择)">📌 pin</button>
-  </div>
-  <div class="lock-note">⏸ 完成或取消上方审批后才能继续输入</div>
-  <div class="chat-input">
-    <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用文件)"></textarea>
-    <div class="chat-foot">
-      <span><kbd>Tab</kbd> 切模式</span><span><kbd>@</kbd> 引用</span><span><kbd>Cmd+↑</kbd> 历史</span><span><kbd>Esc</kbd> 收回</span>
-      <span class="send"><button class="btn btn-primary btn-sm" onclick="demoSend()">发送 ⌘↵</button></span>
-    </div>
+  <div class="comp-lock">完成或取消上方审批后才能继续输入</div>
+  <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用文件)"></textarea>
+  <div class="comp-foot">
+    <span class="modes" id="modes"><span class="mode" data-m="discuss">Discuss</span><span class="mode on" data-m="plan">Plan</span><span class="mode" data-m="write">Write</span></span>
+    <span class="hint">tab 切模式 · @ 引用 · esc 收回</span>
+    <span class="send"><button class="btn btn-primary btn-sm" onclick="demoSend()">发送 ⌘↵</button></span>
   </div>
 </div>
 
-<div class="approval-layer" id="approvalLayer">
-  <div class="approval-card">
-    <div class="ap-head"><span class="badge badge-accent">审批</span><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理(Esc),状态线保持待审批">×</button></div>
-    <span class="ap-path">characters/lin.md · proposal ap_3e9d</span>
+<div class="ap-layer" id="apLayer">
+  <div class="ap-card">
+    <div class="ap-t"><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理 (Esc)">×</button></div>
+    <div class="ap-path">characters/lin.md · proposal ap_3e9d · Writer</div>
     <div class="diff">
       <div class="del">- 林川,男,29 岁,重生前是纵横资本的数据分析师</div>
       <div class="add">+ 林溪,女,29 岁,重生前是纵横资本的数据分析师</div>
     </div>
-    <div class="ap-cascade">⚠ 影响 8 段关联内容(outline 3 · 章节 5)<a href="02-approval-cascade.html">去整批审 →</a></div>
-    <div class="ap-actions">
-      <button class="btn btn-primary btn-sm" onclick="approve()">同意 <kbd style="background:transparent;border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.9)">Y</kbd></button>
-      <button class="btn btn-sm">编辑后同意 <kbd>E</kbd></button>
-      <button class="btn btn-danger btn-sm">拒绝 <kbd>N</kbd></button>
-      <span class="hint">完整审批卡见 02 号原型</span>
+    <div class="ap-cas">影响 8 段关联内容(outline 3 · 章节 5)<a href="02-approval-cascade.html">去整批审 →</a></div>
+    <div class="ap-act">
+      <button class="btn btn-primary btn-sm" onclick="approve()">同意</button>
+      <button class="btn btn-sm" onclick="toast('进入编辑(演示)')">编辑后同意</button>
+      <button class="btn btn-danger btn-sm" onclick="closeApproval();setState('idle');toast('已拒绝')">拒绝</button>
+      <span class="hint">Y · E · N</span>
     </div>
   </div>
 </div>
@@ -329,139 +300,177 @@ function toggleTheme() {
   h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('onovel-theme', h.dataset.theme);
 }
-function toggleNav() { document.getElementById('navdrawer').classList.toggle('open'); }
-function toggleTrace() { document.getElementById('tracedrawer').classList.toggle('open'); }
-function toggleHover() { document.getElementById('hovercard').classList.toggle('show'); }
+function toggleLib() { document.getElementById('lib').classList.toggle('open'); }
+function toggleTrace() { document.getElementById('trace').classList.toggle('open'); }
 function toggleComposer() {
   var c = document.getElementById('composer');
   c.classList.toggle('open');
   if (c.classList.contains('open')) c.querySelector('textarea').focus();
 }
 function closeComposer() { document.getElementById('composer').classList.remove('open'); }
-function openApproval() { document.getElementById('approvalLayer').classList.add('open'); }
-function closeApproval() { document.getElementById('approvalLayer').classList.remove('open'); }
+function openApproval() { document.getElementById('apLayer').classList.add('open'); }
+function closeApproval() { document.getElementById('apLayer').classList.remove('open'); }
 function approve() { closeApproval(); setState('run'); toast('已同意 · cascade 整批审排队中'); }
 
-var mode = 'plan';
-var modeNames = { discuss: 'discuss', plan: 'plan', write: 'write' };
-var modeColors = { discuss: 'var(--text-tertiary)', plan: 'var(--info)', write: 'var(--accent)' };
+/* ===== 库面板 ===== */
+var LIB = {
+  chapters: { foot: '3 个 `_` 前缀派生文件已隐藏 — Developer Mode 可见', html:
+    '<div class="lib-sect">最近</div>' +
+    '<div class="lib-row">林溪.md<span class="meta">角色 · 2 分钟前</span></div>' +
+    '<div class="lib-row">outline.md<span class="meta">大纲 · 昨天</span></div>' +
+    '<div class="lib-sect">第三卷 · 重生七年</div>' +
+    '<div class="lib-row"><span class="num">009</span>旧仓库的钥匙<span class="meta">4,102</span></div>' +
+    '<div class="lib-row"><span class="num">010</span>第一次交锋<span class="meta">3,876</span></div>' +
+    '<div class="lib-row"><span class="num">011</span>融资酒局<span class="meta">4,331</span></div>' +
+    '<div class="lib-row on"><span class="num">012</span>雨夜来客<span class="meta">3,214 · 未保存</span></div>' +
+    '<div class="lib-row"><span class="num">013</span>概要 · 反转伏笔<span class="meta">1,022</span></div>' },
+  characters: { foot: '实体由 AI 维护,改动走审批', html:
+    '<div class="lib-row">林溪<span class="meta">主角 · 47 处提及</span></div>' +
+    '<div class="lib-row">陆沉<span class="meta">对手 · 23 处</span></div>' +
+    '<div class="lib-row">沈柏年<span class="meta">盟友 · 12 处</span></div>' +
+    '<div class="lib-row">阿芷<span class="meta">配角 · 9 处</span></div>' },
+  worldview: { foot: '', html:
+    '<div class="lib-row">世界规则<span class="meta">rules</span></div>' +
+    '<div class="lib-row">城市与地理<span class="meta">geography</span></div>' +
+    '<div class="lib-row">大事记<span class="meta">history</span></div>' +
+    '<div class="lib-row">资本格局<span class="meta">politics</span></div>' },
+  outline: { foot: '', html:
+    '<div class="lib-row">outline.md<span class="meta">主线</span></div>' +
+    '<div class="lib-row">beats.md<span class="meta">节拍</span></div>' +
+    '<div class="lib-row">卷三 · 重生七年<span class="meta">chapter-arcs</span></div>' +
+    '<div class="lib-row">主线时间轴<span class="meta">timeline</span></div>' },
+  query: { foot: '演示数据 · 四类查询见 plan/07 §库面板', html:
+    '<div class="qp">' +
+    '<input placeholder="林溪 在第 3 章时…" onkeydown="if(event.key===\'Enter\')toast(\'查询已发出(演示)\')">' +
+    '<div class="qp-types"><span class="qp-type on" onclick="qType(this)">entity-at</span><span class="qp-type" onclick="qType(this)">relations</span><span class="qp-type" onclick="qType(this)">mentions</span><span class="qp-type" onclick="qType(this)">semantic</span></div>' +
+    '<div><div class="qp-r"><b>林溪 @ ch3</b> · 身份: 数据分析师(重生前) · 位置: 知微书馆</div>' +
+    '<div class="qp-r"><b>关系</b> · 林溪 — 陆沉: 对手(强度 0.8 · 来源 ch10-12)</div></div>' +
+    '</div>' },
+  learnings: { foot: '来自 Reflector 沉淀 · 在 Settings §风格定制中编辑', html:
+    '<div class="ln-row"><span class="w">0.9</span><span>商战细节要具体到数字,不要"一大笔钱"</span></div>' +
+    '<div class="ln-row"><span class="w">0.8</span><span>对话不用感叹号连发,情绪靠动作带</span></div>' +
+    '<div class="ln-row"><span class="w">0.7</span><span>场景切换时给一个气味/声音锚点</span></div>' +
+    '<div class="ln-row"><span class="w">0.6</span><span>陆沉说话从不直接回答问题</span></div>' }
+};
+var CAT_NAMES = { chapters: '章节', characters: '角色', worldview: '世界观', outline: '大纲', query: '查询', learnings: '偏好' };
+var CAT_KEYS = { '1': 'outline', '2': 'characters', '3': 'chapters', '4': 'query', '5': 'learnings' };
+function renderCats(cur) {
+  document.getElementById('libCats').innerHTML = Object.keys(CAT_NAMES).map(function (k) {
+    return '<span class="lib-cat' + (k === cur ? ' on' : '') + '" onclick="setCat(\'' + k + '\')">' + CAT_NAMES[k] + '</span>';
+  }).join('');
+}
+function setCat(cat) {
+  renderCats(cat);
+  document.getElementById('libList').innerHTML = LIB[cat].html;
+  document.getElementById('libFoot').textContent = LIB[cat].foot;
+  if (!document.getElementById('lib').classList.contains('open')) toggleLib();
+}
+function qType(el) {
+  el.parentElement.querySelectorAll('.qp-type').forEach(function (c) { c.classList.remove('on'); });
+  el.classList.add('on');
+}
+document.getElementById('libList').addEventListener('click', function (e) {
+  var row = e.target.closest('.lib-row');
+  if (!row) return;
+  this.querySelectorAll('.lib-row').forEach(function (r) { r.classList.remove('on'); });
+  row.classList.add('on');
+});
+renderCats('chapters');
+document.getElementById('libList').innerHTML = LIB.chapters.html;
+document.getElementById('libFoot').textContent = LIB.chapters.foot;
+
+/* ===== 旁注 ===== */
+var NOTES = {
+  linxi: { name: '林溪', kind: '角色 · 主角', text: '重生回 2014 年的互联网创业者,知微书馆老板。', file: 'characters/lin.md' },
+  luchen: { name: '陆沉', kind: '角色 · 对手', text: '纵横资本合伙人,林溪重生前的最大对手。表面儒雅,实则记仇。', file: 'characters/lu-chen.md' },
+  zhiwei: { name: '知微书馆', kind: '地点', text: '林溪重生后盘下的旧书馆,公司前身,主线主要场景。', file: 'locations/zhiwei.md' },
+  shouye: { name: '守夜人会', kind: '组织', text: '资本世界的影子规则制定者,暗线推手。', file: 'factions/shouye.md' },
+  luopan: { name: '青铜罗盘', kind: '物品', text: '林溪母亲遗物,第 3 章典当,本章回归——伏笔回收。', file: 'items/luopan.md' },
+  lingqi: { name: '灵气', kind: 'violation', text: '此世界不存在「灵气」设定,命中表面词。建议改用「氧化纹路」或删除。', danger: true }
+};
+var noteEl = document.getElementById('note'), noteTimer = null, hideTimer = null;
+function showNote(target) {
+  var d = NOTES[target.dataset.note]; if (!d) return;
+  var color = getComputedStyle(target).borderBottomColor;
+  noteEl.className = 'note' + (d.danger ? ' danger' : '');
+  if (!d.danger) noteEl.style.borderLeftColor = color;
+  noteEl.innerHTML = '<span class="n-name">' + d.name + '</span><span class="n-kind">' + d.kind + '</span><div>' + d.text + '</div>' +
+    (d.file ? '<span class="n-open" onclick="toast(\'打开 ' + d.file + '(演示)\')">打开 ' + d.file + ' →</span>' : '');
+  var mid = document.getElementById('mid'), paper = document.getElementById('paper');
+  var pr = paper.getBoundingClientRect(), tr = target.getBoundingClientRect(), mr = mid.getBoundingClientRect();
+  var left = Math.min(pr.right - 60, mr.right - 210) ;
+  noteEl.style.left = (left - mr.left) + 'px';
+  noteEl.style.top = (tr.top - mr.top + mid.scrollTop - 2) + 'px';
+  noteEl.classList.add('show');
+}
+function hideNote() { noteEl.classList.remove('show'); }
+document.querySelectorAll('[data-note]').forEach(function (el) {
+  el.addEventListener('mouseenter', function () {
+    clearTimeout(hideTimer);
+    noteTimer = setTimeout(function () { showNote(el); }, 100);
+  });
+  el.addEventListener('mouseleave', function () {
+    clearTimeout(noteTimer);
+    hideTimer = setTimeout(hideNote, 200);
+  });
+});
+noteEl.addEventListener('mouseenter', function () { clearTimeout(hideTimer); });
+noteEl.addEventListener('mouseleave', function () { hideTimer = setTimeout(hideNote, 200); });
+
+/* ===== 状态点 ===== */
 var state = 'run';
 function setState(s) {
   state = s;
-  var el = document.getElementById('statusline');
-  el.classList.remove('approval', 'error', 'clickable');
-  el.onclick = null;
+  var dot = document.getElementById('dot'), label = document.getElementById('dotLabel');
+  dot.className = 'dot' + (s === 'run' ? ' run' : s === 'approval' ? ' approval' : s === 'error' ? ' error' : '');
   var comp = document.getElementById('composer');
   comp.classList.remove('locked');
   if (s === 'idle') {
-    el.innerHTML = '<span>📖 重生互联网</span>' +
-      '<span class="mode-chip"><span class="dot" style="background:' + modeColors[mode] + '"></span>' + modeNames[mode] + ' 模式</span>' +
-      '<span class="sl-violation" onclick="event.stopPropagation();toast(\'跳到第 5 段\')">⚠ 1</span>' +
-      '<span class="sl-right"><button class="summon-btn" onclick="event.stopPropagation();toggleComposer()">✦ 对话 (Cmd+L)</button></span>';
+    label.innerHTML = '<span style="color:var(--text-tertiary)">plan</span>';
+    label.classList.add('show');
+    dot.onclick = function () { toggleComposer(); };
+    dot.title = '对话 (Cmd+L)';
   } else if (s === 'run') {
-    el.classList.add('clickable');
-    el.onclick = function () { toggleTrace(); };
-    el.innerHTML = '<span class="sl-pulse"></span><span style="color:var(--text-primary)">Writer 正在生成 diff · 12.3s</span>' +
-      '<span class="sl-progress"><span class="sl-track"><span class="sl-fill" style="display:block"></span></span><span>3/5 · 毒舌读者</span></span>' +
-      '<span style="color:var(--text-tertiary)">点击查看 trace</span>' +
-      '<span class="sl-right"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button><button class="summon-btn" onclick="event.stopPropagation();toggleComposer()">✦</button></span>';
+    label.innerHTML = 'Writer 正在生成 diff · 12s <span class="track"><span class="fill"></span></span> 3/5 · 毒舌读者 <button class="cancel" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button>';
+    label.classList.add('show');
+    dot.onclick = function () { toggleTrace(); };
+    dot.title = '查看 trace (Cmd+J)';
   } else if (s === 'approval') {
-    el.classList.add('approval', 'clickable');
-    el.onclick = function () { openApproval(); };
-    el.innerHTML = '<span>● 1 个修改待审批 · 点击查看</span><span class="sl-right"><kbd>Y</kbd><kbd>N</kbd><kbd>E</kbd></span>';
+    label.innerHTML = '<span class="appr" onclick="openApproval()">1 个修改待审批 — 查看</span>';
+    label.classList.add('show');
+    dot.onclick = openApproval;
+    dot.title = '待审批';
     comp.classList.add('locked');
     openApproval();
-  } else if (s === 'error') {
-    el.classList.add('error', 'clickable');
-    el.onclick = function () { toast('打开 Settings §API Keys'); };
-    el.innerHTML = '<span>⚠ 连接失败 · 点击去 Settings 检查 key</span>';
+  } else {
+    label.innerHTML = '<span class="err" onclick="toast(\'打开 Settings §API Keys\')">连接失败 · 去 Settings 检查 key</span>';
+    label.classList.add('show');
+    dot.onclick = function () { toast('打开 Settings §API Keys'); };
+    dot.title = '错误';
   }
 }
-function demoSend() {
-  closeComposer(); setState('run'); toast('已发送 · 进度移交状态线');
-}
-document.querySelectorAll('#modeToggle button').forEach(function (btn) {
-  btn.addEventListener('click', function () {
-    document.querySelectorAll('#modeToggle button').forEach(function (b) { b.classList.remove('on'); });
-    btn.classList.add('on');
-    mode = btn.dataset.mode;
-    if (state === 'idle') setState('idle');
-    toast('已切到 ' + mode + ' 模式');
+function demoSend() { closeComposer(); setState('run'); toast('已发送 · 进度在右下'); }
+document.querySelectorAll('.mode').forEach(function (m) {
+  m.addEventListener('click', function () {
+    document.querySelectorAll('.mode').forEach(function (x) { x.classList.remove('on'); });
+    m.classList.add('on');
+    toast('已切到 ' + m.dataset.m + ' 模式');
   });
 });
-/* ===== 导航抽屉: 类目切换 ===== */
-function ftRow(r) {
-  return '<div class="ft-row' + (r.active ? ' active' : '') + '">' +
-    (r.num ? '<span class="num">' + r.num + '</span>' : '') + r.name +
-    (r.dirty ? '<span class="dirty-dot" style="margin-left:auto"></span>' : '') + '</div>';
-}
-var DERIVED_FOOT = '3 个 `_` 前缀派生文件已隐藏 — Developer Mode 可见';
-var CATS = {
-  outline: { header: '大纲 · OUTLINE/', foot: DERIVED_FOOT, rows: [
-    { name: 'outline.md' }, { name: 'beats.md' },
-    { name: 'chapter-arcs / 卷三 · 重生七年.md' }, { name: 'timeline / 主线时间轴.md' }] },
-  characters: { header: '角色 · CHARACTERS/', foot: DERIVED_FOOT, rows: [
-    { name: '林溪.md' }, { name: '陆沉.md' }, { name: '沈柏年.md' }, { name: '阿芷.md' }] },
-  worldview: { header: '世界观 · WORLDVIEW/', foot: DERIVED_FOOT, rows: [
-    { name: 'rules · 世界规则.md' }, { name: 'geography · 城市与地理.md' },
-    { name: 'history · 大事记.md' }, { name: 'politics · 资本格局.md' }] },
-  chapters: { header: '章节 · CHAPTERS/', foot: DERIVED_FOOT, rows: [
-    { num: '009', name: '旧仓库的钥匙.md' }, { num: '010', name: '第一次交锋.md' },
-    { num: '011', name: '融资酒局.md' }, { num: '012', name: '雨夜来客.md', active: true, dirty: true },
-    { num: '013', name: '概要 · 反转伏笔.md' }] },
-  query: { header: '查询面板 · QUERYFACTS', foot: '演示数据 · 四类查询见 plan/07 §导航抽屉', html:
-    '<div class="qp">' +
-    '<input placeholder="林溪 在第 3 章时…" onkeydown="if(event.key===\'Enter\')toast(\'查询已发出(演示)\')">' +
-    '<div class="qp-chips"><span class="qp-chip on" onclick="qpChip(this)">entity-at</span><span class="qp-chip" onclick="qpChip(this)">relations</span><span class="qp-chip" onclick="qpChip(this)">mentions</span><span class="qp-chip" onclick="qpChip(this)">semantic</span></div>' +
-    '<div class="qp-result"><b>林溪 @ ch3</b> · 身份: 数据分析师(重生前) · location: 知微书馆</div>' +
-    '<div class="qp-result"><b>关系</b> · 林溪 — 陆沉: 对手(强度 0.8, 来源 ch10-12)</div>' +
-    '</div>' },
-  learnings: { header: '已学偏好 · LEARNINGS', foot: '来自 Reflector 沉淀 · 可在 Settings §风格定制中编辑', html:
-    '<div style="padding:2px 8px">' +
-    '<div class="learn-row"><span class="w">0.9</span><span>商战细节要具体到数字,不要"一大笔钱"</span></div>' +
-    '<div class="learn-row"><span class="w">0.8</span><span>对话不用感叹号连发,情绪靠动作带</span></div>' +
-    '<div class="learn-row"><span class="w">0.7</span><span>场景切换时给一个气味/声音锚点</span></div>' +
-    '<div class="learn-row"><span class="w">0.6</span><span>陆沉说话从不直接回答问题</span></div>' +
-    '</div>' }
-};
-function qpChip(el) {
-  el.parentElement.querySelectorAll('.qp-chip').forEach(function (c) { c.classList.remove('on'); });
-  el.classList.add('on');
-}
-function setCat(cat) {
-  document.querySelectorAll('.cat-item[data-cat]').forEach(function (c) {
-    c.classList.toggle('active', c.dataset.cat === cat);
-  });
-  var d = CATS[cat];
-  document.getElementById('ftHeader').textContent = d.header;
-  document.getElementById('ftList').innerHTML = d.html || d.rows.map(ftRow).join('');
-  document.getElementById('ftFoot').textContent = d.foot || '';
-  if (!document.getElementById('navdrawer').classList.contains('open')) toggleNav();
-}
-document.querySelectorAll('.cat-item[data-cat]').forEach(function (c) {
-  c.addEventListener('click', function () { setCat(c.dataset.cat); });
-});
-document.getElementById('ftList').addEventListener('click', function (e) {
-  var row = e.target.closest('.ft-row');
-  if (!row) return;
-  this.querySelectorAll('.ft-row').forEach(function (r) { r.classList.remove('active'); });
-  row.classList.add('active');
-  toast('打开 ' + row.textContent.trim() + '(演示)');
-});
-var CAT_KEYS = { '1': 'outline', '2': 'characters', '3': 'chapters', '4': 'query', '5': 'learnings' };
 
+/* ===== 键盘 ===== */
 document.addEventListener('keydown', function (e) {
   var cmd = e.metaKey || e.ctrlKey;
-  if (cmd && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleNav(); }
+  if (cmd && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleLib(); }
   if (cmd && e.key.toLowerCase() === 'j') { e.preventDefault(); toggleTrace(); }
   if (cmd && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleComposer(); }
   if (cmd && CAT_KEYS[e.key]) { e.preventDefault(); setCat(CAT_KEYS[e.key]); }
   if (e.key === 'Escape') {
-    if (document.getElementById('approvalLayer').classList.contains('open')) closeApproval();
+    if (document.getElementById('apLayer').classList.contains('open')) closeApproval();
     else if (document.getElementById('composer').classList.contains('open')) closeComposer();
-    else if (document.getElementById('hovercard').classList.contains('show')) toggleHover();
-    else if (document.getElementById('tracedrawer').classList.contains('open')) toggleTrace();
-    else if (document.getElementById('navdrawer').classList.contains('open')) toggleNav();
+    else if (noteEl.classList.contains('show')) hideNote();
+    else if (document.getElementById('trace').classList.contains('open')) toggleTrace();
+    else if (document.getElementById('lib').classList.contains('open')) toggleLib();
   }
 });
 function toast(msg) {
@@ -471,9 +480,6 @@ function toast(msg) {
   setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 2200);
   setTimeout(function () { t.remove(); }, 2600);
 }
-document.getElementById('ftHeader').textContent = CATS.chapters.header;
-document.getElementById('ftList').innerHTML = CATS.chapters.rows.map(ftRow).join('');
-document.getElementById('ftFoot').textContent = CATS.chapters.foot;
 setState('run');
 </script>
 </body>

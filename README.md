@@ -145,7 +145,7 @@ pnpm dev
 
 - [README](./design/README.md) — 设计原则、原型使用方式与导航
 - [00-design-tokens](./design/00-design-tokens.md) — 设计 token:双主题色彩 / 字体 / 圆角 / 动效
-- [01-main-layout](./design/01-main-layout.md) — 主界面:纸面 + 召唤式表面
+- [01-main-layout](./design/01-main-layout.md) — 主界面:章节轨 · 纸面 · 状态点
 - [02-approval-cascade](./design/02-approval-cascade.md) — ApprovalCard 整批审与 cascade
 - [03-reader-panel](./design/03-reader-panel.md) — ReaderPanel 章节风险报告
 - [04-settings](./design/04-settings.md) — SettingsDialog
