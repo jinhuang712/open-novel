@@ -7,6 +7,7 @@
 | plan/07 修订:顶部 Tabs 取消,新增 ADR-05(多章打开 = 左缘章节轨 + 库面板「最近」+ Cmd+P);状态线收为右下状态点(一粒 8px 点 + 旁文一句话,四态不变);导航抽屉改库面板(纯文字类目);纸面无任何顶部常驻行,字数/保存/violation 以左下微标静置;视觉基调约束入档:简约素雅克制、不引入文化符号装饰、唯一循环动效为状态点运行态呼吸。 | `plan/07-ui-layout.md` | 用户要求设计提高想象力、摆脱 VSCode 形似;随后明确否决中国风方案(印章/卷轴/笺),指定简约、高级、素雅、克制、零装饰动画。 |
 | design/01 重写 + 01 号原型第三版:章节轨(章号列 + 当前章标记 + 未保存/violation 微点)、库面板(类目下划线 tab + 发丝线列表 + 最近)、状态点四态、Trace 面板(无卡片底色,发丝线分块)、输入条(模式纯文字 tab)、审批聚焦卡;实体 hover 改为**纸面右缘旁注**(对齐所在段落,不遮正文);新增「动效清单(全集)」章节,声明全部动效及 reduced-motion 行为。原型交互完整:Cmd+B/J/L/1~5、Esc 分层、旁注 hover 100/200ms、四态演示。 | `design/01-main-layout.md` `design/prototypes/01-main-layout.html` | 同上。 |
 | design 原则新增「克制是审美底线」;原则 3 表述与导航(design README 表格、原型索引、根 README)同步为「章节轨 · 纸面 · 状态点」。 | `design/README.md` `design/prototypes/index.html` `README.md` | 同上。 |
+| 库面板收为 4 类目(章节 / 角色 / 世界观 / 大纲),只承载「能打开的东西」:**查询独立为一键浮层**(`Cmd+E` 召出 / 同键或 Esc 收回,框选「查询」预填直达,四类型 `Tab` 互换,结果行点击跳来源;spec/12 待补 `query.open`);**已学偏好移出主界面**,查看与编辑归 Settings §风格定制,Reflector 新沉淀在 Trace 面板内联提示(design/04 同步项记入 TODO)。原型同步实现,`Cmd+1~4` 重映射。 | `plan/07-ui-layout.md` `design/01-main-layout.md` `design/prototypes/01-main-layout.html` `design/prototypes/index.html` `TODO.md` | 用户反馈:查询应是单独的一键互换交互,偏好不该放在库里。 |
 
 ## 2026-06-11 · design+plan · 设计思想转向:写作优先,「纸面 + 召唤式表面」替代五区常驻
 

@@ -47,16 +47,17 @@
   .lib-row .num { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); width: 24px; flex: none; }
   .lib-sect { padding: 10px 12px 4px; font-size: 10.5px; letter-spacing: .08em; color: var(--text-tertiary); }
   .lib-foot { padding: 10px 20px; font-size: 11px; color: var(--text-tertiary); border-top: 1px solid var(--border); }
-  .qp { padding: 12px; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px; }
-  .qp input { font: inherit; font-size: 12.5px; color: var(--text-primary); background: transparent; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 7px 10px; outline: none; }
-  .qp input:focus { border-color: var(--accent); }
-  .qp-types { display: flex; gap: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  /* ===== 查询浮层 (Cmd+E, 一键互换) ===== */
+  .query { position: fixed; left: 50%; top: 16%; transform: translateX(-50%) translateY(6px); width: 560px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px 16px 12px; z-index: 65; display: flex; flex-direction: column; gap: 10px; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+  .query.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+  .query input { font: inherit; font-size: 13.5px; color: var(--text-primary); background: transparent; border: none; outline: none; padding: 2px 0 8px; border-bottom: 1px solid var(--border); }
+  .qp-types { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
   .qp-type { cursor: pointer; padding-bottom: 4px; border-bottom: 2px solid transparent; }
   .qp-type.on { color: var(--text-primary); border-bottom-color: var(--accent); }
-  .qp-r { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 8px 0; border-top: 1px solid var(--border); line-height: 1.7; }
+  .qp-r { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 8px 0; border-top: 1px solid var(--border); line-height: 1.7; cursor: pointer; }
+  .qp-r:hover b { color: var(--accent-text); }
   .qp-r b { color: var(--text-primary); font-weight: 500; }
-  .ln-row { display: flex; gap: 10px; padding: 9px 12px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; border-bottom: 1px solid var(--border); }
-  .ln-row .w { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); flex: none; padding-top: 2px; }
+  .q-hint { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
 
   /* ===== 纸面 ===== */
   .mid { flex: 1; min-width: 0; overflow-y: auto; position: relative; }
@@ -176,6 +177,7 @@
   <button class="btn btn-sm" onclick="toggleLib()">库 (Cmd+B)</button>
   <button class="btn btn-sm" onclick="toggleTrace()">Trace (Cmd+J)</button>
   <button class="btn btn-sm" onclick="toggleComposer()">输入 (Cmd+L)</button>
+  <button class="btn btn-sm" onclick="toggleQuery()">查询 (Cmd+E)</button>
   <span style="display:inline-flex;gap:2px;align-items:center">状态点:
     <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
   </span>
@@ -212,7 +214,7 @@
       <p>雨下到第三天,<span class="ent ent-place" data-note="zhiwei">知微书馆</span>的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。<span class="ent ent-char" data-note="linxi">林溪</span>把最后一摞服务器报价单推到桌角,揉了揉眉心。</p>
       <p>门铃响的时候是凌晨一点十四分。</p>
       <p>来人收了伞,雨水顺着伞尖在地板上积出一小滩。<span class="ent ent-char" data-note="luchen">陆沉</span>就站在那滩水后面,西装笔挺得不像一个深夜造访的人。"林总,"他笑了笑,"我替<span class="ent ent-org" data-note="shouye">守夜人会</span>带个话。"</p>
-      <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span> 让 AI 修改 <kbd>Cmd+K</kbd></button><button>查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
+      <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span> 让 AI 修改 <kbd>Cmd+K</kbd></button><button onclick="openQuery('林溪的指尖在桌沿轻轻敲了两下')">查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
       <p>"带话之前,先把东西还我。"她目光落在对方手里的<span class="ent ent-item" data-note="luopan">青铜罗盘</span>上——盘面上的<span class="violation" data-note="lingqi">灵气</span>纹路在灯下泛着不正常的青色。</p>
       <p>陆沉挑了挑眉,没接话,只是把罗盘放在了吧台上,推过来。</p>
     </div>
@@ -292,6 +294,16 @@
   </div>
 </div>
 
+<div class="query" id="query">
+  <input id="qInput" placeholder="问一个事实:林溪 在第 3 章时…" onkeydown="if(event.key==='Enter'){event.preventDefault();toast('查询已发出(演示)')}">
+  <div class="qp-types" id="qTypes"><span class="qp-type on" onclick="qType(this)">entity-at</span><span class="qp-type" onclick="qType(this)">relations</span><span class="qp-type" onclick="qType(this)">mentions</span><span class="qp-type" onclick="qType(this)">semantic</span></div>
+  <div>
+    <div class="qp-r" onclick="closeQuery();toast('跳到 ch3 来源段(演示)')"><b>林溪 @ ch3</b> · 身份: 数据分析师(重生前) · 位置: 知微书馆</div>
+    <div class="qp-r" onclick="closeQuery();toast('跳到 ch10 来源段(演示)')"><b>关系</b> · 林溪 — 陆沉: 对手(强度 0.8 · 来源 ch10-12)</div>
+  </div>
+  <div class="q-hint">enter 查询 · tab 切类型 · esc / ⌘E 收回</div>
+</div>
+
 <div class="toast-zone" id="toastZone"></div>
 
 <script>
@@ -339,21 +351,11 @@ var LIB = {
     '<div class="lib-row">beats.md<span class="meta">节拍</span></div>' +
     '<div class="lib-row">卷三 · 重生七年<span class="meta">chapter-arcs</span></div>' +
     '<div class="lib-row">主线时间轴<span class="meta">timeline</span></div>' },
-  query: { foot: '演示数据 · 四类查询见 plan/07 §库面板', html:
-    '<div class="qp">' +
-    '<input placeholder="林溪 在第 3 章时…" onkeydown="if(event.key===\'Enter\')toast(\'查询已发出(演示)\')">' +
-    '<div class="qp-types"><span class="qp-type on" onclick="qType(this)">entity-at</span><span class="qp-type" onclick="qType(this)">relations</span><span class="qp-type" onclick="qType(this)">mentions</span><span class="qp-type" onclick="qType(this)">semantic</span></div>' +
-    '<div><div class="qp-r"><b>林溪 @ ch3</b> · 身份: 数据分析师(重生前) · 位置: 知微书馆</div>' +
-    '<div class="qp-r"><b>关系</b> · 林溪 — 陆沉: 对手(强度 0.8 · 来源 ch10-12)</div></div>' +
-    '</div>' },
-  learnings: { foot: '来自 Reflector 沉淀 · 在 Settings §风格定制中编辑', html:
-    '<div class="ln-row"><span class="w">0.9</span><span>商战细节要具体到数字,不要"一大笔钱"</span></div>' +
-    '<div class="ln-row"><span class="w">0.8</span><span>对话不用感叹号连发,情绪靠动作带</span></div>' +
-    '<div class="ln-row"><span class="w">0.7</span><span>场景切换时给一个气味/声音锚点</span></div>' +
-    '<div class="ln-row"><span class="w">0.6</span><span>陆沉说话从不直接回答问题</span></div>' }
+  outline2: null
 };
-var CAT_NAMES = { chapters: '章节', characters: '角色', worldview: '世界观', outline: '大纲', query: '查询', learnings: '偏好' };
-var CAT_KEYS = { '1': 'outline', '2': 'characters', '3': 'chapters', '4': 'query', '5': 'learnings' };
+delete LIB.outline2;
+var CAT_NAMES = { chapters: '章节', characters: '角色', worldview: '世界观', outline: '大纲' };
+var CAT_KEYS = { '1': 'outline', '2': 'characters', '3': 'worldview', '4': 'chapters' };
 function renderCats(cur) {
   document.getElementById('libCats').innerHTML = Object.keys(CAT_NAMES).map(function (k) {
     return '<span class="lib-cat' + (k === cur ? ' on' : '') + '" onclick="setCat(\'' + k + '\')">' + CAT_NAMES[k] + '</span>';
@@ -459,14 +461,33 @@ document.querySelectorAll('.mode').forEach(function (m) {
 });
 
 /* ===== 键盘 ===== */
+function openQuery(prefill) {
+  var q = document.getElementById('query'), i = document.getElementById('qInput');
+  q.classList.add('open');
+  if (prefill) i.value = prefill;
+  i.focus();
+}
+function closeQuery() { document.getElementById('query').classList.remove('open'); }
+function toggleQuery() {
+  document.getElementById('query').classList.contains('open') ? closeQuery() : openQuery();
+}
 document.addEventListener('keydown', function (e) {
   var cmd = e.metaKey || e.ctrlKey;
   if (cmd && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleLib(); }
   if (cmd && e.key.toLowerCase() === 'j') { e.preventDefault(); toggleTrace(); }
   if (cmd && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleComposer(); }
+  if (cmd && e.key.toLowerCase() === 'e') { e.preventDefault(); toggleQuery(); }
   if (cmd && CAT_KEYS[e.key]) { e.preventDefault(); setCat(CAT_KEYS[e.key]); }
+  if (e.key === 'Tab' && document.getElementById('query').classList.contains('open') && !e.isComposing) {
+    e.preventDefault();
+    var types = Array.prototype.slice.call(document.querySelectorAll('#qTypes .qp-type'));
+    var cur = types.findIndex(function (t) { return t.classList.contains('on'); });
+    types[cur].classList.remove('on');
+    types[(cur + (e.shiftKey ? types.length - 1 : 1)) % types.length].classList.add('on');
+  }
   if (e.key === 'Escape') {
     if (document.getElementById('apLayer').classList.contains('open')) closeApproval();
+    else if (document.getElementById('query').classList.contains('open')) closeQuery();
     else if (document.getElementById('composer').classList.contains('open')) closeComposer();
     else if (noteEl.classList.contains('show')) hideNote();
     else if (document.getElementById('trace').classList.contains('open')) toggleTrace();

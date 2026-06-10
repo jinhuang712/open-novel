@@ -47,11 +47,23 @@ flowchart TB
 ## 库面板(召唤式,320px)
 
 - 召出:`Cmd+B` / 点库按钮;推开式,纸面右移
-- 顶部:纯文字类目行(章节 / 角色 / 世界观 / 大纲 / 查询 / 偏好),活动类目 `--text-primary` + 底部 2px accent 短线,其余 `--text-secondary`;`Cmd+1~5` 直达(面板收起时先展开)
+- 顶部:纯文字类目行(章节 / 角色 / 世界观 / 大纲),活动类目 `--text-primary` + 底部 2px accent 短线,其余 `--text-secondary`;`Cmd+1~4` 直达(面板收起时先展开)
 - 列表:行高 32px,文字 + 右侧弱化元信息(字数/修改时间);活动行左缘 2px accent 线,不做整行底色;`_` 前缀派生文件默认隐藏(Developer Mode 显示并标「派生」,read-only,[spec/13 §Section 8](../spec/13-settings.md#section-8-developer-mode--全局))
-- 查询类目:查询输入 + 四类型(entity-at / relations / mentions / semantic,文字 chip)+ 等宽结果行
-- 偏好类目:learnings 列表(权重数字 + 条目),编辑入口 Settings §风格定制
 - 「最近」置于章节类目顶部一组(替代 Tabs 的多文件心智);空态(新项目):居中衬线短句 +「让 AI 起草第一章」按钮 → 召出输入条并预填
+- 库面板只放「能打开的东西」;查询是动作(独立浮层,见下节),偏好是 AI 沉淀的规则(归 Settings)
+
+## 查询浮层(召唤式,一键互换)
+
+queryFacts 是动词不是文件,独立成一键浮层:
+
+- 召出:`Cmd+E`;再按 `Cmd+E` 或 `Esc` 收回(同键互换);框选浮动条的「查询」= 召出并预填选区文字
+- 形态:屏幕上 1/4 处居中 560px(`--bg-raised` + 1px 边 + `--shadow-md`):查询输入 → 四类型纯文字 tab(entity-at / relations / mentions / semantic,**`Tab` 键循环互换**,IME 不抢键)→ 等宽结果行(可点击跳转来源章节)
+- 结果行点击 → 关浮层并跳到对应位置;`Enter` 执行查询
+- 与命令面板的分工:`Cmd+P` 打开文件、`Cmd+Shift+P` 执行命令、`Cmd+E` 问事实([design/06](./06-command-palette.md))
+
+## 偏好(learnings)的去处
+
+不在主界面常驻:查看与编辑都在 **Settings §风格定制**(learnings 列表:权重 + 条目 + 来源 turn,[design/04](./04-settings.md));Reflector 新沉淀一条偏好时,在 Trace 面板的 Reflector 块内联展示,点击可跳 Settings 对应条目。
 
 ## 纸面
 
