@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · design+plan · 设计思想转向:写作优先,「纸面 + 召唤式表面」替代五区常驻
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| plan/07 修订:目标由「仿 VSCode 五区」改为「IDE 的能力,纸面的外观」+ 三条注意力法则(常驻 ≤3 层 / AI 过程默认一行 / 打断只为审批);ADR-01 修订为「纸面 + 召唤式 IDE」并记录原因,新增 ADR-04(agent 可观测性 = 状态线一行 + trace 召唤)。结构变化:ActivityBar 并入导航抽屉(Cmd+B)、ChatBox 改为召唤式 Composer(Cmd+L,新增命令待补 spec/12)、ThinkingPanel 改为 Trace 抽屉(Cmd+J)、DebugConsole 降为 Developer Mode 专属、底部状态栏取消(mode/violation/进度并入 Agent 状态线,费用并入 Trace 头部与 Settings,保存状态归 tab dirty 点)。 | `plan/07-ui-layout.md` | 用户实测主界面原型截图,判定五区常驻「太挤太丰富、难以使用」,要求调整设计思想;经选项确认走「写作优先重构」。 |
+| design/01 重写 + 01 号原型重做:常驻层只剩 Tabs / 纸面 / Agent 状态线(四态:空闲 / 运行中 / 待审批 / 错误);导航抽屉、Trace 抽屉、Composer、审批聚焦卡全部召唤式,原型含真实键绑定(Cmd+B/J/L、Esc 按层级收回)与四态演示;violation 汇总信号改为状态线计数 + 滚动条 marker,移除段落 gutter 常驻 ⚠。 | `design/01-main-layout.md` `design/prototypes/01-main-layout.html` | 同上。 |
+| design 原则与导航同步:README 原则 3 由「IDE 心智不破坏」改为「纸面唯一主角(写作优先)」;原型索引页与根 README 的 01 条目改为新表述。 | `design/README.md` `design/prototypes/index.html` `README.md` | 同上。 |
+| TODO 新增文档同步项:02-06 设计文档与原型仍按旧五区语境(右栏 ChatBox、状态栏等引用),待按新契约同步;spec/12 需补 `chat.focusComposer`(Cmd+L)。 | `TODO.md` | 本轮范围经用户确认仅 plan/07 + design/01 + 01 号原型,其余下一轮。 |
+
 ## 2026-06-10 · design · 主题修正:底色去绿改素色中性,绿仅保留为 accent
 
 | 变更 | 影响文档 | 关联 |

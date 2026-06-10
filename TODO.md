@@ -8,6 +8,7 @@
 
 | 类别 | 状态 | 说明 |
 |---|---|---|
+| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [plan/07](./plan/07-ui-layout.md) ADR-01/04 与 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍按旧五区语境写作(右栏 ChatBox、底部状态栏、ThinkingPanel 常驻等表述);待按「纸面 + 召唤式表面」契约逐篇同步,入口表述以 design/01 为准。同批处理:[spec/12](./spec/12-shortcuts.md) 新增 `chat.focusComposer`(Cmd+L)并把 ChatBox 上下文更名 Composer。 |
 | 文档重写 / CAST 化 | **0 open** | 所有 manifest 页面已重渲染到 CAST shell;Mermaid 作者源恢复到 `site/diagram-sources.json`,渲染器禁止图表 caption / body 暴露 Mermaid 方向声明等源码首行。 |
 | 文档导航 / 索引 | **0 open** | README、index、progress README、TODO、Changelist 的职责边界已收敛;README 不再指向过期 progress 重构项。 |
 | 已关闭历史项 | **0 open** | Embedding provider、schema 主权拆分、cascade controller 主权、reindex 失败语义、analyzeImpact Writer 边界等已决事项从 TODO 活跃区移除,保留在 changelist / 对应 spec 中。 |
