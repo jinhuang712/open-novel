@@ -1,6 +1,6 @@
 # Spec 28 — 技术栈锁定
 
-> **[info]** 后续代码 commit 以本文档为依据。版本号实查清单见 [spec/00](./00-version-audit.md);版本审计跑完前,本文版本表视为占位,audit 产出后回写本文。
+> **[info]** 本文档是技术栈锁定主权文档,后续代码 commit 以本文档为依据。版本号实查清单见 [spec/00](./00-version-audit.md);版本审计跑完前,本文版本表视为占位,audit 产出后回写本文。
 
 ## 技术决策总览
 
@@ -8,19 +8,19 @@
 |---|---|---|
 | 应用架构 | Next.js 15 单应用 | 起步快,SSE 一等公民,App Router 与 AI SDK 6 集成最佳 |
 | LLM 调用层 | Vercel AI SDK 6 (`generateText` / `streamText` + `stopWhen`) | 显式控制工具循环终止条件,不依赖框架隐式 Agent loop;`stopWhen` callback 是框架级一等字段,可精确控制"看到 proposal marker 立刻停"等业务终止 |
-| Agent 编排 | 自定义 runner (13 个函数式) + cascade controller | 业务编排(cascade / 审批 / cardinal-rules / doom-loop / Reflector)用普通 TS 函数显式编排,可见可测,不被 Mastra Agent loop / LangGraph StateGraph 等框架抽象层挡住 |
+| Agent 编排 | 自定义 runner (13 个函数式) + cascade controller | 业务编排用普通 TS 函数显式编排,可见可测;详见设计取舍 ADR-A |
 | LLM | DeepSeek V4 Pro/Flash | ctx **1M tokens**, max output **384K**, 原生 JSON mode (`response_format: { type: 'json_object' }`)。Pro 用于核心创作 (writer / validator / humanizer),Flash 用于辅助 (router / checker / reflector / reader-panel / 工具内 LLM 短调用) |
 | 编辑器 | TipTap 3.x + 自定义装饰器 + AC trie | TipTap 中文排版舒服;不用 `Mention` 节点 (atomic 破坏纯文本流) |
 | 存储 | Markdown (产物) + SQLite (索引 + 过程) | Markdown 人类可读 + Git 友好;SQLite 处理引用图 / 历史 / 学习 / 段锚 / 嵌入向量 |
-| SQLite driver | `better-sqlite3` | Node 圈 SQLite 性能之王;同步 API 简化代码;企业 SSL 下 prebuild 成熟;与 Drizzle / sqlite-vec 配合最稳 |
-| ORM | Drizzle ORM + drizzle-kit | TS schema 单一事实源;migration 自动生成;类型推导让"加字段不漏改" |
-| 向量能力 | `sqlite-vec`(loadExtension) | 与 SQLite 同库,可 SQL JOIN segments + entity_refs + embedding;无需独立向量服务 |
+| SQLite driver | `better-sqlite3` | 同步 API + prebuild 成熟,Drizzle / sqlite-vec 配合最稳;详见设计取舍 ADR-B |
+| ORM | Drizzle ORM + drizzle-kit | TS schema 单一事实源 + 自动 migration;详见设计取舍 ADR-D |
+| 向量能力 | `sqlite-vec`(loadExtension) | 与 SQLite 同库,可直接 SQL JOIN;详见设计取舍 ADR-C |
 | 联网 | 接口预留 + Mock | 二期接 Bocha (中文) + Tavily (英文),用 MCP sidecar |
 | 三模式 | XState 状态机 | discuss 不写,plan 改设定,write 改章节,严格闸门 |
 
 ## 栈分层总览
 
-**数据结构图**
+**栈分层图**
 
 ```mermaid
 flowchart TB
@@ -149,7 +149,7 @@ export function getDb(projectId: string) {
 | 模型 | ID | ctx | max output | 用途 |
 |---|---|---|---|---|
 | Pro | `deepseek-v4-pro` | 1M | 384K | Writer / Validator / Humanizer(核心创作 + 一致性审 + 改写) |
-| Flash | `deepseek-v4-flash` | 1M | 384K | Router / Checker / Reflector / ReaderPanel / Hidden Agent 短调用 |
+| Flash | `deepseek-v4-flash` | 1M | 384K | Router / Checker / Reflector / ReaderPanel / 工具内 LLM 短调用 |
 
 **1M ctx 的设计含义**:普通章节场景下不需要 token 预算控制,把"一致性所需的全部上下文"装齐是头等优先级 — 见 [spec/23 §per-agent 上下文契约](./23-context-contracts.md)(一致性优先装配)。
 
@@ -176,7 +176,7 @@ const result = await generateText({
   model: deepseek.languageModel('deepseek-v4-flash'),
   messages,
   providerOptions: { deepseek: { response_format: { type: 'json_object' } } },
-  maxTokens: 512,                                       // 必须基于 zod schema 估算
+  maxOutputTokens: 512,                                 // 必须基于 zod schema 估算
 })
 ```
 
@@ -186,7 +186,7 @@ const result = await generateText({
 import { generateText } from 'ai'
 
 const result = await generateText({
-  model: deepseekProMax,
+  model: deepseekPro,
   messages: ctx.messages,
   tools: ctx.tools,
   stopWhen: ({ steps }) => {
@@ -212,26 +212,7 @@ const result = await generateText({
 
 ### 应用层 Memory 模块
 
-不用任何 Agent 框架的 Memory 抽象,自己写薄薄一层 thread / resource CRUD + 一致性校验。详见 [spec/22 §应用层 memory 模块](./22-memory-and-history.md)。
-
-```ts
-// lib/agents/memory.ts (简化示意)
-import { getDb } from '@/lib/db'
-import { messages } from '@/lib/db/schema'
-import { eq, and, desc } from 'drizzle-orm'
-
-export async function fetchRecent({ projectId, threadId, limit = 30 }) {
-  // 一致性校验:thread 必须以 projectId 开头
-  if (!threadId.startsWith(`proj:${projectId}:`)) {
-    throw new Error('thread/resource projectId mismatch')
-  }
-  const db = getDb(projectId)
-  return await db.select().from(messages)
-    .where(and(eq(messages.threadId, threadId), eq(messages.resource, projectId)))
-    .orderBy(desc(messages.createdAt))
-    .limit(limit)
-}
-```
+不用任何 Agent 框架的 Memory 抽象,自己写薄薄一层 thread / resource CRUD + 一致性校验(thread/resource guard);messages 落全局 `~/.open-novel/runtime.db`,**不进 per-project `index.db`**。接口与 guard 的 canonical 实现以 [spec/22 §应用层 memory 模块](./22-memory-and-history.md) 为准,本文不重复代码。
 
 ## 版本升级流程
 

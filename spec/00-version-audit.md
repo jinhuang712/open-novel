@@ -8,7 +8,7 @@
 
 文档 audit 后发现的最高优先级风险: plan/08 / spec 全栈所引用的版本号 (`next`、`react`、`ai`、`@ai-sdk/deepseek`、`better-sqlite3`、`drizzle-orm`、`sqlite-vec`、模型 ID `deepseek-v4-pro`) 是基于训练数据 + 调研文章的"应然"假设,**没有任何 commit 把 npm 真实可装版本写下来过**。一旦 W3 第一次 `pnpm add` 失败、native binding 装不上或 model API 返回 404,整个时间表立刻崩。
 
-把版本审计前置到 W3 启动前**单独一次性跑完**,产出一张确定表,写回 plan/08 后再动代码。
+把版本审计前置到 W3 启动前**单独一次性跑完**,产出一张确定表,写回 spec/28 后再动代码。
 
 ## 审计清单
 
