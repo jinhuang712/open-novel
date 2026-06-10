@@ -1,6 +1,8 @@
 /* ============================================================
-   Open Novel — Design Tokens (Claude Desktop 风格)
+   Open Novel — Design Tokens (雾绿 · 嫩叶 主题)
    配套文档: design/00-design-tokens.md
+   基调: 雾绿中性底 + 嫩叶绿唯一 accent + 低反差书卷气
+   (正文对比度收在 7:1-9:1 区间: 下限保可达性,上限保纸感)
    主题机制: html[data-theme="light" | "dark"],由页面内 JS 初始化
    (跟随系统 prefers-color-scheme,用户可手动切换并记忆到 localStorage)
    ============================================================ */
@@ -8,30 +10,30 @@
 :root,
 html[data-theme="light"] {
   /* —— 背景 —— */
-  --bg-app: #FAF9F5;            /* 应用底色: 暖纸白 */
-  --bg-surface: #FFFFFF;        /* 卡片 / 编辑器 */
-  --bg-sunken: #F0EEE6;         /* 侧栏 / 输入底 / 下沉区 */
-  --bg-raised: #FFFFFF;         /* 浮层 / 弹窗 */
-  --bg-hover: rgba(61, 57, 41, 0.06);
-  --bg-active: rgba(61, 57, 41, 0.11);
-  --bg-overlay: rgba(40, 38, 34, 0.45);   /* 模态遮罩 */
+  --bg-app: #F5F8F4;            /* 应用底色: 雾绿白 */
+  --bg-surface: #FBFCFA;        /* 卡片 / 编辑器纸面 (非纯白) */
+  --bg-sunken: #ECF1EC;         /* 侧栏 / 输入底 / 下沉区 */
+  --bg-raised: #FDFEFD;         /* 浮层 / 弹窗 */
+  --bg-hover: rgba(47, 68, 56, 0.05);
+  --bg-active: rgba(47, 68, 56, 0.10);
+  --bg-overlay: rgba(20, 28, 23, 0.40);   /* 模态遮罩 */
 
-  /* —— 文字 —— */
-  --text-primary: #2D2A24;
-  --text-secondary: #6E6A60;
-  --text-tertiary: #9C978A;
-  --text-on-accent: #FFFFFF;
+  /* —— 文字 (低反差: 正文 7.9 / 次要 5.0 / 占位 3.3) —— */
+  --text-primary: #3F5148;
+  --text-secondary: #5C6F66;
+  --text-tertiary: #7B8C84;
+  --text-on-accent: #F6FBF7;
 
   /* —— 边框 —— */
-  --border: #E8E5DB;
-  --border-strong: #D5D1C4;
-  --focus-ring: rgba(217, 119, 87, 0.45);
+  --border: #E1E8E2;
+  --border-strong: #CBD7CE;
+  --focus-ring: rgba(21, 130, 67, 0.35);
 
-  /* —— 品牌 accent (陶土橙) —— */
-  --accent: #D97757;
-  --accent-hover: #C96442;
-  --accent-subtle: #F7EAE3;
-  --accent-text: #B0563B;
+  /* —— 品牌 accent (嫩叶绿) —— */
+  --accent: #158243;
+  --accent-hover: #12763C;
+  --accent-subtle: #E4F3E9;
+  --accent-text: #23774A;
 
   /* —— 语义色 —— */
   --info: #4F7DAF;        --info-subtle: #E9F0F7;
@@ -47,8 +49,8 @@ html[data-theme="light"] {
   --entity-violation: #BF4D43;
 
   /* —— Agent 主题色 (ThinkingPanel) —— */
-  --agent-router: #8A8578;
-  --agent-writer: #D97757;
+  --agent-router: #7E8B80;
+  --agent-writer: #158243;
   --agent-validator: #4F7DAF;
   --agent-checker: #B8862C;
   --agent-reflector: #8A6FB8;
@@ -64,34 +66,35 @@ html[data-theme="light"] {
   --diff-del-bg: #FBEAE8;  --diff-del-text: #A33D34;
   --diff-add-bg: #E8F2E8;  --diff-add-text: #44693F;
 
-  /* —— 阴影 —— */
-  --shadow-sm: 0 1px 2px rgba(45, 42, 36, 0.06);
-  --shadow-md: 0 4px 16px rgba(45, 42, 36, 0.10);
-  --shadow-lg: 0 12px 40px rgba(45, 42, 36, 0.18);
+  /* —— 阴影 (比常规更轻,只为分层) —— */
+  --shadow-sm: 0 1px 2px rgba(38, 56, 46, 0.05);
+  --shadow-md: 0 4px 16px rgba(38, 56, 46, 0.08);
+  --shadow-lg: 0 12px 40px rgba(38, 56, 46, 0.14);
 }
 
 html[data-theme="dark"] {
-  --bg-app: #262624;
-  --bg-surface: #30302E;
-  --bg-sunken: #1F1E1D;
-  --bg-raised: #393937;
-  --bg-hover: rgba(236, 236, 234, 0.06);
-  --bg-active: rgba(236, 236, 234, 0.12);
-  --bg-overlay: rgba(10, 10, 9, 0.60);
+  --bg-app: #1C211D;
+  --bg-surface: #242A25;
+  --bg-sunken: #161A17;
+  --bg-raised: #2C342D;
+  --bg-hover: rgba(212, 226, 217, 0.06);
+  --bg-active: rgba(212, 226, 217, 0.11);
+  --bg-overlay: rgba(4, 8, 6, 0.55);
 
-  --text-primary: #ECECEA;
-  --text-secondary: #A6A39A;
-  --text-tertiary: #75726A;
-  --text-on-accent: #FFFFFF;
+  /* 低反差: 正文 8.3 / 次要 5.0 / 占位 3.3 (vs --bg-surface) */
+  --text-primary: #B9C6BF;
+  --text-secondary: #8B9A93;
+  --text-tertiary: #6F7A75;
+  --text-on-accent: #0D2418;
 
-  --border: #3E3D3A;
-  --border-strong: #52504B;
-  --focus-ring: rgba(217, 119, 87, 0.55);
+  --border: #333B35;
+  --border-strong: #46524A;
+  --focus-ring: rgba(61, 160, 102, 0.50);
 
-  --accent: #D97757;
-  --accent-hover: #E08B6F;
-  --accent-subtle: #423630;
-  --accent-text: #E5957B;
+  --accent: #3DA066;
+  --accent-hover: #4CAB73;
+  --accent-subtle: #233B2C;
+  --accent-text: #54B67C;
 
   --info: #7FA7D1;        --info-subtle: #2E3742;
   --success: #82A886;     --success-subtle: #2E3A2F;
@@ -104,8 +107,8 @@ html[data-theme="dark"] {
   --entity-org: #AC93D9;
   --entity-violation: #D97066;
 
-  --agent-router: #8F8C82;
-  --agent-writer: #D97757;
+  --agent-router: #889287;
+  --agent-writer: #3DA066;
   --agent-validator: #7FA7D1;
   --agent-checker: #D9A645;
   --agent-reflector: #AC93D9;
@@ -115,9 +118,9 @@ html[data-theme="dark"] {
   --diff-del-bg: #46302E;  --diff-del-text: #E5938A;
   --diff-add-bg: #2E3A2F;  --diff-add-text: #A4C9A0;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.38);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.50);
 }
 
 /* ============================================================
@@ -128,7 +131,7 @@ html[data-theme="dark"] {
 
 :root {
   --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
-  --font-serif: "New York", "Songti SC", "Noto Serif SC", Georgia, serif;  /* Claude 标题衬线气质的替身 */
+  --font-serif: "Noto Serif SC", "Songti SC", "Source Han Serif SC", Georgia, serif;  /* 中文书卷气: 品牌标题 / 引文点缀 */
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   --radius-sm: 6px;

@@ -23,6 +23,7 @@
 | P0 | AI SDK 6 `stopWhen` + tool result marker + `onStepFinish` 的端到端行为未跑通。 | [spec/00](./spec/00-version-audit.md) · [plan/08](./plan/08-tech-stack.md) | 写最小 runner spike;若 `stopWhen` 不可靠,回退纯手写 while runner。 |
 | P0 | `sqlite-vec` + `better-sqlite3` + Drizzle 在 macOS arm64 / Linux x64 的 native binding 与 JOIN 行为未实测。 | [spec/00](./spec/00-version-audit.md) · [spec/18](./spec/18-embeddings.md) | 跑 `db.loadExtension(sqliteVec.path)`、`vec0` CRUD、普通表 JOIN;失败再评估 sqlite-vss / hnswlib-node。 |
 | P0 | `better-sqlite3` 在 Next.js Route Handler 中的同步调用、WAL 并发写与 dev hot-reload connection 泄漏未实测。 | [spec/00](./spec/00-version-audit.md) · [plan/04](./plan/04-storage-model.md) | 做 Route Handler 并发写 spike;失败时把写操作隔离到 worker thread。 |
+| P2 | design token → Tailwind v4 / shadcn 变量映射与 `@custom-variant dark`(绑 `data-theme`)未在真实组件实测;深色主题「深字浅钮」的 `--primary-foreground` 需过一遍 shadcn Button 全 variant。 | [design/00 §实现对接](./design/00-design-tokens.md) | W6 前端搭建时随首个 shadcn 组件接入验证;有冲突回写 00 映射表并记 CHANGELOG。 |
 
 ## 3 · 后续架构决策
 

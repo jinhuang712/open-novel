@@ -12,7 +12,7 @@
 
 ## 设计原则
 
-1. **Claude Desktop 风格**:暖纸色底、低饱和中性灰、陶土橙唯一 accent、大圆角、轻阴影、衬线标题点缀 — 详见 [00-design-tokens](./00-design-tokens.md)
+1. **雾绿 · 嫩叶视觉语言**:雾绿中性底、嫩叶绿唯一 accent、低反差书卷气(正文对比度收在 7:1–9:1)、大圆角、轻阴影、中文衬线点缀 — 详见 [00-design-tokens](./00-design-tokens.md)
 2. **双主题是一等公民**:所有颜色走 token,light/dark 同步设计、同步验收
 3. **IDE 心智不破坏**:布局、快捷键、Goto Definition 等沿用 VSCode 范式([plan/07](../plan/07-ui-layout.md) ADR-01),视觉上去工具感、加纸感
 4. **审批是核心仪式**:ApprovalCard 是产品里最重的交互,信息层级(主修改 → cascade 分级 → 守则风险 → 行动)必须一眼可读
@@ -44,3 +44,19 @@ flowchart LR
 - 交互行为以 plan/spec 为准(本目录不重复定义协议与 schema,只引用)
 - 视觉与组件状态以本目录为准;实现期发现冲突,回写本目录并记 `CHANGELOG.md`
 - 原型中的文案、数据均为样例,以 [spec/03 prompts](../spec/03-prompts.md) 与真实数据为准
+
+## 交付与验收(Claude Code 落地流程)
+
+本目录即开发交付物,coding agent 按以下顺序消费,无需额外设计稿:
+
+1. **先读 [00-design-tokens](./00-design-tokens.md)**:`prototypes/tokens.css` 原样进入 `app/globals.css`,按 [00 §实现对接](./00-design-tokens.md#实现对接tailwind-v4--shadcnui) 完成 `@custom-variant` 与 shadcn 变量映射(注意 shadcn `--accent` ≠ 品牌色)
+2. **按界面读 01~06 文档**:每篇都给出布局结构、组件状态(含空/错/加载态)、键盘与主题行为,即组件验收标准;协议与数据结构跟随文中 spec 链接
+3. **打开对应原型页对照实现**:原型是视觉验收基准——布局层级、间距、圆角、双主题观感以原型为准;文案与数据是样例,不照抄
+
+实现侧验收清单(每个界面 PR 必查):
+
+- 双主题逐屏与原型对照,light/dark 都不允许硬编码 hex(可用 `rg "#[0-9A-Fa-f]{6}" --glob '!globals.css'` 做 CI 检查)
+- 文字对比度落在 00 规定区间(正文 7:1–9:1、次要 4.5:1–5.5:1、占位 ≥3:1、accent 按钮字 ≥4.5:1)
+- 全部浮层 `Esc` 可关、模态 Focus Trap、焦点环用 `--focus-ring`([spec/12](../spec/12-shortcuts.md))
+- `prefers-reduced-motion` 下动效降级
+- 实现与设计冲突时:回写本目录文档 + 记 `CHANGELOG.md`,不允许实现侧静默偏离

@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-10 · design · 主题改版:陶土橙 Claude 风 → 雾绿 · 嫩叶绿低反差主题,并补齐 Claude Code 落地对接
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 全套色彩 token 重做:accent 由陶土橙 `#D97757` 改为嫩叶绿(light `#158243` / dark `#3DA066`),中性色由暖纸/暖炭改为雾绿系;确立低反差书卷气原则——正文对比度收在 7:1–9:1(下限可达性、上限纸感),关键文字 token 附实测对比度;深色主题主按钮改为深字浅钮(`--text-on-accent` 分主题取值);`--agent-writer` 跟随品牌色、`--agent-router` 调为雾绿灰;衬线栈移除 New York / Copernicus 替身表述,改为中文宋体系书卷气定位。语义色 / 实体色 / diff 色不变,accent 与 success 同为绿系的区分规则(饱和度 + 角色)写入 00。 | `design/00-design-tokens.md` `design/prototypes/tokens.css` | 用户不接受与 Claude 一致的橙色主题,指定轻盈绿色、整体低对比度书卷气;经表单确认嫩叶绿 + 雾绿中性。 |
+| 风格表述去 Claude 化:design 设计原则、根 README design 导航、onboarding「品牌时刻」描述、原型索引页副标题中的「Claude Desktop 风格」全部改为「雾绿 · 嫩叶」自有视觉语言。原型页本身零硬编码色(全走 tokens.css),无需逐页改动。 | `design/README.md` `README.md` `design/05-onboarding.md` `design/prototypes/index.html` | 同上。 |
+| 新增 Claude Code 落地对接:00 增「实现对接(Tailwind v4 + shadcn/ui)」——tokens.css 原样进 `app/globals.css`、`@custom-variant dark` 绑定 `data-theme`、token → shadcn 变量映射表(含 shadcn `--accent` ≠ 品牌色的命名冲突警告);design README 增「交付与验收(Claude Code 落地流程)」——coding agent 阅读顺序 + 每界面 PR 验收清单(双主题对照原型、对比度区间、Esc/Focus Trap、reduced-motion、禁硬编码 hex)。 | `design/00-design-tokens.md` `design/README.md` | 用户要求设计可直接交给 Claude Code 丝滑落地。 |
+| TODO 增一条 P2 实施前验证:shadcn 变量映射与 data-theme dark variant 需在首个组件接入时实测。 | `TODO.md` | 同上。 |
+
 ## 2026-06-10 · design · 新增 design/ 界面设计体系(交互文档 + 双主题高保真原型)
 
 | 变更 | 影响文档 | 关联 |
