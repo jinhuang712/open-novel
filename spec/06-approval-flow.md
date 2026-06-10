@@ -494,7 +494,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 - **浏览器关闭 → 重开**: rehydrate 时按 `user_turns.status IN ('running', 'awaiting_approval')` 拉所有 in-flight turn, UI 在 chat box 上方 banner 列出 — 用户选择"继续审"或"取消本次对话"。**不再自动 expired** (旧版 24h 机制删除); turn 永远 pending 直到用户显式决议
 - **ApprovalCard pending 行为**: `POST /api/approvals/{id}/resolve` 仍幂等 (status='pending' check), 但不再判 expired
 
-**stream 端**: Mastra Agent 调 writeSettingProposal 后 prompt 显式 stop。stream 在 30s 内自然结束 (proposal emit 完即收尾),不长留挂起。stream 超时不是问题, turn 持久化也不依赖 stream。
+**stream 端**: Writer runner 调 writeSettingProposal 后由 `stopWhen` 显式拦停。stream 在 30s 内自然结束 (proposal emit 完即收尾),不长留挂起。stream 超时不是问题, turn 持久化也不依赖 stream。
 
 ## Cascade 大批量审 (新增)
 
