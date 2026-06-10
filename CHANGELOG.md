@@ -1,5 +1,30 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · plan rewrite · plan/ 重定义为纯产品 PRD:12 篇半技术 → 10 篇纯产品,技术内容迁入 spec
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| plan/ 重定义为**纯产品 PRD**——零技术细节、无历史包袱:旧 12 篇半技术 PRD 删除,重组为 10 篇纯产品 PRD,技术内容迁入 spec([spec/28 — 技术栈](./spec/28-tech-stack.md) 为本次新增);纯产品写作纪律已立入章程 `CLAUDE.md` / `AGENTS.md`。旧 → 新对照见本节下表。 | 全部 `plan/*.md` `spec/28-tech-stack.md` `CLAUDE.md` `AGENTS.md` | [progress/008-plan-rewrite.md](./progress/008-plan-rewrite.md) 为本次迁移的执行计划存档。 |
+| 技术设计取舍(ADR)迁移:旧 plan/03、plan/04、plan/08 的技术 ADR 分别入 [spec/05](./spec/05-entity-highlight.md)、[spec/01](./spec/01-storage-schema.md) 与 [spec/17](./spec/17-paragraph-anchors.md)、[spec/28](./spec/28-tech-stack.md) 的 §设计取舍;产品级决策理由不再以 ADR 表存在,内联进新 plan 各篇正文。 | `spec/05` `spec/01` `spec/17` `spec/28` 全部新 `plan/*.md` | 同上。 |
+| 红线编号映射:旧 plan/01 不变性 #1-12 → 新 [plan/03](./plan/03-guardrails.md) 红线 R1-R10;其中 #5 入 [spec/02](./spec/02-agent-tools.md),#7 入 `CLAUDE.md` / `AGENTS.md` 工作规范,#12 的 JSON 面入 [spec/24](./spec/24-json-output.md)。 | `plan/03-guardrails.md` `spec/02` `spec/24` `CLAUDE.md` `AGENTS.md` | 历史文档中的旧编号按本映射换算。 |
+| README 导航与全仓交叉引用已同步到新 plan 结构。 | `README.md` 及全仓 plan/spec/design/progress 引用 | 同上。 |
+
+旧 → 新对照(旧篇已删,旧名仅为历史名称,只以行内代码标注、不作链接):
+
+| 旧(已删) | 去向 |
+|---|---|
+| `plan/01-overview` | 新 plan/01(概览)/ 02(产品原则)/ 03(守则与红线)/ 04(目标与非目标) |
+| `plan/02-multi-agent` | plan/05(产品)+ spec/02、11、13、24(技术) |
+| `plan/03-editor-layer` | plan/08 + design/01(产品)+ spec/05(技术) |
+| `plan/04-storage-model` | plan/08、02(产品)+ spec/01、13、16、17、27(技术) |
+| `plan/05-modes-and-approval` | plan/06、07 + spec/06、07 |
+| `plan/06-cascade-and-reflection` | plan/07、09 + spec/19、06、22、01 |
+| `plan/07-ui-layout` | design/01 |
+| `plan/08-tech-stack` | spec/28(新增) |
+| `plan/09-narrative-engine` + `plan/10-reader-simulator` | plan/10 + spec/10、11 |
+| `plan/11-knowledge-graph` | plan/08 + spec/16-21 |
+| `plan/12-memory-and-context` | plan/08、09 + spec/22、23 |
+
 ## 2026-06-11 · design+plan · 主界面再设计:「章节轨 · 纸面 · 状态点」,去 VSCode 形似,极简克制
 
 | 变更 | 影响文档 | 关联 |

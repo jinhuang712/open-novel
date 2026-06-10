@@ -8,8 +8,9 @@
 
 | 类别 | 状态 | 说明 |
 |---|---|---|
-| plan/ 重写迁移期 | **1 open** | plan/ 正在按 [progress/008-plan-rewrite.md](./progress/008-plan-rewrite.md) 重写为 10 篇纯产品 PRD;完成前章程 G3 的文件指向为前向引用。完成后删除本条。 |
 | design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍按旧五区语境写作(Tabs、右栏 ChatBox、底部状态栏、ThinkingPanel 常驻等表述);待按「章节轨 · 纸面 · 状态点」契约逐篇同步(库面板 / 状态点 / 输入条 / 旁注 / 查询浮层 / 动效清单约束),入口表述以 design/01 为准。同批处理:[spec/12](./spec/12-shortcuts.md) 新增 `chat.focusComposer`(Cmd+L)与 `query.open`(Cmd+E),ChatBox 上下文更名为输入条;design/04 Settings §风格定制补 learnings 查看与编辑区(偏好从主界面库面板移出后的唯一入口)。 |
+| 经验管理契约缺口 | **1 open** | [spec/13 §学习偏好面板](./spec/13-settings.md) 现为「MVP 不做」存根,与 [plan/09 §经验对你透明](./plan/09-memory-and-learning.md)(经验可见 / 可调 / 可删的完整产品设计)冲突;spec/13 与 [spec/22](./spec/22-memory-and-history.md) 的经验管理契约需按 plan/09 目标态补全设计。 |
+| Reflector 关闭语义 | **1 open** | [plan/05 可关矩阵](./plan/05-agent-team.md) 新增「反思学习者可整体关闭」(关闭后不学新经验、已沉淀经验继续生效);[spec/13](./spec/13-settings.md) 的设置项与 [spec/02](./spec/02-agent-tools.md) / [spec/22](./spec/22-memory-and-history.md) 的关闭语义需补充对应契约。 |
 | 文档重写 / CAST 化 | **0 open** | 所有 manifest 页面已重渲染到 CAST shell;Mermaid 作者源恢复到 `site/diagram-sources.json`,渲染器禁止图表 caption / body 暴露 Mermaid 方向声明等源码首行。 |
 | 文档导航 / 索引 | **0 open** | README、index、progress README、TODO、Changelist 的职责边界已收敛;README 不再指向过期 progress 重构项。 |
 | 已关闭历史项 | **0 open** | Embedding provider、schema 主权拆分、cascade controller 主权、reindex 失败语义、analyzeImpact Writer 边界等已决事项从 TODO 活跃区移除,保留在 changelist / 对应 spec 中。 |
