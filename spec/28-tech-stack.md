@@ -68,6 +68,7 @@ flowchart TB
 | `xstate` / `@xstate/react` | `^5.0` | caret | 三模式状态机 |
 | `zustand` | `^5.0` | caret | 客户端 store |
 | `react-resizable-panels` | `4.10.x` | 锁主线 | 五区可拖拽布局 |
+| `@floating-ui/react` | latest | caret | 实体 hover 卡 / 浮层定位;原 plan/03 选型 |
 | `ahocorasick` | `^1.0` | caret | 10KB JS,实体高亮的字符串多模匹配 |
 | `gray-matter` / `unified` / `remark-*` | latest | caret | Markdown frontmatter + AST 处理 |
 | `lucide-react` | latest | caret | shadcn 默认图标库 |

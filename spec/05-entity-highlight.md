@@ -370,6 +370,8 @@ editorView.props.handleDOMEvents = {
 
 ## Hover 卡片
 
+两类 hover 卡共用同一个 `Floating` 浮层定位组件,基于 `@floating-ui/react`(`useFloating` + `offset` / `flip` / `shift` middleware)锚定到命中文本;版本见 [spec/28 §锁定的库版本](./28-tech-stack.md#锁定的库版本)。
+
 ### Entity Hover
 
 ```tsx
@@ -392,6 +394,8 @@ export function EntityHoverCard({ entityId, anchorPos }) {
   )
 }
 ```
+
+卡片字段为名称 / 类别 / 别名 / 两行摘要;角色实体可选扩展头像与关键属性(由角色卡要素提供),默认不展示——与 [design/01 §纸面](../design/01-main-layout.md#纸面) 旁注的简化呈现一致。
 
 ### Concept Hover
 
@@ -437,7 +441,7 @@ function gotoFile(filePath: string, modifier?: 'cmd' | 'shift') {
 }
 ```
 
-`openInRightSplit` 在 Tabs 区域右栏新增一个 tab,主编辑区不动。这是与 VSCode 的"Go to Definition"(默认是同栏) 的关键差异 — 长篇写作要保留上下文。
+`openInRightSplit` 即 writing-first 主界面的「对照打开」:目标文件在纸面右侧以对照视图展开,当前章纸面不动、不丢上下文(见 [design/01 §实体右键与全项目改名](../design/01-main-layout.md#实体右键与全项目改名);主界面无 Tabs,多文件心智由库面板「最近」组承担)。这是与 VSCode 的"Go to Definition"(默认是同栏) 的关键差异 — 长篇写作要保留上下文。
 
 ## Backlinks 面板
 
@@ -459,6 +463,8 @@ export function BacklinksPanel({ filePath }) {
   )
 }
 ```
+
+**数据源与索引时机**:面板数据来自 `index.db` 的 `backlinks` 表(完整 schema 见 [spec/01 §backlinks](./01-storage-schema.md#backlinks-反向索引在某文件打开时用));索引在章节 / 设定写盘后由 reindex Worker 异步刷新(entity_refs → 反向推导 backlinks,见 [spec/01 §索引刷新流程](./01-storage-schema.md#索引刷新流程)),不阻塞 UI;面板打开时按 `target_file` 查询、按 `source_file` group 计数。
 
 ## 重命名实体 (Rename Refactor)
 
