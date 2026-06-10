@@ -16,7 +16,7 @@
 
 ## 核心能力
 
-- **多 Agent 协作** — 7 对外 Agent(Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel)+ 6 Hidden Agent(内部 LLM 工具,经 `callJsonAgent` 调用),详见 [plan/02](./plan/02-multi-agent.html)
+- **多 Agent 协作** — 7 对外 Agent(Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel)+ 6 Hidden Agent(内部 LLM 工具,经 `callJsonAgent` 调用),详见 [plan/02](./plan/02-multi-agent.md)
 - **三种工作模式** — Discuss(只读检索)/ Plan(设定编辑)/ Write(正文编辑),严格闸门
 - **审批必须** — 所有写入走 proposal 模式,用户在 ApprovalCard 整批审 + 勾选 + 编辑;cascade 内部递归 ≤3 轮全在内存,落盘 transaction 原子
 - **一致性守护** — cascade 影响半径由 SQL 出候选 + LLM 二次过滤,整批一次审完
@@ -41,21 +41,19 @@
 | 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
-详见 [plan/08-tech-stack](./plan/08-tech-stack.html)。
+详见 [plan/08-tech-stack](./plan/08-tech-stack.md)。
 
 ## 文档状态
 
-本仓库当前是静态 HTML 文档站,核心资料以 `README.md`、`index.html`、`plan/*.html`、`spec/*.html`、`site/*.json`、`todo.html`、`changelist.html` 维护。尚未迁移为逐页 CAST Docs JSON 源文件工作流;本轮文档改写采用 preserve-first guided migration,用 `scripts/render_all_docs.py` 对现有 HTML 正文做全量重包、索引生成与链接校验。
-
-HTML 输出已收敛到 `cast-a-doc` 控制 profile:每个页面都是自包含 HTML,样式从 `assets/docs.css` 内联,统一使用 `article.doc` / `doc-header` / `sidebar` / `topbar` / `doc-section` / `doc-footer` 语义壳,不依赖外部 CSS、外部 JS、CDN 或运行时索引脚本。仓库级 CAST Docs 默认值记录在 `.cast-docs/project.json`;`index.html` 由 `site/docs.json` 静态生成并作为 GitHub Pages 入口维护,首页用文档地图三列展示 Plan、Spec、Progress,并只展示读者会直接打开的项目、TODO 与 Changelist 入口;CAST profile、样式源和 JSON 源留在仓库维护层,不在首页主目录罗列。GitHub Pages 站内的 README 导航统一跳转到 GitHub README,避免直接打开本地 Markdown 原文。Mermaid 图表在构建期编译为内联 SVG figure,并注入 `cast-a-doc` 的 renderer-owned diagram viewer,支持点击放大、缩放拖拽和 SVG/PNG 下载,不依赖浏览器端 Mermaid runtime,也不在正文中裸露 flowchart 源码。
+本仓库的全部文档是纯 Markdown:`README.md`(本文件,导航入口)、`plan/*.md`、`spec/*.md`、`progress/*.md`、`TODO.md`、`CHANGELOG.md`。图表一律使用 mermaid 代码块,不允许 ASCII 框图。Agent 工作规范见 [AGENTS.md](./AGENTS.md)(与 `CLAUDE.md` 内容一致)。
 
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **L2 会话记忆**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/22](./spec/22-memory-and-history.html)
+- **L2 会话记忆**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/22](./spec/22-memory-and-history.md)
 - **Schema 主权**: `spec/01` 维护 `index.db`;`spec/22` 维护 `runtime.db`;`spec/27` 维护每项目 `session_history.db`
 - **编排主权**: `spec/26` 维护 cascade controller / `user_turn` actions / 取消恢复语义;`spec/06` 只维护审批 resolve / rollback endpoint
-- **待实查闸门**: W3 代码前仍需执行 [spec/00](./spec/00-version-audit.html) 的版本与 native binding audit
+- **待实查闸门**: W3 代码前仍需执行 [spec/00](./spec/00-version-audit.md) 的版本与 native binding audit
 
 ## 快速启动
 
@@ -74,17 +72,14 @@ pnpm dev
 
 ```
 .
-├── README.md                  # 本文件
-├── index.html                 # 文档入口
-├── todo.html                  # TODO + 已知问题 + 未决问题(由 site/todo.json 渲染)
-├── changelist.html            # 跨文档变更流水线(由 site/changelist.json 渲染)
-├── .cast-docs/project.json    # CAST Docs 项目 profile
-├── site/                      # 文档站 manifest + TODO/CHANGELIST 源数据
-├── scripts/render_all_docs.py # 全量重渲染 + Mermaid SVG viewer + Strict Profile 校验
+├── README.md                  # 本文件,文档导航入口
+├── AGENTS.md                  # Agent 工作规范(与 CLAUDE.md 内容一致)
+├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
+├── TODO.md                    # TODO + 已知问题 + 未决问题
+├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 半技术 PRD(产品向)
 ├── spec/                      # 核心技术文档(实施向)
 ├── progress/                  # 历史进度档案(只做追溯,不再承担 rolling plan)
-├── assets/                    # 文档样式
 ├── app/                       # Next.js 路由 + API
 ├── components/                # 前端组件
 ├── lib/                       # Agent / Tools / Storage / Editor
@@ -93,64 +88,75 @@ pnpm dev
 
 ## 文档导航
 
-### 半技术 PRD (plan/)
+### 半技术 PRD (plan/) — 架构设计 (What / Why)
 
-- [01-overview](./plan/01-overview.html) — 系统概览与关键决策
-- [02-multi-agent](./plan/02-multi-agent.html) — 7 对外 + 6 Hidden Agent 拓扑
-- [03-editor-layer](./plan/03-editor-layer.html) — 编辑器分层与 EditorAdapter
-- [04-storage-model](./plan/04-storage-model.html) — Markdown + SQLite 混合存储
-- [05-modes-and-approval](./plan/05-modes-and-approval.html) — 三模式与审批流
-- [06-cascade-and-reflection](./plan/06-cascade-and-reflection.html) — Cascade 一致性与反馈学习
-- [07-ui-layout](./plan/07-ui-layout.html) — 五区 UI 布局
-- [08-tech-stack](./plan/08-tech-stack.html) — 技术栈锁定
-- [09-narrative-engine](./plan/09-narrative-engine.html) — 叙事引擎(BeatAnalyzer + ArcTracker + 模板库)
-- [10-reader-simulator](./plan/10-reader-simulator.html) — 读者仿真器(5 persona ReaderPanel)
-- [11-knowledge-graph](./plan/11-knowledge-graph.html) — 知识图谱
-- [12-memory-and-context](./plan/12-memory-and-context.html) — 记忆与上下文治理
+从创作工作流、Agent 拓扑、数据模型、模式闸门和 UI 布局解释为什么这样设计。
 
-### 核心技术文档 (spec/)
+- [01-overview](./plan/01-overview.md) — 系统概览与关键决策
+- [02-multi-agent](./plan/02-multi-agent.md) — 7 对外 + 6 Hidden Agent 拓扑与职责
+- [03-editor-layer](./plan/03-editor-layer.md) — 编辑器分层与 EditorAdapter
+- [04-storage-model](./plan/04-storage-model.md) — Markdown + SQLite 三库混合存储模型
+- [05-modes-and-approval](./plan/05-modes-and-approval.md) — 三模式与审批流
+- [06-cascade-and-reflection](./plan/06-cascade-and-reflection.md) — Cascade 一致性与反馈学习
+- [07-ui-layout](./plan/07-ui-layout.md) — 五区 UI 布局
+- [08-tech-stack](./plan/08-tech-stack.md) — 技术栈锁定
+- [09-narrative-engine](./plan/09-narrative-engine.md) — 叙事引擎(BeatAnalyzer + ArcTracker + 模板库)
+- [10-reader-simulator](./plan/10-reader-simulator.md) — 读者仿真器(5 persona ReaderPanel)
+- [11-knowledge-graph](./plan/11-knowledge-graph.md) — 知识图谱与 cascade / RAG 地基
+- [12-memory-and-context](./plan/12-memory-and-context.md) — Agent 记忆与上下文治理
 
-- [00-version-audit](./spec/00-version-audit.html) — W3 启动前版本 / DeepSeek / native binding 审计闸门
-- [01-storage-schema](./spec/01-storage-schema.html) — SQLite schema 与 frontmatter 规范
-- [02-agent-tools](./spec/02-agent-tools.html) — Agent 工具签名与契约
-- [03-prompts](./spec/03-prompts.html) — Agent prompt 模板
-- [04-streaming-protocol](./spec/04-streaming-protocol.html) — SSE 流式协议
-- [05-entity-highlight](./spec/05-entity-highlight.html) — 实体高亮与跳转
-- [06-approval-flow](./spec/06-approval-flow.html) — proposal + 独立 endpoint 审批
-- [07-mode-state-machine](./spec/07-mode-state-machine.html) — XState 状态机
-- [08-de-ai-pipeline](./spec/08-de-ai-pipeline.html) — 去 AI 化 pipeline
-- [09-build-and-tooling](./spec/09-build-and-tooling.html) — 构建与工具链
-- [10-narrative-engine](./spec/10-narrative-engine.html) — 叙事引擎实现
-- [11-reader-personas](./spec/11-reader-personas.html) — ReaderPanel 实现
-- [12-shortcuts](./spec/12-shortcuts.html) — 快捷键 Registry
-- [13-settings](./spec/13-settings.html) — SettingsDialog
-- [14-testing](./spec/14-testing.html) — 测试策略(vitest / playwright / LLM golden / CI)
-- [15-onboarding](./spec/15-onboarding.html) — 首启引导
-- [16-knowledge-schema](./spec/16-knowledge-schema.html) — 知识图谱 schema 与 frontmatter 升级
-- [17-paragraph-anchors](./spec/17-paragraph-anchors.html) — 段级稳定 ID 与差量 reindex
-- [18-embeddings](./spec/18-embeddings.html) — 段级 embedding 与语义检索
-- [19-impact-analysis](./spec/19-impact-analysis.html) — 影响半径与 cascade 工具
-- [20-context-assembly](./spec/20-context-assembly.html) — 上下文装配 assembleContext
-- [21-fact-query](./spec/21-fact-query.html) — 事实查询 queryFacts
-- [22-memory-and-history](./spec/22-memory-and-history.html) — 应用层 memory 模块 + 历史压缩 + 卷级摘要
-- [23-context-contracts](./spec/23-context-contracts.html) — Per-agent 上下文契约
-- [24-json-output](./spec/24-json-output.html) — JSON 结构化输出统一规约
-- [25-cardinal-rules](./spec/25-cardinal-rules.html) — 五大网文守则
-- [26-cascade-controller](./spec/26-cascade-controller.html) — user_turn actions、审批队列、取消与恢复的编排主权
-- [27-session-history](./spec/27-session-history.html) — session_history.db 过程数据 schema 与保留策略
+### 核心技术文档 (spec/) — 实现细节 (How)
+
+把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。原型图、样例与交互设计也归 spec。
+
+- [00-version-audit](./spec/00-version-audit.md) — W3 启动前版本 / DeepSeek / native binding 审计闸门
+- [01-storage-schema](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范
+- [02-agent-tools](./spec/02-agent-tools.md) — Agent 工具签名与契约
+- [03-prompts](./spec/03-prompts.md) — Agent prompt 模板
+- [04-streaming-protocol](./spec/04-streaming-protocol.md) — SSE 事件协议
+- [05-entity-highlight](./spec/05-entity-highlight.md) — 实体高亮与跳转
+- [06-approval-flow](./spec/06-approval-flow.md) — proposal + 独立 endpoint 审批
+- [07-mode-state-machine](./spec/07-mode-state-machine.md) — XState 状态机
+- [08-de-ai-pipeline](./spec/08-de-ai-pipeline.md) — 去 AI 化 pipeline
+- [09-build-and-tooling](./spec/09-build-and-tooling.md) — 构建与工具链
+- [10-narrative-engine](./spec/10-narrative-engine.md) — 叙事引擎实现(BeatAnalyzer / ArcTracker / 模板格式)
+- [11-reader-personas](./spec/11-reader-personas.md) — ReaderPanel 实现
+- [12-shortcuts](./spec/12-shortcuts.md) — 快捷键 Registry + CommandRegistry + IME 闸门 + 撤销栈语义
+- [13-settings](./spec/13-settings.md) — SettingsDialog 8 section + 月度预算 + 项目生命周期
+- [14-testing](./spec/14-testing.md) — 测试策略(vitest / playwright / LLM golden / CI)
+- [15-onboarding](./spec/15-onboarding.md) — 首启引导
+- [16-knowledge-schema](./spec/16-knowledge-schema.md) — 知识图谱 schema 与 frontmatter 升级
+- [17-paragraph-anchors](./spec/17-paragraph-anchors.md) — 段级稳定 ID 与差量 reindex
+- [18-embeddings](./spec/18-embeddings.md) — 段级 embedding 与语义检索
+- [19-impact-analysis](./spec/19-impact-analysis.md) — 影响半径与 cascade 工具
+- [20-context-assembly](./spec/20-context-assembly.md) — 上下文装配工具 assembleContext
+- [21-fact-query](./spec/21-fact-query.md) — 事实查询工具 queryFacts
+- [22-memory-and-history](./spec/22-memory-and-history.md) — runtime.db + 应用层 memory + 历史压缩 + 卷级摘要
+- [23-context-contracts](./spec/23-context-contracts.md) — Per-agent 上下文契约
+- [24-json-output](./spec/24-json-output.md) — JSON 结构化输出统一规约
+- [25-cardinal-rules](./spec/25-cardinal-rules.md) — 五大网文守则
+- [26-cascade-controller](./spec/26-cascade-controller.md) — user_turn actions、审批队列、取消与恢复的编排主权
+- [27-session-history](./spec/27-session-history.md) — session_history.db 过程数据 schema 与保留策略
+
+### 历史进度 (progress/) — 迁移与决策历史 (When)
+
+保留项目启动、阶段收尾、文档审计和架构收敛记录,用于追溯设计变化。
+
+- [README](./progress/README.md) — 日志索引规则与模板
+- [000-init](./progress/000-init.md) — 项目启动记录
+- [001-scaffolding](./progress/001-scaffolding.md) — W2 期起始计划与收尾 retro
+- [002-narrative-reader](./progress/002-narrative-reader.md) — 叙事引擎 + 读者仿真器
+- [003-shortcuts-and-settings](./progress/003-shortcuts-and-settings.md) — 快捷键 + Settings UX 治理
+- [004-docs-hardening](./progress/004-docs-hardening.md) — W3 启动前 day-1 blocker 排查
+- [005-knowledge-graph](./progress/005-knowledge-graph.md) — 知识图谱专攻(cascade + RAG 地基)
+- [006-memory-and-context](./progress/006-memory-and-context.md) — 记忆 / 上下文 / JSON / 守则一致性优先重设计
+- [007-opencode-borrowings](./progress/007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
 
 ### 项目档案
 
-- [todo.html](./todo.html) — TODO + 已知问题 + 未决问题
-- [changelist.html](./changelist.html) — 跨文档变更流水线
-- [.cast-docs/project.json](./.cast-docs/project.json) — CAST Docs 项目 profile
-- [assets/docs.css](./assets/docs.css) — HTML 内联样式源
-- [site/todo.json](./site/todo.json) — TODO 渲染源
-- [site/changelist.json](./site/changelist.json) — Changelist 渲染源
-
-### 历史进度 (progress/)
-
-- 9 篇历史档案(000-007 + README),只保留阶段过程、偏差和决策追溯;当前待办与跨文档变更分别以 [todo.html](./todo.html) 和 [changelist.html](./changelist.html) 为准。
+- [TODO.md](./TODO.md) — TODO + 已知问题 + 未决问题
+- [CHANGELOG.md](./CHANGELOG.md) — 跨文档变更流水线
+- [AGENTS.md](./AGENTS.md) / [CLAUDE.md](./CLAUDE.md) — Agent 工作规范(两份内容一致)
 
 ## 设计原则
 
@@ -160,7 +166,7 @@ pnpm dev
 - **影响半径不依赖 LLM** — cascade 候选必须是 SQL 算的,LLM 只做"是否真受影响"二次过滤
 - **三模式严格分离** — discuss 不写,plan 不碰章节,write 不碰设定
 
-完整不变性见 [plan/01 §不变性](./plan/01-overview.html#不变性约束)。
+完整不变性见 [plan/01 §不变性](./plan/01-overview.md#不变性约束-invariants)。
 
 ## 开发约定
 
@@ -178,7 +184,7 @@ pnpm dev
 - 移动端
 - Windows 原生支持(POC macOS / Linux only;Windows 用户走 WSL)
 - 云同步 / 多设备(本地单机优先;LibSQL 等带云同步能力的数据库栈已被砍)
-- Mastra / LangGraph 等 Agent 框架(自定义 runner + AI SDK 6 `stopWhen` 已够;详见 [plan/08 ADR](./plan/08-tech-stack.html#adr))
+- Mastra / LangGraph 等 Agent 框架(自定义 runner + AI SDK 6 `stopWhen` 已够;详见 [plan/08 ADR](./plan/08-tech-stack.md#adr--设计决策))
 
 ## 许可
 
