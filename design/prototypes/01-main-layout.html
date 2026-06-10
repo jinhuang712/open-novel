@@ -48,6 +48,20 @@
   .ft-row.active::before { content: ""; position: absolute; left: -4px; top: 5px; bottom: 5px; width: 2.5px; border-radius: 2px; background: var(--accent); }
   .ft-row .num { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); width: 26px; flex: none; }
   .ft-foot { padding: 10px 16px; font-size: 11px; color: var(--text-tertiary); border-top: 1px dashed var(--border); white-space: normal; }
+  .ft-foot:empty { display: none; }
+
+  /* 非文件类目: 查询面板 / 已学偏好 */
+  .qp { padding: 4px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+  .qp input { font: inherit; font-size: 12.5px; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 7px 10px; outline: none; width: 100%; box-sizing: border-box; }
+  .qp input:focus { box-shadow: 0 0 0 3px var(--focus-ring); border-color: var(--accent); }
+  .qp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+  .qp-chip { font-size: 11px; padding: 2px 9px; border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; color: var(--text-secondary); }
+  .qp-chip.on { background: var(--accent-subtle); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+  .qp-result { font-family: var(--font-mono); font-size: 11px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 8px; color: var(--text-secondary); line-height: 1.6; }
+  .qp-result b { color: var(--text-primary); font-weight: 500; }
+  .learn-row { display: flex; align-items: flex-start; gap: 8px; padding: 8px; border-radius: var(--radius-sm); color: var(--text-secondary); line-height: 1.5; }
+  .learn-row:hover { background: var(--bg-hover); }
+  .learn-row .w { font-family: var(--font-mono); font-size: 10.5px; color: var(--accent-text); background: var(--accent-subtle); border-radius: 999px; padding: 1px 7px; flex: none; margin-top: 2px; }
 
   /* ===== 纸面 (常驻) ===== */
   .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg-surface); }
@@ -189,26 +203,20 @@
   <div class="body">
     <div class="navdrawer" id="navdrawer">
       <div class="catbar">
-        <div class="cat-item" title="大纲 (Cmd+1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></div>
-        <div class="cat-item" title="角色 (Cmd+2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></div>
-        <div class="cat-item" title="世界观"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9z"/></svg></div>
-        <div class="cat-item active" title="章节 (Cmd+3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 4v13a3 3 0 0 0 3 3"/><path d="M9 9h6M9 13h4"/></svg></div>
-        <div class="cat-item" title="查询面板 (Cmd+4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></div>
-        <div class="cat-item" title="已学到的偏好 (Cmd+5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 5.4L20 9l-4.4 3.9L17 19l-5-3.2L7 19l1.4-6.1L4 9l5.8-.6z"/></svg></div>
+        <div class="cat-item" data-cat="outline" title="大纲 (Cmd+1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></div>
+        <div class="cat-item" data-cat="characters" title="角色 (Cmd+2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></div>
+        <div class="cat-item" data-cat="worldview" title="世界观"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9z"/></svg></div>
+        <div class="cat-item active" data-cat="chapters" title="章节 (Cmd+3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 4v13a3 3 0 0 0 3 3"/><path d="M9 9h6M9 13h4"/></svg></div>
+        <div class="cat-item" data-cat="query" title="查询面板 (Cmd+4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></div>
+        <div class="cat-item" data-cat="learnings" title="已学到的偏好 (Cmd+5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 5.4L20 9l-4.4 3.9L17 19l-5-3.2L7 19l1.4-6.1L4 9l5.8-.6z"/></svg></div>
         <div class="cat-spacer"></div>
-        <div class="cat-item" title="新手指引"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></div>
-        <div class="cat-item" title="Settings (Cmd+,)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></div>
+        <div class="cat-item" title="新手指引 → 05 号原型" onclick="location.href='05-onboarding.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></div>
+        <div class="cat-item" title="Settings (Cmd+,) → 04 号原型" onclick="location.href='04-settings.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></div>
       </div>
       <div class="filetree">
-        <div class="ft-header">章节 · CHAPTERS/</div>
-        <div class="ft-list">
-          <div class="ft-row"><span class="num">009</span>旧仓库的钥匙.md</div>
-          <div class="ft-row"><span class="num">010</span>第一次交锋.md</div>
-          <div class="ft-row"><span class="num">011</span>融资酒局.md</div>
-          <div class="ft-row active"><span class="num">012</span>雨夜来客.md<span class="dirty-dot" style="margin-left:auto"></span></div>
-          <div class="ft-row"><span class="num">013</span>概要 · 反转伏笔.md</div>
-        </div>
-        <div class="ft-foot">3 个 `_` 前缀派生文件已隐藏 — Developer Mode 可见</div>
+        <div class="ft-header" id="ftHeader">章节 · CHAPTERS/</div>
+        <div class="ft-list" id="ftList"></div>
+        <div class="ft-foot" id="ftFoot"></div>
       </div>
     </div>
 
@@ -381,11 +389,73 @@ document.querySelectorAll('#modeToggle button').forEach(function (btn) {
     toast('已切到 ' + mode + ' 模式');
   });
 });
+/* ===== 导航抽屉: 类目切换 ===== */
+function ftRow(r) {
+  return '<div class="ft-row' + (r.active ? ' active' : '') + '">' +
+    (r.num ? '<span class="num">' + r.num + '</span>' : '') + r.name +
+    (r.dirty ? '<span class="dirty-dot" style="margin-left:auto"></span>' : '') + '</div>';
+}
+var DERIVED_FOOT = '3 个 `_` 前缀派生文件已隐藏 — Developer Mode 可见';
+var CATS = {
+  outline: { header: '大纲 · OUTLINE/', foot: DERIVED_FOOT, rows: [
+    { name: 'outline.md' }, { name: 'beats.md' },
+    { name: 'chapter-arcs / 卷三 · 重生七年.md' }, { name: 'timeline / 主线时间轴.md' }] },
+  characters: { header: '角色 · CHARACTERS/', foot: DERIVED_FOOT, rows: [
+    { name: '林溪.md' }, { name: '陆沉.md' }, { name: '沈柏年.md' }, { name: '阿芷.md' }] },
+  worldview: { header: '世界观 · WORLDVIEW/', foot: DERIVED_FOOT, rows: [
+    { name: 'rules · 世界规则.md' }, { name: 'geography · 城市与地理.md' },
+    { name: 'history · 大事记.md' }, { name: 'politics · 资本格局.md' }] },
+  chapters: { header: '章节 · CHAPTERS/', foot: DERIVED_FOOT, rows: [
+    { num: '009', name: '旧仓库的钥匙.md' }, { num: '010', name: '第一次交锋.md' },
+    { num: '011', name: '融资酒局.md' }, { num: '012', name: '雨夜来客.md', active: true, dirty: true },
+    { num: '013', name: '概要 · 反转伏笔.md' }] },
+  query: { header: '查询面板 · QUERYFACTS', foot: '演示数据 · 四类查询见 plan/07 §导航抽屉', html:
+    '<div class="qp">' +
+    '<input placeholder="林溪 在第 3 章时…" onkeydown="if(event.key===\'Enter\')toast(\'查询已发出(演示)\')">' +
+    '<div class="qp-chips"><span class="qp-chip on" onclick="qpChip(this)">entity-at</span><span class="qp-chip" onclick="qpChip(this)">relations</span><span class="qp-chip" onclick="qpChip(this)">mentions</span><span class="qp-chip" onclick="qpChip(this)">semantic</span></div>' +
+    '<div class="qp-result"><b>林溪 @ ch3</b> · 身份: 数据分析师(重生前) · location: 知微书馆</div>' +
+    '<div class="qp-result"><b>关系</b> · 林溪 — 陆沉: 对手(强度 0.8, 来源 ch10-12)</div>' +
+    '</div>' },
+  learnings: { header: '已学偏好 · LEARNINGS', foot: '来自 Reflector 沉淀 · 可在 Settings §风格定制中编辑', html:
+    '<div style="padding:2px 8px">' +
+    '<div class="learn-row"><span class="w">0.9</span><span>商战细节要具体到数字,不要"一大笔钱"</span></div>' +
+    '<div class="learn-row"><span class="w">0.8</span><span>对话不用感叹号连发,情绪靠动作带</span></div>' +
+    '<div class="learn-row"><span class="w">0.7</span><span>场景切换时给一个气味/声音锚点</span></div>' +
+    '<div class="learn-row"><span class="w">0.6</span><span>陆沉说话从不直接回答问题</span></div>' +
+    '</div>' }
+};
+function qpChip(el) {
+  el.parentElement.querySelectorAll('.qp-chip').forEach(function (c) { c.classList.remove('on'); });
+  el.classList.add('on');
+}
+function setCat(cat) {
+  document.querySelectorAll('.cat-item[data-cat]').forEach(function (c) {
+    c.classList.toggle('active', c.dataset.cat === cat);
+  });
+  var d = CATS[cat];
+  document.getElementById('ftHeader').textContent = d.header;
+  document.getElementById('ftList').innerHTML = d.html || d.rows.map(ftRow).join('');
+  document.getElementById('ftFoot').textContent = d.foot || '';
+  if (!document.getElementById('navdrawer').classList.contains('open')) toggleNav();
+}
+document.querySelectorAll('.cat-item[data-cat]').forEach(function (c) {
+  c.addEventListener('click', function () { setCat(c.dataset.cat); });
+});
+document.getElementById('ftList').addEventListener('click', function (e) {
+  var row = e.target.closest('.ft-row');
+  if (!row) return;
+  this.querySelectorAll('.ft-row').forEach(function (r) { r.classList.remove('active'); });
+  row.classList.add('active');
+  toast('打开 ' + row.textContent.trim() + '(演示)');
+});
+var CAT_KEYS = { '1': 'outline', '2': 'characters', '3': 'chapters', '4': 'query', '5': 'learnings' };
+
 document.addEventListener('keydown', function (e) {
   var cmd = e.metaKey || e.ctrlKey;
   if (cmd && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleNav(); }
   if (cmd && e.key.toLowerCase() === 'j') { e.preventDefault(); toggleTrace(); }
   if (cmd && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleComposer(); }
+  if (cmd && CAT_KEYS[e.key]) { e.preventDefault(); setCat(CAT_KEYS[e.key]); }
   if (e.key === 'Escape') {
     if (document.getElementById('approvalLayer').classList.contains('open')) closeApproval();
     else if (document.getElementById('composer').classList.contains('open')) closeComposer();
@@ -401,6 +471,9 @@ function toast(msg) {
   setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 2200);
   setTimeout(function () { t.remove(); }, 2600);
 }
+document.getElementById('ftHeader').textContent = CATS.chapters.header;
+document.getElementById('ftList').innerHTML = CATS.chapters.rows.map(ftRow).join('');
+document.getElementById('ftFoot').textContent = CATS.chapters.foot;
 setState('run');
 </script>
 </body>

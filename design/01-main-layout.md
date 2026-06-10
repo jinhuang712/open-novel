@@ -50,6 +50,8 @@ flowchart TB
 - 左缘 48px 类目图标列(原 ActivityBar 并入):图标 24px 线性,选中态左缘 2px accent 条 + 图标 `--text-primary`;高频项直出(大纲 / 角色 / 世界观 / 章节 / 查询),低频折叠进「更多设定」;底部固定 📚 新手指引与 ⚙ Settings
 - 文件树行高 28px,缩进 12px/级;活动文件 `--bg-active` + accent 左条;dirty 圆点同 Tabs
 - `_` 前缀派生文件默认隐藏;Developer Mode 显示并标 `badge-neutral「派生」`,仍 read-only([spec/13 §Section 8](../spec/13-settings.md#section-8-developer-mode--全局))
+- 非文件类目的树区形态:**查询面板** = 查询输入 + 四类型 chip(entity-at / relations / mentions / semantic)+ 结果行(等宽);**已学偏好** = learnings 列表(权重徽标 + 条目文字),编辑入口在 Settings §风格定制
+- 底部固定入口直接跳转:📚 新手指引 → Onboarding([design/05](./05-onboarding.md)),⚙ → SettingsDialog([design/04](./04-settings.md));`Cmd+1~5` 切类目,抽屉收起时先自动展开
 - 空态(新项目无章节):树区居中衬线短句 +「让 AI 起草第一章」按钮 → 召出 Composer 并预填
 - 抽屉打开不抢焦点;再次 `Cmd+B` 或 `Esc`(焦点在抽屉内时)收回
 
