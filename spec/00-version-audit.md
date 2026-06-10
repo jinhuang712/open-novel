@@ -2,6 +2,8 @@
 
 > **[info]** 本文档替代 plan/08 中的"猜版本"做法,把 W3 接线日的版本号从训练数据预测改为 npm 实查。**任何 W3+ 代码 commit 之前必须先过这一关。**
 
+技术栈锁定主文档(锁定版本表 / 集成关键点 / 设计取舍)见 [spec/28](./28-tech-stack.md)。
+
 ## 为什么要有这个
 
 文档 audit 后发现的最高优先级风险: plan/08 / spec 全栈所引用的版本号 (`next`、`react`、`ai`、`@ai-sdk/deepseek`、`better-sqlite3`、`drizzle-orm`、`sqlite-vec`、模型 ID `deepseek-v4-pro`) 是基于训练数据 + 调研文章的"应然"假设,**没有任何 commit 把 npm 真实可装版本写下来过**。一旦 W3 第一次 `pnpm add` 失败、native binding 装不上或 model API 返回 404,整个时间表立刻崩。
