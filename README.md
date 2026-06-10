@@ -16,16 +16,15 @@
 
 ## 核心能力
 
-- **多 Agent 协作** — 7 对外 Agent(Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel)+ 6 Hidden Agent(内部 LLM 工具,经 `callJsonAgent` 调用),详见 [plan/02](./plan/02-multi-agent.md)
-- **三种工作模式** — Discuss(只读检索)/ Plan(设定编辑)/ Write(正文编辑),严格闸门
-- **审批必须** — 所有写入走 proposal 模式,用户在 ApprovalCard 整批审 + 勾选 + 编辑;cascade 内部递归 ≤3 轮全在内存,落盘 transaction 原子
-- **一致性守护** — cascade 影响半径由 SQL 出候选 + LLM 二次过滤,整批一次审完
-- **五大网文守则** — 黄金三章 / 人设崩坏 / 节奏崩盘 / 期待感兑现 / 金手指依赖 自动检测;critical 风险用户必须确认才能 approve
-- **叙事力学诊断** — BeatAnalyzer(章内节奏 / 钩子强度)+ ArcTracker(跨章弧光偏离)
-- **发布前留存预演** — ReaderPanel 5 persona(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)并行模拟读者反应
-- **反馈学习** — Reflector per-turn 提炼用户偏好,context builder 按 weight 注入,越用越懂你
-- **流式透明** — Agent 推理过程、工具调用在右侧 ThinkingPanel 实时滚动
-- **联网研究** — 接口预留 + Mock,二期接 Bocha(中文)+ Tavily(英文)
+- **AI 角色编辑部** — 七个分工明确的 AI 角色像编辑部一样围着你的书工作,各司其职、可单独开关,详见 [plan/05](./plan/05-agent-team.md)
+- **三种协作姿态** — 讨论(只聊不写)/ 规划(只动设定)/ 写作(产出正文),界限分明,你随时知道 AI 此刻能动什么
+- **审批必经** — AI 只提议,任何写入作品的内容都先经你整批审定、可勾选可编辑,没有静默改动
+- **一致性守护** — 改一个设定,全部连锁影响自动找全,一次看全、一次审完
+- **五大网文守则** — 黄金三章 / 人设不崩 / 节奏不崩盘 / 期待感必兑现 / 金手指不依赖 自动检测;高风险改动须作者确认后才能通过
+- **叙事力学诊断** — 节奏、爽点密度、章末钩子与角色弧光的持续体检与偏离预警
+- **发布前读者预演** — 一组模拟读者(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)先于真实读者读完本章,给出弃书风险报告
+- **越用越懂你** — 你的每一次修改、采纳与否决都被记住,系统越写越合你的手感
+- **过程透明** — AI 的每一步提议、依据与影响都在侧栏实时可见,不是黑盒出稿
 
 ## 技术栈
 
@@ -41,7 +40,7 @@
 | 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
-详见 [plan/08-tech-stack](./plan/08-tech-stack.md)。
+详见 [spec/28-tech-stack](./spec/28-tech-stack.md)。
 
 ## 文档状态
 
@@ -77,7 +76,7 @@ pnpm dev
 ├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
 ├── TODO.md                    # TODO + 已知问题 + 未决问题
 ├── CHANGELOG.md               # 跨文档变更流水线
-├── plan/                      # 半技术 PRD(产品向)
+├── plan/                      # 产品 PRD(纯产品定义)
 ├── spec/                      # 核心技术文档(实施向)
 ├── design/                    # 界面设计: 交互文档 + HTML 高保真原型(prototypes/)
 ├── progress/                  # 历史进度档案(只做追溯,不再承担 rolling plan)
@@ -89,22 +88,20 @@ pnpm dev
 
 ## 文档导航
 
-### 半技术 PRD (plan/) — 架构设计 (What / Why)
+### 产品 PRD (plan/) — 产品设计 (What / Why)
 
-从创作工作流、Agent 拓扑、数据模型、模式闸门和 UI 布局解释为什么这样设计。
+纯产品定义:为谁而做、解决什么问题、产品长什么样、边界在哪里;零技术细节,技术实现收束在 spec/。
 
-- [01-overview](./plan/01-overview.md) — 系统概览与关键决策
-- [02-multi-agent](./plan/02-multi-agent.md) — 7 对外 + 6 Hidden Agent 拓扑与职责
-- [03-editor-layer](./plan/03-editor-layer.md) — 编辑器分层与 EditorAdapter
-- [04-storage-model](./plan/04-storage-model.md) — Markdown + SQLite 三库混合存储模型
-- [05-modes-and-approval](./plan/05-modes-and-approval.md) — 三模式与审批流
-- [06-cascade-and-reflection](./plan/06-cascade-and-reflection.md) — Cascade 一致性与反馈学习
-- [07-ui-layout](./plan/07-ui-layout.md) — 五区 UI 布局
-- [08-tech-stack](./plan/08-tech-stack.md) — 技术栈锁定
-- [09-narrative-engine](./plan/09-narrative-engine.md) — 叙事引擎(BeatAnalyzer + ArcTracker + 模板库)
-- [10-reader-simulator](./plan/10-reader-simulator.md) — 读者仿真器(5 persona ReaderPanel)
-- [11-knowledge-graph](./plan/11-knowledge-graph.md) — 知识图谱与 cascade / RAG 地基
-- [12-memory-and-context](./plan/12-memory-and-context.md) — Agent 记忆与上下文治理
+- [01-overview](./plan/01-overview.md) — 产品定位、要解决的问题、核心场景与能力一览
+- [02-principles](./plan/02-principles.md) — 贯穿全部能力的产品价值观与取舍标准
+- [03-guardrails](./plan/03-guardrails.md) — 产品红线与网文创作守则的唯一出处
+- [04-goals-and-non-goals](./plan/04-goals-and-non-goals.md) — 为谁而做、做什么、明确不做什么
+- [05-agent-team](./plan/05-agent-team.md) — 七个 AI 角色的分工、边界与开关
+- [06-collaboration-and-modes](./plan/06-collaboration-and-modes.md) — 讨论 / 规划 / 写作三种协作方式及其边界
+- [07-approval-and-cascade](./plan/07-approval-and-cascade.md) — 整批审批的形态,连带修改如何一次看全审完
+- [08-story-world](./plan/08-story-world.md) — 六维故事世界如何守住上百万字的前后一致
+- [09-memory-and-learning](./plan/09-memory-and-learning.md) — 系统如何记住这本书、记住你,越用越懂你
+- [10-narrative-and-reader](./plan/10-narrative-and-reader.md) — 叙事力学体检与发布前的模拟读者
 
 ### 核心技术文档 (spec/) — 实现细节 (How)
 
@@ -138,6 +135,7 @@ pnpm dev
 - [25-cardinal-rules](./spec/25-cardinal-rules.md) — 五大网文守则
 - [26-cascade-controller](./spec/26-cascade-controller.md) — user_turn actions、审批队列、取消与恢复的编排主权
 - [27-session-history](./spec/27-session-history.md) — session_history.db 过程数据 schema 与保留策略
+- [28-tech-stack](./spec/28-tech-stack.md) — 技术栈锁定与集成关键点
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)
 
@@ -174,13 +172,13 @@ pnpm dev
 
 ## 设计原则
 
-- **docs-before-code** — 任何代码 commit 之前,对应 plan/spec 必须先有,且用户 approve docs 后才动代码
-- **用户主导** — Agent 提议、用户审批、系统持久;所有写盘动作必经 ApprovalCard
-- **一致性 > 节流** — DeepSeek V4 1M ctx,装齐"一致性所需的全部上下文",不做 token 预算裁剪
-- **影响半径不依赖 LLM** — cascade 候选必须是 SQL 算的,LLM 只做"是否真受影响"二次过滤
-- **三模式严格分离** — discuss 不写,plan 不碰章节,write 不碰设定
+- **用户驾驶位** — AI 提议、作者审定、系统持久;任何写入作品的内容必经审批,没有静默改动
+- **一致性大于一切** — 装齐一致性所需的全部上下文,前后自洽优先于成本节流
+- **影响确定可解释** — 连锁影响的范围由确定性规则算出,AI 只做"是否真受影响"的复核,结果可解释可追溯
+- **三模式严格分离** — 讨论不写、规划不碰正文、写作不碰设定
+- **docs-before-code** — 任何代码之前对应 plan/spec 先有并经用户认可(已纳入 `CLAUDE.md` 工作规范)
 
-完整不变性见 [plan/01 §不变性](./plan/01-overview.md#不变性约束-invariants)。
+完整产品原则见 [plan/02-principles.md](./plan/02-principles.md),红线与守则见 [plan/03-guardrails.md](./plan/03-guardrails.md)。
 
 ## 开发约定
 
@@ -189,16 +187,21 @@ pnpm dev
 3. **任何写入用户文件的操作必须经过 ApprovalCard**,Agent 不能 silent 落盘
 4. 输出语言中文为主,可夹杂英文术语
 
-## 不在 POC 范围
+## 非目标
 
-- 真实联网搜索(二期接入 Bocha + Tavily)
-- 多用户 / 账号系统
-- 番茄小说自动发布(导出 .md/.txt 让用户手动发)
-- 实时协作(二期专项设计;POC 不预留 Yjs 接口)
+明确不做的事(设计立场,不是排期):
+
+- 联网研究与素材搜索
+- 多用户协作与实时协同
+- 云同步 / 多设备
 - 移动端
-- Windows 原生支持(POC macOS / Linux only;Windows 用户走 WSL)
-- 云同步 / 多设备(本地单机优先;LibSQL 等带云同步能力的数据库栈已被砍)
-- Mastra / LangGraph 等 Agent 框架(自定义 runner + AI SDK 6 `stopWhen` 已够;详见 [plan/08 ADR](./plan/08-tech-stack.md#adr--设计决策))
+- 平台自动发布(导出成稿,作者自行上传)
+- 模型微调
+- 跨项目共享记忆与经验
+- 写作中实时干预
+- 替作者决策的闸门化评分
+
+每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经 WSL)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/28 §设计取舍](./spec/28-tech-stack.md#设计取舍)。
 
 ## 许可
 
