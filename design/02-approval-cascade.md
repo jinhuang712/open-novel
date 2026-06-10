@@ -1,6 +1,6 @@
 # design/02 — ApprovalCard 审批与 Cascade
 
-> 原型:`design/prototypes/02-approval-cascade.html` · 上游:[plan/05 三模式与审批流](../plan/05-modes-and-approval.md) · [spec/06 审批流](../spec/06-approval-flow.md) · [spec/25 五大守则](../spec/25-cardinal-rules.md)
+> 原型:`design/prototypes/02-approval-cascade.html` · 上游:[plan/06 协作与三模式](../plan/06-collaboration-and-modes.md) · [plan/07 审批与连带修改](../plan/07-approval-and-cascade.md) · [spec/06 审批流](../spec/06-approval-flow.md) · [spec/25 五大守则](../spec/25-cardinal-rules.md)
 
 整个 ChangeSet(主修改 + 1~3 级 cascade)在**一张卡**里一次审完;这是产品最重的交互,层级必须一眼可读:**发生了什么 → 波及多大 → 有什么风险 → 我怎么决定**。
 
@@ -36,7 +36,7 @@ flowchart TB
 | diff | 行级:删除行 `--diff-del-*`、新增行 `--diff-add-*`,等宽 12.5px;默认显示 ±3 行上下文,可展开 |
 | 编辑 | 「编辑」进入 inline textarea(预填 proposedText),保存即把该条标记为 `edited`(徽标提示),纳入 approve payload 的 `edits{}` |
 
-不勾选 = **搁置**:不落盘,后续 Validator 会再发现([plan/05 §Cascade 审批](../plan/05-modes-and-approval.md#cascade-审批整批审))。原型中未勾行整体降透明度 0.55,使"将落盘集合"一眼可辨。
+不勾选 = **搁置**:不落盘,后续 Validator 会再发现([plan/07 §勾选语义](../plan/07-approval-and-cascade.md#勾选语义))。原型中未勾行整体降透明度 0.55,使"将落盘集合"一眼可辨。
 
 ## Cascade 分组
 
@@ -62,7 +62,7 @@ flowchart TB
 
 - 右对齐主次序:`全选` `全不选`(ghost)→ `拒绝全部 (N)`(danger 描边)→ `同意勾选项 7/9 (Y)`(primary)
 - 同意按钮 disabled 条件:勾选数 = 0,或存在未确认 critical,或存在 blocking
-- **拒绝必填反馈**:点拒绝弹 inline 反馈框(textarea + 「为什么拒绝?」占位 + 示例),提交后自动发一条 ChatBox 消息驱动 Agent 重做([plan/05 §拒绝反馈环](../plan/05-modes-and-approval.md#拒绝反馈环))
+- **拒绝必填反馈**:点拒绝弹 inline 反馈框(textarea + 「为什么拒绝?」占位 + 示例),提交后自动发一条 ChatBox 消息驱动 Agent 重做([plan/07 §否决要给理由](../plan/07-approval-and-cascade.md#否决要给理由))
 - 键盘(卡片焦点内,[spec/12 §ApprovalCard 上下文](../spec/12-shortcuts.md#approvalcard-上下文-浮层焦点内)):`Y` 同意 / `N` 拒绝 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;`Esc` 不关卡(无悬挂超时,永远 pending),只取消 inline 编辑
 
 ## 状态矩阵

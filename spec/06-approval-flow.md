@@ -652,7 +652,7 @@ async function rollbackApproval(tx: Transaction, approvalId: string) {
 - **单条回退**: Settings → 审批历史 → 选某条 approved → "回退" 按钮 → 调 `POST /api/approvals/{id}/rollback`
 - **整 turn 回退**: chat box 顶部 [取消本次对话] (turn 未完结时) 或 Settings → 审批历史 → 按 turn_id 分组 → "回退整个 turn" (turn 已完结时)
 
-**派生视图守卫** (plan/01 inv L10): rollbackApproval 写 fs 前必须检查 `h.target` 对应文件 frontmatter `derived: true` — 若是, 跳过 fs.writeFile (派生文件由 reindex 重生成, 不应手工回退)。
+**派生视图守卫** (plan/03-guardrails.md 红线 R7): rollbackApproval 写 fs 前必须检查 `h.target` 对应文件 frontmatter `derived: true` — 若是, 跳过 fs.writeFile (派生文件由 reindex 重生成, 不应手工回退)。
 
 ## 安全防护
 

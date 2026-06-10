@@ -9,7 +9,7 @@
 | 类别 | 状态 | 说明 |
 |---|---|---|
 | plan/ 重写迁移期 | **1 open** | plan/ 正在按 [progress/008-plan-rewrite.md](./progress/008-plan-rewrite.md) 重写为 10 篇纯产品 PRD;完成前章程 G3 的文件指向为前向引用。完成后删除本条。 |
-| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [plan/07](./plan/07-ui-layout.md) ADR-01/04/05 与 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍按旧五区语境写作(Tabs、右栏 ChatBox、底部状态栏、ThinkingPanel 常驻等表述);待按「章节轨 · 纸面 · 状态点」契约逐篇同步(库面板 / 状态点 / 输入条 / 旁注 / 查询浮层 / 动效清单约束),入口表述以 design/01 为准。同批处理:[spec/12](./spec/12-shortcuts.md) 新增 `chat.focusComposer`(Cmd+L)与 `query.open`(Cmd+E),ChatBox 上下文更名为输入条;design/04 Settings §风格定制补 learnings 查看与编辑区(偏好从主界面库面板移出后的唯一入口)。 |
+| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍按旧五区语境写作(Tabs、右栏 ChatBox、底部状态栏、ThinkingPanel 常驻等表述);待按「章节轨 · 纸面 · 状态点」契约逐篇同步(库面板 / 状态点 / 输入条 / 旁注 / 查询浮层 / 动效清单约束),入口表述以 design/01 为准。同批处理:[spec/12](./spec/12-shortcuts.md) 新增 `chat.focusComposer`(Cmd+L)与 `query.open`(Cmd+E),ChatBox 上下文更名为输入条;design/04 Settings §风格定制补 learnings 查看与编辑区(偏好从主界面库面板移出后的唯一入口)。 |
 | 文档重写 / CAST 化 | **0 open** | 所有 manifest 页面已重渲染到 CAST shell;Mermaid 作者源恢复到 `site/diagram-sources.json`,渲染器禁止图表 caption / body 暴露 Mermaid 方向声明等源码首行。 |
 | 文档导航 / 索引 | **0 open** | README、index、progress README、TODO、Changelist 的职责边界已收敛;README 不再指向过期 progress 重构项。 |
 | 已关闭历史项 | **0 open** | Embedding provider、schema 主权拆分、cascade controller 主权、reindex 失败语义、analyzeImpact Writer 边界等已决事项从 TODO 活跃区移除,保留在 changelist / 对应 spec 中。 |
@@ -21,23 +21,23 @@
 | 优先级 | 问题 | 关联文档 | 回头解决方式 |
 |---|---|---|---|
 | P0 | DeepSeek `cache_control` 字段服务端识别情况未实查。 | [spec/00 §H](./spec/00-version-audit.md) · [spec/03](./spec/03-prompts.md) | W3 day-1 最小复现;若不支持,降级为稳定头部排布,功能不变但 token 成本上升。 |
-| P0 | 1M context + per-agent 装齐契约的真实 token 成本未基线化。 | [spec/23](./spec/23-context-contracts.md) · [plan/12](./plan/12-memory-and-context.md) | 用 DeepSeek tokenizer / 真实请求记录基线;校验 Writer 单次章节调用估算 165K 是否偏离。 |
-| P0 | AI SDK 6 `stopWhen` + tool result marker + `onStepFinish` 的端到端行为未跑通。 | [spec/00](./spec/00-version-audit.md) · [plan/08](./plan/08-tech-stack.md) | 写最小 runner spike;若 `stopWhen` 不可靠,回退纯手写 while runner。 |
+| P0 | 1M context + per-agent 装齐契约的真实 token 成本未基线化。 | [spec/23](./spec/23-context-contracts.md) · [plan/08](./plan/08-story-world.md) | 用 DeepSeek tokenizer / 真实请求记录基线;校验 Writer 单次章节调用估算 165K 是否偏离。 |
+| P0 | AI SDK 6 `stopWhen` + tool result marker + `onStepFinish` 的端到端行为未跑通。 | [spec/00](./spec/00-version-audit.md) · [spec/28](./spec/28-tech-stack.md) | 写最小 runner spike;若 `stopWhen` 不可靠,回退纯手写 while runner。 |
 | P0 | `sqlite-vec` + `better-sqlite3` + Drizzle 在 macOS arm64 / Linux x64 的 native binding 与 JOIN 行为未实测。 | [spec/00](./spec/00-version-audit.md) · [spec/18](./spec/18-embeddings.md) | 跑 `db.loadExtension(sqliteVec.path)`、`vec0` CRUD、普通表 JOIN;失败再评估 sqlite-vss / hnswlib-node。 |
-| P0 | `better-sqlite3` 在 Next.js Route Handler 中的同步调用、WAL 并发写与 dev hot-reload connection 泄漏未实测。 | [spec/00](./spec/00-version-audit.md) · [plan/04](./plan/04-storage-model.md) | 做 Route Handler 并发写 spike;失败时把写操作隔离到 worker thread。 |
+| P0 | `better-sqlite3` 在 Next.js Route Handler 中的同步调用、WAL 并发写与 dev hot-reload connection 泄漏未实测。 | [spec/00](./spec/00-version-audit.md) · [spec/01](./spec/01-storage-schema.md) | 做 Route Handler 并发写 spike;失败时把写操作隔离到 worker thread。 |
 | P2 | design token → Tailwind v4 / shadcn 变量映射与 `@custom-variant dark`(绑 `data-theme`)未在真实组件实测;深色主题「深字浅钮」的 `--primary-foreground` 需过一遍 shadcn Button 全 variant。 | [design/00 §实现对接](./design/00-design-tokens.md) | W6 前端搭建时随首个 shadcn 组件接入验证;有冲突回写 00 映射表并记 CHANGELOG。 |
 
 ## 3 · 后续架构决策
 
 | 优先级 | 问题 | 关联 | 暂定处理 |
 |---|---|---|---|
-| P1 | better-sqlite3 多 connection / LRU 策略仍需按“项目数 × 数据库文件数”重算。 | [plan/04 §连接池](./plan/04-storage-model.md) | 待 native binding spike 后定默认上限和关闭策略。 |
-| P1 | `derived: true` 派生文件守卫的写盘、rollback、chokidar 三处实现细节仍需统一。 | [plan/01](./plan/01-overview.md) · [spec/06](./spec/06-approval-flow.md) · [spec/16](./spec/16-knowledge-schema.md) | 代码前补一张实现级接口表,避免守卫只停留在原则。 |
-| P1 | Reflector 并发安全未定义:多个 turn 几乎同时完成时 `learnings` upsert 冲突。 | [plan/06](./plan/06-cascade-and-reflection.md) · [spec/22](./spec/22-memory-and-history.md) | 实现前明确 transaction / queue / conflict merge 策略。 |
+| P1 | better-sqlite3 多 connection / LRU 策略仍需按“项目数 × 数据库文件数”重算。 | [spec/01 §better-sqlite3 连接池](./spec/01-storage-schema.md) | 待 native binding spike 后定默认上限和关闭策略。 |
+| P1 | `derived: true` 派生文件守卫的写盘、rollback、chokidar 三处实现细节仍需统一。 | [plan/03 红线 R7](./plan/03-guardrails.md) · [spec/06](./spec/06-approval-flow.md) · [spec/16](./spec/16-knowledge-schema.md) | 代码前补一张实现级接口表,避免守卫只停留在原则。 |
+| P1 | Reflector 并发安全未定义:多个 turn 几乎同时完成时 `learnings` upsert 冲突。 | [plan/09](./plan/09-memory-and-learning.md) · [spec/22](./spec/22-memory-and-history.md) | 实现前明确 transaction / queue / conflict merge 策略。 |
 | P1 | doom-loop 阈值 0.9、`callJsonAgent` retry 2 次与用户 retry 可能叠加成循环。 | [spec/06](./spec/06-approval-flow.md) · [spec/24](./spec/24-json-output.md) | 增加 metrics 与 retry budget;避免 escalate → retry → 再 escalate 的无效循环。 |
-| P1 | `ContextOverflowError` 后的“分卷”兜底未设计。 | [spec/23](./spec/23-context-contracts.md) · [plan/12](./plan/12-memory-and-context.md) | 先保留为显式失败;进入长篇真实压测后再设计分卷策略。 |
+| P1 | `ContextOverflowError` 后的“分卷”兜底未设计。 | [spec/23](./spec/23-context-contracts.md) · [plan/08](./plan/08-story-world.md) | 先保留为显式失败;进入长篇真实压测后再设计分卷策略。 |
 | P1 | `extractSemanticDelta` 对中长篇正文 diff 的单次 LLM 稳定性依赖过高。 | [spec/19](./spec/19-impact-analysis.md) | 需要降级路径:分段 delta、规则预筛或人工确认。 |
-| P2 | 取消路径仍有两套入口:Router action 与 ChatBox 顶部“取消本次对话”。 | [plan/02](./plan/02-multi-agent.md) · [spec/06](./spec/06-approval-flow.md) · [spec/24](./spec/24-json-output.md) | 实现前统一为同一个 `rollbackTurn` 语义。 |
+| P2 | 取消路径仍有两套入口:Router action 与 ChatBox 顶部“取消本次对话”。 | [plan/05](./plan/05-agent-team.md) · [spec/06](./spec/06-approval-flow.md) · [spec/24](./spec/24-json-output.md) | 实现前统一为同一个 `rollbackTurn` 语义。 |
 | P2 | 魔法常数尚未系统化暴露或归档:doom-loop 0.9、cascade ≤3、weight 阈值、lastMessages=30、tokenBudget 软警等。 | 多文档 | 先保留硬编码默认;Settings/debug 设计时统一归档。 |
 | P2 | 测试策略已有 spec,但实际 vitest / playwright / LLM golden / spec/00 audit 尚未落地。 | [spec/14](./spec/14-testing.md) · [spec/00](./spec/00-version-audit.md) | 开始代码实施后作为第一批工程化任务。 |
 | P2 | 段锚点、差量 reindex、paragraph_embeddings 强耦合,锚点失稳会拖垮知识图谱。 | [spec/17](./spec/17-paragraph-anchors.md) · [spec/18](./spec/18-embeddings.md) · [spec/19](./spec/19-impact-analysis.md) | 需要真实章节样本和 mutation 测试后校准。 |

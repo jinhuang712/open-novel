@@ -1,6 +1,6 @@
 # Spec 13 — SettingsDialog 设计
 
-> **[info]** 替换 plan/07 末尾对 Settings 的草草几行描述。SettingsDialog 是用户与系统全部偏好打交道的唯一入口,本文给出完整设计。
+> **[info]** 替换旧 UI 布局文档末尾对 Settings 的草草几行描述。SettingsDialog 是用户与系统全部偏好打交道的唯一入口,本文给出完整设计。
 
 ## 设计目标
 
@@ -401,8 +401,8 @@ flowchart TB
 **不暴露的能力** (即使开 Developer Mode 也不允许):
 
 - 派生文件直接编辑: `_` 前缀文件即使可见仍 read-only (spec/16 §派生文件守卫)
-- `cardinal-rules.json` `enabled` 字段: UI 锁死, 只能微调阈值 (plan/04 §cardinal-rules)
-- 跳过 cascade 内部递归: 即使 Developer Mode 也不允许 (plan/01 inv L9)
+- `cardinal-rules.json` `enabled` 字段: UI 锁死, 只能微调阈值 (spec/25 §项目级配置)
+- 跳过 cascade 内部递归: 即使 Developer Mode 也不允许 (plan/03-guardrails.md 红线 R6)
 
 **store 字段**:
 

@@ -33,7 +33,7 @@
 |---|---|---|---|
 | `runtime.db` | `~/.open-novel/runtime.db` | 跨项目会话库:threads / messages / compressed_messages / archived_threads。通过 resource 字段隔离项目。 | 本文件 |
 | `index.db` | `~/.open-novel/workspaces/{projectId}/index.db` | 项目事实与派生索引:entities、timeline、relations、learnings、approvals、volume_summaries 等。 | [spec/01](./01-storage-schema.md#index-db-全表-schema-主权) |
-| `session_history.db` | `~/.open-novel/workspaces/{projectId}/session_history.db` | 项目内过程数据:LLM 调用日志、tool run、成本、debug trace。不是 L2 message history。 | [plan/04](../plan/04-storage-model.md) |
+| `session_history.db` | `~/.open-novel/workspaces/{projectId}/session_history.db` | 项目内过程数据:LLM 调用日志、tool run、成本、debug trace。不是 L2 message history。 | [spec/27](./27-session-history.md) |
 | `runtime/session.json` | `~/.open-novel/workspaces/{projectId}/runtime/session.json` | 状态机恢复缓存:mode、currentTurnId、threadId、savedAt。approvals 仍以 index.db 为准。 | [spec/07](./07-mode-state-machine.md) |
 
 ## runtime.db schema

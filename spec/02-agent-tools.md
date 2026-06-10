@@ -291,7 +291,7 @@ Agent 分两类:**primary**(直接面对用户输入入口:Router 接 UI 路由 
 > - `trackArc` (ArcTracker,跨章 + character.md,Pro) → **Validator**
 > - `applyTemplate` (结构模板库) → **Writer** (大纲生成时显式调用)
 >
-> 拆分理由见 plan/09 §归属与边界。
+> 拆分理由见 plan/10-narrative-and-reader.md §叙事力学诊断(章内归 Checker、跨章归 Validator)。
 
 > **[info]** **知识图谱工具** (W7-W10 落地,定义在 spec/19-21) 的归属:
 >
@@ -299,7 +299,7 @@ Agent 分两类:**primary**(直接面对用户输入入口:Router 接 UI 路由 
 > - `analyzeImpact` (Validator 分析 setting 改动影响半径,见 spec/19) → **Validator**
 > - `queryFacts` (实体 / 关系 / 提及 / 语义事实查询,见 spec/21) → **Router** (discuss 模式优先) + **Writer** (写章节时偶用)
 >
-> 设计理由 (为什么不让 Validator 现场推理影响范围) 见 plan/11 §核心数据流改造。
+> 设计理由 (为什么不让 Validator 现场推理影响范围) 见 plan/07-approval-and-cascade.md §设计核心:先算全,再呈现 + spec/19。
 
 ## 工具内部 LLM 调用规约
 

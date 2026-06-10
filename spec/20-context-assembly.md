@@ -1,6 +1,6 @@
 # Spec 20 — 上下文装配工具 (assembleContext)
 
-> **[info]** 实现 plan/11-knowledge-graph.md L3 工具层第二项。本文档定义 `assembleContext` 工具签名、retrieve 链路、token 预算控制。Writer 写章节 / 章节大纲前必调此工具,获取自动 retrieve 的相关上下文。
+> **[info]** 实现知识图谱 L3 工具层第二项(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md) §写前自动备料)。本文档定义 `assembleContext` 工具签名、retrieve 链路、token 预算控制。Writer 写章节 / 章节大纲前必调此工具,获取自动 retrieve 的相关上下文。
 
 ## 设计原则
 
@@ -391,7 +391,7 @@ async function relevantSettingsIndexes(projectId: string): Promise<WorldviewSect
 
 **为什么全量而非按 entity 反查子文件**:
 
-- plan/01 inv L14 "一致性所需的全部数据必装, 1M ctx 给的就是奢侈装齐的本钱"
+- plan/03-guardrails.md 红线 R9 "一致性所需的全部数据必装, 1M ctx 给的就是奢侈装齐的本钱"
 - `_index.md` 每份 200-500 字, 18 份合计 5-10K token (远低于 1M)
 - "按 entity 反查"会引入"选错文件 = 漏看关键设定"的错误源 — 选错索引 = Writer 不知道有 power-system 这种东西
 - 真细节由 Writer 调 `readSetting` 工具显式取 — context 装索引, 内容按需取

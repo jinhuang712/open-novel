@@ -201,4 +201,4 @@ export function assertUnderHome(p: string): void {
 | TipTap "hydration mismatch" 警告 | `useEditor` 没传 `immediatelyRender: false` |
 | better-sqlite3 / sqlite-vec 找不到 .node 文件 (打包错误) | `next.config.ts` 缺少 `serverExternalPackages` |
 | API Route "fs is not available" | Route 没有 `export const runtime = 'nodejs'` |
-| dev hot-reload 后 SQLite connection 泄漏 / 异常 | `lib/db/index.ts` 没用 `globalThis` 缓存 connection (见 plan/08 §Next.js + better-sqlite3) |
+| dev hot-reload 后 SQLite connection 泄漏 / 异常 | `lib/db/index.ts` 没用 `globalThis` 缓存 connection (见 spec/28 §Next.js + better-sqlite3) |

@@ -2,7 +2,7 @@
 
 ## 文件系统约定
 
-> **[info]** **W7 升级**: settings/ 目录大幅拆分,详见 plan/04 §存储位置 + plan/11-knowledge-graph.md。本节只列顶层结构,详细子目录看 plan/04。
+> **[info]** **W7 升级**: settings/ 目录大幅拆分,详见 [spec/16 §设定目录契约](./16-knowledge-schema.md#设定目录契约)(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md))。本节只列顶层结构,详细子目录看 spec/16。
 
 **数据结构图**
 
@@ -14,7 +14,7 @@ flowchart TD
   ROOT --> WS["workspaces/"]
   WS --> PROJ["'{projectId}/'<br/>proj_{slug}_{shortId}"]
   PROJ --> PJSON["project.json"]
-  PROJ --> SETTINGS["settings/<br/>详细子目录见 plan/04"]
+  PROJ --> SETTINGS["settings/<br/>详细子目录见 spec/16"]
   PROJ --> CHAPTERS["chapters/"]
   PROJ --> IDB["index.db<br/>SQLite per-project"]
   PROJ --> SHDB["session_history.db<br/>过程日志,见 spec/27"]
@@ -482,7 +482,7 @@ export function normalizeForWrite(content: string): string {
 
 ```ts
 db.exec(`
-  PRAGMA journal_mode = WAL;        -- better-sqlite3 + WAL: 多 reader 一个 writer (见 plan/08 §Next.js + better-sqlite3)
+  PRAGMA journal_mode = WAL;        -- better-sqlite3 + WAL: 多 reader 一个 writer (见 spec/28 §Next.js + better-sqlite3)
   PRAGMA synchronous = NORMAL;      -- WAL 下 NORMAL 已足够安全
   PRAGMA foreign_keys = ON;
   PRAGMA busy_timeout = 5000;       -- 写锁竞争时等 5s
@@ -497,7 +497,7 @@ db.exec(`
 
 > **[info]** audit 发现:每项目独立 `index.db`,用户切项目时旧 DB 连接释放策略未定。P0-1 把 LibSQL 换成 better-sqlite3 后, connection 是同步 native binding, 不再是 LibSQL HTTP client。(原 "FD ulimit 256, 5 个项目贴边" 的压力结论属 LibSQL 时代误判, 已被下方 ADR-02 修正。)
 
-`lib/storage/db-pool.ts` (LRU 策略, 与 plan/08 §Drizzle + better-sqlite3 + sqlite-vec 的 `lib/db/index.ts` 配合):
+`lib/storage/db-pool.ts` (LRU 策略, 与 spec/28 §Drizzle + better-sqlite3 + sqlite-vec 集成 的 `lib/db/index.ts` 配合):
 
 ```ts
 import { LRUCache } from 'lru-cache'
@@ -544,7 +544,7 @@ export function closeAll(): void {
 
 **项目切换时**: LRU 自然淘汰 (无需显式 delete; 触达 max=3 时最久未用的自动 close)。**项目删除时**: 显式调 `closeProjectConnections(projectId)` 后再 fs.rm 项目目录 (见 spec/13 §项目生命周期)。
 
-**dev hot-reload 安全**: 在 `lib/db/index.ts` 用 `globalThis.__openNovelDbPool` 缓存 pool 实例, 模仿 Prisma 的 Next.js dev 范式 (详 plan/08 §globalThis 缓存模式)。
+**dev hot-reload 安全**: 在 `lib/db/index.ts` 用 `globalThis.__openNovelDbPool` 缓存 pool 实例, 模仿 Prisma 的 Next.js dev 范式 (详 spec/28 §Next.js + better-sqlite3)。
 
 **connection 范围**: 每个活跃项目同时持有**两个** connection — `index.db` (上述 pool 管理) 与 `session_history.db` (schema 主权见 [spec/27](./27-session-history.md); 与 index.db 同 projectId 同生命周期, LRU 淘汰与 `closeProjectConnections` 时一并 close)。`runtime.db` 跨项目共享, **全局 1 个常驻 connection**, 不进 LRU 池 — 应用启动时打开 (同样 WAL), 进程退出时 close (schema 主权见 [spec/22](./22-memory-and-history.md))。
 
@@ -783,7 +783,7 @@ CREATE TABLE paragraph_embeddings (
   FOREIGN KEY (anchor_id) REFERENCES paragraph_anchors(anchor_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_emb_model ON paragraph_embeddings(model_name);
--- 升级路径: sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath())), 见 spec/18 §决议 + plan/08 §Drizzle + better-sqlite3 + sqlite-vec
+-- 升级路径: sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath())), 见 spec/18 §决议 + spec/28 §Drizzle + better-sqlite3 + sqlite-vec 集成
 ```
 
 embedding BLOB 存储格式 (F32 little-endian, `new Float32Array(buffer)` 还原) 详 spec/18 §schema。provider 选型 (BGE-M3 本地 / DeepSeek / OpenAI) + 决议依据 详 spec/18 §选型对比 §决议。

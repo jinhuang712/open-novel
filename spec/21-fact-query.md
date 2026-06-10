@@ -1,6 +1,6 @@
 # Spec 21 — 事实查询工具 (queryFacts)
 
-> **[info]** 实现 plan/11-knowledge-graph.md L3 工具层第三项。本文档定义 `queryFacts` 工具签名、4 种查询模式、UI 查询面板、Router 在 discuss 模式下的优先调用策略。
+> **[info]** 实现知识图谱 L3 工具层第三项(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md) §边写边查)。本文档定义 `queryFacts` 工具签名、4 种查询模式、UI 查询面板、Router 在 discuss 模式下的优先调用策略。
 
 ## 用途
 

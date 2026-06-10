@@ -91,7 +91,7 @@ flowchart LR
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--font-ui` | system + `PingFang SC` 栈 | 全部 UI 与编辑器正文(编辑器 16px / 行距 1.8,可调,见 [plan/07 §主题](../plan/07-ui-layout.md#主题)) |
+| `--font-ui` | system + `PingFang SC` 栈 | 全部 UI 与编辑器正文(编辑器 16px / 行距 1.8,可调,见 [design/04 §风格定制](./04-settings.md)) |
 | `--font-serif` | `Noto Serif SC` / `Songti SC` / `Source Han Serif SC` | 书卷气点缀:品牌标题(Onboarding、空态)与读者引文;中文宋体优先,不依赖任何私有字体 |
 | `--font-mono` | `JetBrains Mono` / ui-monospace | diff、路径、kbd、token 用量 |
 
@@ -115,7 +115,7 @@ flowchart LR
 
 ## 实现对接(Tailwind v4 + shadcn/ui)
 
-技术栈已锁定 Next.js 15 + Tailwind v4 + shadcn/ui([plan/08](../plan/08-tech-stack.md))。落地时 `tokens.css` 原样进入 `app/globals.css`,再做两件事:
+技术栈已锁定 Next.js 15 + Tailwind v4 + shadcn/ui([spec/28](../spec/28-tech-stack.md))。落地时 `tokens.css` 原样进入 `app/globals.css`,再做两件事:
 
 ### 1. dark variant 绑定 data-theme
 
@@ -166,5 +166,5 @@ flowchart LR
 
 ## 关联文档
 
-- 上游:[plan/07 UI 布局](../plan/07-ui-layout.md) · [plan/08 技术栈](../plan/08-tech-stack.md)
+- 上游:[design/README §设计原则](./README.md) · [spec/28 技术栈](../spec/28-tech-stack.md)
 - 应用:design/01~06 全部界面文档,`design/prototypes/*.html` 全部原型

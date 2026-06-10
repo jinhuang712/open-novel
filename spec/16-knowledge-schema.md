@@ -1,6 +1,6 @@
 # Spec 16 — 知识图谱 Schema
 
-> **[info]** 实现 plan/11-knowledge-graph.md L1 数据层。本文档定义 4 张新表 + 1 张段锚表 (实现见 spec/17) + 1 张段嵌入表 (实现见 spec/18) + character.md frontmatter 升级 + 概念抽取流程。
+> **[info]** 实现知识图谱 L1 数据层(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md))。本文档定义 4 张新表 + 1 张段锚表 (实现见 spec/17) + 1 张段嵌入表 (实现见 spec/18) + character.md frontmatter 升级 + 概念抽取流程。
 
 ## 设计原则
 
@@ -246,7 +246,7 @@ type ForeshadowingMetadata = {
 
 **字段摘要**: `anchor_id` (PK + FK paragraph_anchors) · `embedding` (BLOB, F32 little-endian) · `model_name` (bge-m3 / deepseek-v1 / text-embedding-3-small) · `model_dim` (1024 / 1536 / 3072) · `content_hash` (增量更新用) · `norm` (预计算 L2, cosine 加速)。
 
-**向量索引**: P0-1 升级路径 = sqlite-vec extension (`db.loadExtension(sqliteVec.getLoadablePath())`), 见 [spec/18 §决议](./18-embeddings.md) + [plan/08 §Drizzle + better-sqlite3 + sqlite-vec](../plan/08-tech-stack.md)。provider 选型 (BGE-M3 本地, fallback DeepSeek/OpenAI) 详 spec/18 §选型对比。
+**向量索引**: P0-1 升级路径 = sqlite-vec extension (`db.loadExtension(sqliteVec.getLoadablePath())`), 见 [spec/18 §决议](./18-embeddings.md) + [spec/28 §Drizzle + better-sqlite3 + sqlite-vec 集成](./28-tech-stack.md)。provider 选型 (BGE-M3 本地, fallback DeepSeek/OpenAI) 详 spec/18 §选型对比。
 
 ## character.md frontmatter 升级
 

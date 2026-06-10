@@ -1,12 +1,12 @@
 # Spec 00 — 版本审计闸门 (W3 启动前必跑)
 
-> **[info]** 本文档替代 plan/08 中的"猜版本"做法,把 W3 接线日的版本号从训练数据预测改为 npm 实查。**任何 W3+ 代码 commit 之前必须先过这一关。**
+> **[info]** 本文档替代旧 plan/08-tech-stack(已并入 spec/28)中的"猜版本"做法,把 W3 接线日的版本号从训练数据预测改为 npm 实查。**任何 W3+ 代码 commit 之前必须先过这一关。**
 
 技术栈锁定主文档(锁定版本表 / 集成关键点 / 设计取舍)见 [spec/28](./28-tech-stack.md)。
 
 ## 为什么要有这个
 
-文档 audit 后发现的最高优先级风险: plan/08 / spec 全栈所引用的版本号 (`next`、`react`、`ai`、`@ai-sdk/deepseek`、`better-sqlite3`、`drizzle-orm`、`sqlite-vec`、模型 ID `deepseek-v4-pro`) 是基于训练数据 + 调研文章的"应然"假设,**没有任何 commit 把 npm 真实可装版本写下来过**。一旦 W3 第一次 `pnpm add` 失败、native binding 装不上或 model API 返回 404,整个时间表立刻崩。
+文档 audit 后发现的最高优先级风险: 技术栈文档(现 spec/28)与 spec 全栈所引用的版本号 (`next`、`react`、`ai`、`@ai-sdk/deepseek`、`better-sqlite3`、`drizzle-orm`、`sqlite-vec`、模型 ID `deepseek-v4-pro`) 是基于训练数据 + 调研文章的"应然"假设,**没有任何 commit 把 npm 真实可装版本写下来过**。一旦 W3 第一次 `pnpm add` 失败、native binding 装不上或 model API 返回 404,整个时间表立刻崩。
 
 把版本审计前置到 W3 启动前**单独一次性跑完**,产出一张确定表,写回 spec/28 后再动代码。
 
@@ -51,7 +51,7 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 
 ### B. AI SDK 6 的 `needsApproval` API 形态
 
-**关键**: plan/05 / spec/02 / spec/06 全栈假设 `tool({ needsApproval: true })` 是 AI SDK 6 一等字段。**很可能不是**。
+**关键**: spec/02 / spec/06 全栈假设 `tool({ needsApproval: true })` 是 AI SDK 6 一等字段。**很可能不是**。
 
 需要实查:
 
@@ -63,7 +63,7 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 
 ### C. DeepSeek 模型 ID 与定价
 
-**问题**: spec/03 / plan/02 / README 都写 `deepseek/deepseek-v4-pro` `deepseek/deepseek-v4-flash`。这两个具体型号名是基于"DeepSeek 类比 OpenAI Pro/Flash 命名"的猜测,真实 model id 必须实查。
+**问题**: spec/03 / spec/13 / README 都写 `deepseek/deepseek-v4-pro` `deepseek/deepseek-v4-flash`。这两个具体型号名是基于"DeepSeek 类比 OpenAI Pro/Flash 命名"的猜测,真实 model id 必须实查。
 
 **实查结果** (来源: [https://api-docs.deepseek.com/zh-cn/quick_start/pricing/](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/)):
 
@@ -116,7 +116,7 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 2. 计费走 Gateway 还是直连 DeepSeek?
 3. 是否需要 Gateway?(直连可能更省钱,Gateway 的优势是多 provider 切换,单 provider 不需要)
 
-如果 Gateway 不必要,改成直连 `@ai-sdk/deepseek` + 直接 `process.env.DEEPSEEK_API_KEY`,plan/01 §关键决策表 + plan/08 删 "via Vercel AI Gateway" 字样。
+如果 Gateway 不必要,改成直连 `@ai-sdk/deepseek` + 直接 `process.env.DEEPSEEK_API_KEY`,spec/28 §技术决策总览删 "via Vercel AI Gateway" 字样。
 
 ### E. better-sqlite3 / sqlite-vec 与 native binding
 
@@ -127,7 +127,7 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 3. Drizzle raw SQL 与 `vec0` virtual table 是否能一起工作
 4. dev hot-reload 下 globalThis 缓存是否避免 connection 泄漏
 
-如果 sqlite-vec extension 加载失败,按 [spec/18](18-embeddings.md) 的 fallback 顺序降级到朴素 cosine 或独立向量索引,并回写 plan/08 / spec/18。
+如果 sqlite-vec extension 加载失败,按 [spec/18](18-embeddings.md) 的 fallback 顺序降级到朴素 cosine 或独立向量索引,并回写 spec/28 / spec/18。
 
 ### F. Tailwind 4 + shadcn/ui 兼容性
 
@@ -147,7 +147,7 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 3. 如无,确认是否走自动缓存(部分 provider 如 Anthropic 是 opt-in,部分如 Gemini context cache 是显式 API 创建)
 4. 若真不支持,**spec/22 的 cache_control 策略要降级为"prompt 头部稳定排布"** — 仅靠头部稳定争取后续可能的客户端缓存,不依赖服务端。
 
-**结果回写**: spec/22 §DeepSeek prompt cache 标记策略 + plan/08 §DeepSeek V4 配置。
+**结果回写**: spec/22 §DeepSeek prompt cache 标记策略 + spec/28 §DeepSeek V4 配置。
 
 ### I. AI SDK `wrapLanguageModel` + middleware 实测
 
@@ -223,9 +223,9 @@ W3 启动第一日,**先开 `progress/00X-version-audit.md`**,按以下结构填
 
 ## 改写文档清单 (实查后)
 
-- [ ] plan/08 §锁定的库版本 — 替换为实查表
-- [ ] plan/01 §关键技术决策汇总 — 修正"via Vercel AI Gateway"语
-- [ ] spec/13 §模型分配 (原 plan/02 §模型选择策略, 已并入) — 修正模型 id
+- [ ] spec/28 §锁定的库版本 — 替换为实查表
+- [ ] spec/28 §技术决策总览 — 修正"via Vercel AI Gateway"语
+- [ ] spec/13 §模型分配 (模型选择策略已并入) — 修正模型 id
 - [ ] spec/02 §writeSetting / writeChapter — 改写为 cookbook 形态
 - [ ] spec/06 §服务端实现 — 重写
 - [ ] spec/03 §模型偏好注入 — 修正 model id
@@ -241,8 +241,8 @@ W3 启动第一日,**先开 `progress/00X-version-audit.md`**,按以下结构填
 2. **audit 出来与 plan 不一致时,必须更新 plan,不许 plan 不动直接照"现实"写代码** — 文档先行原则不可破
 3. **如果实查发现某依赖根本不存在或 native binding 不可用**,立刻停下来,与用户对齐降级路径 (e.g. sqlite-vec 失败时先用朴素 cosine,AI SDK middleware 失败时在 helper 内手动 transform)
 
-## 与 plan/08 的关系
+## 与 spec/28 的关系
 
-- plan/08 表格中的版本号在 audit 跑完前**视为占位**
-- audit 跑完后,plan/08 完全重写为实查产物
-- 后续每次 dependency bump 单独 commit (chore deps),只在主版本切换时回头更新 plan/08
+- spec/28 表格中的版本号在 audit 跑完前**视为占位**
+- audit 跑完后,spec/28 完全重写为实查产物
+- 后续每次 dependency bump 单独 commit (chore deps),只在主版本切换时回头更新 spec/28

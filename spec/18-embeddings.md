@@ -1,6 +1,6 @@
 # Spec 18 — 段级 Embedding 与语义检索
 
-> **[info]** 实现 plan/11-knowledge-graph.md L2 算法层第二项。本文档定义段级向量索引、增量计算、检索 API、模型选型对比。
+> **[info]** 实现知识图谱 L2 算法层第二项(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md))。本文档定义段级向量索引、增量计算、检索 API、模型选型对比。
 
 ## 用途
 
@@ -226,7 +226,7 @@ export async function semanticSearch(
 起步用朴素扫描;若 Demo 项目突破 20K 段,**升级路径**:
 
 ```sql
--- sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath()), 见 plan/08 §Drizzle + better-sqlite3 + sqlite-vec)
+-- sqlite-vec extension (db.loadExtension(sqliteVec.getLoadablePath()), 见 spec/28 §Drizzle + better-sqlite3 + sqlite-vec 集成)
 CREATE VIRTUAL TABLE paragraph_embeddings_vec USING vec0(
   embedding FLOAT[1024]
 );
