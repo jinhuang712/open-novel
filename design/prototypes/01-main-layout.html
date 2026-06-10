@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Novel · 主界面五区布局</title>
+<script>
+(function () {
+  var saved = localStorage.getItem('onovel-theme');
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || sys;
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  body { overflow: hidden; }
+  .app { display: flex; flex-direction: column; height: calc(100vh - 42px); min-width: 1180px; }
+
+  /* ===== Tabs ===== */
+  .tabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 10px 0; background: var(--bg-app); border-bottom: 1px solid var(--border); }
+  .tab { display: flex; align-items: center; gap: 7px; padding: 7px 14px; font-size: 12.5px; color: var(--text-secondary); border-radius: var(--radius-md) var(--radius-md) 0 0; border: 1px solid transparent; border-bottom: none; cursor: pointer; position: relative; }
+  .tab:hover { background: var(--bg-hover); }
+  .tab.active { background: var(--bg-surface); color: var(--text-primary); border-color: var(--border); box-shadow: inset 0 2px 0 var(--accent); margin-bottom: -1px; padding-bottom: 8px; }
+  .tab.preview { font-style: italic; }
+  .dirty-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--accent); flex: none; }
+  .tab .close { color: var(--text-tertiary); font-size: 13px; line-height: 1; }
+  .tab-add { padding: 6px 10px; color: var(--text-tertiary); cursor: pointer; border-radius: var(--radius-sm); }
+  .tab-add:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+  .body { display: flex; flex: 1; min-height: 0; }
+
+  /* ===== ActivityBar ===== */
+  .activitybar { width: 48px; flex: none; background: var(--bg-sunken); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 2px; }
+  .ab-item { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); color: var(--text-tertiary); cursor: pointer; position: relative; }
+  .ab-item:hover { color: var(--text-secondary); background: var(--bg-hover); }
+  .ab-item.active { color: var(--text-primary); }
+  .ab-item.active::before { content: ""; position: absolute; left: -4px; top: 9px; bottom: 9px; width: 2.5px; border-radius: 2px; background: var(--accent); }
+  .ab-item svg { width: 21px; height: 21px; }
+  .ab-spacer { flex: 1; }
+
+  /* ===== FileTree ===== */
+  .filetree { width: 232px; flex: none; background: var(--bg-sunken); border-right: 1px solid var(--border); display: flex; flex-direction: column; font-size: 13px; }
+  .ft-header { padding: 12px 16px 6px; font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--text-tertiary); }
+  .ft-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+  .ft-row { display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 8px; border-radius: var(--radius-sm); color: var(--text-secondary); cursor: pointer; position: relative; white-space: nowrap; }
+  .ft-row:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .ft-row.active { background: var(--bg-active); color: var(--text-primary); font-weight: 500; }
+  .ft-row.active::before { content: ""; position: absolute; left: -4px; top: 5px; bottom: 5px; width: 2.5px; border-radius: 2px; background: var(--accent); }
+  .ft-row .num { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); width: 26px; flex: none; }
+  .ft-foot { padding: 10px 16px; font-size: 11px; color: var(--text-tertiary); border-top: 1px dashed var(--border); }
+
+  /* ===== 中区 ===== */
+  .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--bg-surface); }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 20px; font-size: 12px; color: var(--text-tertiary); border-bottom: 1px solid var(--border); flex: none; }
+  .breadcrumb b { color: var(--text-secondary); font-weight: 500; }
+  .wordcount { margin-left: auto; font-family: var(--font-mono); font-size: 11px; }
+
+  .editor { flex: 1; overflow-y: auto; padding: 36px 0 80px; position: relative; }
+  .paper { max-width: 720px; margin: 0 auto; padding: 0 48px; font-size: 16px; line-height: 1.8; }
+  .paper h2 { font-family: var(--font-serif); font-size: 22px; font-weight: 600; margin: 0 0 24px; }
+  .paper p { margin: 0 0 0.9em; position: relative; }
+
+  .ent { text-decoration: none; border-bottom: 1.5px solid; padding-bottom: 1px; cursor: pointer; }
+  .ent-char { border-color: var(--entity-character); color: inherit; }
+  .ent-place { border-color: var(--entity-place); }
+  .ent-item { border-color: var(--entity-item); }
+  .ent-org { border-color: var(--entity-org); }
+  .ent:hover { background: var(--bg-hover); }
+  .violation { border-bottom: 1.5px dashed var(--entity-violation); cursor: pointer; }
+  .para-warn::before { content: "⚠"; position: absolute; left: -28px; top: 2px; font-size: 13px; color: var(--entity-violation); }
+
+  .selection { background: var(--accent-subtle); border-radius: 3px; box-shadow: 0 0 0 1px var(--focus-ring); position: relative; }
+  .float-toolbar { position: absolute; display: inline-flex; gap: 2px; padding: 4px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); transform: translateY(-44px); font-size: 12.5px; white-space: nowrap; z-index: 20; }
+  .float-toolbar button { font: inherit; border: none; background: none; color: var(--text-primary); padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; gap: 5px; align-items: center; }
+  .float-toolbar button:hover { background: var(--bg-hover); }
+  .float-toolbar .spark { color: var(--accent); }
+
+  .hovercard { position: absolute; right: 56px; top: 158px; width: 270px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 14px; z-index: 30; font-size: 13px; }
+  .hovercard .hc-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .hovercard .avatar { width: 28px; height: 28px; border-radius: 99px; background: var(--info-subtle); color: var(--entity-character); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; flex: none; }
+  .hovercard .name { font-weight: 600; }
+  .hovercard .alias { color: var(--text-tertiary); font-size: 12px; }
+  .hovercard p { margin: 4px 0 10px; color: var(--text-secondary); line-height: 1.55; }
+  .hc-demo-tag { position: absolute; top: -9px; right: 12px; font-size: 10px; background: var(--accent-subtle); color: var(--accent-text); padding: 1px 8px; border-radius: 99px; }
+
+  /* ===== Console ===== */
+  .console { flex: none; border-top: 1px solid var(--border); background: var(--bg-app); }
+  .console-bar { display: flex; align-items: center; gap: 16px; height: 30px; padding: 0 16px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+  .console-bar .c-tab { display: flex; gap: 5px; align-items: center; padding: 2px 8px; border-radius: var(--radius-sm); }
+  .console-bar .c-tab.on { background: var(--bg-active); color: var(--text-primary); }
+  .console-body { display: none; height: 170px; overflow-y: auto; padding: 8px 16px; font-family: var(--font-mono); font-size: 11.5px; line-height: 1.8; color: var(--text-secondary); border-top: 1px solid var(--border); }
+  .console.open .console-body { display: block; }
+  .log-net { color: var(--info); }
+  .log-warn { color: var(--warning); }
+
+  /* ===== 状态栏 ===== */
+  .statusbar { display: flex; align-items: center; gap: 18px; height: 26px; padding: 0 16px; font-size: 11.5px; color: var(--text-secondary); border-top: 1px solid var(--border); background: var(--bg-app); flex: none; }
+  .mode-chip { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+  .mode-chip .dot { width: 7px; height: 7px; border-radius: 99px; }
+  .sb-violation { color: var(--danger); cursor: pointer; }
+  .statusbar .right { margin-left: auto; display: flex; gap: 18px; }
+
+  /* ===== 右栏 ===== */
+  .rightpanel { width: 400px; flex: none; background: var(--bg-sunken); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; transition: width var(--dur-base) var(--ease); }
+  .rightpanel.collapsed { width: 0; overflow: hidden; border: none; }
+  .tp-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .tp-header .acts { margin-left: auto; display: flex; gap: 4px; }
+  .thinking { flex: 1; overflow-y: auto; padding: 0 12px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .agent-block { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 12.5px; overflow: hidden; }
+  .agent-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-weight: 600; cursor: pointer; }
+  .agent-dot { width: 8px; height: 8px; border-radius: 99px; flex: none; }
+  .agent-head .time { margin-left: auto; font-weight: 400; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .agent-body { padding: 0 12px 10px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 6px; }
+  .tool-row { font-family: var(--font-mono); font-size: 11px; background: var(--bg-sunken); border-radius: var(--radius-sm); padding: 5px 8px; color: var(--text-secondary); }
+  .tool-row b { color: var(--text-primary); font-weight: 500; }
+  details.tool-json summary { cursor: pointer; list-style: none; }
+  details.tool-json pre { margin: 6px 0 0; padding: 8px; background: var(--bg-app); border-radius: var(--radius-sm); overflow-x: auto; font-size: 10.5px; line-height: 1.5; }
+  .pulse { width: 7px; height: 7px; border-radius: 99px; background: var(--agent-writer); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+  .done-check { color: var(--success); font-size: 12px; }
+
+  /* ===== ChatBox ===== */
+  .chatbox { flex: none; border-top: 1px solid var(--border); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; background: var(--bg-sunken); }
+  .chat-top { display: flex; align-items: center; gap: 8px; }
+  .mode-toggle { display: inline-flex; background: var(--bg-app); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 2px; }
+  .mode-toggle button { font: inherit; font-size: 12px; border: none; background: none; padding: 4px 14px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
+  .mode-toggle button.on { background: var(--bg-surface); box-shadow: var(--shadow-sm); font-weight: 600; }
+  .mode-toggle button.on[data-mode="discuss"] { color: var(--text-primary); }
+  .mode-toggle button.on[data-mode="plan"] { color: var(--info); }
+  .mode-toggle button.on[data-mode="write"] { color: var(--accent-text); }
+  .cancel-turn { margin-left: auto; font-size: 12px; color: var(--text-tertiary); background: none; border: none; cursor: pointer; font-family: inherit; }
+  .cancel-turn:hover { color: var(--danger); }
+  .progress-wrap { font-size: 11.5px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 4px; }
+  .progress-track { height: 4px; border-radius: 99px; background: var(--bg-active); overflow: hidden; }
+  .progress-fill { height: 100%; width: 60%; border-radius: 99px; background: var(--accent); }
+  .chat-input { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 10px 12px 8px; display: flex; flex-direction: column; gap: 8px; }
+  .chat-input:focus-within { box-shadow: 0 0 0 3px var(--focus-ring); border-color: var(--accent); }
+  .chat-input textarea { border: none; background: none; resize: none; font: inherit; font-size: 13.5px; color: var(--text-primary); outline: none; min-height: 44px; }
+  .chat-foot { display: flex; align-items: center; gap: 10px; font-size: 11px; color: var(--text-tertiary); }
+  .chat-foot .send { margin-left: auto; }
+
+  .toast-zone { position: fixed; right: 424px; bottom: 200px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <a href="index.html">← 原型索引</a>
+  <span class="proto-title">01 · 主界面五区布局</span>
+  <span>文档: design/01-main-layout.md</span>
+  <span class="spacer"></span>
+  <span>右栏 <button class="btn btn-sm" onclick="toggleRight()">折叠/展开 (Cmd+J)</button></span>
+  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
+</div>
+
+<div class="app">
+  <div class="tabs">
+    <div class="tab"><span>林溪.md</span><span class="close">×</span></div>
+    <div class="tab active"><span>第 12 章 · 雨夜来客.md</span><span class="dirty-dot" title="未保存"></span></div>
+    <div class="tab preview" title="单击预览模式,双击转永久"><span>outline.md</span><span class="close">×</span></div>
+    <div class="tab-add">＋</div>
+  </div>
+
+  <div class="body">
+    <div class="activitybar">
+      <div class="ab-item" title="大纲 (Cmd+1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg></div>
+      <div class="ab-item" title="角色 (Cmd+2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg></div>
+      <div class="ab-item" title="世界观"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.6 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.6-4-9s1.5-6.4 4-9z"/></svg></div>
+      <div class="ab-item active" title="章节 (Cmd+3)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 4v13a3 3 0 0 0 3 3"/><path d="M9 9h6M9 13h4"/></svg></div>
+      <div class="ab-item" title="查询面板 (Cmd+4)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4-4"/></svg></div>
+      <div class="ab-item" title="已学到的偏好 (Cmd+5)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l2.2 5.4L20 9l-4.4 3.9L17 19l-5-3.2L7 19l1.4-6.1L4 9l5.8-.6z"/></svg></div>
+      <div class="ab-spacer"></div>
+      <div class="ab-item" title="新手指引"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></div>
+      <div class="ab-item" title="Settings (Cmd+,)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></div>
+    </div>
+
+    <div class="filetree">
+      <div class="ft-header">章节 · CHAPTERS/</div>
+      <div class="ft-list">
+        <div class="ft-row"><span class="num">009</span>旧仓库的钥匙.md</div>
+        <div class="ft-row"><span class="num">010</span>第一次交锋.md</div>
+        <div class="ft-row"><span class="num">011</span>融资酒局.md</div>
+        <div class="ft-row active"><span class="num">012</span>雨夜来客.md<span class="dirty-dot" style="margin-left:auto"></span></div>
+        <div class="ft-row"><span class="num">013</span>概要 · 反转伏笔.md</div>
+      </div>
+      <div class="ft-foot">3 个 `_` 前缀派生文件已隐藏 — Developer Mode (Cmd+Shift+D) 可见</div>
+    </div>
+
+    <div class="mid">
+      <div class="breadcrumb">chapters <span>/</span> <b>第 12 章 · 雨夜来客.md</b><span class="wordcount">本章 3,214 字 · 选中 26 字</span></div>
+
+      <div class="editor">
+        <div class="hovercard">
+          <span class="hc-demo-tag">hover 100ms 演示</span>
+          <div class="hc-head"><span class="avatar">陆</span><span class="name">陆沉</span><span class="alias">(沉哥 / 陆先生)</span></div>
+          <span class="badge badge-info">角色</span>
+          <p>纵横资本合伙人,林溪重生前的最大对手。表面儒雅,实则记仇,左手腕有一道旧疤——只在下雨天隐隐作痛。</p>
+          <button class="btn btn-sm">打开 characters/lu-chen.md →</button>
+        </div>
+
+        <div class="paper">
+          <h2>第 12 章 · 雨夜来客</h2>
+          <p>雨下到第三天,<span class="ent ent-place">知微书馆</span>的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。<span class="ent ent-char">林溪</span>把最后一摞服务器报价单推到桌角,揉了揉眉心。</p>
+          <p>门铃响的时候是凌晨一点十四分。</p>
+          <p>来人收了伞,雨水顺着伞尖在地板上积出一小滩。<span class="ent ent-char">陆沉</span>就站在那滩水后面,西装笔挺得不像一个深夜造访的人。"林总,"他笑了笑,"我替<span class="ent ent-org">守夜人会</span>带个话。"</p>
+          <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span>让 AI 修改 <kbd>Cmd+K</kbd></button><button>查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
+          <p class="para-warn">"带话之前,先把东西还我。"她目光落在对方手里的<span class="ent ent-item">青铜罗盘</span>上——盘面上的<span class="violation" title="concept: 灵气 — ⛔ 此世界不存在,命中表面词">灵气</span>纹路在灯下泛着不正常的青色。</p>
+          <p>陆沉挑了挑眉,没接话,只是把罗盘放在了吧台上,推过来。</p>
+        </div>
+      </div>
+
+      <div class="console" id="console">
+        <div class="console-bar" onclick="toggleConsole()">
+          <span style="font-weight:600">Console</span>
+          <span class="c-tab on" data-ctab="logs">Logs <span style="color:var(--text-tertiary)">128</span></span>
+          <span class="c-tab" data-ctab="network">Network <span style="color:var(--text-tertiary)">23</span></span>
+          <span class="c-tab" data-ctab="errors">Errors <span style="color:var(--text-tertiary)">0</span></span>
+          <span style="margin-left:auto"><kbd>Cmd+`</kbd></span>
+        </div>
+        <div class="console-body">
+          <div>[01:14:02] runner/writer · turn turn_8f2a 开始 · mode=plan</div>
+          <div class="log-net">[01:14:03] POST deepseek/v4-pro · in 18,402 tok · out 1,283 tok · $0.021 · 3.4s</div>
+          <div>[01:14:06] tool readSetting('characters/lin.md') → 1,234 字</div>
+          <div class="log-warn">[01:14:08] cascade round 2/3 · 候选 12 → LLM 过滤后 8</div>
+          <div class="log-net">[01:14:09] POST deepseek/v4-flash · in 6,112 tok · out 420 tok · $0.004 · 1.1s</div>
+          <div>[01:14:11] approvals.insert ap_3e9d · status=pending · 等待用户决议</div>
+        </div>
+      </div>
+
+      <div class="statusbar">
+        <span>📖 重生互联网</span>
+        <span class="mode-chip" id="sb-mode"><span class="dot" style="background:var(--info)"></span>plan 模式</span>
+        <span class="sb-violation">⚠ 1 violation · 第 5 段</span>
+        <span class="right"><span>本月 $12.4 / $50</span><span>已保存 01:12</span></span>
+      </div>
+    </div>
+
+    <div class="rightpanel" id="rightpanel">
+      <div class="tp-header">ThinkingPanel
+        <span class="acts"><button class="btn btn-ghost btn-sm">复制 trace</button><button class="btn btn-ghost btn-sm">折叠全部</button></span>
+      </div>
+      <div class="thinking">
+        <div class="agent-block">
+          <div class="agent-head"><span class="agent-dot" style="background:var(--agent-router)"></span>Router <span style="font-weight:400;color:var(--text-tertiary)">(Flash)</span><span class="done-check">✓</span><span class="time">0.8s</span></div>
+          <div class="agent-body"><div>意图: 修改主角性别 → 委派 Writer + Validator(并行)· actions[2]</div></div>
+        </div>
+        <div class="agent-block">
+          <div class="agent-head"><span class="agent-dot" style="background:var(--agent-writer)"></span>Writer <span style="font-weight:400;color:var(--text-tertiary)">(Pro)</span><span class="pulse"></span><span class="time">12.3s</span></div>
+          <div class="agent-body">
+            <div class="tool-row"><b>readSetting</b>('characters/lin.md') → 1,234 字</div>
+            <details class="tool-json"><summary class="tool-row" style="cursor:pointer"><b>writeSettingProposal</b>(…) → proposal ap_3e9d ▸ 展开 JSON</summary>
+<pre>{
+  "kind": "proposal",
+  "approvalId": "ap_3e9d",
+  "path": "characters/lin.md",
+  "reason": "用户要求把主角性别改为女",
+  "cascade": { "rounds": 3, "items": 8 }
+}</pre></details>
+            <div>生成 diff(流式 · 第 2/3 段)…</div>
+          </div>
+        </div>
+        <div class="agent-block">
+          <div class="agent-head"><span class="agent-dot" style="background:var(--agent-validator)"></span>Validator <span style="font-weight:400;color:var(--text-tertiary)">(Pro)</span><span class="done-check">✓</span><span class="time">8.9s</span></div>
+          <div class="agent-body">
+            <div class="tool-row"><b>analyzeImpact</b>(outline.md) → 3 处引用</div>
+            <div class="tool-row"><b>analyzeImpact</b>(chapters/*) → 5 处冲突</div>
+            <div>影响半径收敛 · 共 8 段候选进入 ChangeSet</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chatbox">
+        <div class="chat-top">
+          <div class="mode-toggle" id="modeToggle">
+            <button data-mode="discuss">Discuss</button>
+            <button data-mode="plan" class="on">Plan</button>
+            <button data-mode="write">Write</button>
+          </div>
+          <button class="cancel-turn">取消本次对话</button>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill"></div></div>
+          <span>ReaderPanel · 3/5 · 毒舌读者 · 4.5s</span>
+        </div>
+        <div class="chat-input">
+          <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用文件)"></textarea>
+          <div class="chat-foot">
+            <span><kbd>Tab</kbd> 切模式</span><span><kbd>@</kbd> 引用</span><span><kbd>Cmd+↑</kbd> 历史</span>
+            <span class="send"><button class="btn btn-primary btn-sm">发送 <kbd style="background:transparent;border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.9)">⌘↵</kbd></button></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-zone" id="toastZone"></div>
+
+<script>
+function toggleTheme() {
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('onovel-theme', h.dataset.theme);
+}
+function toggleRight() { document.getElementById('rightpanel').classList.toggle('collapsed'); }
+function toggleConsole() { document.getElementById('console').classList.toggle('open'); }
+
+var modeNames = { discuss: 'discuss 模式', plan: 'plan 模式', write: 'write 模式' };
+var modeColors = { discuss: 'var(--text-tertiary)', plan: 'var(--info)', write: 'var(--accent)' };
+document.querySelectorAll('#modeToggle button').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('#modeToggle button').forEach(function (b) { b.classList.remove('on'); });
+    btn.classList.add('on');
+    var m = btn.dataset.mode;
+    document.getElementById('sb-mode').innerHTML =
+      '<span class="dot" style="background:' + modeColors[m] + '"></span>' + modeNames[m];
+    toast('已切到 ' + modeNames[m]);
+  });
+});
+function toast(msg) {
+  var t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toastZone').appendChild(t);
+  setTimeout(function () { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 2200);
+  setTimeout(function () { t.remove(); }, 2600);
+}
+</script>
+</body>
+</html>

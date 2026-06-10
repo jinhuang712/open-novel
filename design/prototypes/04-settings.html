@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Novel · SettingsDialog</title>
+<script>
+(function () {
+  var saved = localStorage.getItem('onovel-theme');
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || sys;
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .backdrop { min-height: calc(100vh - 42px); background: var(--bg-overlay); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .dialog { width: 880px; max-width: 100%; height: 620px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); display: flex; flex-direction: column; overflow: hidden; }
+
+  .dlg-top { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+  .dlg-title { font-size: 15px; font-weight: 600; }
+  .dlg-search { flex: 1; max-width: 320px; display: flex; align-items: center; gap: 7px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 5px 10px; font-size: 12.5px; color: var(--text-tertiary); }
+  .dlg-search input { border: none; background: none; outline: none; font: inherit; color: var(--text-primary); width: 100%; }
+  .dlg-close { margin-left: auto; font-size: 17px; color: var(--text-tertiary); cursor: pointer; border: none; background: none; padding: 4px 8px; border-radius: var(--radius-sm); }
+  .dlg-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+  .dlg-body { flex: 1; display: flex; min-height: 0; }
+  .nav { width: 208px; flex: none; background: var(--bg-sunken); border-right: 1px solid var(--border); overflow-y: auto; padding: 8px; }
+  .nav-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-md); font-size: 13px; color: var(--text-secondary); cursor: pointer; position: relative; }
+  .nav-row:hover { background: var(--bg-hover); color: var(--text-primary); }
+  .nav-row.active { background: var(--bg-active); color: var(--text-primary); font-weight: 500; }
+  .nav-row.active::before { content: ""; position: absolute; left: -2px; top: 7px; bottom: 7px; width: 2.5px; border-radius: 2px; background: var(--accent); }
+  .nav-row .scope { margin-left: auto; font-size: 11px; }
+  .nav-row .dirty-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--accent); }
+  .nav-row.disabled { opacity: .5; cursor: not-allowed; }
+
+  .pane { flex: 1; overflow-y: auto; padding: 18px 22px; }
+  .scope-banner { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text-secondary); background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 7px 12px; margin-bottom: 16px; }
+  .field { margin-bottom: 18px; }
+  .field > label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .field .desc { font-size: 12px; color: var(--text-tertiary); margin-top: 5px; }
+  .input { display: flex; align-items: center; gap: 8px; }
+  .input input[type="text"], .input input[type="password"], .input input[type="number"] {
+    font: inherit; font-size: 13px; color: var(--text-primary); background: var(--bg-surface);
+    border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 7px 10px; width: 280px; outline: none; }
+  .input input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+
+  .usage { width: 280px; height: 6px; border-radius: 99px; background: var(--bg-active); overflow: hidden; margin-top: 6px; }
+  .usage i { display: block; height: 100%; width: 25%; background: var(--success); border-radius: 99px; }
+
+  table.t { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+  table.t th { text-align: left; font-size: 11px; letter-spacing: .06em; color: var(--text-tertiary); font-weight: 600; padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  table.t td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  select { font: inherit; font-size: 12.5px; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 4px 8px; }
+  .override { color: var(--accent-text); font-size: 11.5px; cursor: pointer; }
+
+  .seg { display: inline-flex; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 2px; }
+  .seg button { font: inherit; font-size: 12.5px; border: none; background: none; padding: 5px 16px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
+  .seg button.on { background: var(--bg-surface); box-shadow: var(--shadow-sm); color: var(--text-primary); font-weight: 600; }
+
+  .danger-zone { border: 1px solid var(--danger); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--danger-subtle); }
+  .danger-zone h4 { margin: 0 0 8px; font-size: 13px; color: var(--danger); }
+  .danger-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; padding: 6px 0; flex-wrap: wrap; }
+
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch i { position: absolute; inset: 0; border-radius: 99px; background: var(--bg-active); transition: background var(--dur-fast); cursor: pointer; }
+  .switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 99px; background: var(--bg-raised); box-shadow: var(--shadow-sm); transition: transform var(--dur-fast) var(--ease); }
+  .switch input:checked + i { background: var(--accent); }
+  .switch input:checked + i::after { transform: translateX(16px); }
+
+  .effects li { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 5px; }
+  .kbd-capture { border: 1.5px dashed var(--accent); border-radius: var(--radius-sm); padding: 4px 10px; font-size: 12px; color: var(--accent-text); }
+  .conflict { color: var(--danger); font-size: 11.5px; }
+
+  .dlg-foot { display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); background: var(--bg-sunken); font-size: 12.5px; }
+  .dirty-note { color: var(--text-secondary); display: flex; align-items: center; gap: 7px; }
+  .dirty-note i { width: 7px; height: 7px; border-radius: 99px; background: var(--accent); }
+  .dlg-foot .grow { flex: 1; }
+  .pane-hidden { display: none; }
+  .placeholder { color: var(--text-tertiary); font-size: 13px; padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <a href="index.html">← 原型索引</a>
+  <span class="proto-title">04 · SettingsDialog</span>
+  <span>文档: design/04-settings.md · 字段契约: spec/13</span>
+  <span class="spacer"></span>
+  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
+</div>
+
+<div class="backdrop">
+  <div class="dialog" role="dialog" aria-label="设置">
+    <div class="dlg-top">
+      <span class="dlg-title">设置</span>
+      <label class="dlg-search">⌕ <input placeholder="搜索设置…(匹配 section 与字段)" oninput="filterNav(this.value)"></label>
+      <span style="font-size:11.5px;color:var(--text-tertiary)"><kbd>Cmd+,</kbd> 打开 · <kbd>Esc</kbd> 关闭</span>
+      <button class="dlg-close" title="关闭">×</button>
+    </div>
+
+    <div class="dlg-body">
+      <div class="nav" id="nav">
+        <div class="nav-row active" data-pane="p1">🔑 API Keys + 预算 <span class="dirty-dot"></span><span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p2">🤖 模型分配 <span class="scope">🔄</span></div>
+        <div class="nav-row" data-pane="p3">⌨️ 快捷键 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p4">🎨 风格定制 <span class="dirty-dot"></span><span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="px5">👥 读者仿真器 <span class="scope">📂</span></div>
+        <div class="nav-row disabled" title="二期">🌐 联网 <span class="badge badge-neutral" style="margin-left:6px">二期</span><span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p7">💾 数据管理 <span class="scope">🌐+📂</span></div>
+        <div class="nav-row" data-pane="p8">🛠 Developer Mode <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="px9">ℹ️ 关于 <span class="scope">🌐</span></div>
+      </div>
+
+      <div class="pane">
+        <div id="p1">
+          <div class="scope-banner">🌐 <b>全局</b> — 所有项目共享 · 存 ~/.open-novel/settings.json</div>
+          <div class="field">
+            <label>DeepSeek API Key</label>
+            <div class="input">
+              <input type="password" value="sk-9f31xxxxxxxxxxxx">
+              <button class="btn btn-sm">显示</button>
+              <button class="btn btn-sm">测试连接</button>
+              <span class="badge badge-success">✓ 已验证</span>
+            </div>
+            <div class="desc">仅存本地;V4 Pro = max effort,Flash = default。怎么拿 key:platform.deepseek.com/api_keys</div>
+          </div>
+          <div class="field">
+            <label>月度成本天花板</label>
+            <div class="input"><input type="number" value="50" style="width:110px"> <span style="font-size:12.5px;color:var(--text-secondary)">USD / 月</span></div>
+            <div class="usage"><i></i></div>
+            <div class="desc">本月已用 $12.4 / $50 · 超 80% 警告,触顶后暂停 LLM 调用</div>
+          </div>
+          <div class="field" style="opacity:.55">
+            <label>Bocha / Tavily Key(联网研究)</label>
+            <div class="input"><input type="text" placeholder="二期开放" disabled> <span class="badge badge-neutral">二期</span></div>
+          </div>
+        </div>
+
+        <div id="p2" class="pane-hidden">
+          <div class="scope-banner">🔄 <b>混合</b> — 全局默认,当前项目〈重生互联网〉可逐 Agent 覆盖</div>
+          <table class="t">
+            <tr><th>Agent</th><th>全局默认</th><th>项目覆盖</th></tr>
+            <tr><td>Router</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
+            <tr><td>Writer</td><td><select><option>Pro</option><option>Flash</option></select></td><td><span class="badge badge-accent">覆盖中: Pro</span> <span class="override">还原</span></td></tr>
+            <tr><td>Validator</td><td><select><option>Pro</option><option>Flash</option></select></td><td>—</td></tr>
+            <tr><td>Checker</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
+            <tr><td>Reflector</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
+            <tr><td>Humanizer</td><td><select><option>Pro</option><option>Flash</option></select></td><td>—</td></tr>
+            <tr><td>ReaderPanel</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
+          </table>
+        </div>
+
+        <div id="p3" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 重绑持久化到 settings.json,冲突即时校验</div>
+          <table class="t">
+            <tr><th>命令</th><th>默认键</th><th>当前键</th><th></th></tr>
+            <tr><td>切换 Agent 模式</td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td><td><button class="btn btn-sm">重绑</button></td></tr>
+            <tr><td>发送消息</td><td><kbd>Cmd+Enter</kbd></td><td><span class="kbd-capture">按下新组合键…(Esc 取消)</span></td><td><span class="conflict">与 approval.approve 冲突,不可保存</span></td></tr>
+            <tr><td>关闭最顶层浮层</td><td><kbd>Esc</kbd></td><td><kbd>Esc</kbd></td><td><span style="font-size:11.5px;color:var(--text-tertiary)">硬约束不可改</span></td></tr>
+          </table>
+        </div>
+
+        <div id="p4" class="pane-hidden">
+          <div class="scope-banner">📂 <b>项目级</b> — 仅作用于〈重生互联网〉· 存 project.json</div>
+          <div class="field">
+            <label>外观 <span class="badge badge-neutral" style="margin-left:4px">🌐 全局字段,陈列于此便于发现</span></label>
+            <div class="seg" id="appearance">
+              <button data-ap="light">浅色</button>
+              <button data-ap="dark">深色</button>
+              <button data-ap="auto" class="on">跟随系统</button>
+            </div>
+            <div class="desc">切换立即生效(本原型真实切换);命令面板亦可搜「切换 dark mode」。</div>
+          </div>
+          <div class="field">
+            <label>文风描述</label>
+            <div class="input"><input type="text" value="冷峻克制,短句为主,商战细节真实"></div>
+          </div>
+          <div class="field">
+            <label>全书禁用词</label>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <span class="badge badge-neutral">在某种程度上 ×</span>
+              <span class="badge badge-neutral">不禁 ×</span>
+              <span class="badge badge-neutral">眸子 ×</span>
+              <button class="btn btn-ghost btn-sm">+ 添加</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="px5" class="pane-hidden"><div class="placeholder">读者仿真器 + 叙事引擎触发 — 字段见 spec/13 §Section 5(原型略)</div></div>
+
+        <div id="p7" class="pane-hidden">
+          <div class="scope-banner">🌐+📂 <b>全局 + 当前项目</b></div>
+          <div class="field">
+            <label>Workspace 路径(🌐)</label>
+            <div class="input"><input type="text" value="~/.open-novel/workspaces/" readonly><button class="btn btn-sm">打开 Finder</button><button class="btn btn-sm">迁移…</button></div>
+            <div class="desc">Trace 总大小 23 MB · <span class="override">清理 7 天前 trace</span> · 本月 LLM 用量 $12.4(<span class="override">按 Agent 拆分</span>)</div>
+          </div>
+          <div class="field">
+            <label>当前项目〈重生互联网〉(📂)</label>
+            <div class="input"><button class="btn btn-sm">改名</button><button class="btn btn-sm">归档(30 天后自动清除)</button><button class="btn btn-sm">导出 zip(含 index.db)</button></div>
+          </div>
+          <div class="danger-zone">
+            <h4>危险区域</h4>
+            <div class="danger-row">
+              <span>删除项目(硬删,不可恢复):输入项目名确认</span>
+              <input type="text" id="delConfirm" placeholder="重生互联网" oninput="checkDel(this.value)"
+                     style="font:12.5px var(--font-ui);padding:5px 9px;border-radius:var(--radius-sm);border:1px solid var(--danger);background:var(--bg-surface);color:var(--text-primary);outline:none">
+              <button class="btn btn-danger btn-sm" id="delBtn" disabled>删除项目</button>
+            </div>
+            <div class="danger-row"><span>重置首启提示(只清 seenTips,不删数据)</span><button class="btn btn-sm">重置</button></div>
+            <div class="desc" style="margin-top:4px">清空全部数据需输入 delete-all-my-novels;server 端二次校验。</div>
+          </div>
+        </div>
+
+        <div id="p8" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 揭示系统内部基础设施,普通用户不需要</div>
+          <div class="field" style="display:flex;align-items:center;gap:12px">
+            <label class="switch"><input type="checkbox" id="devmode" onchange="this.checked && alert('原型演示: Developer Mode 已开启 (Cmd+Shift+D)')"><i></i></label>
+            <div><b style="font-size:13px">Developer Mode</b><div class="desc" style="margin-top:2px">快捷键 Cmd+Shift+D · 跨项目生效</div></div>
+          </div>
+          <ul class="effects">
+            <li>FileTree 显示 `_` 前缀派生文件(仍 read-only)</li>
+            <li>DebugConsole 默认展开(调用栈 / 工具结果 / 错误)</li>
+            <li>ThinkingPanel 显示 reasoning 全文(默认一句摘要)</li>
+            <li>ApprovalCard 顶部多一栏「查看 ChangeSet JSON」</li>
+            <li>ChatBox 下方显示 turn_id / threadId / action index</li>
+            <li>session_history.db 调试面板(LLM 日志 / token / retry)</li>
+          </ul>
+        </div>
+
+        <div id="px9" class="pane-hidden"><div class="placeholder">Open Novel 0.3.0-poc · 检查更新 · 开源许可(待补充 LICENSE)</div></div>
+      </div>
+    </div>
+
+    <div class="dlg-foot">
+      <span class="dirty-note"><i></i>2 个 section 未保存:<span class="override">API Keys</span>、<span class="override">风格定制</span></span>
+      <div class="grow"></div>
+      <button class="btn btn-sm">导入</button>
+      <button class="btn btn-sm">导出</button>
+      <button class="btn">取消</button>
+      <button class="btn btn-primary">应用</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('onovel-theme', h.dataset.theme);
+}
+document.querySelectorAll('.nav-row[data-pane]').forEach(function (row) {
+  row.addEventListener('click', function () {
+    document.querySelectorAll('.nav-row').forEach(function (r) { r.classList.remove('active'); });
+    row.classList.add('active');
+    document.querySelectorAll('.pane > div').forEach(function (p) { p.classList.add('pane-hidden'); });
+    document.getElementById(row.dataset.pane).classList.remove('pane-hidden');
+  });
+});
+function filterNav(q) {
+  document.querySelectorAll('.nav-row').forEach(function (r) {
+    r.style.display = r.textContent.toLowerCase().indexOf(q.toLowerCase()) >= 0 ? '' : 'none';
+  });
+}
+function checkDel(v) { document.getElementById('delBtn').disabled = v !== '重生互联网'; }
+document.querySelectorAll('#appearance button').forEach(function (b) {
+  b.addEventListener('click', function () {
+    document.querySelectorAll('#appearance button').forEach(function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    var v = b.dataset.ap;
+    if (v === 'auto') {
+      localStorage.removeItem('onovel-theme');
+      document.documentElement.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } else {
+      document.documentElement.dataset.theme = v;
+      localStorage.setItem('onovel-theme', v);
+    }
+  });
+});
+</script>
+</body>
+</html>

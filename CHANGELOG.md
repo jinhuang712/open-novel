@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-10 · design · 新增 design/ 界面设计体系(交互文档 + 双主题高保真原型)
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 新增 `design/` 目录:`README.md`(设计原则与导航)、`00-design-tokens.md`(Claude Desktop 风格 token,light/dark 双主题色彩 / 字体 / 圆角 / 动效与对比度验收)、`01~06` 六篇界面交互设计文档(主界面五区 / ApprovalCard 与 cascade / ReaderPanel / Settings / Onboarding / 命令面板与快捷交互),内容基于 plan/03 05 07、spec/05 06 11 12 13 15 收束,只定交互与视觉,协议与 schema 仍以 spec 为准。 | `design/*.md` | 用户要求基于现有设计文档产出界面交互 / 原型图 / UI 样例,落在 `design/`;风格参考 Claude Desktop,必须支持 dark & light 双主题。 |
+| 新增 `design/prototypes/`:`tokens.css`(唯一 token 源)+ `index.html` 原型索引 + 六个可交互高保真原型页,均支持深浅主题切换(跟随系统 + 手动记忆)。这是仓库唯一允许 `.html` 的目录(原型,非文档站)。 | `design/prototypes/*` | 同上。 |
+| 文档规范同步:文档体系与职责边界新增 design 条目;spec 不再承载“原型图 / 样例 / 交互设计”,移交 design;链接规则细化为“Markdown 不得超链接 `.html`(以代码段写路径),`design/prototypes/` 内 HTML 互链允许”。README 增补 design 导航区、目录树与文档状态说明。 | `AGENTS.md` `CLAUDE.md` `README.md` | 为 HTML 原型在纯 Markdown 仓库中开出受控例外;两份 agent 规范保持一致。 |
+
 ## 2026-06-10 · markdown migration · 文档全面去 CAST 化
 
 | 变更 | 影响文档 | 关联 |

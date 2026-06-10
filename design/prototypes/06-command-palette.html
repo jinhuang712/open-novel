@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Novel · 命令面板与快捷交互</title>
+<script>
+(function () {
+  var saved = localStorage.getItem('onovel-theme');
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || sys;
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .stage { max-width: 640px; margin: 24px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; }
+  .stage-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--text-tertiary); margin-top: 18px; }
+
+  .overlay-demo { background: var(--bg-overlay); border-radius: var(--radius-xl); padding: 36px 24px 48px; display: flex; justify-content: center; }
+  .palette { width: 520px; max-width: 100%; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .pal-input { display: flex; align-items: center; gap: 9px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+  .pal-input .pfx { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 14px; }
+  .pal-input input { flex: 1; border: none; background: none; outline: none; font: inherit; font-size: 14px; color: var(--text-primary); }
+  .pal-list { max-height: 320px; overflow-y: auto; padding: 6px; }
+  .pal-group { font-size: 10.5px; font-weight: 600; letter-spacing: .08em; color: var(--text-tertiary); padding: 8px 10px 4px; }
+  .pal-row { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: var(--radius-md); font-size: 13px; cursor: pointer; position: relative; }
+  .pal-row:hover { background: var(--bg-hover); }
+  .pal-row.sel { background: var(--bg-active); }
+  .pal-row.sel::before { content: ""; position: absolute; left: -2px; top: 6px; bottom: 6px; width: 2.5px; border-radius: 2px; background: var(--accent); }
+  .pal-row .cat { color: var(--text-tertiary); }
+  .pal-row mark { background: none; color: var(--accent-text); font-weight: 600; }
+  .pal-row .keys { margin-left: auto; display: flex; gap: 4px; }
+  .pal-row .danger-dot { width: 6px; height: 6px; border-radius: 99px; background: var(--danger); margin-left: 6px; }
+  .pal-row .when { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
+  .pal-empty { padding: 22px 10px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
+  .pal-foot { display: flex; gap: 16px; justify-content: center; padding: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-tertiary); background: var(--bg-sunken); }
+
+  .chat-mock { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; position: relative; }
+  .chat-mock .ta { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13.5px; min-height: 40px; }
+  .caret { display: inline-block; width: 1.5px; height: 15px; background: var(--accent); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .mention-pop { position: absolute; left: 38px; top: 64px; width: 320px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 5px; z-index: 10; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; background: var(--accent-subtle); color: var(--accent-text); border-radius: 7px; padding: 1px 7px; font-size: 12.5px; }
+  .chip .x { cursor: pointer; opacity: .7; }
+  .cat-dot { width: 8px; height: 8px; border-radius: 99px; flex: none; }
+
+  .editor-mock { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px 26px; font-size: 15px; line-height: 1.8; }
+  .selection { background: var(--accent-subtle); box-shadow: 0 0 0 1px var(--focus-ring); border-radius: 3px; }
+  .sel-generating { outline: 1.5px dashed var(--accent); outline-offset: 2px; border-radius: 3px; }
+  .inline-bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 7px 10px; }
+  .inline-bar .spark { color: var(--accent); }
+  .inline-bar input { flex: 1; border: none; background: none; outline: none; font: inherit; font-size: 13px; color: var(--text-primary); }
+  .gen-note { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .spinner { width: 11px; height: 11px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 99px; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast-row { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .toast .dot { width: 8px; height: 8px; border-radius: 99px; }
+  .toast .act { color: var(--accent-text); font-weight: 600; cursor: pointer; margin-left: 6px; }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <a href="index.html">← 原型索引</a>
+  <span class="proto-title">06 · 命令面板与快捷交互</span>
+  <span>文档: design/06-command-palette.md · 清单: spec/12</span>
+  <span class="spacer"></span>
+  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
+</div>
+
+<div class="stage">
+  <div class="stage-label">命令面板 — CMD+SHIFT+P / F1(输入框可真实过滤,↑↓ 选择)</div>
+  <div class="overlay-demo">
+    <div class="palette">
+      <div class="pal-input"><span class="pfx">&gt;</span><input id="palInput" value="切换" oninput="renderPal()" placeholder="输入命令…"></div>
+      <div class="pal-list" id="palList"></div>
+      <div class="pal-foot"><span><kbd>↑↓</kbd> 选择</span><span><kbd>Enter</kbd> 执行</span><span><kbd>Esc</kbd> 关闭</span><span>`when` 不满足的命令不出现</span></div>
+    </div>
+  </div>
+
+  <div class="stage-label">快速打开文件 — CMD+P(输入 &gt; 前缀即转命令面板)</div>
+  <div class="overlay-demo" style="padding:24px">
+    <div class="palette">
+      <div class="pal-input"><span class="pfx">⌕</span><input value="雨夜" readonly></div>
+      <div class="pal-list">
+        <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-item)"></span><span><mark>雨夜</mark>来客.md</span><span class="cat">chapters/012</span><span class="keys"><kbd>↵</kbd> 预览 · <kbd>⌘↵</kbd> 新 tab</span></div>
+        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 7 章 · <mark>雨夜</mark>伏击(旧稿).md</span><span class="cat">chapters/_archive</span></div>
+        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>雨</mark>巷 · 知微书馆.md</span><span class="cat">settings/locations</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage-label">@文件引用 — CHATBOX 内字面 @ 触发(IME 组词中不弹)</div>
+  <div class="chat-mock">
+    <div class="ta">帮我检查 @林<span class="caret"></span> 在前三章的称谓一致性</div>
+    <div class="mention-pop">
+      <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>林</mark>溪</span><span class="cat">角色 · characters/lin.md</span><span class="keys"><kbd>↵</kbd></span></div>
+      <div class="pal-row"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>林</mark>父</span><span class="cat">角色 · characters/lin-fu.md</span></div>
+      <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 3 章 · <mark>林</mark>家旧宅.md</span><span class="cat">章节</span></div>
+      <div class="pal-foot" style="border:none;background:none;padding:5px"><span><kbd>Esc</kbd> 取消保留字面 @林</span></div>
+    </div>
+    <div style="height:118px"></div>
+    <div class="ta">帮我检查 <span class="chip">@林溪 <span class="x">×</span></span> 在前三章的称谓一致性<span class="caret"></span></div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:8px">确认后变 mention chip;发送时展开为 [@林溪](mention://char_lin_a3f2) 契约形态(spec/12 §@文件名引用)。</div>
+  </div>
+
+  <div class="stage-label">框选 AI 改写 — CMD+K 就地输入,结果一律走 APPROVALCARD</div>
+  <div class="editor-mock">
+    <p style="margin:0 0 4px"><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。</span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
+    <div class="inline-bar"><span class="spark">✦</span><input placeholder="怎么改这段?例:语气更克制,删掉直白的心理说明"><button class="btn btn-primary btn-sm">发送</button><kbd>Esc</kbd></div>
+    <div style="height:18px"></div>
+    <p style="margin:0 0 4px"><span class="sel-generating">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。</span></p>
+    <div class="gen-note"><span class="spinner"></span>Writer 正在生成(流式)… 完成后弹 ApprovalCard,同意才 replaceRange 落盘 <button class="btn btn-ghost btn-sm">取消 (Esc)</button></div>
+  </div>
+
+  <div class="stage-label">TOAST — 右栏左缘上方,同屏最多 3 条,4S 自动消退,HOVER 暂停</div>
+  <div class="toast-row">
+    <div class="toast"><span class="dot" style="background:var(--info)"></span>已切到 plan 模式</div>
+    <div class="toast"><span style="color:var(--success)">✓</span>已落盘 7/9 项<span class="act">撤销</span></div>
+    <div class="toast"><span style="color:var(--warning)">⚠</span>完成审批后才能切模式</div>
+    <div class="toast"><span style="color:var(--danger)">✗</span>连接失败,去 Settings 检查 API key<span class="act">打开 Settings</span></div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('onovel-theme', h.dataset.theme);
+}
+var cmds = [
+  { cat: '聊天', name: '切换 Agent 模式 (discuss/plan/write)', keys: ['Tab'] },
+  { cat: '视图', name: '切换 dark mode', keys: [] },
+  { cat: '视图', name: '切换 Console', keys: ['Cmd+`'] },
+  { cat: '编辑', name: '切换段落批注', keys: ['Cmd+/'] },
+  { cat: '视图', name: '切换 Developer Mode', keys: ['Cmd+Shift+D'] },
+  { cat: '审批', name: 'cascade 全部同意', keys: ['Cmd+Shift+A'], when: '有待审时可见' },
+  { cat: '实体', name: '修复 violation(跑一次 cascade)', keys: [] },
+  { cat: '项目', name: '导出当前项目', keys: [] },
+  { cat: '项目', name: '删除项目', keys: [], danger: true },
+  { cat: '系统', name: '打开 Settings', keys: ['Cmd+,'] },
+  { cat: '系统', name: '重置首启提示', keys: [] },
+  { cat: '数据', name: '查看审批历史', keys: [] }
+];
+var recent = ['项目: 创建项目(5 分钟前)', '项目: 导出当前项目'];
+var sel = 0;
+function renderPal() {
+  var q = document.getElementById('palInput').value.trim();
+  var list = document.getElementById('palList');
+  var hits = cmds.filter(function (c) { return (c.cat + c.name).indexOf(q) >= 0; });
+  sel = Math.min(sel, Math.max(0, hits.length - 1));
+  var html = '';
+  if (q) {
+    html += '<div class="pal-group">匹配命令 (' + hits.length + ')</div>';
+    if (!hits.length) html += '<div class="pal-empty">没有匹配的命令 — 试试 设置 / 章节 / 导出</div>';
+    hits.forEach(function (c, i) {
+      var name = q ? c.name.split(q).join('<mark>' + q + '</mark>') : c.name;
+      html += '<div class="pal-row' + (i === sel ? ' sel' : '') + '" onclick="sel=' + i + ';renderPal()">'
+        + '<span class="cat">' + c.cat + ':</span><span>' + name + '</span>'
+        + (c.danger ? '<span class="danger-dot" title="危险命令,执行前有确认闸"></span>' : '')
+        + (c.when ? '<span class="when">(' + c.when + ')</span>' : '')
+        + '<span class="keys">' + c.keys.map(function (k) { return '<kbd>' + k + '</kbd>'; }).join('') + '</span></div>';
+    });
+  }
+  html += '<div class="pal-group">最近用过</div>';
+  recent.forEach(function (r) { html += '<div class="pal-row"><span style="color:var(--text-tertiary)">↺</span><span>' + r + '</span></div>'; });
+  list.innerHTML = html;
+}
+document.getElementById('palInput').addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowDown') { sel++; renderPal(); e.preventDefault(); }
+  if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); renderPal(); e.preventDefault(); }
+});
+renderPal();
+</script>
+</body>
+</html>

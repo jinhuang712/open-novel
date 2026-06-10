@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Novel · Onboarding 首启引导</title>
+<script>
+(function () {
+  var saved = localStorage.getItem('onovel-theme');
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || sys;
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .stage { display: flex; flex-direction: column; align-items: center; padding: 36px 16px 80px; gap: 28px; }
+  .wizard { width: 580px; max-width: 100%; padding: 28px 32px 24px; display: flex; flex-direction: column; min-height: 480px; }
+
+  .wz-top { display: flex; align-items: center; margin-bottom: 22px; }
+  .dots { display: flex; gap: 8px; align-items: center; }
+  .dot { width: 9px; height: 9px; border-radius: 99px; border: 1.5px solid var(--border-strong); background: transparent; }
+  .dot.done { background: var(--success); border-color: var(--success); }
+  .dot.cur { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-subtle); }
+  .step-no { font-size: 12px; color: var(--text-tertiary); margin-left: 12px; }
+  .skip-all { margin-left: auto; font-size: 12px; color: var(--text-tertiary); background: none; border: none; cursor: pointer; font-family: inherit; }
+  .skip-all:hover { color: var(--text-secondary); text-decoration: underline; }
+  .mock-badge { display: none; margin-left: 10px; }
+  .mock .mock-badge { display: inline-flex; }
+
+  h1.serif { font-family: var(--font-serif); font-size: 26px; font-weight: 600; margin: 0 0 6px; }
+  .sub { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 22px; }
+
+  .step { display: none; flex: 1; }
+  .step.on { display: block; }
+
+  .id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .id-card { border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; background: var(--bg-surface); }
+  .id-card:hover { border-color: var(--border-strong); background: var(--bg-hover); }
+  .id-card.sel { border-color: var(--accent); background: var(--accent-subtle); }
+  .id-card b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .id-card span { font-size: 12px; color: var(--text-secondary); }
+
+  .info-card { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.7; margin-bottom: 16px; }
+  .key-row { display: flex; gap: 8px; }
+  .key-row input { flex: 1; font: inherit; font-size: 13px; padding: 9px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); outline: none; }
+  .key-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+  .key-state { font-size: 12.5px; margin-top: 8px; min-height: 18px; }
+  .mock-link { display: inline-block; margin-top: 14px; font-size: 12.5px; color: var(--text-tertiary); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+  .proj-grid { display: flex; flex-direction: column; gap: 10px; }
+  .proj-card { border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; background: var(--bg-surface); position: relative; }
+  .proj-card.sel { border-color: var(--accent); background: var(--accent-subtle); }
+  .proj-card b { font-size: 13.5px; }
+  .proj-card .desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.6; }
+  .reco { position: absolute; top: -9px; right: 14px; }
+  .blank-form { display: none; margin-top: 10px; border-top: 1px dashed var(--border-strong); padding-top: 12px; }
+  .proj-card.sel .blank-form { display: block; }
+  .blank-form label { display: block; font-size: 12px; font-weight: 600; margin: 10px 0 4px; }
+  .blank-form input, .blank-form select, .blank-form textarea { width: 100%; font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); outline: none; }
+  .blank-form textarea { min-height: 56px; resize: vertical; }
+
+  .three { display: flex; flex-direction: column; gap: 10px; }
+  .three-card { display: flex; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--bg-surface); }
+  .three-card svg { width: 30px; height: 30px; flex: none; color: var(--accent); margin-top: 2px; }
+  .three-card b { font-size: 13.5px; display: block; margin-bottom: 3px; }
+  .three-card p { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.65; }
+  .cta { margin-top: 20px; text-align: center; }
+  .cta .btn { font-size: 14px; padding: 10px 28px; border-radius: var(--radius-lg); }
+
+  .wz-foot { display: flex; align-items: center; margin-top: 24px; }
+  .wz-foot .grow { flex: 1; }
+  .hint-enter { font-size: 11.5px; color: var(--text-tertiary); margin-right: 12px; }
+
+  /* tooltip showcase */
+  .tip-grid { width: 580px; max-width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tip { background: var(--bg-raised); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 10px 12px; font-size: 12.5px; }
+  .tip .when { font-size: 11px; color: var(--text-tertiary); display: block; margin-bottom: 4px; }
+  .tip .ok { margin-top: 8px; }
+  .stage-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <a href="index.html">← 原型索引</a>
+  <span class="proto-title">05 · Onboarding 首启引导</span>
+  <span>文档: design/05-onboarding.md</span>
+  <span class="spacer"></span>
+  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
+</div>
+
+<div class="stage">
+  <div class="card wizard" id="wizard">
+    <div class="wz-top">
+      <div class="dots" id="dots"></div>
+      <span class="step-no" id="stepNo">Step 1/4</span>
+      <span class="badge badge-warning mock-badge">Mock 模式</span>
+      <button class="skip-all" onclick="alert('原型演示: 跳过全部 → 直接进主界面 (默认 Discuss 模式)')">跳过全部</button>
+    </div>
+
+    <div class="step on" id="s1">
+      <h1 class="serif">欢迎来到 Open Novel</h1>
+      <p class="sub">像用 IDE 写代码一样写长篇 — 三分钟,搭好你的创作工作台。先认识一下:你是谁?</p>
+      <div class="id-grid">
+        <div class="id-card sel" onclick="selId(this)"><b>已经在番茄写过书</b><span>老作者,懂签约与全勤</span></div>
+        <div class="id-card" onclick="selId(this)"><b>想试试 AI 辅助写网文</b><span>写过一些,想提效</span></div>
+        <div class="id-card" onclick="selId(this)"><b>学生 / 业余写作</b><span>为爱发电,节奏自由</span></div>
+        <div class="id-card" onclick="selId(this)"><b>先随便看看</b><span>跳过这个,直接用</span></div>
+      </div>
+      <p class="sub" style="margin-top:14px; font-size:12px; color:var(--text-tertiary)">不影响任何功能,仅用于改进引导节奏。</p>
+    </div>
+
+    <div class="step" id="s2">
+      <h1 class="serif">接入 DeepSeek</h1>
+      <p class="sub">Open Novel 用 DeepSeek V4 驱动全部创作 Agent。</p>
+      <div class="info-card">
+        怎么拿 key:platform.deepseek.com/api_keys<br>
+        成本预估:10 万字正文 ≈ $3(Pro 写作 + Flash 路由)<br>
+        Key 仅存本地 ~/.open-novel/settings.json,不上传任何服务器
+      </div>
+      <div class="key-row">
+        <input type="password" id="keyInput" placeholder="sk-…">
+        <button class="btn" onclick="testKey()">测试连接</button>
+      </div>
+      <div class="key-state" id="keyState"></div>
+      <span class="mock-link" onclick="useMock()">跳过 — 用 Mock 模式先看看界面(占位文本,流程走通)</span>
+    </div>
+
+    <div class="step" id="s3">
+      <h1 class="serif">创建你的第一个项目</h1>
+      <p class="sub">建议先看样例:5 分钟理解「提议 → 审批 → cascade」整套流程。</p>
+      <div class="proj-grid">
+        <div class="proj-card sel" onclick="selProj(this)">
+          <span class="reco badge badge-accent">推荐 · 5 分钟看懂全流程</span>
+          <b>加载样例项目〈重生互联网〉</b>
+          <div class="desc">已含世界观 / 大纲 / 3 个角色 · 第 1 章概要 + 3000 字正文 · 5 条审批历史 + 3 条已学偏好(展示反馈学习)</div>
+        </div>
+        <div class="proj-card" onclick="selProj(this)">
+          <b>创建空白项目</b>
+          <div class="desc">从一个故事种子开始,设定逐项生成</div>
+          <div class="blank-form" onclick="event.stopPropagation()">
+            <label>项目名 *</label><input placeholder="例:大荒镖局">
+            <label>流派</label><select><option>都市重生</option><option>玄幻</option><option>悬疑异闻</option><option>科幻</option><option>历史</option></select>
+            <label>风格描述</label><input placeholder="例:冷峻克制,短句为主">
+            <label>故事种子</label><textarea placeholder="一两句话:谁,在什么世界,要做成什么事"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step" id="s4">
+      <h1 class="serif">三件事,先了解</h1>
+      <p class="sub">Open Novel 和 ChatGPT 不一样的地方:</p>
+      <div class="three">
+        <div class="three-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="8" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg>
+          <div><b>三种模式,你来定边界</b><p>右下输入框顶部:Discuss 只读检索 · Plan 改设定 · Write 写章节。焦点在输入框时按 <kbd>Tab</kbd> 循环切换。</p></div>
+        </div>
+        <div class="three-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.6-8 9-4.8-1.4-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4.5"/></svg>
+          <div><b>AI 不会偷偷改文件</b><p>所有写入先弹审批卡:看 diff、勾选、可编辑,点同意才落盘。永不超时,审到你满意为止。</p></div>
+        </div>
+        <div class="three-card">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="5" cy="12" r="2.2"/><circle cx="14" cy="5.5" r="2.2"/><circle cx="14" cy="18.5" r="2.2"/><circle cx="20.5" cy="12" r="1.6"/><path d="M7 11l5-4.5M7 13l5 4.5M16 6.5l3.5 4M16 17.5l3.5-4"/></svg>
+          <div><b>改设定,系统帮你扫全书</b><p>例:主角性别男改女 — 系统列出所有需要同步改的章节段落,整批审一次,绝不留一致性暗坑。</p></div>
+        </div>
+      </div>
+      <div class="cta"><button class="btn btn-primary" onclick="alert('原型演示: 进入主界面 (默认 Discuss 模式)')">明白了,开始写吧</button></div>
+    </div>
+
+    <div class="wz-foot">
+      <button class="btn btn-ghost" id="prevBtn" onclick="go(-1)">上一步</button>
+      <div class="grow"></div>
+      <span class="hint-enter"><kbd>Enter</kbd> 下一步</span>
+      <button class="btn btn-primary" id="nextBtn" onclick="go(1)">下一步</button>
+    </div>
+  </div>
+
+  <div class="stage-label">进入主界面后 — 渐进式一次性 TOOLTIP(写入 SEENTIPS,不重复弹,同屏最多 1 条)</div>
+  <div class="tip-grid">
+    <div class="tip"><span class="when">首次焦点 ChatBox</span>试试按 <kbd>Tab</kbd> 切换 plan / write / discuss 模式<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次出现 ApprovalCard</span>AI 想改文件 — 先看 diff 再决定,不同意就不会落盘<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次出现 cascade 警告</span>Validator 帮你扫了相关章节,看看哪些段需要一起改<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次切到 plan 模式</span>现在 AI 只会改 settings/,不会动 chapters/<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次出现 ReaderPanel 报告</span>这是 5 个虚拟读者的反应,可参考可忽略<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip" style="border-left-color:var(--border-strong)"><span class="when">重置入口</span>Settings → 数据管理 → 危险区域 →「重置首启提示」<div class="ok"><button class="btn btn-sm" disabled>展示用</button></div></div>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('onovel-theme', h.dataset.theme);
+}
+var step = 1, keyOk = false;
+function render() {
+  for (var i = 1; i <= 4; i++) document.getElementById('s' + i).classList.toggle('on', i === step);
+  var dots = '';
+  for (var j = 1; j <= 4; j++) dots += '<span class="dot ' + (j < step ? 'done' : j === step ? 'cur' : '') + '"></span>';
+  document.getElementById('dots').innerHTML = dots;
+  document.getElementById('stepNo').textContent = 'Step ' + step + '/4';
+  document.getElementById('prevBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
+  var next = document.getElementById('nextBtn');
+  next.style.display = step === 4 ? 'none' : '';
+  next.disabled = (step === 2 && !keyOk);
+  next.title = next.disabled ? '测试连接通过,或选择 Mock 模式' : '';
+}
+function go(d) { step = Math.min(4, Math.max(1, step + d)); render(); }
+function selId(el) {
+  document.querySelectorAll('.id-card').forEach(function (c) { c.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+function selProj(el) {
+  document.querySelectorAll('.proj-card').forEach(function (c) { c.classList.remove('sel'); });
+  el.classList.add('sel');
+}
+function testKey() {
+  var v = document.getElementById('keyInput').value;
+  var s = document.getElementById('keyState');
+  if (!v) { s.innerHTML = '<span style="color:var(--danger)">✗ 请先输入 key</span>'; return; }
+  s.innerHTML = '<span style="color:var(--text-tertiary)">连接中…</span>';
+  setTimeout(function () {
+    keyOk = true;
+    s.innerHTML = '<span style="color:var(--success)">✓ 连接成功 · V4 Pro / Flash 可用</span>';
+    render();
+  }, 700);
+}
+function useMock() {
+  keyOk = true;
+  document.getElementById('wizard').classList.add('mock');
+  document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选 Mock 模式 — 占位文本,可随时在 Settings 填入真实 key</span>';
+  render();
+}
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' && step < 4 && !document.getElementById('nextBtn').disabled) go(1);
+});
+render();
+</script>
+</body>
+</html>

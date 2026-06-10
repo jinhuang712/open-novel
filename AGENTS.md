@@ -24,11 +24,12 @@
 
 ## 文档体系
 
-本仓库的全部文档是纯 Markdown,不存在 HTML 文档站,也不使用 CAST 相关 skills(`cast-a-doc` / `cast-a-start`)或任何渲染脚本。
+本仓库的全部文档是纯 Markdown,不存在 HTML 文档站,也不使用 CAST 相关 skills(`cast-a-doc` / `cast-a-start`)或任何渲染脚本。唯一例外:`design/prototypes/*.html` 是浏览器直接打开的高保真界面原型(非文档站,无构建/渲染脚本)。
 
 - `README.md` 是文档导航唯一入口。
 - `plan/*.md`: 半技术 PRD(产品向)。
-- `spec/*.md`: 核心技术文档(实施向);原型图、样例与交互设计归 spec。
+- `spec/*.md`: 核心技术文档(实施向);协议、schema 与失败语义归 spec。
+- `design/*.md` + `design/prototypes/*.html`: 界面交互设计与高保真原型;UI 原型图 / 交互设计 / UI 样例归 design。
 - `progress/*.md`: 历史进度档案。
 - `TODO.md`: 当前开放问题和实施前验证项。
 - `CHANGELOG.md`: 跨文档变更流水线。
@@ -36,7 +37,7 @@
 文档规则:
 
 - **图表一律使用 mermaid 代码块**(```mermaid fence)。整个仓库不允许 ASCII 框图 / 文字版流程图;目录树文件列举(`├──` 风格)按文件列表对待,可保留在普通代码块中。
-- 仓库内部链接一律指向 `.md` 文件,不得出现指向仓库内 `.html` 的链接。
+- Markdown 文档的仓库内部链接一律指向 `.md` 文件,不得出现指向仓库内 `.html` 的超链接;引用原型时以代码段写路径(如 `design/prototypes/01-main-layout.html`)。`design/prototypes/` 内 HTML 页面之间允许互链。
 - 真实代码示例(ts/sql/bash/json/yaml 等)用带语言标注的代码块。
 
 ## Git 规则
@@ -55,7 +56,8 @@
 
 - `README.md`: 项目定位、关键能力、技术栈、文档导航、开发约定。
 - `plan/*.md`: 产品意图、用户工作流、架构取舍和 ADR。
-- `spec/*.md`: 实现契约、接口、schema、验证方式和失败语义;原型图 / 样例 / 交互设计放这里。
+- `spec/*.md`: 实现契约、接口、schema、验证方式和失败语义。
+- `design/*.md` + `design/prototypes/*.html`: 界面交互设计、原型图与 UI 样例;视觉 token 与双主题规范见 `design/00-design-tokens.md`。
 - `progress/*.md`: 历史档案,只用于追溯阶段目标、偏差和决策过程;不再承担 rolling plan。
 - `TODO.md`: 当前开放问题和实施前验证项。
 - `CHANGELOG.md`: 跨文档变更流水线。

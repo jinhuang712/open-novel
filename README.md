@@ -45,7 +45,7 @@
 
 ## 文档状态
 
-本仓库的全部文档是纯 Markdown:`README.md`(本文件,导航入口)、`plan/*.md`、`spec/*.md`、`progress/*.md`、`TODO.md`、`CHANGELOG.md`。图表一律使用 mermaid 代码块,不允许 ASCII 框图。Agent 工作规范见 [AGENTS.md](./AGENTS.md)(与 `CLAUDE.md` 内容一致)。
+本仓库的全部文档是纯 Markdown:`README.md`(本文件,导航入口)、`plan/*.md`、`spec/*.md`、`design/*.md`、`progress/*.md`、`TODO.md`、`CHANGELOG.md`。图表一律使用 mermaid 代码块,不允许 ASCII 框图。唯一的 HTML 例外是 `design/prototypes/*.html` — 浏览器直接打开的高保真界面原型(非文档站)。Agent 工作规范见 [AGENTS.md](./AGENTS.md)(与 `CLAUDE.md` 内容一致)。
 
 当前实现方向已统一为:
 
@@ -79,6 +79,7 @@ pnpm dev
 ├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 半技术 PRD(产品向)
 ├── spec/                      # 核心技术文档(实施向)
+├── design/                    # 界面设计: 交互文档 + HTML 高保真原型(prototypes/)
 ├── progress/                  # 历史进度档案(只做追溯,不再承担 rolling plan)
 ├── app/                       # Next.js 路由 + API
 ├── components/                # 前端组件
@@ -107,7 +108,7 @@ pnpm dev
 
 ### 核心技术文档 (spec/) — 实现细节 (How)
 
-把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。原型图、样例与交互设计也归 spec。
+把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。界面原型与交互设计已移至 design/。
 
 - [00-version-audit](./spec/00-version-audit.md) — W3 启动前版本 / DeepSeek / native binding 审计闸门
 - [01-storage-schema](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范
@@ -137,6 +138,19 @@ pnpm dev
 - [25-cardinal-rules](./spec/25-cardinal-rules.md) — 五大网文守则
 - [26-cascade-controller](./spec/26-cascade-controller.md) — user_turn actions、审批队列、取消与恢复的编排主权
 - [27-session-history](./spec/27-session-history.md) — session_history.db 过程数据 schema 与保留策略
+
+### 界面设计 (design/) — 交互与视觉 (Look & Feel)
+
+每个核心界面一份交互设计文档 + 一份 HTML 高保真原型(`design/prototypes/`,浏览器直接打开 `index.html`,支持深浅双主题,Claude Desktop 风格)。
+
+- [README](./design/README.md) — 设计原则、原型使用方式与导航
+- [00-design-tokens](./design/00-design-tokens.md) — 设计 token:双主题色彩 / 字体 / 圆角 / 动效
+- [01-main-layout](./design/01-main-layout.md) — 主界面五区布局交互
+- [02-approval-cascade](./design/02-approval-cascade.md) — ApprovalCard 整批审与 cascade
+- [03-reader-panel](./design/03-reader-panel.md) — ReaderPanel 章节风险报告
+- [04-settings](./design/04-settings.md) — SettingsDialog
+- [05-onboarding](./design/05-onboarding.md) — 首启引导
+- [06-command-palette](./design/06-command-palette.md) — 命令面板与快捷交互
 
 ### 历史进度 (progress/) — 迁移与决策历史 (When)
 

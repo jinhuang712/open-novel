@@ -1,0 +1,248 @@
+/* ============================================================
+   Open Novel — Design Tokens (Claude Desktop 风格)
+   配套文档: design/00-design-tokens.md
+   主题机制: html[data-theme="light" | "dark"],由页面内 JS 初始化
+   (跟随系统 prefers-color-scheme,用户可手动切换并记忆到 localStorage)
+   ============================================================ */
+
+:root,
+html[data-theme="light"] {
+  /* —— 背景 —— */
+  --bg-app: #FAF9F5;            /* 应用底色: 暖纸白 */
+  --bg-surface: #FFFFFF;        /* 卡片 / 编辑器 */
+  --bg-sunken: #F0EEE6;         /* 侧栏 / 输入底 / 下沉区 */
+  --bg-raised: #FFFFFF;         /* 浮层 / 弹窗 */
+  --bg-hover: rgba(61, 57, 41, 0.06);
+  --bg-active: rgba(61, 57, 41, 0.11);
+  --bg-overlay: rgba(40, 38, 34, 0.45);   /* 模态遮罩 */
+
+  /* —— 文字 —— */
+  --text-primary: #2D2A24;
+  --text-secondary: #6E6A60;
+  --text-tertiary: #9C978A;
+  --text-on-accent: #FFFFFF;
+
+  /* —— 边框 —— */
+  --border: #E8E5DB;
+  --border-strong: #D5D1C4;
+  --focus-ring: rgba(217, 119, 87, 0.45);
+
+  /* —— 品牌 accent (陶土橙) —— */
+  --accent: #D97757;
+  --accent-hover: #C96442;
+  --accent-subtle: #F7EAE3;
+  --accent-text: #B0563B;
+
+  /* —— 语义色 —— */
+  --info: #4F7DAF;        --info-subtle: #E9F0F7;
+  --success: #5E8C61;     --success-subtle: #EAF2EA;
+  --warning: #B8862C;     --warning-subtle: #F8F0DE;
+  --danger: #BF4D43;      --danger-subtle: #F9E9E7;
+
+  /* —— 实体高亮 (按 category) —— */
+  --entity-character: #4F7DAF;
+  --entity-place: #5E8C61;
+  --entity-item: #C2762D;
+  --entity-org: #8A6FB8;
+  --entity-violation: #BF4D43;
+
+  /* —— Agent 主题色 (ThinkingPanel) —— */
+  --agent-router: #8A8578;
+  --agent-writer: #D97757;
+  --agent-validator: #4F7DAF;
+  --agent-checker: #B8862C;
+  --agent-reflector: #8A6FB8;
+  --agent-humanizer: #4E9B8F;
+  --agent-reader: #C95F8E;
+
+  /* —— 置信度 —— */
+  --confidence-high: var(--success);
+  --confidence-mid: var(--warning);
+  --confidence-low: var(--text-tertiary);
+
+  /* —— diff —— */
+  --diff-del-bg: #FBEAE8;  --diff-del-text: #A33D34;
+  --diff-add-bg: #E8F2E8;  --diff-add-text: #44693F;
+
+  /* —— 阴影 —— */
+  --shadow-sm: 0 1px 2px rgba(45, 42, 36, 0.06);
+  --shadow-md: 0 4px 16px rgba(45, 42, 36, 0.10);
+  --shadow-lg: 0 12px 40px rgba(45, 42, 36, 0.18);
+}
+
+html[data-theme="dark"] {
+  --bg-app: #262624;
+  --bg-surface: #30302E;
+  --bg-sunken: #1F1E1D;
+  --bg-raised: #393937;
+  --bg-hover: rgba(236, 236, 234, 0.06);
+  --bg-active: rgba(236, 236, 234, 0.12);
+  --bg-overlay: rgba(10, 10, 9, 0.60);
+
+  --text-primary: #ECECEA;
+  --text-secondary: #A6A39A;
+  --text-tertiary: #75726A;
+  --text-on-accent: #FFFFFF;
+
+  --border: #3E3D3A;
+  --border-strong: #52504B;
+  --focus-ring: rgba(217, 119, 87, 0.55);
+
+  --accent: #D97757;
+  --accent-hover: #E08B6F;
+  --accent-subtle: #423630;
+  --accent-text: #E5957B;
+
+  --info: #7FA7D1;        --info-subtle: #2E3742;
+  --success: #82A886;     --success-subtle: #2E3A2F;
+  --warning: #D9A645;     --warning-subtle: #423A28;
+  --danger: #D97066;      --danger-subtle: #46302E;
+
+  --entity-character: #7FA7D1;
+  --entity-place: #82A886;
+  --entity-item: #D99A55;
+  --entity-org: #AC93D9;
+  --entity-violation: #D97066;
+
+  --agent-router: #8F8C82;
+  --agent-writer: #D97757;
+  --agent-validator: #7FA7D1;
+  --agent-checker: #D9A645;
+  --agent-reflector: #AC93D9;
+  --agent-humanizer: #6FB8AC;
+  --agent-reader: #D9849E;
+
+  --diff-del-bg: #46302E;  --diff-del-text: #E5938A;
+  --diff-add-bg: #2E3A2F;  --diff-add-text: #A4C9A0;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* ============================================================
+   基础排版 / 通用原语 (各原型页共用)
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+:root {
+  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --font-serif: "New York", "Songti SC", "Noto Serif SC", Georgia, serif;  /* Claude 标题衬线气质的替身 */
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* —— 原型页顶栏 (非产品 UI,仅原型导航) —— */
+.proto-bar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px;
+  font-size: 12.5px; color: var(--text-secondary);
+  border-bottom: 1px dashed var(--border-strong);
+  background: var(--bg-app);
+  position: sticky; top: 0; z-index: 100;
+}
+.proto-bar a { color: var(--accent-text); text-decoration: none; }
+.proto-bar a:hover { text-decoration: underline; }
+.proto-bar .spacer { flex: 1; }
+.proto-bar .proto-title { font-weight: 600; color: var(--text-primary); }
+
+/* —— 按钮 —— */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font: inherit; font-size: 13px; font-weight: 500;
+  padding: 6px 14px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface); color: var(--text-primary);
+  cursor: pointer; user-select: none;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease),
+              color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+.btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+.btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn-danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+.btn-danger:hover { background: var(--danger-subtle); }
+.btn-ghost { border-color: transparent; background: transparent; color: var(--text-secondary); }
+.btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); }
+.btn-sm { font-size: 12px; padding: 3px 10px; border-radius: var(--radius-sm); }
+
+/* —— kbd 键帽 —— */
+kbd {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 1px 6px; border-radius: 5px;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* —— 徽标 —— */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  padding: 3px 8px; border-radius: 999px;
+}
+.badge-accent { background: var(--accent-subtle); color: var(--accent-text); }
+.badge-info { background: var(--info-subtle); color: var(--info); }
+.badge-success { background: var(--success-subtle); color: var(--success); }
+.badge-warning { background: var(--warning-subtle); color: var(--warning); }
+.badge-danger { background: var(--danger-subtle); color: var(--danger); }
+.badge-neutral { background: var(--bg-sunken); color: var(--text-secondary); }
+
+/* —— 卡片 —— */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+/* —— 滚动条 —— */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* —— toast —— */
+.toast {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 16px; border-radius: var(--radius-md);
+  background: var(--bg-raised); border: 1px solid var(--border);
+  box-shadow: var(--shadow-md); font-size: 13px;
+}
+
+/* —— 主题切换按钮 (proto-bar 内) —— */
+.theme-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; padding: 4px 12px;
+  border-radius: 999px; border: 1px solid var(--border-strong);
+  background: var(--bg-surface); color: var(--text-secondary); cursor: pointer;
+}
+.theme-toggle:hover { color: var(--text-primary); background: var(--bg-hover); }

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Novel · 界面原型索引</title>
+<script>
+(function () {
+  var saved = localStorage.getItem('onovel-theme');
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || sys;
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .stage { max-width: 880px; margin: 40px auto 80px; padding: 0 20px; }
+  h1 { font-family: var(--font-serif); font-size: 30px; font-weight: 600; margin: 0 0 6px; }
+  .sub { color: var(--text-secondary); font-size: 14px; margin: 0 0 28px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+  a.tile { text-decoration: none; color: inherit; display: block; transition: transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+  a.tile:hover { transform: translateY(-2px); }
+  a.tile:hover .card { box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+  .thumb { height: 130px; background: var(--bg-sunken); border-bottom: 1px solid var(--border); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 14px; display: flex; gap: 6px; overflow: hidden; }
+  .tile-meta { padding: 12px 16px 14px; }
+  .tile-meta b { font-size: 14px; display: block; margin-bottom: 3px; }
+  .tile-meta span { font-size: 12px; color: var(--text-secondary); line-height: 1.5; display: block; }
+  .tile-meta code { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .sk { background: var(--bg-active); border-radius: 4px; }
+  .sk-accent { background: var(--accent); opacity: .85; border-radius: 4px; }
+  .sk-line { height: 6px; border-radius: 3px; background: var(--bg-active); margin-bottom: 6px; }
+  .col { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .note { margin-top: 28px; font-size: 12.5px; color: var(--text-tertiary); line-height: 1.8; }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <span class="proto-title">Open Novel · 界面原型</span>
+  <span>配套文档: design/README.md 与 design/0X-*.md</span>
+  <span class="spacer"></span>
+  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
+</div>
+
+<div class="stage">
+  <h1>界面原型索引</h1>
+  <p class="sub">Claude Desktop 风格 · 双主题(右上角切换,跟随系统)· 交互为前端演示,契约以 plan/spec 为准</p>
+
+  <div class="grid">
+    <a class="tile" href="01-main-layout.html">
+      <div class="card" style="overflow:hidden">
+        <div class="thumb">
+          <div class="sk" style="width:10px"></div>
+          <div class="sk" style="width:42px"></div>
+          <div class="col"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:90%"></div><div class="sk-line" style="width:84%"></div><div class="sk-line" style="width:88%"></div><div class="sk-line" style="width:40%"></div></div>
+          <div class="col" style="max-width:64px"><div class="sk" style="flex:1"></div><div class="sk-accent" style="height:22px"></div></div>
+        </div>
+        <div class="tile-meta"><b>01 · 主界面五区布局</b><span>Tabs / ActivityBar / FileTree / 编辑器实体高亮 / ThinkingPanel / ChatBox</span><code>design/01-main-layout.md</code></div>
+      </div>
+    </a>
+
+    <a class="tile" href="02-approval-cascade.html">
+      <div class="card" style="overflow:hidden">
+        <div class="thumb">
+          <div class="col">
+            <div class="sk-line" style="width:70%"></div>
+            <div style="display:flex;gap:6px"><div class="sk" style="width:12px;height:12px"></div><div class="sk-line" style="flex:1;margin:3px 0 0"></div></div>
+            <div class="sk" style="height:18px;background:var(--diff-del-bg)"></div>
+            <div class="sk" style="height:18px;background:var(--diff-add-bg)"></div>
+            <div style="display:flex;gap:6px;margin-top:auto"><div class="sk" style="width:54px;height:18px"></div><div class="sk-accent" style="width:84px;height:18px;margin-left:auto"></div></div>
+          </div>
+        </div>
+        <div class="tile-meta"><b>02 · ApprovalCard 审批与 Cascade</b><span>整批审 / 影响图谱 / 分级勾选 / 五大守则风险 / 拒绝反馈环</span><code>design/02-approval-cascade.md</code></div>
+      </div>
+    </a>
+
+    <a class="tile" href="03-reader-panel.html">
+      <div class="card" style="overflow:hidden">
+        <div class="thumb">
+          <div class="sk" style="width:44px;height:44px;border-radius:99px"></div>
+          <div class="col"><div class="sk-line" style="width:62%"></div><div class="sk-line" style="width:90%;background:var(--danger-subtle)"></div><div class="sk-line" style="width:86%;background:var(--success-subtle)"></div><div class="sk-line" style="width:50%"></div><div style="display:flex;gap:4px;margin-top:auto"><div class="sk-accent" style="width:10px;height:10px;border-radius:99px"></div><div class="sk-accent" style="width:10px;height:10px;border-radius:99px"></div><div class="sk" style="width:10px;height:10px;border-radius:99px"></div></div></div>
+        </div>
+        <div class="tile-meta"><b>03 · ReaderPanel 风险报告</b><span>留存预测环 / 多人标记风险与亮点 / 5 persona 反馈 / 进行态</span><code>design/03-reader-panel.md</code></div>
+      </div>
+    </a>
+
+    <a class="tile" href="04-settings.html">
+      <div class="card" style="overflow:hidden">
+        <div class="thumb">
+          <div class="col" style="max-width:64px"><div class="sk-line"></div><div class="sk-line" style="background:var(--accent-subtle)"></div><div class="sk-line"></div><div class="sk-line"></div><div class="sk-line"></div></div>
+          <div class="col"><div class="sk-line" style="width:50%"></div><div class="sk" style="height:20px;width:80%"></div><div class="sk-line" style="width:40%;margin-top:6px"></div><div class="sk" style="height:20px;width:60%"></div></div>
+        </div>
+        <div class="tile-meta"><b>04 · SettingsDialog</b><span>9 section / 🌐📂🔄 分层 / dirty 汇总 / 危险操作字样确认</span><code>design/04-settings.md</code></div>
+      </div>
+    </a>
+
+    <a class="tile" href="05-onboarding.html">
+      <div class="card" style="overflow:hidden">
+        <div class="thumb" style="align-items:center;justify-content:center">
+          <div class="col" style="max-width:150px;align-items:center">
+            <div style="display:flex;gap:5px"><div class="sk-accent" style="width:8px;height:8px;border-radius:99px"></div><div class="sk" style="width:8px;height:8px;border-radius:99px"></div><div class="sk" style="width:8px;height:8px;border-radius:99px"></div><div class="sk" style="width:8px;height:8px;border-radius:99px"></div></div>
+            <div class="sk-line" style="width:110px;height:10px;margin-top:8px"></div>
+            <div style="display:flex;gap:6px;width:100%"><div class="sk" style="flex:1;height:30px"></div><div class="sk" style="flex:1;height:30px"></div></div>
+            <div class="sk-accent" style="width:74px;height:18px;margin-top:4px"></div>
+          </div>
+        </div>
+        <div class="tile-meta"><b>05 · Onboarding 首启引导</b><span>4 步向导(身份 / API key / 首项目 / 三件事)+ 一次性 tooltip</span><code>design/05-onboarding.md</code></div>
+      </div>
+    </a>
+
+    <a class="tile" href="06-command-palette.html">
+      <div class="card" style="overflow:hidden">
+        <div class="thumb" style="align-items:flex-start;justify-content:center">
+          <div class="col" style="max-width:170px">
+            <div class="sk" style="height:20px"></div>
+            <div class="sk-line" style="width:88%;background:var(--accent-subtle)"></div>
+            <div class="sk-line" style="width:78%"></div>
+            <div class="sk-line" style="width:84%"></div>
+            <div class="sk-line" style="width:58%"></div>
+          </div>
+        </div>
+        <div class="tile-meta"><b>06 · 命令面板与快捷交互</b><span>Cmd+Shift+P / Cmd+P / @引用 / Cmd+K 框选改写 / toast</span><code>design/06-command-palette.md</code></div>
+      </div>
+    </a>
+  </div>
+
+  <div class="note">
+    所有颜色经 <code>tokens.css</code> CSS 变量引用,双主题自动适配 — token 表与对比度验收标准见 design/00-design-tokens.md。<br>
+    原型数据均为样例(项目〈重生互联网〉/ 角色 林溪 · 陆沉);协议与 schema 以 spec/ 为准。
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('onovel-theme', h.dataset.theme);
+}
+</script>
+</body>
+</html>

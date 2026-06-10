@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open Novel · ApprovalCard 审批与 Cascade</title>
+<script>
+(function () {
+  var saved = localStorage.getItem('onovel-theme');
+  var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  document.documentElement.dataset.theme = saved || sys;
+})();
+</script>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  .stage { max-width: 600px; margin: 24px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+
+  .turn-banner { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-secondary); background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 14px; }
+  .turn-banner .right { margin-left: auto; }
+
+  .approval { overflow: hidden; }
+  .ap-head { display: flex; align-items: flex-start; gap: 10px; padding: 14px 18px 12px; border-bottom: 1px solid var(--border); }
+  .ap-head .spark { color: var(--accent); font-size: 16px; line-height: 1.4; }
+  .ap-title { font-size: 14px; font-weight: 600; }
+  .ap-title code { font-family: var(--font-mono); font-size: 12.5px; background: var(--bg-sunken); padding: 1px 6px; border-radius: 5px; }
+  .ap-reason { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; }
+  .ap-badges { margin-left: auto; display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex: none; }
+
+  .graph-wrap { padding: 12px 18px; border-bottom: 1px solid var(--border); }
+  .graph-label { font-size: 11px; font-weight: 600; letter-spacing: .06em; color: var(--text-tertiary); margin-bottom: 6px; }
+  .legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
+  .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-right: 4px; }
+
+  .rows { display: flex; flex-direction: column; }
+  .group-head { display: flex; align-items: center; gap: 8px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; background: var(--bg-sunken); border-bottom: 1px solid var(--border); user-select: none; }
+  .group-head .chev { transition: transform var(--dur-fast) var(--ease); }
+  .group.closed .chev { transform: rotate(-90deg); }
+  .group.closed .change-row { display: none; }
+
+  .change-row { display: flex; gap: 10px; padding: 12px 18px; border-bottom: 1px solid var(--border); transition: opacity var(--dur-fast) var(--ease); }
+  .change-row.off { opacity: .5; }
+  .change-row input[type="checkbox"] { margin-top: 3px; accent-color: var(--accent); width: 15px; height: 15px; flex: none; }
+  .cr-main { flex: 1; min-width: 0; }
+  .cr-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; flex-wrap: wrap; }
+  .cr-title code { font-family: var(--font-mono); font-size: 12px; }
+  .cr-reason { font-size: 12px; color: var(--text-secondary); margin: 2px 0 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .edit-link { margin-left: auto; flex: none; }
+
+  .diff { font-family: var(--font-mono); font-size: 12px; line-height: 1.7; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  .diff div { padding: 1px 10px; white-space: pre-wrap; }
+  .d-ctx { color: var(--text-tertiary); }
+  .d-del { background: var(--diff-del-bg); color: var(--diff-del-text); }
+  .d-add { background: var(--diff-add-bg); color: var(--diff-add-text); }
+
+  .edit-area { display: none; margin-top: 8px; }
+  .change-row.editing .edit-area { display: block; }
+  .edit-area textarea { width: 100%; font: 12.5px/1.7 var(--font-mono); color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px; resize: vertical; min-height: 64px; }
+  .edit-area .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+
+  .rules { margin: 12px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .rule-block { border-radius: var(--radius-md); padding: 10px 14px; font-size: 12.5px; }
+  .rule-critical { background: var(--danger-subtle); border: 1px solid var(--danger); }
+  .rule-critical .rt { color: var(--danger); font-weight: 600; }
+  .rule-major { background: var(--warning-subtle); border: 1px solid transparent; }
+  .rule-major .rt { color: var(--warning); font-weight: 600; }
+  .rule-block .jump { color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .ack { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-weight: 500; color: var(--danger); }
+  .ack input { accent-color: var(--danger); margin-top: 2px; }
+
+  .actions { display: flex; align-items: center; gap: 8px; padding: 12px 18px; background: var(--bg-sunken); }
+  .actions .grow { flex: 1; }
+
+  .reject-pane { display: none; padding: 12px 18px; border-top: 1px dashed var(--border-strong); }
+  .approval.rejecting .reject-pane { display: block; }
+  .reject-pane label { font-size: 12.5px; font-weight: 600; }
+  .reject-pane textarea { width: 100%; margin-top: 6px; font: 13px/1.6 var(--font-ui); color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 10px; min-height: 64px; resize: vertical; }
+  .reject-pane .hint { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; }
+  .reject-pane .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+  .kbd-hints { display: flex; gap: 16px; justify-content: center; font-size: 11.5px; color: var(--text-tertiary); }
+</style>
+</head>
+<body>
+<div class="proto-bar">
+  <a href="index.html">← 原型索引</a>
+  <span class="proto-title">02 · ApprovalCard 审批与 Cascade</span>
+  <span>文档: design/02-approval-cascade.md</span>
+  <span class="spacer"></span>
+  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
+</div>
+
+<div class="stage">
+  <div class="turn-banner">⏳ 本次对话进行中 · action 1/2<span class="right"><button class="btn btn-sm btn-danger">取消本次对话 · 回退 0 项</button></span></div>
+
+  <div class="card approval" id="approval">
+    <div class="ap-head">
+      <span class="spark">✱</span>
+      <div>
+        <div class="ap-title">Writer 想要 writeSetting: <code>characters/lin.md</code></div>
+        <div class="ap-reason">原因: 用户要求把主角性别改为女 — 名字 林川 → 林溪</div>
+      </div>
+      <div class="ap-badges">
+        <span class="badge badge-accent">+8 项 cascade · 3 轮分析</span>
+        <span class="badge badge-neutral">还有 1 条待审 <kbd>Cmd+]</kbd></span>
+      </div>
+    </div>
+
+    <div class="graph-wrap">
+      <div class="graph-label">影响图谱 · HOVER 节点联动下方行</div>
+      <svg viewBox="0 0 540 110" style="width:100%; height:auto" aria-label="影响图谱">
+        <g stroke="var(--border-strong)" stroke-width="1.2">
+          <line x1="80" y1="55" x2="200" y2="22"/><line x1="80" y1="55" x2="200" y2="55"/><line x1="80" y1="55" x2="200" y2="88"/>
+          <line x1="200" y1="22" x2="330" y2="22"/><line x1="200" y1="55" x2="330" y2="55"/>
+          <line x1="330" y1="22" x2="455" y2="38"/><line x1="330" y1="55" x2="455" y2="72"/>
+        </g>
+        <g font-size="10.5" font-family="var(--font-mono)">
+          <g><circle cx="80" cy="55" r="7" fill="var(--accent)"/><text x="80" y="80" text-anchor="middle" fill="var(--text-secondary)">lin.md</text></g>
+          <g><circle cx="200" cy="22" r="6" fill="var(--info)"/><text x="200" y="10" text-anchor="middle" fill="var(--text-secondary)">outline</text></g>
+          <g><circle cx="200" cy="55" r="6" fill="var(--info)"/><text x="218" y="47" fill="var(--text-secondary)">wang.md</text></g>
+          <g><circle cx="200" cy="88" r="6" fill="var(--info)"/><text x="200" y="105" text-anchor="middle" fill="var(--text-secondary)">ch_001</text></g>
+          <g><circle cx="330" cy="22" r="6" fill="var(--warning)"/><text x="330" y="10" text-anchor="middle" fill="var(--text-secondary)">ch_003</text></g>
+          <g><circle cx="330" cy="55" r="6" fill="var(--warning)"/><text x="348" y="47" fill="var(--text-secondary)">ch_005</text></g>
+          <g><circle cx="455" cy="38" r="5" fill="var(--text-tertiary)"/><text x="455" y="24" text-anchor="middle" fill="var(--text-secondary)">ch_007</text></g>
+          <g><circle cx="455" cy="72" r="5" fill="var(--text-tertiary)"/><text x="455" y="92" text-anchor="middle" fill="var(--text-secondary)">timeline</text></g>
+        </g>
+      </svg>
+      <div class="legend">
+        <span><i style="background:var(--accent)"></i>主修改</span>
+        <span><i style="background:var(--info)"></i>一级 cascade</span>
+        <span><i style="background:var(--warning)"></i>二级</span>
+        <span><i style="background:var(--text-tertiary)"></i>三级</span>
+      </div>
+    </div>
+
+    <div class="rows">
+      <div class="change-row" data-row>
+        <input type="checkbox" checked data-check>
+        <div class="cr-main">
+          <div class="cr-title">主修改: <code>characters/lin.md</code><span class="badge badge-accent">level 0</span>
+            <button class="btn btn-ghost btn-sm edit-link" onclick="toggleEdit(this)">编辑</button></div>
+          <div class="cr-reason">性别与名字字段 + 人物小传相应改写</div>
+          <div class="diff">
+            <div class="d-ctx">  # characters/lin.md · frontmatter</div>
+            <div class="d-del">- gender: male</div>
+            <div class="d-add">+ gender: female</div>
+            <div class="d-del">- 名字叫林川,北漂程序员,2024 年猝死在工位上。</div>
+            <div class="d-add">+ 名字叫林溪,北漂程序员,2024 年猝死在工位上。</div>
+          </div>
+          <div class="edit-area"><textarea>+ 名字叫林溪,北漂程序员,2024 年猝死在工位上。</textarea>
+            <div class="row"><button class="btn btn-sm" onclick="toggleEdit(this)">取消</button><button class="btn btn-primary btn-sm" onclick="saveEdit(this)">保存编辑</button></div></div>
+        </div>
+      </div>
+
+      <div class="group" id="g1">
+        <div class="group-head" onclick="toggleGroup('g1')"><span class="chev">▾</span>一级 cascade(5)<span class="badge badge-neutral" data-gcount>4/5 勾选</span></div>
+        <div class="change-row" data-row><input type="checkbox" checked data-check>
+          <div class="cr-main"><div class="cr-title"><code>outline.md § …a3f2c8d1</code><span class="badge badge-success">高置信</span></div>
+            <div class="cr-reason">第 3 段以"他"指代主角,需改为"她"</div>
+            <div class="diff"><div class="d-del">- 他在融资酒局上第一次亮出底牌</div><div class="d-add">+ 她在融资酒局上第一次亮出底牌</div></div></div></div>
+        <div class="change-row" data-row><input type="checkbox" checked data-check>
+          <div class="cr-main"><div class="cr-title"><code>characters/wang.md § …9b07d2aa</code><span class="badge badge-success">高置信</span></div>
+            <div class="cr-reason">王胖子对主角的称谓"川哥"需调整</div>
+            <div class="diff"><div class="d-del">- 嘴上喊着"川哥",心里却服气</div><div class="d-add">+ 嘴上喊着"溪姐",心里却服气</div></div></div></div>
+        <div class="change-row" data-row><input type="checkbox" checked data-check>
+          <div class="cr-main"><div class="cr-title"><code>chapters/ch_001 § 段 5</code><span class="badge badge-success">高置信</span></div>
+            <div class="cr-reason">开场自我介绍中的性别表述</div>
+            <div class="diff"><div class="d-del">- 我叫林川,一个普通的北漂程序员</div><div class="d-add">+ 我叫林溪,一个普通的北漂程序员</div></div></div></div>
+        <div class="change-row" data-row><input type="checkbox" checked data-check>
+          <div class="cr-main"><div class="cr-title"><code>chapters/ch_001 § 段 12</code><span class="badge badge-warning">中置信</span></div>
+            <div class="cr-reason">室友招呼用语随性别变化("哥们"→ 更自然的称呼)</div>
+            <div class="diff"><div class="d-del">- "哥们,泡面还要不要了?"</div><div class="d-add">+ "林溪,泡面还要不要了?"</div></div></div></div>
+        <div class="change-row off" data-row><input type="checkbox" data-check>
+          <div class="cr-main"><div class="cr-title"><code>chapters/ch_001 § 段 18</code><span class="badge badge-neutral">低置信 · 默认不勾</span></div>
+            <div class="cr-reason">"程序员鼓励师"玩笑话可能不再成立 — 语境存疑,建议人工判断</div>
+            <div class="diff"><div class="d-del">- 同事起哄让他当"鼓励师"</div><div class="d-add">+ (待定)删除该玩笑或改写语境</div></div></div></div>
+      </div>
+
+      <div class="group closed" id="g2">
+        <div class="group-head" onclick="toggleGroup('g2')"><span class="chev">▾</span>二级 cascade(3)<span class="badge badge-neutral" data-gcount>2/3 勾选</span></div>
+        <div class="change-row" data-row><input type="checkbox" checked data-check>
+          <div class="cr-main"><div class="cr-title"><code>chapters/ch_003 § 段 7</code><span class="badge badge-warning">中置信</span></div>
+            <div class="cr-reason">由 wang.md 称谓变化连带:对话引用"川哥"</div>
+            <div class="diff"><div class="d-del">- "川哥这个人,你别看他闷"</div><div class="d-add">+ "溪姐这个人,你别看她闷"</div></div></div></div>
+        <div class="change-row" data-row><input type="checkbox" checked data-check>
+          <div class="cr-main"><div class="cr-title"><code>chapters/ch_005 § 段 3</code><span class="badge badge-warning">中置信</span></div>
+            <div class="cr-reason">媒体报道段落中的"青年才俊"表述微调</div>
+            <div class="diff"><div class="d-del">- 这位 26 岁的青年才俊</div><div class="d-add">+ 这位 26 岁的创业新锐</div></div></div></div>
+        <div class="change-row off" data-row><input type="checkbox" data-check>
+          <div class="cr-main"><div class="cr-title"><code>timeline/2024.md § 段 2</code><span class="badge badge-neutral">低置信</span></div>
+            <div class="cr-reason">时间线事件描述可能无需变动</div>
+            <div class="diff"><div class="d-ctx">  (无文本变更建议,仅标记复核)</div></div></div></div>
+      </div>
+    </div>
+
+    <div class="rules">
+      <div class="rule-block rule-critical">
+        <div class="rt">⛔ 1 项严重违反守则,可能让读者直接弃书 — 人设崩坏</div>
+        <div style="margin-top:4px">ch_003 <span class="jump">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让 Writer 重做。</div>
+        <label class="ack"><input type="checkbox" id="ackRisk" onchange="refresh()">我已阅读上述风险,明知违反仍通过</label>
+      </div>
+      <div class="rule-block rule-major">
+        <div class="rt">⚠ 1 项 major — 节奏崩盘风险</div>
+        <div style="margin-top:4px">本批改动集中在前三章,建议改完后跑一次 ReaderPanel 验证黄金三章爽点密度(<span class="jump">查看 spec/25 §黄金三章</span>)。</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost btn-sm" onclick="setAll(true)">全选</button>
+      <button class="btn btn-ghost btn-sm" onclick="setAll(false)">全不选</button>
+      <div class="grow"></div>
+      <button class="btn btn-danger" onclick="document.getElementById('approval').classList.toggle('rejecting')">拒绝全部 <kbd style="border-color:currentColor;color:inherit;background:transparent">N</kbd></button>
+      <button class="btn btn-primary" id="approveBtn">同意勾选项 <span id="count">7/9</span> <kbd style="background:transparent;border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.95)">Y</kbd></button>
+    </div>
+
+    <div class="reject-pane">
+      <label>为什么拒绝?(必填 — 会作为反馈让 Writer 重做)</label>
+      <textarea placeholder="例:改性别后语气还是男性化的,口吻没调整"></textarea>
+      <div class="hint">提交后自动发一条消息驱动 Agent 带着拒绝理由重新生成。</div>
+      <div class="row"><button class="btn btn-sm" onclick="document.getElementById('approval').classList.remove('rejecting')">取消</button><button class="btn btn-primary btn-sm">提交反馈并拒绝</button></div>
+    </div>
+  </div>
+
+  <div class="kbd-hints">
+    <span><kbd>Y</kbd> 同意</span><span><kbd>N</kbd> 拒绝</span><span><kbd>E</kbd> 编辑后同意</span>
+    <span><kbd>Cmd+Shift+A</kbd> cascade 全选同意</span><span><kbd>Cmd+]</kbd> 下一条待审</span>
+  </div>
+</div>
+
+<script>
+function toggleTheme() {
+  var h = document.documentElement;
+  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('onovel-theme', h.dataset.theme);
+}
+function toggleGroup(id) { document.getElementById(id).classList.toggle('closed'); }
+function toggleEdit(el) { el.closest('[data-row]').classList.toggle('editing'); }
+function saveEdit(el) {
+  var row = el.closest('[data-row]');
+  row.classList.remove('editing');
+  var t = row.querySelector('.cr-title');
+  if (!t.querySelector('.badge-info')) {
+    var b = document.createElement('span'); b.className = 'badge badge-info'; b.textContent = '已编辑';
+    t.insertBefore(b, t.querySelector('.edit-link'));
+  }
+}
+function setAll(v) {
+  document.querySelectorAll('[data-check]').forEach(function (c) { c.checked = v; });
+  refresh();
+}
+function refresh() {
+  var checks = Array.prototype.slice.call(document.querySelectorAll('[data-check]'));
+  checks.forEach(function (c) { c.closest('[data-row]').classList.toggle('off', !c.checked); });
+  var on = checks.filter(function (c) { return c.checked; }).length;
+  document.getElementById('count').textContent = on + '/' + checks.length;
+  var acked = document.getElementById('ackRisk').checked;
+  var btn = document.getElementById('approveBtn');
+  btn.disabled = on === 0 || !acked;
+  btn.title = !acked ? '存在 critical 风险:先勾选"明知违反仍通过"' : (on === 0 ? '至少勾选一项' : '');
+  document.querySelectorAll('.group').forEach(function (g) {
+    var gc = g.querySelectorAll('[data-check]');
+    var gon = Array.prototype.filter.call(gc, function (c) { return c.checked; }).length;
+    g.querySelector('[data-gcount]').textContent = gon + '/' + gc.length + ' 勾选';
+  });
+}
+document.querySelectorAll('[data-check]').forEach(function (c) { c.addEventListener('change', refresh); });
+refresh();
+</script>
+</body>
+</html>
