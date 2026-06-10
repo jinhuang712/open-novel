@@ -359,7 +359,7 @@ async function semanticRelevantSegs(
 ```ts
 async function relevantSettingsIndexes(projectId: string): Promise<WorldviewSection[]> {
   // 取 settings/**/_index.md 全部 + 顶层 scalar 散文件 (taboos.md / themes.md / reader-promises.md)
-  // 1M ctx 下不裁: 18 个 _index.md 约 5-10K token, 顶层 scalar 约 1-3K token, 合计 < 15K (与 plan/12 一致性优先一致)
+  // 1M ctx 下不裁: 18 个 _index.md 约 5-10K token, 顶层 scalar 约 1-3K token, 合计 < 15K (一致性优先, 见 spec/23)
   const settingsDir = `${projectDir(projectId)}/settings`
   const indexPaths = await glob(`${settingsDir}/**/_index.md`)         // 18 个子目录索引
   const topLevelScalars = ['taboos.md', 'themes.md', 'reader-promises.md']    // 项目级硬约束散文件

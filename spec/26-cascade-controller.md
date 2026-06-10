@@ -124,7 +124,7 @@ cascade controller 的调试事件写入 [spec/27](./27-session-history.md) 的 
 
 ## 关联文档
 
-- [plan/02](../plan/02-multi-agent.md) Router actions 输出
+- [spec/24 §Router 输出](./24-json-output.md) Router actions schema 与意图分类示例
 - [spec/06](./06-approval-flow.md) Approval resolve / rollback endpoint
 - [spec/07](./07-mode-state-machine.md) UI 状态机
 - [spec/19](./19-impact-analysis.md) analyzeImpact

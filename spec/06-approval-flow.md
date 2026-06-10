@@ -600,6 +600,13 @@ async function onResolve(call, decision, finalContent) {
 
 Reflector 异步消费 (Worker),不阻塞主链路。
 
+**per-turn 批次语义**: resolve 时只入队数据;Reflector 真正跑是在 `user_turns.status` 转入终态 `'done'` 时,**每 turn 跑一次**,输入是整个 turn 的用户原话 (`user_turns.user_input`) + Router `actions[]` (`user_turns.router_actions`) + 该 turn 全部 approvals 决议。不逐 approval / 逐 cascade_group 跑 — 单 turn 内多个 action 之间有因果关联 (例: action[0] 改主角性别接受 12/15 cascade, action[1] 写章节漏改称谓被 reject → 只有跨 action 看完整 turn 才能提炼出"gender cascade 用户在意称谓"这类经验)。例外:
+
+- **cancelled turn 不跑**: 用户主动放弃整 turn = "这次试错本身就不该参考",入 learnings 反而误导;cancelled turn 进 `history` 留 trace,不进 Reflector
+- **discuss 模式 turn 不跑**: 无 approve/reject 决议信号,无 learning 可提炼
+
+输出 schema (含 `turnId` / scope 枚举) 见 [spec/24 §Reflector 经验提炼](./24-json-output.md);weight 生命周期见 [spec/01 §learnings](./01-storage-schema.md#learnings)。
+
 ## 撤销
 
 `approvals` 表支持**单条回退**和**整 turn 回退**两种粒度。整 turn 回退由 §Turn 取消语义 触发, 内部循环调下面这个 `rollbackApproval`:

@@ -68,7 +68,7 @@ const result = await generateText({
 
 详见下面各 schema 章节。
 
-### Router 输出 (actions[] 一次性意图解析, 见 plan/02 §路由策略)
+### Router 输出 (actions[] 一次性意图解析, 编排语义见 [spec/26](./26-cascade-controller.md))
 
 ```ts
 import { z } from 'zod'
@@ -126,7 +126,7 @@ export type RouterOutput = z.infer<typeof RouterOutputSchema>
 {user_input}
 ```
 
-**意图分类示例** (与 plan/02 §路由策略 对齐):
+**意图分类示例**:
 
 - "你觉得主角应该长什么样" → `actions=[{ kind: 'discussFreeForm', question: ... }]`
 - "把主角改成女生" → `actions=[{ kind: 'writeSetting', target: 'characters/lin.md', intent: ... }]`

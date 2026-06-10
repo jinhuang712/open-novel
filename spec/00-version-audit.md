@@ -75,14 +75,14 @@ npm view ahocorasick versions --json | jq '.[-3:]'
 
 **关键修正** (与之前训练数据假设的偏差):
 
-- **ctx 上限**: **1M tokens**。设计骨架 = per-agent 上下文契约 + 一致性优先 (spec/23 / plan/12),不做 token 预算裁剪
+- **ctx 上限**: **1M tokens**。设计骨架 = per-agent 上下文契约 + 一致性优先 (spec/23),不做 token 预算裁剪
 - **max output**: 之前没考虑 → **384K tokens**(对 Writer 单次写超长章节非常友好,但 JSON mode 必须配套设 `max_tokens` 防截断,见 §G)
 - **模型命名**: 实查证实 `deepseek-v4-pro` / `deepseek-v4-flash` 是真实 ID(无 `deepseek/` 前缀,纯 model 名)
 - **reasoning**: 没有独立 reasoning model;V4-Flash 自带 thinking 模式,通过参数切换;不需要再为 ArcTracker / Validator 单独选 reasoner
 
 **模型选型守约**:
 
-> **[info]** ❌ **禁止 fallback 到 `deepseek-chat` / `deepseek-reasoner` / `deepseek-r1` / `deepseek-v3`** — 这些旧模型没有 reasoning effort 控制,也没有 V4 的 `max` variant,与 plan/02 的混合分档设计 (`v4-pro + max` / `v4-flash + default`) 冲突。一旦 V4 临时不可用,直接 escalate 到用户而非静默回退到 V3/旧版,因为旧模型行为差异会让 cardinal-rules 检测精度劣化。
+> **[info]** ❌ **禁止 fallback 到 `deepseek-chat` / `deepseek-reasoner` / `deepseek-r1` / `deepseek-v3`** — 这些旧模型没有 reasoning effort 控制,也没有 V4 的 `max` variant,与 [spec/13 §模型分配](./13-settings.md) 的混合分档设计 (`v4-pro + max` / `v4-flash + default`) 冲突。一旦 V4 临时不可用,直接 escalate 到用户而非静默回退到 V3/旧版,因为旧模型行为差异会让 cardinal-rules 检测精度劣化。
 
 ### G. DeepSeek JSON 输出模式
 
@@ -225,7 +225,7 @@ W3 启动第一日,**先开 `progress/00X-version-audit.md`**,按以下结构填
 
 - [ ] plan/08 §锁定的库版本 — 替换为实查表
 - [ ] plan/01 §关键技术决策汇总 — 修正"via Vercel AI Gateway"语
-- [ ] plan/02 §模型选择策略 — 修正模型 id
+- [ ] spec/13 §模型分配 (原 plan/02 §模型选择策略, 已并入) — 修正模型 id
 - [ ] spec/02 §writeSetting / writeChapter — 改写为 cookbook 形态
 - [ ] spec/06 §服务端实现 — 重写
 - [ ] spec/03 §模型偏好注入 — 修正 model id

@@ -1,6 +1,6 @@
 # Spec 23 — Per-agent 上下文契约 (Per-agent Context Contracts)
 
-> **[info]** 与 [plan/12 §per-agent 上下文契约](../plan/12-memory-and-context.md) 对齐 — 这一篇是 **L1 (工作记忆)** 的具体落地。每个 agent 有自己的 context builder,根据职责定义"必装什么 / 不装什么";一致性所需的全部数据必装,不在限额内做选择。
+> **[info]** 本文件是四层记忆模型中 **L1 (工作记忆)** 的具体落地(四层模型总览见 [spec/22 §四层记忆模型](./22-memory-and-history.md))。每个 agent 有自己的 context builder,根据职责定义"必装什么 / 不装什么";一致性所需的全部数据必装,不在限额内做选择。
 
 ## 设计原则
 
@@ -57,7 +57,7 @@ export async function buildBaseContext(input: BaseContextInput, agentName: strin
     weight: { gte: 0.2 },
   }).orderBy('weight', 'desc').limit(8)
 
-  // 2. cardinal_rule scope 永远保留 top-1 (与 spec/25 + plan/12 一致)
+  // 2. cardinal_rule scope 永远保留 top-1 (与 spec/25 一致)
   const cardinalRuleLearnings = allLearnings.filter(l => l.scope === 'cardinal_rule')
   const others = allLearnings.filter(l => l.scope !== 'cardinal_rule')
   const learnings = [...cardinalRuleLearnings.slice(0, 1), ...others].slice(0, 8)
@@ -200,6 +200,21 @@ async function buildWriterWriteContext(input: WriterInput): Promise<BuildOutput>
 - 概念约束 + 章节弧光 + 范文 + 守则: ≈ 30K
 - learnings + recent_messages: ≈ 20K
 - **小计**: ≈ 165K (16% of 1M, 远不接近警报阈值)
+
+### 1b. Writer (plan 模式) — 文体分流
+
+Writer 是单一 Agent, 但两种模式文体差异大:
+
+- **plan 模式** (writeSetting): 写 worldview.md / character.md 等设定文档 — **说明文 + 完整 frontmatter**
+- **write 模式** (writeChapter): 写小说正文 — **文学体**
+
+**风险**: 用写设定的腔调写小说, 或反之。**缓解** (本文件的装配责任):
+
+1. Writer 的 context builder 在每次调用前**必须注入"你现在是 plan 模式 / write 模式"** + 对应**文体范例** (plan 模式注入设定文档范例片段; write 模式注入 `userExemplars` 文学体范文)
+2. system prompt 头部 stable header 段 (spec/03) 含模式区分指令; 动态 `mode_constraints` 片段按模式注入 (见 [spec/03 §模式约束片段](./03-prompts.md))
+3. plan 模式装配比 write 模式轻: 不装 recentChapters / chapterArc / 守则滚动指标, 必装 settings 相关 L4 (现有 setting 全文 + 概念表 + entity 索引, 经 spec/20 assembleContext)
+
+**决策 (ADR)**: 保留单 Writer + 模式注入区分; 若实测出现"用写设定的腔调写小说"或反之, 再拆为 SettingsAuthor + ChapterWriter 两个 primary agent。
 
 ### 2. Validator
 

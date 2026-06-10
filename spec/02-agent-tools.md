@@ -390,8 +390,9 @@ prune 触发时把 `_tool_cache/{toolCallId}.json` 缓存文件**真删** (`fs.u
 | `cover-meta` | 用户首次完成第一卷或主动要求 | worldview.md + 主线 character.md + 本卷 volume_summary | `CoverMetaSchema` (slogan + tagline + 关键词 + 推荐分类) | Flash + default |
 | `compaction` (旧 compressOldMessages) | spec/22 §可选历史压缩 启用 + > 60 条 messages | mastra_messages 旧批次 | `CompressionSummarySchema` (spec/22) | Flash + default |
 | `reflection` (= 现 Reflector) | 用户 approve / reject 后 cascade 末 | approval history 单批 | `ReflectionOutputSchema` (spec/24) | Flash + default |
+| `chapter-writer-retry` | doom-loop 检测判 continue 后, cascade 控制器派 Writer 重生成 (spec/06 §doom-loop) | 原 writer threadId (续 thread) + 拒绝理由 + chapterId | 章节正文 NL 流式 (**不走 JSON mode**) | **Pro + max** (唯一例外, 本质是 Writer 的 isolated 调用) |
 
-**全部走 Flash + default**: 这些都是输出短的辅助任务, 不是创作核心。Reflector 例外? 否, Reflector 是从 cascade 反馈学经验, 短摘要级 — Flash + default 够。
+**除 `chapter-writer-retry` 外全部走 Flash + default**: 这些都是输出短的辅助任务, 不是创作核心。Reflector 例外? 否, Reflector 是从 cascade 反馈学经验, 短摘要级 — Flash + default 够。`chapter-writer-retry` 是 Writer 重生成正文的封装 (Pro + max, 续原 threadId 让 Writer 看到"我刚才被拒了", 见 spec/06 §doom-loop), 不在 Settings 暴露。
 
 ### 实现统一封装
 
@@ -404,11 +405,12 @@ export type HiddenAgentName =
   | 'cover-meta'
   | 'compaction'
   | 'reflection'
+  | 'chapter-writer-retry'
 
 export const HIDDEN_AGENT_REGISTRY: Record<HiddenAgentName, {
   systemPrompt: string                                  // 模板, 引用自 spec/03
-  schema: z.ZodSchema                                   // spec/24 zod
-  model: 'flash'
+  schema?: z.ZodSchema                                  // spec/24 zod; chapter-writer-retry 输出 NL 无 schema
+  model: 'flash' | 'pro'                                // 仅 chapter-writer-retry 用 pro
   maxTokens: number
 }> = { /* ... */ }
 
@@ -418,9 +420,10 @@ export async function runHiddenAgent<N extends HiddenAgentName>(
   ctx: { projectId: string; threadId?: string },
 ): Promise<HiddenAgentOutput[N]> {
   const cfg = HIDDEN_AGENT_REGISTRY[name]
+  // chapter-writer-retry 输出 NL 流式, 走 streamText 续 thread; 其余走 callJsonAgent
   return callJsonAgent({                                // spec/24
     label: `hidden:${name}`,
-    model: deepseekFlash,
+    model: cfg.model === 'pro' ? deepseekPro : deepseekFlash,
     schema: cfg.schema,
     maxTokens: cfg.maxTokens,
     messages: buildMessages(cfg.systemPrompt, input),
@@ -429,13 +432,13 @@ export async function runHiddenAgent<N extends HiddenAgentName>(
 }
 ```
 
-### 与 plan/02 §Agent 总览 的关系
+### 与 7 个对外 Agent 总览的关系
 
-plan/02 总览只列 7 个 user-facing agent (Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel), **不列 hidden**。hidden 在 spec/02 维护, 是实现细节。借 opencode 把"压缩对话"也叫 agent 的设计哲学: 但 hidden 不进 SettingsDialog 模型覆盖列表, 不在 ApprovalCard 显示作者, 默认行为对用户透明。
+对外总览只列 7 个 user-facing agent (Router / Writer / Checker / Validator / Reflector / Humanizer / ReaderPanel) — 它们可在 SettingsDialog 单独配模型 + reasoningEffort ([spec/13 §模型分配](./13-settings.md))。hidden 在 spec/02 维护, 是实现细节。借 opencode 把"压缩对话"也叫 agent 的设计哲学: 但 hidden 不进 SettingsDialog 模型覆盖列表, 不在 ApprovalCard 显示作者, 默认行为对用户透明。Hidden agent 与对外 Agent 共用同一套日志记录 (`llm_calls` / traces), 但**不挂 L2 messages thread**(一次性分析, 历史由 spec/23 context builder 每次重装, 挂主 thread 反而污染 lastMessages 滑窗;`chapter-writer-retry` 续 writer subthread 是唯一例外)。
 
 ### Reflector 现状重命名
 
-`Reflector` (现 plan/02 总览第 5 个) 与 hidden `reflection` 是同一个东西。一致性起见, **保留 Reflector 名 (user-facing 习惯), 但实现归到 HIDDEN_AGENT_REGISTRY['reflection']**, plan/02 表里 Reflector 仍显示。这是命名层 vs 实现层的解耦, 不冲突。
+对外总览的 `Reflector` 与 hidden `reflection` 是同一个东西。一致性起见, **保留 Reflector 名 (user-facing 习惯), 但实现归到 HIDDEN_AGENT_REGISTRY['reflection']**, 对外 Agent 总览表里 Reflector 仍显示。这是命名层 vs 实现层的解耦, 不冲突。
 
 ## 模式约束
 

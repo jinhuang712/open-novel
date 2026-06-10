@@ -9,7 +9,7 @@
 3. **递归 cascade 必须有终止条件**,且 metric 是"影响半径单调下降"
 4. **置信度全程透传**,UI 据此分级显示
 
-## 工作链路 (取代 plan/06 §解决方案)
+## 工作链路
 
 > **[info]** ⚠ **关键交互模型**: 整个 cascade 递归在 **审批之前** 的内部循环里完成。Writer 生成主修改 (in-memory),`analyzeImpact` 内部递归 ≤3 层把所有 cascade proposal 算清楚,**汇总成一个 ChangeSet 一次审**。用户审完后才落盘。任何"先落盘 → 再触发 cascade"或"逐项 ApprovalCard"的设计都是错的。
 
@@ -24,7 +24,7 @@ flowchart TD
     direction TB
     R1S1["step 1: extractSemanticDelta(main delta)<br/>LLM Flash 抽结构化 delta<br/>(entity-attribute / relation-add / concept-add / paragraph-rewrite ...)"]
     R1S2["step 2: computeImpactRadius — 纯 SQL 出候选段集 (weight ≥ 30)<br/>entity_refs / concept_refs (weight=100)<br/>关系上下游 1 跳 (weight=50-90)<br/>dependencies 锚点上下游 (weight=70)<br/>timeline 区间内引用 (weight=80)<br/>embeddings 语义相关 topK (weight=cos×100)"]
-    R1S3["step 3: filterByLLM — Pro 批 5 段<br/>ChangeProposal[round=1]"]
+    R1S3["step 3: filterByLLM — Flash 批 5 段<br/>ChangeProposal[round=1]"]
     R1S1 --> R1S2 --> R1S3
   end
 
@@ -582,7 +582,14 @@ async function runCascadeRecursion(
 
 用户**不能干预内部循环**(无法"在第 2 轮就提前 approve"),只能等汇总完整批审。如果用户耐心不足,可在 SettingsDialog 调"递归深度上限"= 1 / 2 / 3 (默认 3)。
 
-## 取代 plan/06 §性能考虑
+### 性能预算
+
+- **SQL 影响半径 < 100ms** (5K 段规模, computeImpactRadius 纯 SQL)
+- **filterByLLM 每批 5 段 ~3-5s** (Flash + JSON mode)
+- **Writer 内部短调用单段 ~1-3s**
+- **内部递归 ≤ 3 轮典型总耗时 15-45s** — 因此 UI 必须在 Writer 出主修改后立刻显示上述轮次进度,作者可看到内部进度但不能干预,直到 ChangeSet 出来
+
+## 性能策略取舍 (历史策略清理)
 
 - ❌ 旧:"按章节范围 ±5 章" — 已删 (治标策略,本 spec 取代)
 - ❌ 旧:"基于 entity hash 的'已审过'标记" — 已无意义,LLM 二次过滤本就只对未审过段调用

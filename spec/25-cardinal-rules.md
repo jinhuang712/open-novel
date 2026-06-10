@@ -502,6 +502,18 @@ async function calculateGoldenFingerDensity(chapters: Chapter[]) {
 }
 ```
 
+## 检测分工总表
+
+| 守则 | 主检测 | 二审 |
+|---|---|---|
+| 1. 黄金三章 | `goldenChaptersCheck` 在 ArcTracker (归 Validator) | ReaderPanel |
+| 2. 人设崩坏 | `characterIntegrityCheck` (Validator 主导) | ReaderPanel |
+| 3. 节奏崩盘 | `pacingCheck` (BeatAnalyzer + ArcTracker 协同) | — |
+| 4. 期待感兑现 | `promiseAccountabilityCheck` (Validator) | ReaderPanel |
+| 5. 金手指依赖 | `protagonistAgencyCheck` (BeatAnalyzer + ArcTracker) | ReaderPanel |
+
+叙事引擎拆给两个 Agent:**BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章偏离 → 归 Validator**(实现见 [spec/10](./10-narrative-engine.md))。ReaderPanel 的 `cardinalRuleSignals` 覆盖全部五项([spec/11](./11-reader-personas.md)),但它是**非闸门**信号 — 挂在 ApprovalCard 内供作者参考,不参与 blocking 判定;表中"二审"指其 flag 进入 CardinalRulesReport 汇总展示的守则项。
+
 ## 风险报告输出 (`CardinalRulesReport`)
 
 每次章节生成或 setting 修改后,Validator + ReaderPanel + ArcTracker + BeatAnalyzer 各自跑相关检测,汇总成:

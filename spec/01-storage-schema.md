@@ -87,16 +87,22 @@ type Project = {
   style: string                       // 自然语言描述,LLM 生成时遵守
   agentPersonality: string            // Agent 性格
   exampleCorpusFiles?: string[]       // 范文路径 (相对于项目根)
-  models: {
-    router: 'flash' | 'pro'           // 默认 flash
-    writer: 'flash' | 'pro'           // 默认 pro
-    checker: 'flash' | 'pro'          // 默认 flash
-    validator: 'flash' | 'pro'        // 默认 pro
-    reflector: 'flash' | 'pro'        // 默认 flash
-    humanizer: 'flash' | 'pro'        // 默认 pro
+  models: {                           // 项目级覆盖, 默认值与分档理由见 spec/13 §模型分配
+    router: AgentModelConfig          // 默认 flash + default
+    writer: AgentModelConfig          // 默认 pro + max
+    checker: AgentModelConfig         // 默认 flash + default
+    validator: AgentModelConfig       // 默认 pro + max
+    reflector: AgentModelConfig       // 默认 flash + default
+    humanizer: AgentModelConfig       // 默认 pro + max
+    readerPanel: AgentModelConfig     // 默认 flash + default
   }
   createdAt: string
   updatedAt: string
+}
+
+type AgentModelConfig = {
+  model: 'flash' | 'pro' | string     // string = 自定义模型 ID (仅 V4 系, 禁 fallback 旧型号, 见 spec/00 §C)
+  reasoningEffort?: 'default' | 'max' // 缺省时按分档默认 (Pro=max / Flash=default, 见 spec/13 §模型分配)
 }
 ```
 
@@ -279,7 +285,9 @@ CREATE INDEX idx_history_target ON history(target);
 ```sql
 CREATE TABLE learnings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  scope TEXT NOT NULL,                -- project | global | chapter:001
+  scope TEXT NOT NULL,                -- 枚举与 spec/24 §Reflector 一致: style | narrative | pacing | voice
+                                      --   | worldview | character | consistency | relations
+                                      --   | cardinal_rule | intent | mode
   insight TEXT NOT NULL,
   evidence TEXT,
   applicable_agents TEXT NOT NULL,    -- JSON array
@@ -291,6 +299,23 @@ CREATE TABLE learnings (
 CREATE INDEX idx_learnings_scope ON learnings(scope);
 ```
 
+**weight 生命周期 (MVP 简化版)**:
+
+| 触发 | 调整 | 说明 |
+|---|---|---|
+| 初始入库 | weight = 1.0 (或 Reflector `suggestedWeight`, 见 [spec/24 §Reflector](./24-json-output.md)) | Reflector 写入时 |
+| 30 天衰减 | × 0.95 | 自然衰减, 后台 cron 跑 |
+| weight < 0.2 | 不注入 (行保留) | 简化版不归档, 直接软过滤 (注入逻辑见 [spec/23 §learnings 注入](./23-context-contracts.md)) |
+| `scope='cardinal_rule'` | **不参与衰减** | 只能用户在 SettingsDialog 显式调整守则阈值时同步移除 ([spec/25](./25-cardinal-rules.md)) |
+
+**MVP 简化范围**: 保留核心闭环 (per-turn LLM 提炼 + weight 自然衰减 + context builder 注入 top-K + cardinal_rule scope top-1 保留)。以下砍掉, 二期视需求补:
+
+- 命中加权 +0.5 / 拒绝降权 -0.3 (需要 hit 追踪 + 关联 approvals;`hit_count` / `last_hit_at` 字段保留默认值 0 / NULL, 不参与衰减计算)
+- archive 归档表 (`learnings_archive`) + 30 天可恢复
+- SettingsDialog 学习偏好面板 (用户手动 +/-/删) — 见 [spec/13 §学习偏好面板](./13-settings.md#学习偏好面板-mvp-不做) deprecation stub;若 learnings 误学, 只能等 30 天衰减
+- 跨进程 hydrate (启动时按 projectId 加载 top-K;简化版按需 SQL 查)
+- 跨项目 learnings 共享 (**永不做**: 避免一个项目的特殊偏好污染其他风格不同的项目)
+
 ### user_turns (用户对话 turn 级状态, 见 spec/06 §Turn 取消语义)
 
 ```sql
@@ -298,7 +323,7 @@ CREATE TABLE user_turns (
   id TEXT PRIMARY KEY,                       -- ulid
   session_id TEXT NOT NULL,                  -- 关联应用层 thread proj:X:session:Y 的 session 部分 (见 spec/22 §thread/session)
   user_input TEXT NOT NULL,                  -- 用户原话 (Reflector 训练用)
-  router_actions TEXT NOT NULL,              -- JSON: Router 输出的 actions[] (见 plan/02 §路由策略)
+  router_actions TEXT NOT NULL,              -- JSON: Router 输出的 actions[] (见 spec/24 §Router 输出)
   current_action_index INTEGER NOT NULL DEFAULT 0,
   status TEXT NOT NULL,                      -- 'running' | 'awaiting_approval' | 'done' | 'cancelled'
   reverted_approval_count INTEGER,           -- cancelled 时记录 revert 了几条 approved approvals
@@ -542,7 +567,7 @@ export function closeAll(): void {
 | `entity_refs` | [§entity_refs](#entity-refs-实体在何处被提及) | 实体提及索引 | spec/05 |
 | `backlinks` | [§backlinks](#backlinks-反向索引在某文件打开时用) | 反向索引 | — |
 | `history` | [§history](#history) | 写盘历史 (gzip BLOB) | — |
-| `learnings` | [§learnings](#learnings) | Reflector 沉淀经验 | plan/06 |
+| `learnings` | [§learnings](#learnings) | Reflector 沉淀经验 | spec/24 §Reflector |
 | `user_turns` | [§user_turns](#user-turns) | 对话 turn 级状态 | spec/06 §Turn 取消 |
 | `approvals` | [§approvals](#approvals) | 审批 ChangeSet | spec/06 |
 | `traces` | [§traces](#traces-流式日志归档可选-ingest-自-jsonl) | 流式日志归档 | spec/04 |
@@ -708,9 +733,9 @@ kind / status 枚举 + lint 增强规则 (deadline / weight / promiseAccountabil
 
 ### 别名: `foreshadowings`
 
-> **[info]** 在 [spec/25](./25-cardinal-rules.md) / [spec/19](./19-impact-analysis.md) / [spec/23](./23-context-contracts.md) / [plan/12](../plan/12-memory-and-context.md) 等文档中, `foreshadowings` 表 ≡ `dependencies WHERE kind = 'foreshadowing'`。它**不是独立物理表**, 而是一个语义别名 / 业务视图。
+> **[info]** 在 [spec/25](./25-cardinal-rules.md) / [spec/19](./19-impact-analysis.md) / [spec/23](./23-context-contracts.md) / [spec/22](./22-memory-and-history.md) 等文档中, `foreshadowings` 表 ≡ `dependencies WHERE kind = 'foreshadowing'`。它**不是独立物理表**, 而是一个语义别名 / 业务视图。
 >
-> spec/25 的 promise deadline / weight / expected_resolution_pattern 在实施层是 `dependencies.metadata` JSON 字段的逻辑结构,而非独立 `foreshadowings` 物理表。如未来要把这些字段升级为正式列,必须在本表 `dependencies` 上 ALTER,并同步 spec/25 / spec/19 / spec/23 / plan/12。
+> spec/25 的 promise deadline / weight / expected_resolution_pattern 在实施层是 `dependencies.metadata` JSON 字段的逻辑结构,而非独立 `foreshadowings` 物理表。如未来要把这些字段升级为正式列,必须在本表 `dependencies` 上 ALTER,并同步 spec/25 / spec/19 / spec/23。
 >
 > `db.dependencies.findActiveForeshadowings()` 是 `dependencies WHERE kind='foreshadowing' AND status IN (...)` 的便捷封装。禁止新增独立 `foreshadowings` 表。
 

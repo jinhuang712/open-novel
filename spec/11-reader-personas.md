@@ -335,6 +335,16 @@ async function callPersona(persona: Persona, chapter: Chapter): Promise<PersonaR
 
 5 个并行 + 用户自定义 (`Promise.allSettled`),失败的 persona 在聚合时按"placeholder weight=0"处理 (不影响其他 persona 的加权平均)。
 
+### 长章采样策略 (成本控制)
+
+ReaderPanel 每章跑 5 个 (+ N 自定义) persona,token 开销与章节长度成正比。**章节 > 5K 字时不全文喂入**,只取关键段:
+
+- **前 1000 字** (黄金开局判断: hook / 主角出场)
+- **后 800 字** (章末钩子 / 追更欲判断)
+- **中段冲突点** (优先取 BeatAnalyzer 标记的冲突 beat 所在段,见 spec/10;无 beat 数据时退化为中段等距抽 2-3 段)
+
+采样在 `callPersona` 拼 prompt 前完成,采样后内容仍走 `wrapUntrusted` 围栏。≤ 5K 字的章节全文喂入。其余成本控制开关 (整体禁用 / 单 persona 开关 + weight) 见 [spec/13 §Section 5](./13-settings.md)。
+
 ## 聚合算法
 
 > **[info]** 1/5 失败的 placeholder 给 retention 多少分,需明确;1/5 失败和 5/5 失败的 recommendation 也要区分。

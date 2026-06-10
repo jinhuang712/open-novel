@@ -1,6 +1,6 @@
 # Spec 22 — Memory & History 落地细节
 
-> **[info]** 与 [plan/12 §四层记忆模型](../plan/12-memory-and-context.md) 对齐。本文件定义 **L2 会话记忆** 的落地方式:应用层 memory 模块、`runtime.db` schema、thread/resource 隔离、历史压缩、卷级摘要、跨进程恢复与验证边界。当前结论是 **不依赖 Mastra Memory / LangChain Memory 等框架内置记忆抽象**。
+> **[info]** 本文件是四层记忆模型的主权文档,并定义 **L2 会话记忆** 的落地方式:应用层 memory 模块、`runtime.db` schema、thread/resource 隔离、历史压缩、卷级摘要、跨进程恢复与验证边界。当前结论是 **不依赖 Mastra Memory / LangChain Memory 等框架内置记忆抽象**。
 
 ## 设计目标
 
@@ -9,6 +9,23 @@
 - **L4 优先**:历史消息只解释用户意图和对话上下文;一旦与设定、章节、知识图谱冲突,以 L4 为准。
 - **可恢复但不自动有损**:默认保留原始 messages,压缩和语义召回都默认关闭。
 - **可替换**:memory 模块只暴露稳定接口,未来换存储或 Agent runtime 不影响 context builder。
+
+## 四层记忆模型
+
+| 层 | 规模 | 位置 | 访问 | 生命周期 | 详见 |
+|---|---|---|---|---|---|
+| **L1 工作记忆** | 当前 stream 的 system + retrieve + messages + user | 内存 (装配后送入 LLM) | 各 agent context builder 装配 | 单次 generateText / streamText 调用 | [spec/23](./23-context-contracts.md) |
+| **L2 会话记忆** | 单 session 对话历史 + tool calls | `runtime.db` messages 表 (跨项目共享文件, resource 隔离) | context builder 显式 `fetchRecent(threadId, limit)` | 单 session (默认 30 天不活动归档) | 本文件 |
+| **L3 项目记忆** | ≤ 数百条 learnings (Reflector per-turn 写入) | `index.db` learnings 表 ([spec/01 §learnings](./01-storage-schema.md#learnings)) | 各 agent context builder 注入 system prompt | 跨 session 永久 (30 天自然衰减, 简化版无 archive) | [spec/23 §learnings 注入](./23-context-contracts.md) |
+| **L4 知识图谱** | 全项目设定 + 章节 + 段锚 + relations + 概念 + foreshadowings + cardinal-rules.json | file (md) + `index.db` | assembleContext 写 / queryFacts 读 / analyzeImpact | 永久 (项目存在则存在) | spec/16-21 + spec/25 |
+
+层间流动:L2 通过 append + lastMessages 滑窗进入 L1;L3 按 agent scope 取 top-K 注入 system prompt;L4 经 per-agent 契约 retrieve 装入 L1(均由 spec/23 context builder 完成)。
+
+**关键不变性**:
+
+- **L4 是单一事实源**:L1-L3 任何与 L4 冲突的内容,answer 时以 L4 为准(例:历史 message 里说"林溪是男的",但 L4 character 已改女,以 L4 为准)
+- **L3 写入仅 Reflector**:不允许 LLM 在 stream 中直接 upsert learnings;只有 Reflector 在 `user_turns.status='done'` 时跑一次(per-turn 批次)
+- **L1 装配契约严格写死**:各 agent 必装项不允许"为节省临时省略" — 1M ctx 给的就是奢侈装齐的本钱(spec/23)
 
 ## 数据库分工
 
@@ -302,6 +319,21 @@ const learnings = await db.workspace(projectId).learnings.find({
 - 召回范围限制在同一 thread + 同一 resource,不跨项目。
 
 打开后召回结果只能作为补充消息放在压缩摘要之前;不能覆盖 L4 检索结果。
+
+## 关键参数 (默认值, SettingsDialog 可调)
+
+| 参数 | 默认值 | 调节范围 | 说明 |
+|---|---|---|---|
+| `memory.lastMessages` | 30 | 12 - 60 | 1M ctx 下不需要紧 |
+| `memory.semanticRecall` | `false` | bool | 默认关 (见 §semantic recall) |
+| `memory.compressedMessages.enabled` | `false` | bool | 默认关;长 session > 200 messages 用户主动开 |
+| `thread.gcAfterDays` | 30 | 7 - 90 | 不活动 thread 归档 (进 `archived_threads`, 不硬删) |
+| `learnings.topK` | 8 | 4 - 20 | 注入条数上限;不是为省 token,是为模型注意力 (注入 30 条经验反而稀释主任务) |
+| `learnings.weightFloor` | 0.2 | 0.1 - 0.5 | < floor 不注入 (软过滤, 行保留) |
+| `learnings.weightDecay` | 0.95 / 30 天 | 0.9 - 1.0 | 老经验衰减率 (后台 cron, 见 [spec/01 §learnings](./01-storage-schema.md#learnings)) |
+| `learnings.cardinalRuleProtect` | `true` | bool | `scope='cardinal_rule'` 的 top-1 永远不被截断 ([spec/25](./25-cardinal-rules.md)) |
+
+`memory.*` / `thread.*` 由本文件落地;`learnings.*` 的注入逻辑见 [spec/23 §learnings 注入](./23-context-contracts.md),weight 生命周期见 [spec/01 §learnings](./01-storage-schema.md#learnings)。
 
 ## 测试
 

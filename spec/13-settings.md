@@ -92,24 +92,42 @@ UI 字段:
 
 ## Section 2: 模型分配 (🔄 混合)
 
-每个 Agent 单独选 Pro / Flash / 自定义模型 ID。
+每个 Agent 单独选 Pro / Flash / 自定义模型 ID,并可单独覆盖 `reasoningEffort`。
 
 ```yaml
-# 全局默认
+# 全局默认 (模型 × reasoningEffort 二档)
 defaults:
-  router: flash
-  writer: pro
-  checker: flash
-  validator: pro
-  reflector: flash
-  humanizer: pro
-  readerPanel: flash
-  
+  router:      { model: flash, reasoningEffort: default }
+  writer:      { model: pro,   reasoningEffort: max }
+  checker:     { model: flash, reasoningEffort: default }
+  validator:   { model: pro,   reasoningEffort: max }
+  reflector:   { model: flash, reasoningEffort: default }
+  humanizer:   { model: pro,   reasoningEffort: max }
+  readerPanel: { model: flash, reasoningEffort: default }
+
 # 项目级覆盖 (project.json.modelOverrides)
 overrides:
-  writer: "deepseek/deepseek-v4-pro"     # 显式锁主线
-  checker: "deepseek/deepseek-v4-pro"     # 该项目要求 Checker 也用 Pro 提升节奏分析质量
+  writer: { model: "deepseek-v4-pro", reasoningEffort: max }       # 显式锁主线
+  checker: { model: "deepseek-v4-pro", reasoningEffort: max }      # 该项目要求 Checker 也用 Pro 提升节奏分析质量
 ```
+
+### reasoningEffort 混合分档 (Pro=max + Flash=default)
+
+V4-Pro vs V4-Flash 是**输出长度上限**和**单价档**的差异 (两者 ctx 都 1M,见 [spec/00 §C](./00-version-audit.md))。配合 reasoningEffort 形成二档:
+
+| Agent | 模型 | reasoningEffort | 理由 |
+|---|---|---|---|
+| Writer | `deepseek-v4-pro` | `max` | 单章 5K-10K 长输出 + 创作核心,质量优先 |
+| Validator | `deepseek-v4-pro` | `max` | cascade 报告长输出 + 一致性核心,深度推理 |
+| Humanizer | `deepseek-v4-pro` | `max` | 整章重写长输出,质量优先 |
+| Router | `deepseek-v4-flash` | `default` | 路由 JSON 短输出,低成本快反应 |
+| Checker | `deepseek-v4-flash` | `default` | 章内分析 JSON 短输出 |
+| Reflector | `deepseek-v4-flash` | `default` | 短摘要级提炼 |
+| ReaderPanel | `deepseek-v4-flash` | `default` | 单 persona 反应短输出 |
+
+- **Pro 系 → `max`**: 长输出 + 质量优先 (创作核心 / 一致性核心),max effort 是正确投入
+- **Flash 系 → `default`**: 输出短,关键诉求是低成本快反应;Flash 上 max 会抹平成本优势,同价位用 Pro 反而更划算
+- **禁止 fallback 到旧型号** (`deepseek-chat` / `-reasoner` / `-r1` / `-v3`): 没有 reasoning effort 参数,行为差异会让 cardinal-rules 检测精度劣化;Settings UI **不暴露**旧型号选项 (模型选型守约见 [spec/00 §C](./00-version-audit.md))
 
 UI:
 
@@ -501,9 +519,9 @@ flowchart TD
 
 > **[info]** 原设计含 ActivityBar 💡 入口 + LearningsPanel UI (项目↔全局 promote/demote + 编辑 + 软删 + 本周新增审视), 与 Reflector 简化版决议 **矛盾**。本节已废弃。
 >
-> 权威决议见 [plan/06 §不做什么](../plan/06-cascade-and-reflection.md#不做什么): "MVP 不做学习偏好面板 — 用户暂时无法手动 +/-/删 / promote / 软删恢复;若 learnings 误学, 只能等 30 天衰减"。
+> 权威决议见 [spec/01 §learnings](./01-storage-schema.md#learnings) MVP 简化范围: "MVP 不做学习偏好面板 — 用户暂时无法手动 +/-/删 / promote / 软删恢复;若 learnings 误学, 只能等 30 天衰减"。
 >
-> 二期若重启此功能, 需先在 [plan/06](../plan/06-cascade-and-reflection.md) 同步 hit 追踪 + archive 表 + 跨进程 hydrate 等前置依赖 (见 plan/06 §简化版砍掉的)。
+> 二期若重启此功能, 需先在 [spec/01 §learnings](./01-storage-schema.md#learnings) 同步 hit 追踪 + archive 表 + 跨进程 hydrate 等前置依赖。
 
 ## 不做什么
 
