@@ -19,11 +19,7 @@ flowchart TD
 
 **TipTap 3.x(基于 ProseMirror)** + 自定义 ProseMirror Decorations + Aho-Corasick 自动机。装饰器对原始 markdown **零侵入**(不污染文件内容);SSR 下要求 `useEditor({ ..., immediatelyRender: false })`。
 
-为什么不用 TipTap 的 `Mention` 节点:
-
-- Mention 是 atomic node,会插入显式标记节点,破坏纯文本流
-- 需求是**已经写好的名字被自动识别**,不是"打 `@` 召唤选择器"
-- ProseMirror 创始人本人推荐这个场景用 `addProseMirrorPlugins` + Decorations
+为什么不用 TipTap 的 `Mention` 节点:取舍见下表 ADR-02;`addProseMirrorPlugins` + Decorations 是 ProseMirror 社区对"已写就文本自动识别"场景的标准做法。
 
 | 编号 | 决策 | 选项 | 选择 | 理由 |
 |---|---|---|---|---|
@@ -33,7 +29,7 @@ flowchart TD
 
 ## EditorAdapter 接口
 
-业务代码(Editor 组件、ApprovalCard、框选修改、SearchPanel)只与 `EditorAdapter` 交互,不直接依赖 TipTap。换实现只需替换 `lib/editor/tiptap-impl.ts`:
+业务代码(Editor 组件、ApprovalCard、框选修改、Cmd+E 查询浮层)只与 `EditorAdapter` 交互,不直接依赖 TipTap。换实现只需替换 `lib/editor/tiptap-impl.ts`:
 
 ```ts
 // lib/editor/adapter.ts
@@ -49,17 +45,19 @@ export interface EditorAdapter {
   getSelection(): { from: number; to: number; text: string } | null
   replaceRange(from: number, to: number, text: string): void
 
-  // 实体装饰
-  decorateEntities(entities: Entity[]): void
+  // 高亮装饰 (entity + concept 双索引)
+  decorateHighlights(items: Highlightable[]): void
   clearDecorations(): void
 
   // 事件
   onSelectionChange(cb: (sel) => void): Unsubscribe
-  onEntityClick(cb: (entityId: string, pos: { x: number; y: number }) => void): Unsubscribe
-  onEntityHover(cb: (entityId: string, pos: { x: number; y: number }) => void): Unsubscribe
+  onHighlightClick(cb: (kind: 'entity' | 'concept', id: string, pos: { x: number; y: number }) => void): Unsubscribe
+  onHighlightHover(cb: (kind: 'entity' | 'concept', id: string, pos: { x: number; y: number }) => void): Unsubscribe
   onContentChange(cb: (content: string) => void): Unsubscribe
 }
 ```
+
+entity 与 concept 装饰共用同一通道:`decorateHighlights` 一次接收两类 `Highlightable`,点击 / hover 回调的 `kind` 由装饰 DOM 上的 `data-kind` 区分(见 §ProseMirror Plugin 集成)。
 
 ### 别名映射 (Entity 类型)
 
@@ -73,7 +71,7 @@ type Entity = {
 }
 ```
 
-构建 AC trie 时把 `[canonicalName, ...aliases]` 全部入桶,每个 pattern 反指 `entityId`;点击 / Hover / Goto 行为只看 `entityId`,所有别名等价(concept 同理用 `surfaceForms` 入桶;entity + concept 合一的 `Highlightable` 见下节)。`filePath` 供 Hover 卡片"打开 →"与 Goto Definition 使用。
+构建 AC trie 时把 `[canonicalName, ...aliases]` 全部入桶,每个 pattern 反指 `entityId`;点击 / Hover / Goto 行为只看 `entityId`,所有别名等价(concept 同理用 `surfaceForms` 入桶;entity + concept 合一的 `Highlightable` 定义见 §AC trie 构建)。`filePath` 供 Hover 卡片"打开 →"与 Goto Definition 使用。
 
 ### 编辑器迁移路径 (将来切 CodeMirror / Monaco)
 
@@ -81,7 +79,7 @@ type Entity = {
 
 1. 写新的 `lib/editor/codemirror-impl.ts` 实现 `EditorAdapter`
 2. `lib/editor/index.ts` 切默认导出
-3. 业务代码(含 ApprovalCard、框选修改、SearchPanel)零改动
+3. 业务代码(含 ApprovalCard、框选修改、Cmd+E 查询浮层)零改动
 
 预计成本:3-5 天(主要是装饰器层的迁移,纯文本部分零成本)。
 
@@ -366,11 +364,11 @@ editorView.props.handleDOMEvents = {
 }
 ```
 
-例外:粘贴自身(TipTap → TipTap 的内部 paste,如 reorder 段落)走默认 schema-aware 路径,不剥格式。
+例外:粘贴自身(TipTap → TipTap 的内部 paste,如 reorder 段落)走默认 schema-aware 路径,不剥格式。判别手段:`event.clipboardData` 的 `text/html` 含 ProseMirror 写入的 `data-pm-slice` 标记即视为内部粘贴,走 schema-aware 路径;否则按上述 handler 剥格式、仅插纯文本。
 
 ## Hover 卡片
 
-两类 hover 卡共用同一个 `Floating` 浮层定位组件,基于 `@floating-ui/react`(`useFloating` + `offset` / `flip` / `shift` middleware)锚定到命中文本;版本见 [spec/28 §锁定的库版本](./28-tech-stack.md#锁定的库版本)。
+两类 hover 卡共用同一个 `Floating` 浮层定位组件:定位由 `@floating-ui/react` 提供(`useFloating` + `offset` / `flip` / `shift` middleware),呈现位置遵循 [design/01 §纸面](../design/01-main-layout.md#纸面) 的右缘旁注——浮现在纸面右缘、与命中词所在段落顶对齐,**不是锚定命中词的 tooltip**;版本见 [spec/28 §锁定的库版本](./28-tech-stack.md#锁定的库版本)。
 
 ### Entity Hover
 
@@ -395,7 +393,7 @@ export function EntityHoverCard({ entityId, anchorPos }) {
 }
 ```
 
-卡片字段为名称 / 类别 / 别名 / 两行摘要;角色实体可选扩展头像与关键属性(由角色卡要素提供),默认不展示——与 [design/01 §纸面](../design/01-main-layout.md#纸面) 旁注的简化呈现一致。
+卡片字段为名称 / 类别 / 别名 / 两行摘要;角色实体可选扩展头像与关键属性(由角色卡要素提供),默认不展示。完整字段集见上;[design/01 §纸面](../design/01-main-layout.md#纸面) 旁注默认仅展示名称 / 类别 / 两行摘要(不含别名)。
 
 ### Concept Hover
 
