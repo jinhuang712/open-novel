@@ -333,11 +333,13 @@ flowchart TB
 |---|---|
 | **改名** | 仅改 project.json.name,**目录名不变** (避免破坏所有引用路径)。UI 显示真实名 + 真实 id |
 | **归档 (软删)** | 移到 `~/.open-novel/_archive/{projectId}/`,UI 隐藏 (但归档区可见);保留 30 天后启动 Worker 自动彻底删 |
-| **导出 zip** | 打包 `proj_xxx.zip`,**含 .md + project.json + index.db** (含 narrative_metrics / reader_reports / approvals 这些花了 LLM 钱跑的数据);entity_refs / backlinks 这种纯派生表可在导入时重建 |
+| **导出 zip** | 打包 `proj_xxx.zip`,**含 .md + project.json + index.db** (含 narrative_metrics / reader_reports / approvals / learnings 这些花了 LLM 钱跑的数据,丢了等于丢钱);entity_refs / backlinks 这种纯派生表可在导入时重建 |
 | **删除 (硬删)** | 二次确认 + 输入项目名字样;先 `closeProjectConnections(projectId)` 关闭 better-sqlite3 connection (见 spec/01 §`lib/storage/db-pool.ts`),再 fs.rm 项目目录;删 session_history.db 中对应 thread / messages |
-| **导入 zip** | 解压到 `~/.open-novel/workspaces/{newId}/`;若 projectId 冲突生成新 id;导入后 Worker reindex |
+| **导入 zip** | 解压到 `~/.open-novel/workspaces/{newId}/`;若 projectId 冲突自动生成新 id;导入后 Worker 后台 reindex 重建 entity_refs / backlinks 等纯派生表 |
 | **恢复归档** | 移回 workspaces/,UI 重新可见 |
 | **迁移 Workspace 路径** | 整体 `~/.open-novel/` move,settings.json `workspaceRoot` 字段更新;过程中所有项目 better-sqlite3 connection 必须先 close |
+
+> **[info]** **备份策略**: 用户数据完全在 `~/.open-novel/`,iCloud / Time Machine 自然备份;导出 / 导入 zip 是跨设备迁移与显式备份通道。
 
 ### 危险操作的安全闸
 

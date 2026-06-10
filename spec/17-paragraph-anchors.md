@@ -341,12 +341,55 @@ embedding 计算时间不计入此表(那是 spec/18)。
 
 | 情况 | 处理 |
 |---|---|
-| 文件被外部编辑器整文件覆盖 (chokidar 触发) | 按 writeChapter 路径走差量 reindex,无差异 |
+| 文件被外部编辑器整文件覆盖 (chokidar 触发, 见 §外部编辑器同步) | 按 writeChapter 路径走差量 reindex,无差异 |
 | 文件大量段重写 (e.g. AI 全章重写) | diff 大概率退化为 deleted + added,锚点迁移失败,dependencies 大批 broken — UI 红色警告"该章节锚点大变,请检查相关伏笔" |
 | 段被切成 2 段 (用户加了 \n\n) | 第一段 unchanged 或 modified,第二段 added (signature 与原段不同) — dependencies 留在第一段,符合预期 (锚定在前半部分) |
 | 两段被合并 | 两个旧 anchor 中一个 deleted (signature 不再匹配),另一个 modified (现在多了内容);dependencies 落在 modified 那段 |
 | heading 改名 (`# 性格` → `# 性格特征`) | headingPath 变 → anchor_id 变,但 content_signature 同 → diff 标 rewritten,dependencies 自动迁移 |
 | frontmatter 改 (e.g. `age: 28` → `30`) | frontmatter 不进段切分,reindex 走 entities/entity_timeline 而非 anchor 系统 (二者并行,互不干扰) |
+
+## 外部编辑器同步 (chokidar watcher + SSE)
+
+> **[info]** 用户在 VSCode / iA Writer 直接改了 `characters/lin.md` — 应用不知道;TipTap 仍显示旧内容,pending 审批的 before-state 错位 → diff 出错。
+
+策略:**chokidar 文件 watcher**(Node 端,在 `/api/watch` Route Handler 内挂)+ SSE push 到前端。
+
+```ts
+// app/api/watch/route.ts (long-lived SSE)
+export const runtime = 'nodejs'
+
+export async function GET(req: Request) {
+  const projectId = new URL(req.url).searchParams.get('projectId')!
+  const watcher = chokidar.watch(getProjectDir(projectId) + '/**/*.md', {
+    ignoreInitial: true, atomic: true,
+  })
+  const stream = new ReadableStream({
+    start(controller) {
+      watcher.on('change', (path) => {
+        controller.enqueue(`event: fs:changed\ndata: ${JSON.stringify({ path })}\n\n`)
+      })
+    },
+  })
+  req.signal.addEventListener('abort', () => watcher.close())
+  return new Response(stream, { headers: { 'content-type': 'text/event-stream' } })
+}
+```
+
+前端收到 `fs:changed` 后:
+
+- 该文件在某个 Tab 打开 + 用户没有未保存编辑 → **静默 reload**
+- 用户有未保存编辑 → 弹**冲突 dialog**:"[文件名] 被外部修改。要 [使用磁盘版本] / [保留我的修改] / [手动 merge]"
+- 该文件在某个 pending 审批的 before-state 中 → 该审批 **invalidate(`status='stale'`)**,提示用户重做(approvals 表 status 枚举见 [spec/01](./01-storage-schema.md) §approvals;审批流见 [spec/06](./06-approval-flow.md))
+
+后端侧:chokidar 触发的整文件覆盖按 writeChapter 路径走差量 reindex(见 §边界情况),与应用内写盘无差异。
+
+### 设计取舍 (ADR)
+
+| 编号 | 决策 | 选项 | 选择 | 理由 |
+|---|---|---|---|---|
+| ADR-03 | 外部编辑器冲突处理 | Web Locks / **chokidar watcher + 冲突 dialog** / 忽略 | **chokidar + 冲突 dialog** | 单 tab 假设下不需要 Web Locks(见 [spec/01](./01-storage-schema.md) §SQLite WAL Mode + 并发写);chokidar 在 Node 生态成熟;冲突 dialog 把决策交给用户,避免 silent overwrite |
+
+存储层 ADR-01 / ADR-02 见 [spec/01](./01-storage-schema.md) §设计取舍。
 
 ## L4 治理 — 锚点失效 lint
 

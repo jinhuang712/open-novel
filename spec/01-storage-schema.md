@@ -332,7 +332,7 @@ CREATE TABLE approvals (
   diff TEXT,                          -- pre-rendered diff for audit
   change_set TEXT,                    -- JSON: 整批 ChangeSet (main + cascade[] + graph + metadata), spec/06
   accepted_items TEXT,                -- JSON array of accepted proposal ids (resolve 时填)
-  status TEXT NOT NULL,               -- pending | approved | rejected | edited | reverted
+  status TEXT NOT NULL,               -- pending | approved | rejected | edited | reverted | stale
   user_feedback TEXT,                 -- 拒绝时的反馈
   decided_at TEXT,
   created_at TEXT NOT NULL
@@ -341,7 +341,7 @@ CREATE INDEX idx_approvals_status ON approvals(status);
 CREATE INDEX idx_approvals_turn ON approvals(turn_id);
 ```
 
-> **[info]** **schema 演进**: `turn_id` / `change_set` / `accepted_items` 是 W9+ 加的列 (spec/06 整批审 + Turn 取消语义), 旧 `payload` / `diff` 列保留兼容。`status='reverted'` 是 W9+ 新值, 由 `rollbackApproval` 写入 (见 spec/06 §撤销)。
+> **[info]** **schema 演进**: `turn_id` / `change_set` / `accepted_items` 是 W9+ 加的列 (spec/06 整批审 + Turn 取消语义), 旧 `payload` / `diff` 列保留兼容。`status='reverted'` 是 W9+ 新值, 由 `rollbackApproval` 写入 (见 spec/06 §撤销)。`status='stale'` 由外部编辑器同步协议写入 — pending 审批的 before-state 文件被外部编辑器修改时整批失效, 提示用户重做 (见 [spec/17](./17-paragraph-anchors.md) §外部编辑器同步)。
 
 ### traces (流式日志归档,可选 ingest 自 JSONL)
 
@@ -466,6 +466,8 @@ db.exec(`
 
 **Worker 单例模式**: 所有 reindex / history insert 走同一个 Worker 单线程 (`lib/storage/reindex-worker.ts`),不允许两个 reindex 并发同一项目。Worker 内部用队列串行,避免 PRAGMA busy_timeout 真正触发。
 
+**单 tab 假设 (工程声明)**: 本应用按**单用户单 tab**设计 — 不做多 tab 协调 / Web Locks / "后到 tab 只读"等机制。用户若开第二个 tab 是 OS 行为不是 app 行为, 共享同一 Node 进程的内存状态, 写入以最后一次为准 (last-write-wins), 不额外提示。多 tab 协作 / 多用户协作不在本期范围。
+
 ## better-sqlite3 连接池 (P0-1 修正)
 
 > **[info]** audit 发现:每项目独立 `index.db`,用户切项目时旧 DB 连接释放策略未定。Node FD ulimit 256,同时打开 5 个项目就贴边。P0-1 把 LibSQL 换成 better-sqlite3 后, connection 是同步 native binding, 不再是 LibSQL HTTP client。
@@ -480,7 +482,7 @@ import path from 'node:path'
 import { getProjectDir } from './paths'
 
 const pool = new LRUCache<string, Database.Database>({
-  max: 3,                                   // 同时最多 3 个项目活跃 (W3 spike 后调整, 见 todo.html P1-3)
+  max: 3,                                   // 同时最多 3 个项目活跃 (W3 spike 后调整, 见 TODO.md P1)
   dispose: (db) => db.close(),              // LRU 淘汰时关闭 native handle
   ttl: 1000 * 60 * 30,                      // 30min idle 后淘汰
 })
@@ -516,6 +518,17 @@ export function closeAll(): void {
 **项目切换时**: LRU 自然淘汰 (无需显式 delete; 触达 max=3 时最久未用的自动 close)。**项目删除时**: 显式调 `closeProjectConnections(projectId)` 后再 fs.rm 项目目录 (见 spec/13 §项目生命周期)。
 
 **dev hot-reload 安全**: 在 `lib/db/index.ts` 用 `globalThis.__openNovelDbPool` 缓存 pool 实例, 模仿 Prisma 的 Next.js dev 范式 (详 plan/08 §globalThis 缓存模式)。
+
+**connection 范围**: 每个活跃项目同时持有**两个** connection — `index.db` (上述 pool 管理) 与 `session_history.db` (schema 主权见 [spec/27](./27-session-history.md); 与 index.db 同 projectId 同生命周期, LRU 淘汰与 `closeProjectConnections` 时一并 close)。`runtime.db` 跨项目共享, **全局 1 个常驻 connection**, 不进 LRU 池 — 应用启动时打开 (同样 WAL), 进程退出时 close (schema 主权见 [spec/22](./22-memory-and-history.md))。
+
+## 设计取舍 (ADR · 存储层)
+
+| 编号 | 决策 | 选项 | 选择 | 理由 |
+|---|---|---|---|---|
+| ADR-01 | 产物 vs 过程数据是否分库 | 合并到 index.db / **拆为 index.db + session_history.db** | **拆为两库** | 产物索引面向 LLM 检索 + 用户文件浏览, 过程数据面向开发者调试 + 性能监控; 混合会让备份策略 / 写入并发 / schema migration 都更难; 两库各自独立 schema 演进 |
+| ADR-02 | 连接池策略 | 每项目 keep-alive / **LRU(3) 项目级 connection** / 单 connection 全局共享 | **LRU(3)** | 单机本地工具, FD 不紧张但要避免 hot-reload 泄漏; 具体数字 W3 spike 后调整 (原 LibSQL LRU(3) 结论错误, 实际需按"项目数 × 数据库文件数"重算, 见 TODO.md P1) |
+
+外部编辑器冲突处理的 ADR-03 (chokidar + 冲突 dialog) 见 [spec/17](./17-paragraph-anchors.md) §外部编辑器同步。
 
 ## §index.db 全表 schema (Wave 4 主权区) — 全表索引目录
 
