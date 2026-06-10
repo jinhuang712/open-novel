@@ -470,7 +470,7 @@ db.exec(`
 
 ## better-sqlite3 连接池 (P0-1 修正)
 
-> **[info]** audit 发现:每项目独立 `index.db`,用户切项目时旧 DB 连接释放策略未定。Node FD ulimit 256,同时打开 5 个项目就贴边。P0-1 把 LibSQL 换成 better-sqlite3 后, connection 是同步 native binding, 不再是 LibSQL HTTP client。
+> **[info]** audit 发现:每项目独立 `index.db`,用户切项目时旧 DB 连接释放策略未定。P0-1 把 LibSQL 换成 better-sqlite3 后, connection 是同步 native binding, 不再是 LibSQL HTTP client。(原 "FD ulimit 256, 5 个项目贴边" 的压力结论属 LibSQL 时代误判, 已被下方 ADR-02 修正。)
 
 `lib/storage/db-pool.ts` (LRU 策略, 与 plan/08 §Drizzle + better-sqlite3 + sqlite-vec 的 `lib/db/index.ts` 配合):
 

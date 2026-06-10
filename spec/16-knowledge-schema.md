@@ -484,9 +484,36 @@ export async function assertNotDerived(filePath: string) {
 
 ## 设定目录契约
 
-> **[info]** 本节吸收 plan/04 §目录设计要点 的实现侧契约 (`_` 前缀文件约定 / `_index.md` 生产格式 / 空目录处理); spec 侧以本节为准, plan/04 保留产品向叙述。
+> **[info]** 本节定义设定目录的实现侧契约 (`_` 前缀文件约定 / `_index.md` 生成格式 / 空目录处理 / 子目录全集), 自存储模型设计迁入; spec 侧以本节为准。
 
 **`_` 前缀文件约定**: 文件名或目录名以 `_` 开头 (e.g. `_index.md` / `_matrix.md` / `_character-ages.md` / `_registry`) = 系统索引 / 派生文件, FileTree 组件默认隐藏, 用户感知不到这些文件存在; Developer Mode 切换可见 (spec/13)。派生文件必须 `_` 前缀; 全部 `_` 前缀文件经 §派生文件守卫 拒写 writeSetting。
+
+**settings/ 子目录全集**(项目创建时全部建立, 流派用不到的目录按 §空目录处理 占位):
+
+```
+settings/
+├── worldview/          # _index + geography + history + politics + economy
+│                       #   + technology + culture + religion + rules
+├── outline/            # _index + master + volumes/ + chapter-outlines/_registry
+├── beats.md            # 节拍设计
+├── characters/         # _index + {id}.md
+├── factions/           # 阵营: _index + {id}.md
+├── organizations/      # 公司/门派/公会/政府: _index + {id}.md
+├── locations/          # _index + regions/ + cities/ + buildings/ + landmarks/
+├── items/              # 重要物品/法宝/信物: _index + {id}.md
+├── events/             # 历史事件 + 关键事件: _index + {id}.md
+├── timeline/           # _index + era + story-clock + _character-ages (派生)
+├── relationships/      # _index + _matrix (派生) + notes/{id}
+├── story-lines/        # _index + main + subplots/{id}
+├── foreshadowing/      # 预埋伏笔: _index + {id}.md
+├── chapter-arcs/       # 按弧划分: _index + {id}.md
+├── power-system/       # 玄幻/修仙/系统流: _index + overview + tiers
+│                       #   + techniques + artifacts
+├── glossary/           # 术语/黑话: _index 单文件
+├── taboos.md           # 绝对不能写
+├── themes.md           # 主题/核心矛盾/价值观
+└── reader-promises.md  # 已对读者立的旗
+```
 
 ### 目录索引文件契约
 
