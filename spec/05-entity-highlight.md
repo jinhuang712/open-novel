@@ -15,7 +15,79 @@ flowchart TD
   AC --> DECO(["Decorations 增量刷新<br/>按命中类型用不同 class"])
 ```
 
+## 编辑器选型与设计取舍
+
+**TipTap 3.x(基于 ProseMirror)** + 自定义 ProseMirror Decorations + Aho-Corasick 自动机。装饰器对原始 markdown **零侵入**(不污染文件内容);SSR 下要求 `useEditor({ ..., immediatelyRender: false })`。
+
+为什么不用 TipTap 的 `Mention` 节点:
+
+- Mention 是 atomic node,会插入显式标记节点,破坏纯文本流
+- 需求是**已经写好的名字被自动识别**,不是"打 `@` 召唤选择器"
+- ProseMirror 创始人本人推荐这个场景用 `addProseMirrorPlugins` + Decorations
+
+| 编号 | 决策 | 选项 | 选择 | 理由 |
+|---|---|---|---|---|
+| ADR-01 | 编辑器框架 | TipTap 3.x / CodeMirror 6 / Monaco / Slate | **TipTap 3.x** | 中文长文排版最舒服;ProseMirror 底层成熟;装饰器 API 适合实体高亮场景;Monaco 偏代码,Slate API 不稳 |
+| ADR-02 | 实体识别方式 | TipTap Mention 节点 / **ProseMirror Decorations + AC trie** | **Decorations + AC trie** | 需求是"已写就的名字自动识别"而非"@ 召唤";Mention atomic node 破坏纯文本流且不能自动识别已有文本 |
+| ADR-03 | 抽象 EditorAdapter 接口 | 直接耦合 TipTap / **抽象适配器** | **抽象适配器** | 未来如发现 TipTap 性能瓶颈或社区下沉,可换 CodeMirror 而业务代码零改动;接口稳定的代价是少量样板 |
+
+## EditorAdapter 接口
+
+业务代码(Editor 组件、ApprovalCard、框选修改、SearchPanel)只与 `EditorAdapter` 交互,不直接依赖 TipTap。换实现只需替换 `lib/editor/tiptap-impl.ts`:
+
+```ts
+// lib/editor/adapter.ts
+export interface EditorAdapter {
+  // 文件操作
+  open(filePath: string): Promise<void>
+  save(): Promise<void>
+  isDirty(): boolean
+
+  // 内容读写
+  getContent(): string
+  setContent(text: string): void
+  getSelection(): { from: number; to: number; text: string } | null
+  replaceRange(from: number, to: number, text: string): void
+
+  // 实体装饰
+  decorateEntities(entities: Entity[]): void
+  clearDecorations(): void
+
+  // 事件
+  onSelectionChange(cb: (sel) => void): Unsubscribe
+  onEntityClick(cb: (entityId: string, pos: { x: number; y: number }) => void): Unsubscribe
+  onEntityHover(cb: (entityId: string, pos: { x: number; y: number }) => void): Unsubscribe
+  onContentChange(cb: (content: string) => void): Unsubscribe
+}
+```
+
+### 别名映射 (Entity 类型)
+
+```ts
+type Entity = {
+  id: string
+  canonicalName: string      // "刘备"
+  aliases: string[]           // ["玄德", "刘玄德", "皇叔"]
+  category: 'character' | 'place' | 'item' | 'org'
+  filePath: string            // "characters/liubei.md"
+}
+```
+
+构建 AC trie 时把 `[canonicalName, ...aliases]` 全部入桶,每个 pattern 反指 `entityId`;点击 / Hover / Goto 行为只看 `entityId`,所有别名等价(concept 同理用 `surfaceForms` 入桶;entity + concept 合一的 `Highlightable` 见下节)。`filePath` 供 Hover 卡片"打开 →"与 Goto Definition 使用。
+
+### 编辑器迁移路径 (将来切 CodeMirror / Monaco)
+
+要换编辑器,只需:
+
+1. 写新的 `lib/editor/codemirror-impl.ts` 实现 `EditorAdapter`
+2. `lib/editor/index.ts` 切默认导出
+3. 业务代码(含 ApprovalCard、框选修改、SearchPanel)零改动
+
+预计成本:3-5 天(主要是装饰器层的迁移,纯文本部分零成本)。
+
 ## AC trie 构建 (entity + concept 双索引)
+
+选用 `BrunoRB/ahocorasick`(约 10KB,纯 JS,无 Node/WASM 依赖,浏览器与 Web Worker 均可运行);单次扫描 O(N + matches),量化目标见 §性能数据。
 
 ```ts
 // lib/editor/aho-corasick.ts
@@ -219,6 +291,8 @@ function computeDecorations(doc, items) {
 
 **W2 末尾必须跑** 一次基准 (`tests/unit/ahocorasick.bench.ts`),把数据填回此表。文档不允许长期留"待实测"。
 
+**输入防抖**: 用户连续输入时,dirty-range 的 AC 重扫做 **100ms debounce**;debounce 等待期间 Decoration 仅 `map(tr.mapping)` 跟随位置、不重算(IME composition 期间同样只 map 不重算,见 §IME 安全)。全文扫描只发生在初次加载与 Codex 变更。
+
 ## AC trie 重建策略 (新增)
 
 > **[info]** audit 发现:`BrunoRB/ahocorasick` 不支持增量插入。每改一个角色都要全量重建 trie + 全文重扫,**写设定模式下 Validator cascade 的 reindex 会触发数十次重建**。
@@ -273,6 +347,26 @@ apply(tr, old, _oldState, newState) {
 
 - `shortcuts.test.ts`: composing=true 时 Tab 不切模式
 - `entity-highlight.test.ts`: composing 期间 Decoration 不重算 + composition 结束后重算正确
+
+## 富文本粘贴策略
+
+用户从 Word / 微信 / 网页粘贴带格式段落 → TipTap 默认会保留 HTML 格式,污染纯文本流。策略:TipTap `editor.setOptions({ enablePasteRules: false })` + 自定义 paste handler:
+
+```ts
+editorView.props.handleDOMEvents = {
+  paste(view, event) {
+    const text = event.clipboardData?.getData('text/plain') ?? ''
+    if (text) {
+      event.preventDefault()
+      view.dispatch(view.state.tr.insertText(text))   // 仅插纯文本
+      return true
+    }
+    return false
+  },
+}
+```
+
+例外:粘贴自身(TipTap → TipTap 的内部 paste,如 reorder 段落)走默认 schema-aware 路径,不剥格式。
 
 ## Hover 卡片
 
