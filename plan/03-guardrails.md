@@ -103,7 +103,7 @@
 
 - [spec/25 — 五大网文守则](../spec/25-cardinal-rules.md):五条守则的可观察指标、检测分工与风险报告,R10 的检测落点。
 - [spec/06 — 审批流](../spec/06-approval-flow.md):R1 审批闸门,以及 critical 显式确认与 blocking 禁止通过在审批中的执行语义。
-- [spec/07 — 三模式状态机](../spec/07-mode-state-machine.md):R3 三模式分离与显式切换的状态约束。
+- [spec/07 — 模式状态契约](../spec/07-mode-state-machine.md):R3 三模式分离与显式切换的状态约束。
 - [spec/19 — 影响分析](../spec/19-impact-analysis.md):R6 确定性影响穷举的实现契约。
 - [spec/16 — 知识结构与派生守卫](../spec/16-knowledge-schema.md):R4 未决连带修改的写作锁,与 R7 派生资料只读的守卫规则。
 - [spec/23 — 上下文装配契约](../spec/23-context-contracts.md):R9 材料必装齐与"装不下明确告知"的失败语义。
