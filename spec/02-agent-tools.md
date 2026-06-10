@@ -272,6 +272,8 @@ export const readApprovalHistory = tool({
 
 ## 工具分配
 
+Agent 分两类:**primary**(直接面对用户输入入口:Router 接 UI 路由 / Writer 接生成请求)与 **subagent**(由 cascade 流程内部触发,不直接对用户:Checker / Validator / ReaderPanel / Reflector / Humanizer)。显式分类约束 UI 路由、权限与 thread 归属(spec/22):**subagent 默认不持有 needsApproval 工具**;Humanizer 的 `writeChapter✓` 是唯一例外,其 proposal 仍走完整审批闸门。
+
 每个 Agent 拥有的工具集 (在 Agent 定义里 `tools: { ... }` 注入):
 
 | Agent | readSetting | listSettings | readChapter | searchEntities | writeSetting | writeChapter | proposeChanges | webSearch | webFetch | recordLearning | readApprovalHistory |
@@ -388,7 +390,7 @@ prune 触发时把 `_tool_cache/{toolCallId}.json` 缓存文件**真删** (`fs.u
 | `chapter-summary` | 章节落盘后, 写入 chapter.md frontmatter `summary` 字段 | 本章正文 | `ChapterSummarySchema` (200-400 字摘要 + 关键事件列表) | Flash + default |
 | `volume-summarizer` | spec/22 §卷级锚定摘要 触发条件满足 | 上一份 volume_summary + 新章节 chapter_summaries | `VolumeSummarySchema` (9 段固定结构) | Flash + default |
 | `cover-meta` | 用户首次完成第一卷或主动要求 | worldview.md + 主线 character.md + 本卷 volume_summary | `CoverMetaSchema` (slogan + tagline + 关键词 + 推荐分类) | Flash + default |
-| `compaction` (旧 compressOldMessages) | spec/22 §可选历史压缩 启用 + > 60 条 messages | mastra_messages 旧批次 | `CompressionSummarySchema` (spec/22) | Flash + default |
+| `compaction` (旧 compressOldMessages) | spec/22 §可选历史压缩 启用 + > 60 条 messages | runtime.db messages 旧批次 | `CompressionSummarySchema` (spec/22) | Flash + default |
 | `reflection` (= 现 Reflector) | 用户 approve / reject 后 cascade 末 | approval history 单批 | `ReflectionOutputSchema` (spec/24) | Flash + default |
 | `chapter-writer-retry` | doom-loop 检测判 continue 后, cascade 控制器派 Writer 重生成 (spec/06 §doom-loop) | 原 writer threadId (续 thread) + 拒绝理由 + chapterId | 章节正文 NL 流式 (**不走 JSON mode**) | **Pro + max** (唯一例外, 本质是 Writer 的 isolated 调用) |
 

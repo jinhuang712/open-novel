@@ -512,7 +512,7 @@ async function calculateGoldenFingerDensity(chapters: Chapter[]) {
 | 4. 期待感兑现 | `promiseAccountabilityCheck` (Validator) | ReaderPanel |
 | 5. 金手指依赖 | `protagonistAgencyCheck` (BeatAnalyzer + ArcTracker) | ReaderPanel |
 
-叙事引擎拆给两个 Agent:**BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章偏离 → 归 Validator**(实现见 [spec/10](./10-narrative-engine.md))。ReaderPanel 的 `cardinalRuleSignals` 覆盖全部五项([spec/11](./11-reader-personas.md)),但它是**非闸门**信号 — 挂在 ApprovalCard 内供作者参考,不参与 blocking 判定;表中"二审"指其 flag 进入 CardinalRulesReport 汇总展示的守则项。
+叙事引擎拆给两个 Agent:**BeatAnalyzer 是章内分析 → 归 Checker;ArcTracker 是跨章偏离 → 归 Validator**(实现见 [spec/10](./10-narrative-engine.md))。ReaderPanel 的 `cardinalRulesFlags` 覆盖全部五项([spec/11](./11-reader-personas.md)),但它是**非闸门**信号 — 挂在 ApprovalCard 内供作者参考,不参与 blocking 判定;表中"二审"指其 flag 进入 CardinalRulesReport 汇总展示的守则项。
 
 ## 风险报告输出 (`CardinalRulesReport`)
 

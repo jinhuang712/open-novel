@@ -741,9 +741,9 @@ flowchart TD
 
 (三个动作对应 spec/05 §modes-and-approval 的标准动作, 加 "强制 approve 跳过 Validator" 一个新动作)
 
-### 与 spec/22 §subagent task_id 续跑 的协同
+### 与 spec/22 §thread 命名与归属 的协同
 
-opencode `tool/task.ts` 的 `task_id` 续跑模式: Validator 拒绝后 Writer 重生成应**续上原 threadId** 而不是开新会话, 让 Mastra lastMessages=30 能让 Writer 看到"我刚才被拒了"。这是 doom-loop 检测能不能起作用的前提 — 如果每次重生成都是空白上下文, Writer 当然会一直输出同一个东西。
+opencode `tool/task.ts` 的 `task_id` 续跑模式: Validator 拒绝后 Writer 重生成应**续上原 threadId** 而不是开新会话, 让 `lastMessages=30` 滑窗(spec/22)能让 Writer 看到"我刚才被拒了"。这是 doom-loop 检测能不能起作用的前提 — 如果每次重生成都是空白上下文, Writer 当然会一直输出同一个东西。
 
 ```ts
 // 在 cascade 控制器内 (spec/06 §cascade 流转)
