@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-10 · design · 主题修正:底色去绿改素色中性,绿仅保留为 accent
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 背景体系由雾绿系改为无色彩倾向的素色中性(light `#F7F7F7` 系 / dark `#1D1D1D` 系),边框、hover/active、遮罩、阴影同步去色;文字改为灰墨(饱和度 ≤5%,读感是墨不是绿);`--agent-router` 回归中性灰。嫩叶绿 accent、低反差区间(正文 7:1–9:1)与全部语义/实体/diff 色不变,对比度断言重新实测全过。主题名「雾绿 · 嫩叶」更正为「嫩叶 · 素纸」。 | `design/00-design-tokens.md` `design/prototypes/tokens.css` `design/README.md` `README.md` `design/05-onboarding.md` `design/prototypes/index.html` | 用户反馈雾绿底色把背景也染绿了,不符合预期——绿色只能做点缀,背景必须中性。 |
+
 ## 2026-06-10 · design · 主题改版:陶土橙 Claude 风 → 雾绿 · 嫩叶绿低反差主题,并补齐 Claude Code 落地对接
 
 | 变更 | 影响文档 | 关联 |

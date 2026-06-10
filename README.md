@@ -141,7 +141,7 @@ pnpm dev
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)
 
-每个核心界面一份交互设计文档 + 一份 HTML 高保真原型(`design/prototypes/`,浏览器直接打开 `index.html`,支持深浅双主题,雾绿 · 嫩叶绿低反差视觉语言)。
+每个核心界面一份交互设计文档 + 一份 HTML 高保真原型(`design/prototypes/`,浏览器直接打开 `index.html`,支持深浅双主题,嫩叶绿 accent · 素色低反差视觉语言)。
 
 - [README](./design/README.md) — 设计原则、原型使用方式与导航
 - [00-design-tokens](./design/00-design-tokens.md) — 设计 token:双主题色彩 / 字体 / 圆角 / 动效

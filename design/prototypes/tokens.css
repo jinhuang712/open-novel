@@ -1,7 +1,7 @@
 /* ============================================================
-   Open Novel — Design Tokens (雾绿 · 嫩叶 主题)
+   Open Novel — Design Tokens (嫩叶 · 素纸 主题)
    配套文档: design/00-design-tokens.md
-   基调: 雾绿中性底 + 嫩叶绿唯一 accent + 低反差书卷气
+   基调: 素色中性底 (无色彩倾向) + 嫩叶绿唯一 accent + 低反差书卷气
    (正文对比度收在 7:1-9:1 区间: 下限保可达性,上限保纸感)
    主题机制: html[data-theme="light" | "dark"],由页面内 JS 初始化
    (跟随系统 prefers-color-scheme,用户可手动切换并记忆到 localStorage)
@@ -9,24 +9,24 @@
 
 :root,
 html[data-theme="light"] {
-  /* —— 背景 —— */
-  --bg-app: #F5F8F4;            /* 应用底色: 雾绿白 */
-  --bg-surface: #FBFCFA;        /* 卡片 / 编辑器纸面 (非纯白) */
-  --bg-sunken: #ECF1EC;         /* 侧栏 / 输入底 / 下沉区 */
-  --bg-raised: #FDFEFD;         /* 浮层 / 弹窗 */
-  --bg-hover: rgba(47, 68, 56, 0.05);
-  --bg-active: rgba(47, 68, 56, 0.10);
-  --bg-overlay: rgba(20, 28, 23, 0.40);   /* 模态遮罩 */
+  /* —— 背景 (素色中性,不带绿) —— */
+  --bg-app: #F7F7F7;            /* 应用底色: 素白 */
+  --bg-surface: #FCFCFC;        /* 卡片 / 编辑器纸面 (非纯白) */
+  --bg-sunken: #EFEFEF;         /* 侧栏 / 输入底 / 下沉区 */
+  --bg-raised: #FDFDFD;         /* 浮层 / 弹窗 */
+  --bg-hover: rgba(34, 38, 36, 0.05);
+  --bg-active: rgba(34, 38, 36, 0.10);
+  --bg-overlay: rgba(17, 19, 18, 0.40);   /* 模态遮罩 */
 
-  /* —— 文字 (低反差: 正文 7.9 / 次要 5.0 / 占位 3.3) —— */
-  --text-primary: #3F5148;
-  --text-secondary: #5C6F66;
-  --text-tertiary: #7B8C84;
+  /* —— 文字 (灰墨,低反差: 正文 7.9 / 次要 5.0 / 占位 3.3) —— */
+  --text-primary: #474F4B;
+  --text-secondary: #646D68;
+  --text-tertiary: #838A86;
   --text-on-accent: #F6FBF7;
 
   /* —— 边框 —— */
-  --border: #E1E8E2;
-  --border-strong: #CBD7CE;
+  --border: #E5E5E4;
+  --border-strong: #D1D2D0;
   --focus-ring: rgba(21, 130, 67, 0.35);
 
   /* —— 品牌 accent (嫩叶绿) —— */
@@ -49,7 +49,7 @@ html[data-theme="light"] {
   --entity-violation: #BF4D43;
 
   /* —— Agent 主题色 (ThinkingPanel) —— */
-  --agent-router: #7E8B80;
+  --agent-router: #838683;
   --agent-writer: #158243;
   --agent-validator: #4F7DAF;
   --agent-checker: #B8862C;
@@ -67,28 +67,28 @@ html[data-theme="light"] {
   --diff-add-bg: #E8F2E8;  --diff-add-text: #44693F;
 
   /* —— 阴影 (比常规更轻,只为分层) —— */
-  --shadow-sm: 0 1px 2px rgba(38, 56, 46, 0.05);
-  --shadow-md: 0 4px 16px rgba(38, 56, 46, 0.08);
-  --shadow-lg: 0 12px 40px rgba(38, 56, 46, 0.14);
+  --shadow-sm: 0 1px 2px rgba(22, 24, 23, 0.05);
+  --shadow-md: 0 4px 16px rgba(22, 24, 23, 0.08);
+  --shadow-lg: 0 12px 40px rgba(22, 24, 23, 0.14);
 }
 
 html[data-theme="dark"] {
-  --bg-app: #1C211D;
-  --bg-surface: #242A25;
-  --bg-sunken: #161A17;
-  --bg-raised: #2C342D;
-  --bg-hover: rgba(212, 226, 217, 0.06);
-  --bg-active: rgba(212, 226, 217, 0.11);
-  --bg-overlay: rgba(4, 8, 6, 0.55);
+  --bg-app: #1D1D1D;
+  --bg-surface: #252525;
+  --bg-sunken: #171717;
+  --bg-raised: #2D2D2D;
+  --bg-hover: rgba(226, 228, 227, 0.06);
+  --bg-active: rgba(226, 228, 227, 0.11);
+  --bg-overlay: rgba(0, 0, 0, 0.55);
 
-  /* 低反差: 正文 8.3 / 次要 5.0 / 占位 3.3 (vs --bg-surface) */
-  --text-primary: #B9C6BF;
-  --text-secondary: #8B9A93;
-  --text-tertiary: #6F7A75;
+  /* 灰墨低反差: 正文 8.3 / 次要 5.0 / 占位 3.3 (vs --bg-surface) */
+  --text-primary: #BAC0BD;
+  --text-secondary: #8E9591;
+  --text-tertiary: #717673;
   --text-on-accent: #0D2418;
 
-  --border: #333B35;
-  --border-strong: #46524A;
+  --border: #373737;
+  --border-strong: #4B4C4B;
   --focus-ring: rgba(61, 160, 102, 0.50);
 
   --accent: #3DA066;
@@ -107,7 +107,7 @@ html[data-theme="dark"] {
   --entity-org: #AC93D9;
   --entity-violation: #D97066;
 
-  --agent-router: #889287;
+  --agent-router: #8E908E;
   --agent-writer: #3DA066;
   --agent-validator: #7FA7D1;
   --agent-checker: #D9A645;
