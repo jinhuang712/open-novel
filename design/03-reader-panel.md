@@ -2,7 +2,7 @@
 
 > 原型:`design/prototypes/03-reader-panel.html` · 上游:[plan/09 叙事诊断与读者预演](../plan/09-narrative-and-reader.md) · [spec/S08 创作质量](../spec/S08-creative-engine.md)
 
-5 个 persona(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)并行读一章,聚合成一份**发布前留存预演报告**。报告嵌在 ApprovalCard 内(write 模式章节工具时),也可从命令面板独立触发后在右栏单独成卡。
+5 个 persona(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)并行读一章,聚合成一份**发布前留存预演报告**。报告可嵌入写作审批卡,也可从命令面板独立触发后在右栏单独成卡。
 
 ## 报告信息架构
 
@@ -42,7 +42,7 @@ flowchart TB
 
 ## 进行态(长任务)
 
-- 触发后 ChatBox 顶部进度条:「ReaderPanel · 3/5 · 毒舌读者 · 4.5s」([plan/07 §长任务体验](../plan/07-collaboration-and-modes.md#长任务体验))
+- 触发后状态点旁显示进度:「ReaderPanel · 3/5 · 毒舌读者 · 4.5s」([plan/07 §长任务体验](../plan/07-collaboration-and-modes.md#长任务体验))
 - 报告区先以骨架卡占位,每个 persona 完成即点亮其色点并填入缩略 sentiment
 - 取消:已完成 persona 保留;<3 成功 → 头部显示 `insufficient`,不出 recommendation,提供「补跑失败的 2 个」按钮
 

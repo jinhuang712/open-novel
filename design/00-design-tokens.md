@@ -76,7 +76,7 @@ flowchart LR
 | 实体 | `--entity-item` | `#C2762D` | `#D99A55` | 物品 |
 | 实体 | `--entity-org` | `#8A6FB8` | `#AC93D9` | 阵营 / 组织 |
 | 实体 | `--entity-violation` | `#BF4D43` | `#D97066` | concept violation 红色虚线 |
-| Agent | `--agent-router` | `#838683` | `#8E908E` | Router(ThinkingPanel 主题色) |
+| Agent | `--agent-router` | `#838683` | `#8E908E` | Router(Trace 摘要色) |
 | Agent | `--agent-writer` | `#158243` | `#3DA066` | Writer(品牌色,与 accent 同值) |
 | Agent | `--agent-validator` | `#4F7DAF` | `#7FA7D1` | Validator |
 | Agent | `--agent-checker` | `#B8862C` | `#D9A645` | Checker |
@@ -160,7 +160,7 @@ flowchart LR
 
 ### 3. 组件对应关系
 
-- Button / Dialog / Toast(sonner)/ Tabs 等 shadcn 组件**不改结构只改变量**;自绘组件(ApprovalCard、ThinkingPanel、实体高亮)直接消费本文 token
+- Button / Dialog / Toast(sonner)/ Tabs 等 shadcn 组件**不改结构只改变量**;自绘组件(ApprovalCard、Trace 面板、实体高亮、批阅层)直接消费本文 token
 - lucide 图标一律 `currentColor`,继承文字色,不单独配色
 - 验收方式见 [design/README §交付与验收](./README.md#交付与验收claude-code-落地流程)
 

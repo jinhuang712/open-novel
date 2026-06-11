@@ -1,5 +1,15 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · docs · 文档矛盾复查与审定口径收敛
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将产品层“审批”口径收敛为“作者审定”:小处表达走正文批阅层就地确认,连带修改和高风险变更进入整批审批;避免 plan 继续暗示所有写入都走同一个审批卡闸门。 | `plan/02-principles.md` `plan/05-story-world.md` `plan/06-agent-team.md` `plan/07-collaboration-and-modes.md` | 本轮文档矛盾复查发现 plan 与 inline review 主路径冲突。 |
+| 将系统总契约纳入批阅建议路径:Agent 输出形态从回答 / 报告 / proposal 扩展为回答 / 报告 / 批阅建议 / proposal,写入节点统一称为作者审定。 | `spec/S00-system-contract.md` `spec/S10-editor-and-interaction.md` `spec/platform/I02-editor-adapter-contract.md` | 避免 S00/I02 只承认审批后落盘,遗漏 inline review 接受后的 editor undo 路径。 |
+| 补齐 inline review 的 appendix 归口:批阅建议 schema、inline review 事件进入 A02/A03,实现明细仍后置到 appendix。 | `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` | 核心 spec 已定义行为,appendix 需要承接字段与事件明细。 |
+| 清理 design 与原型旧 UI 命名:ChatBox、ThinkingPanel、DebugConsole、FileTree 等残留改为输入条、Trace、Developer Console、库面板;Onboarding 改为“就地确认 + 审批卡”双层心智。 | `design/00-design-tokens.md` `design/03-reader-panel.md` `design/05-onboarding.md` `design/prototypes/04-settings.html` `design/prototypes/05-onboarding.html` `design/prototypes/tokens.css` | 避免旧五区心智继续污染写作优先主界面契约。 |
+| 更新剩余 TODO:design 同步项从 02-05 全部残留缩小到 design/02 审批卡复查与 01 原型全局搜索热键。 | `TODO.md` | 本轮已处理 03/04/05 的明显旧命名和 onboarding 旧审批口径。 |
+
 ## 2026-06-11 · spec+design · Inline Review 默认路径与跨文档 Cascade 边界
 
 | 变更 | 影响文档 | 关联 |

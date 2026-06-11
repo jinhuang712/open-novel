@@ -9,7 +9,7 @@
 - context package、impact analysis result、fact query result。
 - tool result envelope。
 - narrative report、reader report、cardinal rules report。
-- humanizer diff 和 style report。
+- humanizer diff、style report、inline review suggestion。
 - streaming control payload 和 recoverable error payload。
 - Universal Search query intent、result group、preview payload。
 - Discuss Mode answer/report/switch suggestion payload。
@@ -23,8 +23,10 @@
 - [S07 Context And Query](../S07-context-and-query.md)
 - [S08 Creative Engine](../S08-creative-engine.md)
 - [S09 Style And Humanizer](../S09-style-and-humanizer.md)
+- [S10 Editor And Interaction](../S10-editor-and-interaction.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
+- [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
 

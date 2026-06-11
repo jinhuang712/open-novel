@@ -9,7 +9,7 @@
 - approval、cancel、rollback、recovery 事件。
 - trace、tool run、LLM call、cost 事件。
 - Universal Search open/result/preview/action 事件。
-- editor、query、command、focus、Discuss Mode、ReaderPanel 事件。
+- editor、inline review、query、command、focus、Discuss Mode、ReaderPanel 事件。
 - 事件去重、乱序恢复和断线重连规则。
 
 ## 对应核心文档
@@ -17,6 +17,7 @@
 - [S04 Turn Orchestration](../S04-turn-orchestration.md)
 - [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
 - [S10 Editor And Interaction](../S10-editor-and-interaction.md)
+- [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
 - [S02 Runtime State](../S02-runtime-state.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)

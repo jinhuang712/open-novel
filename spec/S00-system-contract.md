@@ -6,17 +6,17 @@
 
 ## 十分钟读法
 
-先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实,Agent 产生回答或提议,作者审批,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。
+先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实,Agent 产生回答或提议,作者审定,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。
 
 ```mermaid
 flowchart LR
   Author[作者] --> Turn[Turn Orchestration]
   Turn --> Context[Context And Query]
   Context --> Agent[Agent Runtime]
-  Agent --> Draft[回答 / 报告 / Proposal]
+  Agent --> Draft[回答 / 报告 / 批阅建议 / Proposal]
   Draft --> Approval{是否写入作品?}
   Approval -->|否| Stream[Streaming UI]
-  Approval -->|是,需审定| Decision[作者审批]
+  Approval -->|是,需审定| Decision[作者审定]
   Decision --> Storage[Project Storage]
   Storage --> KG[Knowledge Graph]
   KG --> Context
@@ -27,14 +27,14 @@ flowchart LR
   Runtime --> Stream
 ```
 
-如果只能记住一件事,就是:系统可以自动分析、自动提议、自动解释,但不能静默改变作品事实。任何看起来“方便”的捷径,只要绕过审批、主权边界或可恢复状态,都是架构错误。
+如果只能记住一件事,就是:系统可以自动分析、自动提议、自动解释,但不能静默改变作品事实。任何看起来“方便”的捷径,只要绕过作者审定、主权边界或可恢复状态,都是架构错误。
 
 ## 三条系统律
 
 | 系统律 | 具体含义 | 一旦违反会发生什么 |
 |---|---|---|
 | 作者文件优先 | 章节、设定、大纲、角色卡等可读文件和审批后事实是作品主权来源 | 派生索引、会话历史、Trace 都不能覆盖作品事实 |
-| 提议先于写入 | Agent 输出只能是回答、报告或可审批 proposal | 直接写盘、隐式落盘、模型自批自改都视为阻断级错误 |
+| 提议先于写入 | Agent 输出只能是回答、报告、批阅建议或可审批 proposal | 直接写盘、隐式落盘、模型自批自改都视为阻断级错误 |
 | 可解释失败优先于猜测继续 | 关键事实、上下文、索引、结构化输出缺失时必须显式失败或降级 | 不允许用默认值、自然语言猜测或静默裁剪伪装成功 |
 
 这三条系统律高于单篇 spec 的局部便利。后续文档只是在各自领域解释它们如何落地。

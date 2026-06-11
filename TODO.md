@@ -6,7 +6,7 @@
 
 | 类别 | 状态 | 说明 |
 |---|---|---|
-| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/06` 文档与原型已补 Universal Search / `Shift+Shift` / hover preview 口径;`design/01` 原型尚未接入全局搜索热键,`design/02-05` 文档与原型仍有旧五区语境残留,待按「章节轨 · 纸面 · 状态点」契约逐篇同步。 |
+| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/03-06` 文档与原型已清理明显旧 UI 命名;`design/01` 原型尚未接入全局搜索热键,`design/02` 仍需按「章节轨 · 纸面 · 状态点」契约复查审批卡定位、取消入口和风险等级视觉。 |
 | appendix 明细抽取 | **1 open** | active [spec appendix](./spec/appendix/README.md) 已收敛为 `A/V` 分类归口,旧 29 篇原文已归档;后续实现前需按需从 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md) 抽取当前有效的表结构、schema、工具参数、prompt、golden cases 和测试矩阵,避免重新把历史噪音搬回 appendix。 |
 | M/platform 明细深化 | **1 open** | `M01-M16` 已作为根层能力 spec 建立,`I01-I05` / `R01-R05` 已迁入 `spec/platform/`;后续进入代码前,需要按实际实现顺序把对应字段、命令、事件、测试样例和 spike 结果补进 `Axx/Vxx`,不要把 appendix 细节倒灌回核心正文或 platform 契约。 |
 | 经验管理契约缺口 | **1 open** | [spec/S02](./spec/S02-runtime-state.md)、[spec/S11](./spec/S11-settings-and-onboarding.md) 与 [spec/M12](./spec/M12-memory-learning-management.md) 已点名经验可见 / 可调 / 可删的目标语义;仍需把经验字段、交互细节和失败场景补入 [A01](./spec/appendix/A01-schema-tables.md) 与 [V01](./spec/appendix/V01-test-matrix.md),并与 [plan/10 §经验对你透明](./plan/10-memory-and-learning.md) 对齐。 |

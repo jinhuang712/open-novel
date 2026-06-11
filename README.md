@@ -241,7 +241,7 @@ pnpm dev
 - 写作中实时干预
 - 替作者决策的闸门化评分
 
-每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经 WSL)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/S00](./spec/S00-system-contract.md),完整历史明细见 [spec appendix](./spec/appendix/README.md)。
+每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经兼容层)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/S00](./spec/S00-system-contract.md),完整历史明细见 [spec appendix](./spec/appendix/README.md)。
 
 ## 许可
 

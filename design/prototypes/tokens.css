@@ -48,7 +48,7 @@ html[data-theme="light"] {
   --entity-org: #8A6FB8;
   --entity-violation: #BF4D43;
 
-  /* —— Agent 主题色 (ThinkingPanel) —— */
+  /* —— Agent 主题色 (Trace / 状态点) —— */
   --agent-router: #838683;
   --agent-writer: #158243;
   --agent-validator: #4F7DAF;
