@@ -1,6 +1,6 @@
 # design/01 — 主界面:章节轨 · 纸面 · 状态点
 
-> 原型:`design/prototypes/01-main-layout.html` · 上游:[plan/06 协作与三模式](../plan/06-collaboration-and-modes.md) · [plan/08 故事世界(边写边查)](../plan/08-story-world.md) · [spec/05 实体高亮](../spec/05-entity-highlight.md)(布局契约 2026-06-11 修订,以本篇为主权)
+> 原型:`design/prototypes/01-main-layout.html` · 上游:[plan/07 协作与三模式](../plan/07-collaboration-and-modes.md) · [plan/05 故事世界(边写边查)](../plan/05-story-world.md) · [spec/05 实体高亮](../spec/05-entity-highlight.md)(布局契约 2026-06-11 修订,以本篇为主权)
 
 设计立场:**简约、素雅、克制**。常驻屏幕的只有三样——左缘章节轨、正文纸面、右下状态点;库、对话、trace、审批、调试全部召唤式,`Esc` 即走。层级靠留白与发丝线(1px 边),不靠色块与投影;不引入任何文化符号装饰;除状态点运行态的缓慢呼吸外,没有循环动画,全部过渡只用 120/200ms 的淡入与小位移。
 

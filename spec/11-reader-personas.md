@@ -1,6 +1,6 @@
 # Spec 11 — 读者 Persona 与 ReaderPanel 实现
 
-> **[info]** 实现 ReaderPanel Agent 与 5 个默认 persona(产品面见 [plan/10 — 叙事诊断与读者预演](../plan/10-narrative-and-reader.md) §读者预演)。
+> **[info]** 实现 ReaderPanel Agent 与 5 个默认 persona(产品面见 [plan/09 — 叙事诊断与读者预演](../plan/09-narrative-and-reader.md) §读者预演)。
 
 ## 关于 Persona 的伦理边界
 

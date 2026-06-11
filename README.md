@@ -16,7 +16,7 @@
 
 ## 核心能力
 
-- **AI 角色编辑部** — 七个分工明确的 AI 角色像编辑部一样围着你的书工作,各司其职、可单独开关,详见 [plan/05](./plan/05-agent-team.md)
+- **AI 角色编辑部** — 七个分工明确的 AI 角色像编辑部一样围着你的书工作,各司其职、可单独开关,详见 [plan/06](./plan/06-agent-team.md)
 - **三种协作姿态** — 讨论(只聊不写)/ 规划(只动设定)/ 写作(产出正文),界限分明,你随时知道 AI 此刻能动什么
 - **审批必经** — AI 只提议,任何写入作品的内容都先经你整批审定、可勾选可编辑,没有静默改动
 - **一致性守护** — 改一个设定,全部连锁影响自动找全,一次看全、一次审完
@@ -96,12 +96,12 @@ pnpm dev
 - [02-principles](./plan/02-principles.md) — 贯穿全部能力的产品价值观与取舍标准
 - [03-guardrails](./plan/03-guardrails.md) — 产品红线与网文创作守则的唯一出处
 - [04-goals-and-non-goals](./plan/04-goals-and-non-goals.md) — 为谁而做、做什么、明确不做什么
-- [05-agent-team](./plan/05-agent-team.md) — 七个 AI 角色的分工、边界与开关
-- [06-collaboration-and-modes](./plan/06-collaboration-and-modes.md) — 讨论 / 规划 / 写作三种协作方式及其边界
-- [07-approval-and-cascade](./plan/07-approval-and-cascade.md) — 整批审批的形态,连带修改如何一次看全审完
-- [08-story-world](./plan/08-story-world.md) — 六维故事世界如何守住上百万字的前后一致
-- [09-memory-and-learning](./plan/09-memory-and-learning.md) — 系统如何记住这本书、记住你,越用越懂你
-- [10-narrative-and-reader](./plan/10-narrative-and-reader.md) — 叙事力学体检与发布前的模拟读者
+- [05-story-world](./plan/05-story-world.md) — 六维故事世界如何守住上百万字的前后一致
+- [06-agent-team](./plan/06-agent-team.md) — 七个 AI 角色的分工、边界与开关
+- [07-collaboration-and-modes](./plan/07-collaboration-and-modes.md) — 讨论 / 规划 / 写作三种协作方式及其边界
+- [08-approval-and-cascade](./plan/08-approval-and-cascade.md) — 整批审批的形态,连带修改如何一次看全审完
+- [09-narrative-and-reader](./plan/09-narrative-and-reader.md) — 叙事力学体检与发布前的模拟读者
+- [10-memory-and-learning](./plan/10-memory-and-learning.md) — 系统如何记住这本书、记住你,越用越懂你
 
 ### 核心技术文档 (spec/) — 实现细节 (How)
 

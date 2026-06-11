@@ -1,6 +1,6 @@
 # Spec 19 — 影响半径与 Cascade 工具 (analyzeImpact)
 
-> **[info]** 实现知识图谱 L2 算法层第三项 + L3 工具层第一项(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md) 与 [plan/07 — 审批与连带修改](../plan/07-approval-and-cascade.md))。本文档定义影响半径计算器 (纯 SQL,不调 LLM)、`analyzeImpact` 工具签名、LLM 二次过滤流程、递归 cascade 终止条件。
+> **[info]** 实现知识图谱 L2 算法层第三项 + L3 工具层第一项(产品面见 [plan/05 — 故事世界与一致性](../plan/05-story-world.md) 与 [plan/08 — 审批与连带修改](../plan/08-approval-and-cascade.md))。本文档定义影响半径计算器 (纯 SQL,不调 LLM)、`analyzeImpact` 工具签名、LLM 二次过滤流程、递归 cascade 终止条件。
 
 ## 设计原则
 

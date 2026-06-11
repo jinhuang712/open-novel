@@ -1,6 +1,6 @@
 # Spec 20 — 上下文装配工具 (assembleContext)
 
-> **[info]** 实现知识图谱 L3 工具层第二项(产品面见 [plan/08 — 故事世界与一致性](../plan/08-story-world.md) §写前自动备料)。本文档定义 `assembleContext` 工具签名、retrieve 链路、token 预算控制。Writer 写章节 / 章节大纲前必调此工具,获取自动 retrieve 的相关上下文。
+> **[info]** 实现知识图谱 L3 工具层第二项(产品面见 [plan/05 — 故事世界与一致性](../plan/05-story-world.md) §写前自动备料)。本文档定义 `assembleContext` 工具签名、retrieve 链路、token 预算控制。Writer 写章节 / 章节大纲前必调此工具,获取自动 retrieve 的相关上下文。
 
 ## 设计原则
 
