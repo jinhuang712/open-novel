@@ -1,6 +1,6 @@
 # Spec 16 — 知识图谱 Schema
 
-> **[info]** 实现知识图谱 L1 数据层(产品面见 [plan/05 — 故事世界与一致性](../plan/05-story-world.md))。本文档定义 4 张新表 + 1 张段锚表 (实现见 spec/17) + 1 张段嵌入表 (实现见 spec/18) + character.md frontmatter 升级 + 概念抽取流程。
+> **[info]** 实现知识图谱 L1 数据层(产品面见 [plan/05 — 故事世界与一致性](../../../plan/05-story-world.md))。本文档定义 4 张新表 + 1 张段锚表 (实现见 spec/17) + 1 张段嵌入表 (实现见 spec/18) + character.md frontmatter 升级 + 概念抽取流程。
 
 ## 设计原则
 

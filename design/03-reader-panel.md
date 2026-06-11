@@ -1,6 +1,6 @@
 # design/03 — ReaderPanel 章节风险报告
 
-> 原型:`design/prototypes/03-reader-panel.html` · 上游:[plan/09 叙事诊断与读者预演](../plan/09-narrative-and-reader.md) · [spec/11 读者 Persona](../spec/11-reader-personas.md)
+> 原型:`design/prototypes/03-reader-panel.html` · 上游:[plan/09 叙事诊断与读者预演](../plan/09-narrative-and-reader.md) · [spec/08 创作质量](../spec/08-creative-engine.md)
 
 5 个 persona(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)并行读一章,聚合成一份**发布前留存预演报告**。报告嵌在 ApprovalCard 内(write 模式章节工具时),也可从命令面板独立触发后在右栏单独成卡。
 
@@ -19,7 +19,7 @@ flowchart TB
 ## 头部
 
 - **留存预测环**:64px 环形进度,数值大字居中;色段 0-39 danger / 40-69 warning / 70-100 success
-- **recommendation 徽标**:`publish`(success)/ `minor-tweak`(warning)/ `rework`(danger)/ `insufficient`(neutral,<3 persona 成功时,[spec/11 §聚合算法](../spec/11-reader-personas.md#聚合算法))
+- **recommendation 徽标**:`publish`(success)/ `minor-tweak`(warning)/ `rework`(danger)/ `insufficient`(neutral,<3 persona 成功时,[spec/08](../spec/08-creative-engine.md))
 - persona 色点行:5 个 12px 圆点(成功=实心 agent-reader 色系,失败=空心),hover 显示 persona 名与状态
 
 ## 风险 / 亮点行

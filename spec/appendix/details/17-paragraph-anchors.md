@@ -1,6 +1,6 @@
 # Spec 17 — 段级稳定 ID 与差量 reindex
 
-> **[info]** 实现知识图谱 L2 算法层第一项(产品面见 [plan/05 — 故事世界与一致性](../plan/05-story-world.md))。本文档定义段锚点 (paragraph anchor) 的稳定 ID 算法、`paragraph_anchors` 表使用、差量 reindex 流程、段移动 / 重命名 / 拆分 / 合并的稳定性追踪策略,以及外部编辑器修改的同步策略。
+> **[info]** 实现知识图谱 L2 算法层第一项(产品面见 [plan/05 — 故事世界与一致性](../../../plan/05-story-world.md))。本文档定义段锚点 (paragraph anchor) 的稳定 ID 算法、`paragraph_anchors` 表使用、差量 reindex 流程、段移动 / 重命名 / 拆分 / 合并的稳定性追踪策略,以及外部编辑器修改的同步策略。
 
 ## 为什么要段级 ID
 

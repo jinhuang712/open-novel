@@ -1,6 +1,6 @@
 # Spec 10 — 叙事引擎实现
 
-> **[info]** 实现叙事引擎的三个能力模块(产品面见 [plan/09 — 叙事诊断与读者预演](../plan/09-narrative-and-reader.md))。
+> **[info]** 实现叙事引擎的三个能力模块(产品面见 [plan/09 — 叙事诊断与读者预演](../../../plan/09-narrative-and-reader.md))。
 >
 > **Agent 归属**:
 >

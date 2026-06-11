@@ -1,6 +1,6 @@
 # design/05 — Onboarding 首启引导
 
-> 原型:`design/prototypes/05-onboarding.html` · 上游:[spec/15 首启引导](../spec/15-onboarding.md)
+> 原型:`design/prototypes/05-onboarding.html` · 上游:[spec/11 Settings 与 Onboarding](../spec/11-settings-and-onboarding.md)
 
 首启 = 品牌时刻:全屏素色底 + 居中 560px 卡片,标题用衬线,是整个产品里书卷气最重的一页。目标 3 分钟进入主界面。
 
@@ -27,7 +27,7 @@ flowchart LR
 
 ## 渐进式 Tooltip(进入主界面后)
 
-一次性气泡:`--bg-raised` + `--shadow-md` + accent 左条,指向目标控件,「知道了」关闭即写入 `seenTips`,不重复弹([spec/15 §主界面渐进式 Tooltip](../spec/15-onboarding.md#主界面渐进式-tooltip) 五条触发表)。同屏最多 1 条,排队不叠加。重置入口:Settings §数据管理。
+一次性气泡:`--bg-raised` + `--shadow-md` + accent 左条,指向目标控件,「知道了」关闭即写入 `seenTips`,不重复弹([spec/11](../spec/11-settings-and-onboarding.md))。同屏最多 1 条,排队不叠加。重置入口:Settings §数据管理。
 
 ## 状态矩阵
 

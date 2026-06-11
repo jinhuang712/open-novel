@@ -1,6 +1,6 @@
 # design/06 — 命令面板与快捷交互
 
-> 原型:`design/prototypes/06-command-palette.html` · 上游:[spec/12 快捷键 Registry](../spec/12-shortcuts.md)(命令清单 / 上下文优先级 / IME 闸门以 spec 为准)
+> 原型:`design/prototypes/06-command-palette.html` · 上游:[spec/10 编辑器与交互](../spec/10-editor-and-interaction.md)(命令清单 / 上下文优先级 / IME 闸门以 spec 为准)
 
 本篇收口五个"轻浮层"交互:命令面板、快速打开文件、@文件引用、框选 AI 改写(Cmd+K)、toast。它们共享同一套浮层视觉:`--bg-raised` + `--radius-lg` + `--shadow-lg`,顶部 1/4 处垂直定位,`Esc` 关闭,Focus Trap。
 
@@ -32,7 +32,7 @@ flowchart TB
 - 输入 `@` 100ms 后在光标下方弹 popover(不抢 `@` 字符;IME composition 中不弹)
 - 源:实体 + 章节 + 设定文件,fuzzy;行 = 类目色点 + 名称 + 路径
 - `↑↓` 选,`Enter` 确认 → textarea 中 `@xxx` 替换为 mention chip(accent-subtle 底圆角块,含 ×);`Esc` 取消保留字面 `@xxx`
-- chip 在发送 prompt 时展开为 `[@角色名](mention://char_xxx)` 契约形态([spec/12 §@文件名引用](../spec/12-shortcuts.md#文件名引用))
+- chip 在发送 prompt 时展开为 `[@角色名](mention://char_xxx)` 契约形态([spec/10](../spec/10-editor-and-interaction.md))
 
 ## 框选 AI 改写(Cmd+K)
 

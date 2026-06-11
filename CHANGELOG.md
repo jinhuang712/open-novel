@@ -1,12 +1,21 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · spec · 根层 spec 激进重组为 12 篇系统契约 + appendix 明细
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| spec 根层从 29 篇历史增量功能文档重组为 12 篇系统契约文档:`00-system-contract`、`01-project-storage`、`02-runtime-state`、`03-agent-runtime`、`04-turn-orchestration`、`05-streaming-ui-protocol`、`06-knowledge-graph`、`07-context-and-query`、`08-creative-engine`、`09-style-and-humanizer`、`10-editor-and-interaction`、`11-settings-and-onboarding`。核心 spec 只写技术路径、职责边界、主权对象和失败语义。 | `spec/00-11` `README.md` | 用户确认 spec 应减少技术细节堆砌,先讲清技术路径和设计。 |
+| 表结构、JSON schema、事件枚举、工具参数、prompt 模板、测试矩阵、版本审计和旧迁移明细后置到 `spec/appendix/`;旧 29 篇 spec 原文保留在 `spec/appendix/details/`,作为字段、schema、参数和历史细节来源,不再作为根层 spec 主权骨架。 | `spec/appendix/*` `spec/appendix/details/*` | 同上;避免细节丢失,同时降低核心 spec 噪音。 |
+| 文档规范新增 spec 写作纪律:S1 核心 spec 必须说明职责边界、主权对象、输入输出、关键流程、失败语义和用户可见结果;S2 技术细节后置;S3 同一生命周期、状态机、失败语义、数据主权或上下文规则只能有一个权威定义位置。 | `AGENTS.md` `CLAUDE.md` | 用户要求把“核心 spec 不能太虚、appendix 不能变垃圾桶、关键约束不能完全挪走”纳入长期要求。 |
+| README 的 spec 导航与当前实现方向改为新骨架;TODO 活跃项和实施前验证项同步改指核心 spec 或 appendix,旧断链风险从入口文档移除。 | `README.md` `TODO.md` | 同上。 |
+
 ## 2026-06-11 · plan · 能力章按创作旅程重排 + 概览具体化 + 删竞品对比与变更纪律
 
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
 | plan 能力章按作者创作旅程重排:05 故事世界(原 08)→ 06 AI 角色团队(原 05)→ 07 协作与三模式(原 06)→ 08 审批与连带修改(原 07)→ 09 叙事诊断与读者预演(原 10)→ 10 记忆与成长(原 09);01-04 不变。全仓引用(README、TODO、spec、design 链接与「NN — 标题」标签)同步重映射,无断链;progress/ 历史档案按档案纪律不改动,其散文中的旧编号指当时结构。 | 全部 `plan/*.md` `README.md` `TODO.md` 相关 `spec/*.md` `design/*.md` `CLAUDE.md` `AGENTS.md` | 用户指定能力章按创作旅程排序。 |
 | plan/01 概览具体化:能力亮点 10 项与场景速览改写为「产品行为 + 你的决策动作 + 结果」并按新章序重排;开篇一句定义「审定」动作集合(通过 / 否决 / 改后通过);删「与同类产品的差异」整节(竞品对比表),定位句改写为不点名竞品的版本并入能力亮点收尾;阅读地图按新序重排,删文档体系说明行(职责归 README)。改写文案已与能力章逐项交叉核对对齐(审定三元组、整批审批勾选语义、章内体检四项、六维名称「人事物」、润色师按需召唤)。 | `plan/01-overview.md` | 用户反馈能力 / 亮点 / 核心交互太笼统;交互形态仍归 design,plan 只写产品行为。 |
-| plan/06、plan/10 同口径收紧:读者评审团 / 润色师 / 反思学习者的「给你什么」从口号落到具体行为;「四个旋钮」点名(档位、开关、用量、性格文风);经验权重表述改为「调高、调低或删除」;plan/06 七个角色小节标题去除英文内部代号(G1);plan/04 平台约束「WSL」改「兼容层」(技术名词出 plan)。两项遗留口径问题(开书旅程缺 plan 承诺、风险三档命名中英混用)记入 TODO。 | `plan/06-agent-team.md` `plan/10-memory-and-learning.md` `plan/04-goals-and-non-goals.md` `spec/00-version-audit.md` `TODO.md` | 同上;对抗性校验(编号一致性 / 写作纪律 / 事实交叉核对 / 误伤体检)后修正。 |
+| plan/06、plan/10 同口径收紧:读者评审团 / 润色师 / 反思学习者的「给你什么」从口号落到具体行为;「四个旋钮」点名(档位、开关、用量、性格文风);经验权重表述改为「调高、调低或删除」;plan/06 七个角色小节标题去除英文内部代号(G1);plan/04 平台约束「WSL」改「兼容层」(技术名词出 plan)。两项遗留口径问题(开书旅程缺 plan 承诺、风险三档命名中英混用)记入 TODO。 | `plan/06-agent-team.md` `plan/10-memory-and-learning.md` `plan/04-goals-and-non-goals.md` `spec/00-system-contract.md` `TODO.md` | 同上;对抗性校验(编号一致性 / 写作纪律 / 事实交叉核对 / 误伤体检)后修正。 |
 | plan/03 删「红线变更纪律」节(流程性元内容出 plan);其中值得保留的治理规则(红线编号只追加不复用、增删改须同步 spec 并记 CHANGELOG)移入 `CLAUDE.md` / `AGENTS.md` G3。plan/04 对变更纪律的引用同步收尾。 | `plan/03-guardrails.md` `plan/04-goals-and-non-goals.md` `CLAUDE.md` `AGENTS.md` | 用户决定 plan 不放变更纪律。 |
 
 ## 2026-06-11 · plan · 删除各篇文末「## 实现承载」小节,plan/ 收为零 spec/design 链接
@@ -21,9 +30,9 @@
 
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
-| plan/ 重定义为**纯产品 PRD**——零技术细节、无历史包袱:旧 12 篇半技术 PRD 删除,重组为 10 篇纯产品 PRD,技术内容迁入 spec([spec/28 — 技术栈](./spec/28-tech-stack.md) 为本次新增);纯产品写作纪律已立入章程 `CLAUDE.md` / `AGENTS.md`。旧 → 新对照见本节下表。 | 全部 `plan/*.md` `spec/28-tech-stack.md` `CLAUDE.md` `AGENTS.md` | [progress/008-plan-rewrite.md](./progress/008-plan-rewrite.md) 为本次迁移的执行计划存档。 |
-| 技术设计取舍(ADR)迁移:旧 plan/03、plan/04、plan/08 的技术 ADR 分别入 [spec/05](./spec/05-entity-highlight.md)、[spec/01](./spec/01-storage-schema.md) 与 [spec/17](./spec/17-paragraph-anchors.md)、[spec/28](./spec/28-tech-stack.md) 的 §设计取舍;产品级决策理由不再以 ADR 表存在,内联进新 plan 各篇正文。 | `spec/05` `spec/01` `spec/17` `spec/28` 全部新 `plan/*.md` | 同上。 |
-| 红线编号映射:旧 plan/01 不变性 #1-12 → 新 [plan/03](./plan/03-guardrails.md) 红线 R1-R10;其中 #5 入 [spec/02](./spec/02-agent-tools.md),#7 入 `CLAUDE.md` / `AGENTS.md` 工作规范,#12 的 JSON 面入 [spec/24](./spec/24-json-output.md)。 | `plan/03-guardrails.md` `spec/02` `spec/24` `CLAUDE.md` `AGENTS.md` | 历史文档中的旧编号按本映射换算。 |
+| plan/ 重定义为**纯产品 PRD**——零技术细节、无历史包袱:旧 12 篇半技术 PRD 删除,重组为 10 篇纯产品 PRD,技术内容迁入 spec([spec/28 — 技术栈](./spec/00-system-contract.md) 为本次新增);纯产品写作纪律已立入章程 `CLAUDE.md` / `AGENTS.md`。旧 → 新对照见本节下表。 | 全部 `plan/*.md` `spec/00-system-contract.md` `CLAUDE.md` `AGENTS.md` | [progress/008-plan-rewrite.md](./progress/008-plan-rewrite.md) 为本次迁移的执行计划存档。 |
+| 技术设计取舍(ADR)迁移:旧 plan/03、plan/04、plan/08 的技术 ADR 分别入 [spec/05](./spec/10-editor-and-interaction.md)、[spec/01](./spec/01-project-storage.md) 与 [spec/17](./spec/06-knowledge-graph.md)、[spec/28](./spec/00-system-contract.md) 的 §设计取舍;产品级决策理由不再以 ADR 表存在,内联进新 plan 各篇正文。 | `spec/05` `spec/01` `spec/17` `spec/28` 全部新 `plan/*.md` | 同上。 |
+| 红线编号映射:旧 plan/01 不变性 #1-12 → 新 [plan/03](./plan/03-guardrails.md) 红线 R1-R10;其中 #5 入 [spec/02](./spec/03-agent-runtime.md),#7 入 `CLAUDE.md` / `AGENTS.md` 工作规范,#12 的 JSON 面入 [spec/24](./spec/03-agent-runtime.md)。 | `plan/03-guardrails.md` `spec/02` `spec/24` `CLAUDE.md` `AGENTS.md` | 历史文档中的旧编号按本映射换算。 |
 | README 导航与全仓交叉引用已同步到新 plan 结构。 | `README.md` 及全仓 plan/spec/design/progress 引用 | 同上。 |
 
 旧 → 新对照(旧篇已删,旧名仅为历史名称,只以行内代码标注、不作链接):

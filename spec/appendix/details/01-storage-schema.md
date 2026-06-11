@@ -2,7 +2,7 @@
 
 ## 文件系统约定
 
-> **[info]** **W7 升级**: settings/ 目录大幅拆分,详见 [spec/16 §设定目录契约](./16-knowledge-schema.md#设定目录契约)(产品面见 [plan/05 — 故事世界与一致性](../plan/05-story-world.md))。本节只列顶层结构,详细子目录看 spec/16。
+> **[info]** **W7 升级**: settings/ 目录大幅拆分,详见 [spec/16 §设定目录契约](./16-knowledge-schema.md#设定目录契约)(产品面见 [plan/05 — 故事世界与一致性](../../../plan/05-story-world.md))。本节只列顶层结构,详细子目录看 spec/16。
 
 **数据结构图**
 

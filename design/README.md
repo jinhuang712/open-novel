@@ -44,7 +44,7 @@ flowchart LR
 
 - 交互行为以 plan/spec 为准(本目录不重复定义协议与 schema,只引用)
 - 视觉与组件状态以本目录为准;实现期发现冲突,回写本目录并记 `CHANGELOG.md`
-- 原型中的文案、数据均为样例,以 [spec/03 prompts](../spec/03-prompts.md) 与真实数据为准
+- 原型中的文案、数据均为样例,以 [spec/03 Agent Runtime](../spec/03-agent-runtime.md) 与真实数据为准
 
 ## 交付与验收(Claude Code 落地流程)
 
@@ -58,6 +58,6 @@ flowchart LR
 
 - 双主题逐屏与原型对照,light/dark 都不允许硬编码 hex(可用 `rg "#[0-9A-Fa-f]{6}" --glob '!globals.css'` 做 CI 检查)
 - 文字对比度落在 00 规定区间(正文 7:1–9:1、次要 4.5:1–5.5:1、占位 ≥3:1、accent 按钮字 ≥4.5:1)
-- 全部浮层 `Esc` 可关、模态 Focus Trap、焦点环用 `--focus-ring`([spec/12](../spec/12-shortcuts.md))
+- 全部浮层 `Esc` 可关、模态 Focus Trap、焦点环用 `--focus-ring`([spec/10](../spec/10-editor-and-interaction.md))
 - `prefers-reduced-motion` 下动效降级
 - 实现与设计冲突时:回写本目录文档 + 记 `CHANGELOG.md`,不允许实现侧静默偏离

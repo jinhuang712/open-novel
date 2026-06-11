@@ -174,7 +174,7 @@ SettingsDialog 的调试面板只读本库:
 
 - [spec/01](./01-storage-schema.md) index.db schema 主权
 - [spec/22](./22-memory-and-history.md) runtime.db schema 主权与三库分工(§数据库分工)
-- [plan/02 — 产品原则](../plan/02-principles.md) 数据归你 / 产物与过程分离的产品立场
+- [plan/02 — 产品原则](../../../plan/02-principles.md) 数据归你 / 产物与过程分离的产品立场
 - [spec/24](./24-json-output.md) JSON retry 与结构化输出
 - [spec/26](./26-cascade-controller.md) cascade event 来源
 

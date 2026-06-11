@@ -368,7 +368,7 @@ editorView.props.handleDOMEvents = {
 
 ## Hover 卡片
 
-两类 hover 卡共用同一个 `Floating` 浮层定位组件:定位由 `@floating-ui/react` 提供(`useFloating` + `offset` / `flip` / `shift` middleware),呈现位置遵循 [design/01 §纸面](../design/01-main-layout.md#纸面) 的右缘旁注——浮现在纸面右缘、与命中词所在段落顶对齐,**不是锚定命中词的 tooltip**;版本见 [spec/28 §锁定的库版本](./28-tech-stack.md#锁定的库版本)。
+两类 hover 卡共用同一个 `Floating` 浮层定位组件:定位由 `@floating-ui/react` 提供(`useFloating` + `offset` / `flip` / `shift` middleware),呈现位置遵循 [design/01 §纸面](../../../design/01-main-layout.md#纸面) 的右缘旁注——浮现在纸面右缘、与命中词所在段落顶对齐,**不是锚定命中词的 tooltip**;版本见 [spec/28 §锁定的库版本](./28-tech-stack.md#锁定的库版本)。
 
 ### Entity Hover
 
@@ -393,7 +393,7 @@ export function EntityHoverCard({ entityId, anchorPos }) {
 }
 ```
 
-卡片字段为名称 / 类别 / 别名 / 两行摘要;角色实体可选扩展头像与关键属性(由角色卡要素提供),默认不展示。完整字段集见上;[design/01 §纸面](../design/01-main-layout.md#纸面) 旁注默认仅展示名称 / 类别 / 两行摘要(不含别名)。
+卡片字段为名称 / 类别 / 别名 / 两行摘要;角色实体可选扩展头像与关键属性(由角色卡要素提供),默认不展示。完整字段集见上;[design/01 §纸面](../../../design/01-main-layout.md#纸面) 旁注默认仅展示名称 / 类别 / 两行摘要(不含别名)。
 
 ### Concept Hover
 
@@ -439,7 +439,7 @@ function gotoFile(filePath: string, modifier?: 'cmd' | 'shift') {
 }
 ```
 
-`openInRightSplit` 即 writing-first 主界面的「对照打开」:目标文件在纸面右侧以对照视图展开,当前章纸面不动、不丢上下文(见 [design/01 §实体右键与全项目改名](../design/01-main-layout.md#实体右键与全项目改名);主界面无 Tabs,多文件心智由库面板「最近」组承担)。这是与 VSCode 的"Go to Definition"(默认是同栏) 的关键差异 — 长篇写作要保留上下文。
+`openInRightSplit` 即 writing-first 主界面的「对照打开」:目标文件在纸面右侧以对照视图展开,当前章纸面不动、不丢上下文(见 [design/01 §实体右键与全项目改名](../../../design/01-main-layout.md#实体右键与全项目改名);主界面无 Tabs,多文件心智由库面板「最近」组承担)。这是与 VSCode 的"Go to Definition"(默认是同栏) 的关键差异 — 长篇写作要保留上下文。
 
 ## Backlinks 面板
 

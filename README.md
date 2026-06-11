@@ -40,7 +40,7 @@
 | 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
-详见 [spec/28-tech-stack](./spec/28-tech-stack.md)。
+技术路线入口见 [spec/00-system-contract](./spec/00-system-contract.md),完整技术栈明细保留在 [spec appendix](./spec/appendix/README.md)。
 
 ## 文档状态
 
@@ -49,10 +49,12 @@
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **L2 会话记忆**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/22](./spec/22-memory-and-history.md)
-- **Schema 主权**: `spec/01` 维护 `index.db`;`spec/22` 维护 `runtime.db`;`spec/27` 维护每项目 `session_history.db`
-- **编排主权**: `spec/26` 维护 cascade controller / `user_turn` actions / 取消恢复语义;`spec/06` 只维护审批 resolve / rollback endpoint
-- **待实查闸门**: W3 代码前仍需执行 [spec/00](./spec/00-version-audit.md) 的版本与 native binding audit
+- **核心 spec**: 根层 `spec/00-11` 写系统契约、技术路径、职责边界和失败语义
+- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节进入 [spec/appendix](./spec/appendix/README.md)
+- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/02](./spec/02-runtime-state.md)
+- **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/01](./spec/01-project-storage.md) 定义
+- **编排主权**: user turn / cascade / approval / rollback 由 [spec/04](./spec/04-turn-orchestration.md) 定义
+- **待实查闸门**: 代码前的外部事实审计由 [spec/00](./spec/00-system-contract.md) 统筹,明细见 appendix
 
 ## 快速启动
 
@@ -103,39 +105,23 @@ pnpm dev
 - [09-narrative-and-reader](./plan/09-narrative-and-reader.md) — 叙事力学体检与发布前的模拟读者
 - [10-memory-and-learning](./plan/10-memory-and-learning.md) — 系统如何记住这本书、记住你,越用越懂你
 
-### 核心技术文档 (spec/) — 实现细节 (How)
+### 核心技术文档 (spec/) — 系统契约 (How / Boundaries)
 
-把存储 schema、Agent 工具、审批流、上下文装配、测试和发布闸门收束为可执行规格。界面原型与交互设计已移至 design/。
+根层 spec 只写系统契约、技术路径、职责边界和失败语义;表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
 
-- [00-version-audit](./spec/00-version-audit.md) — W3 启动前版本 / DeepSeek / native binding 审计闸门
-- [01-storage-schema](./spec/01-storage-schema.md) — SQLite schema 与 frontmatter 规范
-- [02-agent-tools](./spec/02-agent-tools.md) — Agent 工具签名与契约
-- [03-prompts](./spec/03-prompts.md) — Agent prompt 模板
-- [04-streaming-protocol](./spec/04-streaming-protocol.md) — SSE 事件协议
-- [05-entity-highlight](./spec/05-entity-highlight.md) — 实体高亮与跳转
-- [06-approval-flow](./spec/06-approval-flow.md) — proposal + 独立 endpoint 审批
-- [07-mode-state-machine](./spec/07-mode-state-machine.md) — XState 状态机
-- [08-de-ai-pipeline](./spec/08-de-ai-pipeline.md) — 去 AI 化 pipeline
-- [09-build-and-tooling](./spec/09-build-and-tooling.md) — 构建与工具链
-- [10-narrative-engine](./spec/10-narrative-engine.md) — 叙事引擎实现(BeatAnalyzer / ArcTracker / 模板格式)
-- [11-reader-personas](./spec/11-reader-personas.md) — ReaderPanel 实现
-- [12-shortcuts](./spec/12-shortcuts.md) — 快捷键 Registry + CommandRegistry + IME 闸门 + 撤销栈语义
-- [13-settings](./spec/13-settings.md) — SettingsDialog 8 section + 月度预算 + 项目生命周期
-- [14-testing](./spec/14-testing.md) — 测试策略(vitest / playwright / LLM golden / CI)
-- [15-onboarding](./spec/15-onboarding.md) — 首启引导
-- [16-knowledge-schema](./spec/16-knowledge-schema.md) — 知识图谱 schema 与 frontmatter 升级
-- [17-paragraph-anchors](./spec/17-paragraph-anchors.md) — 段级稳定 ID 与差量 reindex
-- [18-embeddings](./spec/18-embeddings.md) — 段级 embedding 与语义检索
-- [19-impact-analysis](./spec/19-impact-analysis.md) — 影响半径与 cascade 工具
-- [20-context-assembly](./spec/20-context-assembly.md) — 上下文装配工具 assembleContext
-- [21-fact-query](./spec/21-fact-query.md) — 事实查询工具 queryFacts
-- [22-memory-and-history](./spec/22-memory-and-history.md) — runtime.db + 应用层 memory + 历史压缩 + 卷级摘要
-- [23-context-contracts](./spec/23-context-contracts.md) — Per-agent 上下文契约
-- [24-json-output](./spec/24-json-output.md) — JSON 结构化输出统一规约
-- [25-cardinal-rules](./spec/25-cardinal-rules.md) — 五大网文守则
-- [26-cascade-controller](./spec/26-cascade-controller.md) — user_turn actions、审批队列、取消与恢复的编排主权
-- [27-session-history](./spec/27-session-history.md) — session_history.db 过程数据 schema 与保留策略
-- [28-tech-stack](./spec/28-tech-stack.md) — 技术栈锁定与集成关键点
+- [00-system-contract](./spec/00-system-contract.md) — 技术路线入口、spec 写作契约和审计闸门
+- [01-project-storage](./spec/01-project-storage.md) — 项目文件、项目事实库、派生索引和存储失败语义
+- [02-runtime-state](./spec/02-runtime-state.md) — 会话记忆、过程历史、经验管理和 Reflector 关闭语义
+- [03-agent-runtime](./spec/03-agent-runtime.md) — Agent runner、工具边界、prompt 组织和结构化输出失败语义
+- [04-turn-orchestration](./spec/04-turn-orchestration.md) — user turn、cascade、approval、rollback 和 UI 状态边界
+- [05-streaming-ui-protocol](./spec/05-streaming-ui-protocol.md) — 事件流、trace、状态点和前端恢复语义
+- [06-knowledge-graph](./spec/06-knowledge-graph.md) — 实体、概念、关系、段落锚点和 embedding 的一致性主权
+- [07-context-and-query](./spec/07-context-and-query.md) — 影响分析、上下文装配、事实查询和 overflow 语义
+- [08-creative-engine](./spec/08-creative-engine.md) — 五大守则、叙事诊断和模拟读者的创作质量契约
+- [09-style-and-humanizer](./spec/09-style-and-humanizer.md) — 去 AI 味、人味改写和风格守恒边界
+- [10-editor-and-interaction](./spec/10-editor-and-interaction.md) — 编辑器、高亮、快捷键、查询入口和输入焦点契约
+- [11-settings-and-onboarding](./spec/11-settings-and-onboarding.md) — Settings、Onboarding、经验管理、项目生命周期和危险操作
+- [appendix](./spec/appendix/README.md) — 表结构、schema、事件、工具、prompt、测试和迁移明细
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)
 
@@ -201,7 +187,7 @@ pnpm dev
 - 写作中实时干预
 - 替作者决策的闸门化评分
 
-每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经 WSL)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/28 §设计取舍](./spec/28-tech-stack.md#设计取舍)。
+每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经 WSL)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/00](./spec/00-system-contract.md),完整历史明细见 [spec appendix](./spec/appendix/README.md)。
 
 ## 许可
 
