@@ -1,6 +1,6 @@
 # Spec Appendix · A/V Index
 
-appendix 只承接实现者偶尔需要查的机器级明细。读者不需要先读 appendix 才能理解系统;系统主路径、设计取舍、职责边界、失败语义和用户可见结果必须在根层 `spec/Sxx` / `spec/Mxx` / `spec/Ixx` / `spec/Rxx` 讲清。
+appendix 只承接实现者偶尔需要查的机器级明细。读者不需要先读 appendix 才能理解系统;系统主路径、设计取舍、职责边界、失败语义和用户可见结果必须在根层 `spec/Sxx` / `spec/Mxx` 或 `spec/platform/Ixx` / `spec/platform/Rxx` 讲清。
 
 当前 appendix 只保留两类编号:`Axx` 是实现明细,`Vxx` 是验证明细。旧 29 篇原文已迁出 active appendix;后续需要具体字段、schema、工具参数、prompt、golden case 或测试矩阵时,从历史归档抽取仍有效内容,整理进这里对应分类。
 
@@ -14,6 +14,7 @@ appendix 归口保存:
 appendix 不保存:
 
 - 根层 spec 应该讲清的主路径。
+- platform 应该讲清的接入、恢复、迁移和诊断失败语义。
 - 历史阶段叙事、旧方案对比和迁移过程流水账。
 - 已关闭问题、旧 MVP/Phase/Wave/Wn 计划。
 - 未验证事实伪装成当前契约。
@@ -34,4 +35,4 @@ appendix 不保存:
 
 ## 更新规则
 
-新增 appendix 明细前先确认它服务哪篇根层 spec。若明细改变了行为语义、失败处理、用户可见结果或主权边界,必须同步更新根层 spec,不能只改 appendix。
+新增 appendix 明细前先确认它服务哪篇根层 spec 或 platform 文档。若明细改变了行为语义、失败处理、用户可见结果或主权边界,必须同步更新对应 spec/platform 文档,不能只改 appendix。

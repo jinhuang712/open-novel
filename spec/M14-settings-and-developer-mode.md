@@ -26,7 +26,7 @@ flowchart LR
   Dev -.no direct write.-> Files[Author Files]
 ```
 
-修复类动作如果存在,必须进入 [R04](./R04-index-health-and-repair.md) 或危险操作确认,不能藏在 debug 面板里直接执行。
+修复类动作如果存在,必须进入 [R04](./platform/R04-index-health-and-repair.md) 或危险操作确认,不能藏在 debug 面板里直接执行。
 
 ## 失败收场
 

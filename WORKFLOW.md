@@ -1,6 +1,6 @@
 # WORKFLOW · 文档与实现协作流程
 
-本文件定义 Open Novel 的文档更新工作流。它补充 `AGENTS.md` / `CLAUDE.md`:前者是 agent 行为规范,本文件是一次需求从想法进入文档、设计、实现和验收时的更新顺序。
+本文件定义一个需求从想法进入文档、设计、实现和验收时的更新顺序。它应尽量保持项目无关:项目专属文档地图放在 `README.md`,项目专属 agent 约束放在 `AGENTS.md` / `CLAUDE.md`。
 
 ## 总原则
 
@@ -8,121 +8,124 @@
 flowchart LR
   Idea[需求/反馈] --> Classify[判断影响范围]
   Classify --> Plan[plan: 产品承诺变化]
-  Classify --> Spec[spec: 技术/能力契约变化]
+  Classify --> Spec[spec: 核心技术/能力契约变化]
+  Classify --> Platform[spec/platform: 集成/可靠性变化]
   Classify --> Design[design: 交互/视觉变化]
-  Spec --> Appendix[appendix: schema/event/tool/prompt 明细]
+  Spec --> Appendix[spec/appendix: schema/event/tool/prompt/verification 明细]
+  Platform --> Appendix
   Plan --> Readme[README 导航]
   Spec --> Readme
+  Platform --> Readme
   Design --> Readme
   Appendix --> Todo[TODO 未决项]
   Readme --> Change[CHANGELOG]
   Todo --> Change
 ```
 
-任何显著变更至少要判断四件事:
+任何显著变更至少判断四件事:
 
 | 问题 | 更新位置 |
 |---|---|
 | 产品承诺是否变化 | `plan/*.md` |
-| 技术行为或能力边界是否变化 | `spec/*.md` |
-| 用户交互或视觉是否变化 | `design/*.md` + 原型 |
+| 核心技术行为或能力边界是否变化 | `spec/S*.md` 或 `spec/M*.md` |
+| 集成、恢复、迁移、诊断等支撑契约是否变化 | `spec/platform/*.md` |
+| 用户交互或视觉是否变化 | `design/*.md` 和必要原型 |
 | 是否有未关闭风险或实施前验证 | `TODO.md` |
 
 跨文档变更必须写入 `CHANGELOG.md`。
 
 ## 编号体系
 
-Open Novel 的文档编号采用“单字母 + 数字”。字母表示读法,数字表示该类文档内部顺序。
+文档编号采用“单字母 + 数字”。字母表示读法,数字表示该类文档内部顺序。
 
 | 前缀 | 位置 | 含义 | 适用内容 |
 |---|---|---|---|
 | `Sxx` | `spec/` 根层 | System Design | 系统主权、跨层契约、运行时、存储、上下文、底层协议 |
 | `Mxx` | `spec/` 根层 | User-facing Capability | 用户可触发、可感知、可验收的能力闭环 |
-| `Ixx` | `spec/` 根层 | Integration Contract | 模型、编辑器、文件系统、导入导出、桌面壳等跨边界接入 |
-| `Rxx` | `spec/` 根层 | Reliability / Runtime Operations | 项目生命周期、备份恢复、迁移升级、索引修复、诊断排障 |
-| `Axx` | `spec/appendix/` | Appendix Implementation Detail | 表结构、schema、事件、工具、prompt、迁移明细 |
-| `Vxx` | `spec/appendix/` | Verification Detail | 测试矩阵、golden cases、外部能力 spike |
+| `Ixx` | `spec/platform/` | Integration Contract | 模型、编辑器、文件系统、导入导出、桌面壳、第三方服务等跨边界接入 |
+| `Rxx` | `spec/platform/` | Reliability / Runtime Operations | 生命周期、备份恢复、迁移升级、索引修复、诊断排障 |
+| `Axx` | `spec/appendix/` | Appendix Implementation Detail | 表结构、schema、事件、工具、prompt、迁移字段等实现明细 |
+| `Vxx` | `spec/appendix/` | Verification Detail | 测试矩阵、golden cases、外部能力 spike、实查记录 |
 | `Pxxx` | `progress/` | Progress Record | 历史进度、迁移记录、复盘归档 |
 
-不新增二级能力目录。`S/M/I/R` 都是核心 spec,直接在 `spec/` 根层;`A/V` 保留在 appendix;`P` 只用于历史档案。
+`S/M` 是读者需要主动理解的核心技术文档。`I/R` 是与 appendix 平级的支撑契约,放在 `spec/platform/`。`A/V` 是实现者偶尔查的明细,放在 `spec/appendix/`。`P` 只用于历史档案。
 
-## spec 更新流程
+## 更新流程
 
-| 类型 | 做法 |
+| 变更类型 | 做法 |
 |---|---|
-| 系统主权变化 | 更新根层 `Sxx` |
-| 用户可感知能力变化 | 新增或更新根层 `Mxx`,例如 `M01-universal-search.md` |
-| 跨边界接入变化 | 新增或更新根层 `Ixx`,例如 `I01-llm-provider-contract.md` |
-| 运行维护/恢复/诊断变化 | 新增或更新根层 `Rxx`,例如 `R04-index-health-and-repair.md` |
-| schema / event / tool / prompt 明细变化 | 更新 appendix `Axx` |
-| 测试 / golden / spike 变化 | 更新 appendix `Vxx` |
-| 历史材料迁移 | 归 `progress/Pxxx` 或专题 archive,不要放回 active spec |
+| 系统主权、核心状态机、跨层失败语义变化 | 更新 `spec/Sxx-*.md` |
+| 用户可感知能力变化 | 新增或更新 `spec/Mxx-*.md` |
+| 跨边界接入变化 | 新增或更新 `spec/platform/Ixx-*.md` |
+| 运行维护、恢复、迁移、诊断变化 | 新增或更新 `spec/platform/Rxx-*.md` |
+| schema / event / tool / prompt / migration 字段变化 | 更新 `spec/appendix/Axx-*.md` |
+| 测试、golden case、外部 spike 或实查记录变化 | 更新 `spec/appendix/Vxx-*.md` |
+| 历史材料迁移或复盘 | 归 `progress/Pxxx-*.md` 或专题 archive |
 
-### 能力级核心 spec 规则
+### 核心 Spec 规则
 
-新能力不要另建二级能力目录。如果一个能力值得单独实现、测试和设计验收,它就是核心 spec,直接进入 `spec/MNN-name.md`。
+如果一篇文档决定读者理解系统主路径所必需的设计,它应进入 `Sxx` 或 `Mxx`,而不是 appendix。
 
-能力 spec 必须讲完整闭环:
+核心 spec 必须讲清:
 
-- 用户如何触发。
-- 它读取哪些事实和索引。
-- 它输出什么。
-- 它与相邻能力的边界。
-- 它如何失败和降级。
-- 它引用哪些 design 文档。
-- 它的测试清单。
+- 读者为什么需要这篇文档。
+- 它负责什么、不负责什么。
+- 它拥有哪些主权对象或职责边界。
+- 输入、输出、依赖和下游影响。
+- 关键流程或状态如何流转。
+- 失败事故如何收场。
+- 用户看见什么结果。
+- 哪些支撑契约被后置到 `platform/`,哪些实现明细被后置到 `appendix/`。
 
-当前能力级核心 spec:
+核心 spec 应优先用场景、mermaid 图、表格和 FAQ 解释设计。图表用于说明系统关系和状态流转,表格用于对齐边界和取舍,FAQ 用于回答实现者最容易误解的问题。
 
-| 能力 | 文档 | design |
-|---|---|---|
-| Universal Search | [M01](./spec/M01-universal-search.md) | [design/01](./design/01-main-layout.md) · [design/06](./design/06-command-palette.md) |
-| Command Palette / Quick Open | [M02](./spec/M02-command-palette-and-quick-open.md) | [design/06](./design/06-command-palette.md) |
-| Fact Query | [M03](./spec/M03-fact-query.md) | [design/01](./design/01-main-layout.md) · [design/06](./design/06-command-palette.md) |
-| Discuss Mode | [M04](./spec/M04-discuss-mode.md) | [design/01](./design/01-main-layout.md) |
-| Planning Mode | [M05](./spec/M05-planning-mode.md) | [design/01](./design/01-main-layout.md) |
-| Writing Mode | [M06](./spec/M06-writing-mode.md) | [design/01](./design/01-main-layout.md) · [design/02](./design/02-approval-cascade.md) |
-| Inline Rewrite / Humanizer | [M07](./spec/M07-inline-rewrite-and-humanizer.md) | [design/06](./design/06-command-palette.md) |
-| Approval Cascade | [M08](./spec/M08-approval-cascade.md) | [design/02](./design/02-approval-cascade.md) |
-| Trace Observability | [M09](./spec/M09-trace-observability.md) | [design/01](./design/01-main-layout.md) · [design/04](./design/04-settings.md) |
-| Knowledge Surface | [M10](./spec/M10-knowledge-surface.md) | [design/01](./design/01-main-layout.md) |
-| ReaderPanel | [M11](./spec/M11-reader-panel.md) | [design/03](./design/03-reader-panel.md) |
-| Memory / Learning Management | [M12](./spec/M12-memory-learning-management.md) | [design/04](./design/04-settings.md) |
-| Agent Team Controls | [M13](./spec/M13-agent-team-controls.md) | [design/04](./design/04-settings.md) |
-| Settings / Developer Mode | [M14](./spec/M14-settings-and-developer-mode.md) | [design/04](./design/04-settings.md) |
-| Onboarding / New Book | [M15](./spec/M15-onboarding-and-new-book.md) | [design/05](./design/05-onboarding.md) |
-| Project Library / Navigation | [M16](./spec/M16-project-library-and-navigation.md) | [design/01](./design/01-main-layout.md) |
+### Platform 规则
 
-当前集成契约:
+`spec/platform/` 放支撑核心体验但不应打断主阅读路径的工程契约。它不是 appendix,因为它仍然定义行为边界和失败收场;它也不是根层核心 spec,因为读者通常不需要先读它才能理解产品能力。
 
-| 集成边界 | 文档 |
-|---|---|
-| LLM provider | [I01](./spec/I01-llm-provider-contract.md) |
-| Editor adapter | [I02](./spec/I02-editor-adapter-contract.md) |
-| Filesystem / watcher | [I03](./spec/I03-filesystem-and-watcher.md) |
-| Import / export | [I04](./spec/I04-import-export-contract.md) |
-| Desktop shell | [I05](./spec/I05-desktop-shell-contract.md) |
+`Ixx` 文档回答:
 
-当前可靠性/运维契约:
+- 这个外部/跨边界系统提供什么能力。
+- 接入前必须验证什么。
+- 它的失败如何影响核心路径。
+- 什么时候应降级、阻断或回写 TODO。
 
-| 运维闭环 | 文档 |
-|---|---|
-| Project lifecycle | [R01](./spec/R01-project-lifecycle.md) |
-| Backup / restore | [R02](./spec/R02-backup-restore.md) |
-| Migration / upgrade | [R03](./spec/R03-migration-and-upgrade.md) |
-| Index health / repair | [R04](./spec/R04-index-health-and-repair.md) |
-| Diagnostics / Debug Mode | [R05](./spec/R05-diagnostics-and-debug-mode.md) |
+`Rxx` 文档回答:
 
-## design 更新流程
+- 某个运维或恢复闭环何时触发。
+- 它保护哪些主权数据或用户结果。
+- 失败时系统停在哪个可解释状态。
+- 哪些修复动作需要用户确认。
 
-design 不是 SoT,但它也不是可忽略的草图。它是交互和视觉契约,必须随能力 spec 同步更新。
+### Appendix 规则
+
+appendix 只承接实现者偶尔需要查的机器级明细。读者不需要先读 appendix 才能理解系统。
+
+appendix 可以保存:
+
+- 表结构、字段字典、索引和迁移字段。
+- 完整 JSON Schema / interface / 结构化输出样例。
+- 工具参数、命令清单和事件字段。
+- prompt 模板全文和公共片段。
+- 测试矩阵、golden cases、外部能力实查记录。
+
+appendix 不保存:
+
+- 根层 spec 应讲清的主路径。
+- 平台契约应讲清的接入/恢复失败语义。
+- 历史阶段叙事、旧方案对比和迁移过程流水账。
+- 已关闭问题、旧排期计划、未验证事实伪装成当前契约。
+
+## Design 更新流程
+
+design 不是 source of truth,但它也不是可忽略的草图。它是交互和视觉契约,必须随能力 spec 同步更新。
 
 | 变更 | design 处理 |
 |---|---|
-| 新增浮层/面板/快捷键 | 更新对应 `design/*.md`;必要时更新原型 |
+| 新增浮层、面板、快捷键、用户可见状态 | 更新对应 `design/*.md`;必要时更新原型 |
 | spec 改了行为 | design 补交互状态、空态、错态、键盘和视觉层级 |
-| design 发现实现不可行 | 回写 spec 或 TODO,并记 CHANGELOG |
-| 原型与 md 不一致 | 以 md 为当前契约,原型需要同步 |
+| design 发现实现不可行 | 回写 spec 或 TODO,并记入 CHANGELOG |
+| 原型与 Markdown 不一致 | 以 Markdown 为当前契约,原型需要同步 |
 
 Markdown 文档不得超链接到仓库内 `.html`;引用原型只写路径。
 
@@ -163,5 +166,6 @@ diff -u AGENTS.md CLAUDE.md
 - Markdown 内部链接存在。
 - Markdown 不超链接仓库内 `.html`。
 - 新核心 spec 已进入 README 导航。
+- 新 platform 文档已进入 README 导航。
 - 如果改了 design,对应 spec 有引用或说明。
 - 如果有未关闭项,已进入 TODO。

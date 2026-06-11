@@ -133,7 +133,7 @@ flowchart TB
 
 ## 读者导航
 
-`S` 读系统主权,`M` 读用户能力,`I` 读跨边界接入,`R` 读运行可靠性。不要用旧的连续数字理解 spec;编号字母就是文档的阅读姿态。
+`S` 读系统主权,`M` 读用户能力,`platform/I` 读跨边界接入,`platform/R` 读运行可靠性。不要用旧的连续数字理解 spec;编号字母就是文档的阅读姿态。
 
 | 想理解的问题 | 先读 |
 |---|---|
@@ -164,16 +164,16 @@ flowchart TB
 | Settings 和 Developer Mode 如何分层 | [M14 · Settings / Developer Mode](./M14-settings-and-developer-mode.md) |
 | 首启和开书向导如何落地 | [M15 · Onboarding / New Book](./M15-onboarding-and-new-book.md) |
 | 项目库和章节轨如何导航 | [M16 · Project Library / Navigation](./M16-project-library-and-navigation.md) |
-| 模型 provider 如何接入和审计 | [I01 · LLM Provider Contract](./I01-llm-provider-contract.md) |
-| 编辑器适配层如何隔离实现 | [I02 · Editor Adapter Contract](./I02-editor-adapter-contract.md) |
-| 文件监听、原子写和冲突如何收场 | [I03 · Filesystem / Watcher](./I03-filesystem-and-watcher.md) |
-| 导入导出如何保持可迁移 | [I04 · Import / Export](./I04-import-export-contract.md) |
-| 桌面壳和本地权限如何约束 | [I05 · Desktop Shell](./I05-desktop-shell-contract.md) |
-| 项目打开、关闭、归档如何定义 | [R01 · Project Lifecycle](./R01-project-lifecycle.md) |
-| 备份恢复如何避免假成功 | [R02 · Backup / Restore](./R02-backup-restore.md) |
-| 迁移升级如何可回滚 | [R03 · Migration / Upgrade](./R03-migration-and-upgrade.md) |
-| 索引坏了如何降级和修复 | [R04 · Index Health / Repair](./R04-index-health-and-repair.md) |
-| 诊断包和 Debug Mode 如何保护隐私 | [R05 · Diagnostics / Debug Mode](./R05-diagnostics-and-debug-mode.md) |
+| 模型 provider 如何接入和审计 | [I01 · LLM Provider Contract](./platform/I01-llm-provider-contract.md) |
+| 编辑器适配层如何隔离实现 | [I02 · Editor Adapter Contract](./platform/I02-editor-adapter-contract.md) |
+| 文件监听、原子写和冲突如何收场 | [I03 · Filesystem / Watcher](./platform/I03-filesystem-and-watcher.md) |
+| 导入导出如何保持可迁移 | [I04 · Import / Export](./platform/I04-import-export-contract.md) |
+| 桌面壳和本地权限如何约束 | [I05 · Desktop Shell](./platform/I05-desktop-shell-contract.md) |
+| 项目打开、关闭、归档如何定义 | [R01 · Project Lifecycle](./platform/R01-project-lifecycle.md) |
+| 备份恢复如何避免假成功 | [R02 · Backup / Restore](./platform/R02-backup-restore.md) |
+| 迁移升级如何可回滚 | [R03 · Migration / Upgrade](./platform/R03-migration-and-upgrade.md) |
+| 索引坏了如何降级和修复 | [R04 · Index Health / Repair](./platform/R04-index-health-and-repair.md) |
+| 诊断包和 Debug Mode 如何保护隐私 | [R05 · Diagnostics / Debug Mode](./platform/R05-diagnostics-and-debug-mode.md) |
 
 ## 失败不是错误码
 

@@ -24,7 +24,7 @@ flowchart LR
   Open --> Recent[Runtime Recent]
 ```
 
-导航不改变作品事实。删除、归档、导入等危险操作进入 [R01](./R01-project-lifecycle.md) 和 Settings 危险操作语义。
+导航不改变作品事实。删除、归档、导入等危险操作进入 [R01](./platform/R01-project-lifecycle.md) 和 Settings 危险操作语义。
 
 ## 失败收场
 

@@ -1,11 +1,19 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · docs · platform 归口与 WORKFLOW 去项目化
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| `Ixx/Rxx` 从根层 spec 迁入 `spec/platform/`,与 appendix 平级:platform 承载集成、可靠性、恢复、迁移和诊断等支撑契约;根层 `spec/` 保持 `S/M` 主阅读路径。 | `spec/platform/*` `README.md` `spec/S00-system-contract.md` `TODO.md` | 用户判断 I/R 更适合放进另一个与 appendix 平级的目录,并确认目录名为 `platform`。 |
+| `WORKFLOW.md` 去项目化:移除 Open Novel 名称、当前能力清单和具体 design/spec 文件名,保留可复制的文档流、编号体系、platform/appendix 分工和提交前验证规则。 | `WORKFLOW.md` | 用户指出 WORKFLOW 应该可以覆盖到另一个项目,不应有项目 designated words。 |
+| `AGENTS.md` 与 `CLAUDE.md` 同步整理:保留 Open Novel 项目级约束,但把文档职责改成根层 `S/M`、`spec/platform/I/R`、`spec/appendix/A/V`。 | `AGENTS.md` `CLAUDE.md` | 用户要求完成后整理 WORKFLOW、CLAUDE、AGENTS。 |
+
 ## 2026-06-11 · docs · S/M/I/R/A/V/P 编号体系与全量文档重写执行
 
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
 | 文档编号从连续数字扩展为单字母 + 数字:`Sxx` 表示系统设计,`Mxx` 表示用户能力,`Ixx` 表示集成契约,`Rxx` 表示可靠性/运维契约,`Axx` 表示 appendix 实现明细,`Vxx` 表示验证明细,`Pxxx` 表示 progress 历史档案。编号规则固化进 WORKFLOW、README、agent 工作规范和各索引。 | `WORKFLOW.md` `README.md` `AGENTS.md` `CLAUDE.md` `spec/appendix/README.md` `progress/README.md` | 用户要求继续使用单字母 + 数字,保留 appendix,增加 `P` 给 progress。 |
-| 根层 spec 不再只有 S/M:新增并纳入导航的 `I01-I05` 覆盖模型、编辑器、文件系统、导入导出、桌面壳五类跨边界接入;新增 `R01-R05` 覆盖项目生命周期、备份恢复、迁移升级、索引修复和诊断排障。 | `spec/I*.md` `spec/R*.md` `README.md` `spec/S00-system-contract.md` | 用户追问除 S/M 外是否还有其他适用场景;最终选择 I/R 进入核心 spec,验证细节 V 进 appendix。 |
+| 新增并纳入导航的 `I01-I05` 覆盖模型、编辑器、文件系统、导入导出、桌面壳五类跨边界接入;新增 `R01-R05` 覆盖项目生命周期、备份恢复、迁移升级、索引修复和诊断排障。它们随后迁入 `spec/platform/`,不再作为根层主阅读路径。 | `spec/platform/I*.md` `spec/platform/R*.md` `README.md` `spec/S00-system-contract.md` | 用户追问除 S/M 外是否还有其他适用场景;最终选择 I/R 进入编号体系,验证细节 V 进 appendix。 |
 | 能力级 spec 补齐到 `M01-M16`:Universal Search、Command Palette、Fact Query、Discuss、Planning、Writing、Inline Rewrite、Approval、Trace、Knowledge Surface、ReaderPanel、Memory、Agent Controls、Settings、Onboarding、Project Library 都有根层阅读入口,后续实现明细只补入 A/V。 | `spec/M*.md` `README.md` `TODO.md` | 用户要求放心大胆拆,不要放 `/modules`,直接放到核心 spec 级别。 |
 | appendix 和 progress 也纳入编号管理:appendix README 改为 A/V index 并新增 golden cases、external spikes;progress 根层文档改为 `P000-P008`,README 表格同步编号。 | `spec/appendix/*` `progress/*` | appendix 保留但只放用户不必主动读的明细;progress 可用,但只做历史档案。 |
 

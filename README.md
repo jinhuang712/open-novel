@@ -49,10 +49,10 @@
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **核心 spec 编号**: 根层 `spec/` 使用 `S/M/I/R` 四类编号;appendix 使用 `A/V`;progress 使用 `P`
+- **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
 - **系统设计**: `S00-S11` 写系统主权、跨层契约、运行时、存储、上下文和底层协议
 - **能力闭环**: `M01-M16` 写用户可触发、可感知、可验收的完整能力
-- **集成与可靠性**: `I01-I05` 写跨边界接入契约;`R01-R05` 写生命周期、恢复、迁移、修复和诊断
+- **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/S01](./spec/S01-project-storage.md) 定义
@@ -83,7 +83,7 @@ pnpm dev
 ├── TODO.md                    # TODO + 已知问题 + 未决问题
 ├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 产品 PRD(纯产品定义)
-├── spec/                      # 核心技术文档(实施向)
+├── spec/                      # 核心技术文档(S/M) + platform/ + appendix/
 ├── design/                    # 界面设计: 交互文档 + HTML 高保真原型(prototypes/)
 ├── progress/                  # 历史进度档案(只做追溯,不再承担 rolling plan)
 ├── app/                       # Next.js 路由 + API
@@ -111,7 +111,7 @@ pnpm dev
 
 ### 核心技术文档 (spec/) — 系统契约 (How / Boundaries)
 
-根层 spec 是可直接阅读的技术设计。`S` 讲系统主权和跨层契约,`M` 讲用户可感知能力,`I` 讲外部/跨边界接入,`R` 讲运行可靠性和恢复闭环。每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
+根层 spec 是可直接阅读的技术设计。`S` 讲系统主权和跨层契约,`M` 讲用户可感知能力。`I/R` 放在 `spec/platform/`,承接跨边界接入、恢复、迁移和诊断等平台支撑契约。每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
 
 #### S · System Design
 
@@ -147,21 +147,20 @@ pnpm dev
 - [M15-onboarding-and-new-book](./spec/M15-onboarding-and-new-book.md) — 首启、开书向导、样例项目和工作区初始化
 - [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开和跨项目隔离
 
-#### I · Integration Contract
+#### Platform · I/R
 
-- [I01-llm-provider-contract](./spec/I01-llm-provider-contract.md) — 模型 provider 能力、失败、审计和降级边界
-- [I02-editor-adapter-contract](./spec/I02-editor-adapter-contract.md) — 编辑器适配层的选择、锚点、选区和 undo 责任
-- [I03-filesystem-and-watcher](./spec/I03-filesystem-and-watcher.md) — 文件系统、外部编辑监听、原子写和冲突处理
-- [I04-import-export-contract](./spec/I04-import-export-contract.md) — 导入、导出、可迁移格式和错误收场
-- [I05-desktop-shell-contract](./spec/I05-desktop-shell-contract.md) — 桌面壳、系统权限、窗口与本地路径契约
+- [platform README](./spec/platform/README.md) — `I/R` 平台支撑契约索引与更新规则
+- [I01-llm-provider-contract](./spec/platform/I01-llm-provider-contract.md) — 模型 provider 能力、失败、审计和降级边界
+- [I02-editor-adapter-contract](./spec/platform/I02-editor-adapter-contract.md) — 编辑器适配层的选择、锚点、选区和 undo 责任
+- [I03-filesystem-and-watcher](./spec/platform/I03-filesystem-and-watcher.md) — 文件系统、外部编辑监听、原子写和冲突处理
+- [I04-import-export-contract](./spec/platform/I04-import-export-contract.md) — 导入、导出、可迁移格式和错误收场
+- [I05-desktop-shell-contract](./spec/platform/I05-desktop-shell-contract.md) — 桌面壳、系统权限、窗口与本地路径契约
 
-#### R · Reliability / Runtime Operations
-
-- [R01-project-lifecycle](./spec/R01-project-lifecycle.md) — 项目创建、打开、关闭、归档和恢复入口
-- [R02-backup-restore](./spec/R02-backup-restore.md) — 备份、恢复、版本保留和不可恢复提示
-- [R03-migration-and-upgrade](./spec/R03-migration-and-upgrade.md) — 文档、数据和索引迁移升级策略
-- [R04-index-health-and-repair](./spec/R04-index-health-and-repair.md) — 索引健康、重建、降级查询和修复体验
-- [R05-diagnostics-and-debug-mode](./spec/R05-diagnostics-and-debug-mode.md) — 诊断包、Debug Mode、导出边界和隐私保护
+- [R01-project-lifecycle](./spec/platform/R01-project-lifecycle.md) — 项目创建、打开、关闭、归档和恢复入口
+- [R02-backup-restore](./spec/platform/R02-backup-restore.md) — 备份、恢复、版本保留和不可恢复提示
+- [R03-migration-and-upgrade](./spec/platform/R03-migration-and-upgrade.md) — 文档、数据和索引迁移升级策略
+- [R04-index-health-and-repair](./spec/platform/R04-index-health-and-repair.md) — 索引健康、重建、降级查询和修复体验
+- [R05-diagnostics-and-debug-mode](./spec/platform/R05-diagnostics-and-debug-mode.md) — 诊断包、Debug Mode、导出边界和隐私保护
 
 #### Appendix · A/V
 
