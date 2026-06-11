@@ -81,7 +81,7 @@ plan 禁止出现:
 ### G3 · 结构约定
 
 - 能力章(plan/05-10)开篇在 H1 后第一段用两行:**你此刻的问题**:…。**产品的回答**:…。
-- 正文零 spec/design 链接;每篇文末固定 `## 实现承载` 小节,集中放 spec/design 链接。
+- plan 全篇不出现 spec/design 链接(plan 内部互链与红线编号引用除外);spec/design 的文档导航集中在 `README.md`。
 - 产品红线(编号 R1-R10)全文只在 `plan/03-guardrails.md`,其他篇只引用编号(如 R4)。
 - 审批卡结构只在 `plan/07-approval-and-cascade.md`。
 - 可关矩阵只在 `plan/05-agent-team.md`。

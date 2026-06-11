@@ -70,11 +70,3 @@ flowchart LR
 ```
 
 闭环每转一圈,系统就更像你一分;而圈上的每一站,你都看得见、改得动。
-
-## 实现承载
-
-- [spec/22 — 记忆与历史](../spec/22-memory-and-history.md):当轮在场、会话历史保存与恢复、不自动压缩,以及 R2 项目隔离、R5 取消不学与 R8 事实优先级的承载。
-- [spec/23 — 上下文装配契约](../spec/23-context-contracts.md):对话历史与经验如何装进每一次生成的材料。
-- [spec/01 — 存储结构](../spec/01-storage-schema.md):经验的存储承载。
-- [spec/24 — 复盘提炼输出](../spec/24-json-output.md):反思学习者复盘提炼经验的输出契约。
-- [design/04 — 设置](../design/04-settings.md):经验逐条可见、可调、可删的管理界面契约。

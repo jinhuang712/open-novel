@@ -101,10 +101,3 @@ flowchart TD
 ```
 
 旅程的每一站,主动权都在你手里:分析可取消,条目可搁置,否决有去向,生效可回退。
-
-## 实现承载
-
-- [spec/06 — 审批流](../spec/06-approval-flow.md):审批闸门、永不过期与原样恢复、重复确认与整轮取消回退的执行语义。
-- [spec/19 — 影响分析](../spec/19-impact-analysis.md):连锁影响确定性穷举(R6)与置信度标注的实现契约。
-- [spec/26 — 级联编排](../spec/26-cascade-controller.md):多级连带的分析编排与取消回退的执行承载。
-- [design/02 — 审批卡](../design/02-approval-cascade.md):审批卡的布局、勾选交互与状态呈现的界面契约。

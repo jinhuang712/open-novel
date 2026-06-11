@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · plan · 删除各篇文末「## 实现承载」小节,plan/ 收为零 spec/design 链接
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| plan 全部 10 篇文末的 `## 实现承载` 小节(集中放 spec/design 链接)删除;plan/ 现为纯产品 PRD,全篇不出现 spec/design 链接,仅保留 plan 内部互链与红线编号引用。plan→spec/design 的文档导航由 [README.md](./README.md)(唯一入口)承载。 | 全部 `plan/*.md` | 用户决定 plan 不需要文末实现承载。 |
+| 治理纪律同步:`CLAUDE.md` / `AGENTS.md` 的 G3 结构约定由「正文零 spec/design 链接 + 每篇文末固定 `## 实现承载` 小节」改为「plan 全篇不出现 spec/design 链接(plan 内部互链与红线编号引用除外),导航集中在 README」。 | `CLAUDE.md` `AGENTS.md` | 保持仓库自洽,避免后续 agent 按旧 G3 把小节加回。 |
+| `progress/008-plan-rewrite.md` 作为历史档案保留其对旧实现承载约定的记述,不回改。 | (无改动,仅说明) | 历史档案只追溯当时决策。 |
+
 ## 2026-06-11 · plan rewrite · plan/ 重定义为纯产品 PRD:12 篇半技术 → 10 篇纯产品,技术内容迁入 spec
 
 | 变更 | 影响文档 | 关联 |

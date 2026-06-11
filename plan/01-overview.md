@@ -84,7 +84,3 @@ plan 共 10 篇,建议按序通读;只关心具体能力的读者可直接跳 05
 - [10 — 叙事诊断与读者预演](./10-narrative-and-reader.md):叙事力学体检与发布前的模拟读者。
 
 三层文档体系一句话:plan 讲产品(做什么、为什么),spec 讲实现(怎么做到),design 讲界面(长什么样、怎么交互)。
-
-## 实现承载
-
-全仓文档导航见 [README.md](../README.md);界面交互设计与高保真原型见 [design/README.md](../design/README.md)。
