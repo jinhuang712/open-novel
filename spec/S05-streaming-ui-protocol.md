@@ -13,7 +13,7 @@ UI 像驾驶舱,不是黑盒日志流。
 | 审批卡 | 用户需要审定的具体变更 | 自动写入许可 |
 | 错误提示 | 失败原因和可恢复动作 | 技术栈堆栈全文 |
 
-真正的业务结果来自 [04](./S04-turn-orchestration.md) 和 [01](./S01-project-storage.md)。事件流只是把这些结果展示出来。
+真正的业务结果来自 [S04](./S04-turn-orchestration.md) 和 [S01](./S01-project-storage.md)。事件流只是把这些结果展示出来。
 
 ## 一条事件如何抵达 UI
 
@@ -102,7 +102,7 @@ Trace 不是越多越好。每条 trace 应能回答一个问题:
 | 为什么失败 | 工具/模型/schema/存储的失败点 |
 | 哪些能力降级 | 索引过期、语义召回不可用、日志缺失 |
 
-Developer Mode 可以看更多诊断,但普通 Trace 应服务作者理解,不是堆内部字段。Trace 作为用户可读产品能力的完整闭环见 [14 · Trace Observability](./M09-trace-observability.md)。
+Developer Mode 可以看更多诊断,但普通 Trace 应服务作者理解,不是堆内部字段。Trace 作为用户可读产品能力的完整闭环见 [M09 · Trace Observability](./M09-trace-observability.md)。
 
 ## 事件事故处理
 

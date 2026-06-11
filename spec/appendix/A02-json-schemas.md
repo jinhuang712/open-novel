@@ -17,16 +17,16 @@
 
 ## 对应核心文档
 
-- [03 Agent Runtime](../S03-agent-runtime.md)
-- [04 Turn Orchestration](../S04-turn-orchestration.md)
-- [05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [07 Context And Query](../S07-context-and-query.md)
-- [08 Creative Engine](../S08-creative-engine.md)
-- [09 Style And Humanizer](../S09-style-and-humanizer.md)
-- [12 Universal Search](../M01-universal-search.md)
-- [13 Discuss Mode](../M04-discuss-mode.md)
-- [14 Trace Observability](../M09-trace-observability.md)
-- [16 ReaderPanel](../M11-reader-panel.md)
+- [S03 Agent Runtime](../S03-agent-runtime.md)
+- [S04 Turn Orchestration](../S04-turn-orchestration.md)
+- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
+- [S07 Context And Query](../S07-context-and-query.md)
+- [S08 Creative Engine](../S08-creative-engine.md)
+- [S09 Style And Humanizer](../S09-style-and-humanizer.md)
+- [M01 Universal Search](../M01-universal-search.md)
+- [M04 Discuss Mode](../M04-discuss-mode.md)
+- [M09 Trace Observability](../M09-trace-observability.md)
+- [M11 ReaderPanel](../M11-reader-panel.md)
 
 ## 边界
 

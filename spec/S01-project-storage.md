@@ -119,11 +119,11 @@ stateDiagram-v2
 
 | 对方 | Project Storage 给它什么 | Project Storage 从它要什么 |
 |---|---|---|
-| [04](./S04-turn-orchestration.md) | 落盘结果、rollback 结果、冲突状态 | 已审批 ChangeSet 和事务意图 |
-| [06](./S06-knowledge-graph.md) | 文件变更范围、版本、派生写入边界 | reindex 健康度和过期范围 |
-| [07](./S07-context-and-query.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
-| [10](./S10-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
-| [11](./S11-settings-and-onboarding.md) | workspace/project 生命周期结果 | 导入、导出、删除等危险操作确认 |
+| [S04](./S04-turn-orchestration.md) | 落盘结果、rollback 结果、冲突状态 | 已审批 ChangeSet 和事务意图 |
+| [S06](./S06-knowledge-graph.md) | 文件变更范围、版本、派生写入边界 | reindex 健康度和过期范围 |
+| [S07](./S07-context-and-query.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
+| [S10](./S10-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
+| [S11](./S11-settings-and-onboarding.md) | workspace/project 生命周期结果 | 导入、导出、删除等危险操作确认 |
 
 ## FAQ
 

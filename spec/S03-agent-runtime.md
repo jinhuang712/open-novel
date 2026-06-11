@@ -25,7 +25,7 @@ sequenceDiagram
   R-->>O: draft/report/proposal/failure
 ```
 
-runner 的返回值只回到编排层。只要结果会改变作品,它必须成为 proposal 或 ChangeSet,等待 [04](./S04-turn-orchestration.md) 处理。
+runner 的返回值只回到编排层。只要结果会改变作品,它必须成为 proposal 或 ChangeSet,等待 [S04](./S04-turn-orchestration.md) 处理。
 
 ## Runner 不是 Agent 框架
 

@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · docs · spec 编号残留与审计归口修正
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 修复 spec 内部链接显示文本仍使用旧连续编号的问题,统一改为目标文档的 `S/M` 前缀,避免与当前 `S/M/I/R/A/V/P` 编号体系冲突。 | `spec/S*.md` `spec/appendix/*.md` | spec 复查发现链接虽不断链,但显示编号会误导阅读姿态。 |
+| 收敛外部事实审计归口:S00 明确审计证据进 appendix,行为契约回写对应根层 `S/M` 或 `platform/I/R`;未关闭问题进 TODO,路线变化进 CHANGELOG。 | `spec/S00-system-contract.md` | 修复 platform 拆分后 S00 仍只写 appendix/TODO 的归口残留。 |
+| 明确 appendix 三类验证/迁移材料边界:`V03` 是外部能力原始 spike 证据唯一归口,`V01` 只放验证矩阵和用例引用,`A06` 只放迁移说明、版本能力摘要和历史归档说明。 | `spec/appendix/README.md` `spec/appendix/A06-migration-notes.md` `spec/appendix/V01-test-matrix.md` `spec/appendix/V03-external-spikes.md` | 修复 A06/V01/V03 同时承接外部审计与 spike 的职责重叠。 |
+
 ## 2026-06-11 · docs · platform 归口与 WORKFLOW 去项目化
 
 | 变更 | 影响文档 | 关联 |

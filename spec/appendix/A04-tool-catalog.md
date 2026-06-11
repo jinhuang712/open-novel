@@ -14,15 +14,15 @@
 
 ## 对应核心文档
 
-- [03 Agent Runtime](../S03-agent-runtime.md)
-- [04 Turn Orchestration](../S04-turn-orchestration.md)
-- [06 Knowledge Graph](../S06-knowledge-graph.md)
-- [07 Context And Query](../S07-context-and-query.md)
-- [10 Editor And Interaction](../S10-editor-and-interaction.md)
-- [12 Universal Search](../M01-universal-search.md)
-- [13 Discuss Mode](../M04-discuss-mode.md)
-- [15 Approval Cascade](../M08-approval-cascade.md)
-- [16 ReaderPanel](../M11-reader-panel.md)
+- [S03 Agent Runtime](../S03-agent-runtime.md)
+- [S04 Turn Orchestration](../S04-turn-orchestration.md)
+- [S06 Knowledge Graph](../S06-knowledge-graph.md)
+- [S07 Context And Query](../S07-context-and-query.md)
+- [S10 Editor And Interaction](../S10-editor-and-interaction.md)
+- [M01 Universal Search](../M01-universal-search.md)
+- [M04 Discuss Mode](../M04-discuss-mode.md)
+- [M08 Approval Cascade](../M08-approval-cascade.md)
+- [M11 ReaderPanel](../M11-reader-panel.md)
 
 ## 边界
 

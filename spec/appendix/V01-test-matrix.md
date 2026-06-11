@@ -1,10 +1,10 @@
 # V01 · Test Matrix
 
-本 appendix 是测试矩阵、验证命令、golden case、E2E 场景和外部能力 spike 结果的归口。根层 spec 只说明哪些行为必须可验证。
+本 appendix 是测试矩阵、验证命令、单测/集成/E2E 场景和 golden case 引用的归口。外部能力的原始 spike 证据归 [V03](./V03-external-spikes.md)。
 
 ## 归口内容
 
-- 外部事实审计 spike。
+- 外部事实审计需要覆盖的验证项,原始证据反链到 V03。
 - storage / reindex / rollback 测试。
 - runner / JSON retry / tool failure 测试。
 - turn / approval / cancel / recovery 测试。
@@ -21,21 +21,21 @@
 
 ## 对应核心文档
 
-- [00 System Contract](../S00-system-contract.md)
-- [01 Project Storage](../S01-project-storage.md)
-- [03 Agent Runtime](../S03-agent-runtime.md)
-- [04 Turn Orchestration](../S04-turn-orchestration.md)
-- [05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [07 Context And Query](../S07-context-and-query.md)
-- [08 Creative Engine](../S08-creative-engine.md)
-- [10 Editor And Interaction](../S10-editor-and-interaction.md)
-- [11 Settings And Onboarding](../S11-settings-and-onboarding.md)
-- [12 Universal Search](../M01-universal-search.md)
-- [13 Discuss Mode](../M04-discuss-mode.md)
-- [14 Trace Observability](../M09-trace-observability.md)
-- [15 Approval Cascade](../M08-approval-cascade.md)
-- [16 ReaderPanel](../M11-reader-panel.md)
+- [S00 System Contract](../S00-system-contract.md)
+- [S01 Project Storage](../S01-project-storage.md)
+- [S03 Agent Runtime](../S03-agent-runtime.md)
+- [S04 Turn Orchestration](../S04-turn-orchestration.md)
+- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
+- [S07 Context And Query](../S07-context-and-query.md)
+- [S08 Creative Engine](../S08-creative-engine.md)
+- [S10 Editor And Interaction](../S10-editor-and-interaction.md)
+- [S11 Settings And Onboarding](../S11-settings-and-onboarding.md)
+- [M01 Universal Search](../M01-universal-search.md)
+- [M04 Discuss Mode](../M04-discuss-mode.md)
+- [M09 Trace Observability](../M09-trace-observability.md)
+- [M08 Approval Cascade](../M08-approval-cascade.md)
+- [M11 ReaderPanel](../M11-reader-panel.md)
 
 ## 边界
 
-测试步骤、命令和 fixture 属于 appendix。测试暴露出行为契约不成立时,必须回写根层 spec 或 TODO。
+测试步骤、命令和 fixture 属于 appendix。测试暴露出行为契约不成立时,必须回写对应根层 spec、platform 文档或 TODO;原始外部能力证据进入 [V03](./V03-external-spikes.md)。

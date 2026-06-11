@@ -14,15 +14,15 @@
 
 ## 对应核心文档
 
-- [04 Turn Orchestration](../S04-turn-orchestration.md)
-- [05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [10 Editor And Interaction](../S10-editor-and-interaction.md)
-- [02 Runtime State](../S02-runtime-state.md)
-- [12 Universal Search](../M01-universal-search.md)
-- [13 Discuss Mode](../M04-discuss-mode.md)
-- [14 Trace Observability](../M09-trace-observability.md)
-- [15 Approval Cascade](../M08-approval-cascade.md)
-- [16 ReaderPanel](../M11-reader-panel.md)
+- [S04 Turn Orchestration](../S04-turn-orchestration.md)
+- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
+- [S10 Editor And Interaction](../S10-editor-and-interaction.md)
+- [S02 Runtime State](../S02-runtime-state.md)
+- [M01 Universal Search](../M01-universal-search.md)
+- [M04 Discuss Mode](../M04-discuss-mode.md)
+- [M09 Trace Observability](../M09-trace-observability.md)
+- [M08 Approval Cascade](../M08-approval-cascade.md)
+- [M11 ReaderPanel](../M11-reader-panel.md)
 
 ## 边界
 

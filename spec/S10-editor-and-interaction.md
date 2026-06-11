@@ -81,7 +81,7 @@ flowchart TD
 
 把两者混成一个入口会让用户分不清“我是在查事实”还是“我在让 Agent 做事”。
 
-Universal Search 的完整设计见 [12 · Universal Search](./M01-universal-search.md)。本篇只保留它在编辑器焦点和命令路由中的位置。
+Universal Search 的完整设计见 [M01 · Universal Search](./M01-universal-search.md)。本篇只保留它在编辑器焦点和命令路由中的位置。
 
 ## Esc 和取消
 
@@ -98,7 +98,7 @@ stateDiagram-v2
   ApprovalOpen --> TurnCancel: explicit cancel approval
 ```
 
-Esc 先关闭最上层界面,不默认取消正在运行的 turn。取消 turn 需要明确命令,并进入 [04](./S04-turn-orchestration.md) 的统一取消语义。
+Esc 先关闭最上层界面,不默认取消正在运行的 turn。取消 turn 需要明确命令,并进入 [S04](./S04-turn-orchestration.md) 的统一取消语义。
 
 ## 外部编辑和 undo
 
