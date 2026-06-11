@@ -5,12 +5,13 @@
 ## 归口内容
 
 - Router actions。
-- ChangeSet、approval item、rollback result。
+- ChangeSet、approval item、internal recovery result。
 - context package、impact analysis result、fact query result。
 - tool result envelope。
 - narrative report、reader report、cardinal rules report。
 - humanizer diff、style report、inline review suggestion。
 - streaming control payload 和 recoverable error payload。
+- turn recap payload、activity item、author note、correction request 和 continuation action。
 - Universal Search query intent、result group、preview payload。
 - Discuss Mode answer/report/switch suggestion payload。
 - Trace step、degraded state、developer detail envelope。
@@ -29,7 +30,8 @@
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
+- [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
 ## 边界
 
-schema 可在 appendix 细化;但如果某个字段缺失会改变 retry、approval、blocking、rollback 或用户可见风险,根层 spec 必须点名该字段的行为意义。
+schema 可在 appendix 细化;但如果某个字段缺失会改变 retry、approval、blocking、内部恢复或用户可见风险,根层 spec 必须点名该字段的行为意义。

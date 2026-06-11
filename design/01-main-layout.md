@@ -17,6 +17,7 @@ flowchart TB
   subgraph SUMMON["召唤层"]
     LIB["库面板 320px<br/>Cmd+B / 点章节轨顶部"]
     TRC["Trace 面板 380px<br/>Cmd+J / 点状态点"]
+    ACT["Activity 时间线<br/>Trace 顶部「全部活动」"]
     US["Universal Search<br/>Shift+Shift"]
     QRY["事实查询<br/>Cmd+E"]
     CMP["输入条 600px 悬浮<br/>Cmd+L / 状态点 ✦"]
@@ -25,6 +26,7 @@ flowchart TB
   end
   RAIL -.-> LIB
   DOT -.-> TRC
+  TRC -.-> ACT
   DOT -.-> APP
   ED -.-> US
   ED -.-> QRY
@@ -102,9 +104,12 @@ queryFacts 是动词不是文件,独立成一键浮层:
 | 空闲 | `--text-tertiary` | 无;hover 浮现「✦ 对话 Cmd+L」 | 召出输入条 |
 | 运行中 | `--accent`,2.4s 透明度呼吸(全应用唯一循环动效;`prefers-reduced-motion` 下静止) | 「Writer 正在生成 diff · 12s」+ 进度 `3/5 · 毒舌读者` + 取消 | 展开 Trace 面板 |
 | 待审批 | `--accent`,静止 | 「1 个修改待审批 — 查看」(`--accent-text`) | 弹审批聚焦卡 |
+| 已停止 | `--text-tertiary`,静止 | 「已停止 · 没有修改 · 查看 recap」 | 展开 Trace 面板 |
 | 错误 | `--danger` | 「连接失败 · 去 Settings 检查 key」 | 直达 Settings §API Keys |
 
-Trace 面板(`Cmd+J` / 点状态点,380px 推开式):头部 = 本 turn 成本与 token 量(等宽 11px)+「复制 trace」「折叠全部」;主体按 agent 分块——agent 名 + 耗时一行,工具调用行等宽可展开 JSON,reasoning 默认一句摘要(Developer Mode 展开全文);块间发丝线分隔,不做卡片底色。
+Trace 面板(`Cmd+J` / 点状态点,380px 推开式):头部 = 最近 turn recap 摘要、本 turn 成本与 token 量(等宽 11px)+「全部活动」「复制 trace」「折叠全部」;主体按 agent 分块——agent 名 + 耗时一行,工具调用行等宽可展开 JSON,reasoning 默认一句摘要(Developer Mode 展开全文);块间发丝线分隔,不做卡片底色。
+
+Activity 时间线由 Trace 顶部的「全部活动」进入,仍是召唤式面板而非常驻侧栏。它按时间列出 recap、作者备注、已审定修改、停止和失败记录;点击条目跳到对应章节、审批卡或 Trace step。
 
 ## 输入条(召唤式)
 
@@ -129,6 +134,7 @@ Trace 面板(`Cmd+J` / 点状态点,380px 推开式):头部 = 本 turn 成本与
 | 流式生成中 | 状态点呼吸;Trace 面板若开启则滚动;输入条未 pin 已收回 |
 | inline_review | 正文附近出现批阅层标记;状态点保持空闲或弱进度;输入条不锁定 |
 | await_approval | 审批卡浮出;状态点静止 accent;输入条锁定 |
+| stopped_no_change | 状态点旁一行 stopped recap;Trace 顶部列出已完成结果、未完成步骤和继续入口 |
 | 断网 / key 失效 | 状态点 danger + 旁文;输入条顶部一行「连接失败,去 Settings 检查 key」 |
 
 ## 动效清单(全集)

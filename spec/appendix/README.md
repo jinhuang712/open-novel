@@ -23,9 +23,9 @@ appendix 不保存:
 
 ## 分类索引
 
-- [A01-schema-tables](./A01-schema-tables.md) — 文件、frontmatter、数据库表、索引和迁移字段的归口。
-- [A02-json-schemas](./A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet、context package 和 query result 的归口。
-- [A03-event-catalog](./A03-event-catalog.md) — turn、stream、trace、approval、UI 事件字段的归口。
+- [A01-schema-tables](./A01-schema-tables.md) — 文件、frontmatter、数据库表、activity recap、索引和迁移字段的归口。
+- [A02-json-schemas](./A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet、recap、context package 和 query result 的归口。
+- [A03-event-catalog](./A03-event-catalog.md) — turn、stream、trace、approval、recap、UI 事件字段的归口。
 - [A04-tool-catalog](./A04-tool-catalog.md) — Agent 工具、查询工具、命令和快捷键明细的归口。
 - [A05-prompt-templates](./A05-prompt-templates.md) — prompt 模板和公共片段全文的归口。
 - [A06-migration-notes](./A06-migration-notes.md) — 迁移说明、版本能力摘要、native binding 影响和历史归档说明的归口。

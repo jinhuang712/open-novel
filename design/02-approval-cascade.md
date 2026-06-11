@@ -25,7 +25,7 @@ flowchart TB
 - 入场:160ms 淡入 + 8px 上移;同时输入条进入 disabled 态(见 [design/01 §输入条](./01-main-layout.md#输入条召唤式))
 - 多审批排队:卡头右上 `badge-accent「还有 N 条待审」`,`Cmd+]` / `Cmd+[` 切换;一次只显示一张(按 createdAt)
 - `×` / `Esc` = 暂不处理:卡片收回,状态点保持待审批,输入条仍锁定;拒绝必须走行动栏的必填反馈
-- 取消入口不放在审批卡内常驻。运行态取消跟随状态点;跨进程恢复或返回待审批时,输入条恢复 banner 提供“继续审 / 取消本次对话”入口。全局 rollback 语义以 [spec/S04](../spec/S04-turn-orchestration.md) 为准
+- 取消入口不放在审批卡内常驻。运行态取消跟随状态点;跨进程恢复或返回待审批时,输入条恢复 banner 提供“继续审 / 取消本次对话”入口。全局 cancel plan 与 forward-only 修正语义以 [spec/S04](../spec/S04-turn-orchestration.md) 为准
 
 ## ChangeRow(每条变更行)
 
@@ -74,7 +74,7 @@ flowchart TB
 | cascade 分析中(卡未弹) | 状态点显示运行态,Trace 面板记录「影响分析 第 2/3 轮」 |
 | 卡片待决 | 输入条锁定;状态点显示待审批;卡片可收回但 pending 不消失 |
 | 提交中(resolve 请求) | 行动栏按钮 loading,勾选框锁定;幂等 — 重复点击不重复落盘 |
-| 同意完成 | 卡片折叠为一行回执:「已落盘 7/9 项 · 撤销入口在 审批历史」+ 240ms 渐出 |
+| 同意完成 | 卡片折叠为一行回执:「已落盘 7/9 项 · 可在审批历史生成修正提案」+ 240ms 渐出 |
 | 拒绝完成 | 卡片折叠为回执「已拒绝,反馈已发给 Writer」,新一轮生成开始 |
 | 跨进程恢复 | 启动时 hydrate,输入条恢复 banner「有 1 条待审的修改」点击重开卡片 |
 | doom-loop 升级 | 卡头替换为 warning 块「Writer 与 Validator 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/S04](../spec/S04-turn-orchestration.md)) |

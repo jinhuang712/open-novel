@@ -140,7 +140,7 @@ flowchart TB
 | 作品事实怎么保存、外部编辑怎么处理 | [S01 · Project Storage](./S01-project-storage.md) |
 | 系统记住什么、Reflector 关闭是什么意思 | [S02 · Runtime State](./S02-runtime-state.md) |
 | Agent 怎么运行、工具和 JSON 失败怎么办 | [S03 · Agent Runtime](./S03-agent-runtime.md) |
-| 一次 turn 怎么审批、取消、回滚 | [S04 · Turn Orchestration](./S04-turn-orchestration.md) |
+| 一次 turn 怎么审批、取消和收场 | [S04 · Turn Orchestration](./S04-turn-orchestration.md) |
 | UI 怎么看见过程、断线怎么恢复 | [S05 · Streaming UI Protocol](./S05-streaming-ui-protocol.md) |
 | 实体、锚点、embedding 怎么维护 | [S06 · Knowledge Graph](./S06-knowledge-graph.md) |
 | 上下文和影响分析怎么装配 | [S07 · Context And Query](./S07-context-and-query.md) |
@@ -164,6 +164,7 @@ flowchart TB
 | Settings 和 Developer Mode 如何分层 | [M14 · Settings / Developer Mode](./M14-settings-and-developer-mode.md) |
 | 首启和开书向导如何落地 | [M15 · Onboarding / New Book](./M15-onboarding-and-new-book.md) |
 | 项目库和章节轨如何导航 | [M16 · Project Library / Navigation](./M16-project-library-and-navigation.md) |
+| 本轮完成、停止或修正后如何留下用户可读记录 | [M17 · Turn Recap / Continuation](./M17-turn-recap-and-continuation.md) |
 | 模型 provider 如何接入和审计 | [I01 · LLM Provider Contract](./platform/I01-llm-provider-contract.md) |
 | 编辑器适配层如何隔离实现 | [I02 · Editor Adapter Contract](./platform/I02-editor-adapter-contract.md) |
 | 文件监听、原子写和冲突如何收场 | [I03 · Filesystem / Watcher](./platform/I03-filesystem-and-watcher.md) |

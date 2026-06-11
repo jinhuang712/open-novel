@@ -7,7 +7,7 @@
 | 类别 | 状态 | 说明 |
 |---|---|---|
 | appendix 明细抽取 | **1 open** | active [spec appendix](./spec/appendix/README.md) 已收敛为 `A/V` 分类归口,旧 29 篇原文已归档;后续实现前需按需从 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md) 抽取当前有效的表结构、schema、工具参数、prompt、golden cases 和测试矩阵,避免重新把历史噪音搬回 appendix。 |
-| M/platform 明细深化 | **1 open** | `M01-M16` 已作为根层能力 spec 建立,`I01-I05` / `R01-R05` 已迁入 `spec/platform/`;后续进入代码前,需要按实际实现顺序把对应字段、命令、事件、测试样例和 spike 结果补进 `Axx/Vxx`,不要把 appendix 细节倒灌回核心正文或 platform 契约。 |
+| M/platform 明细深化 | **1 open** | `M01-M17` 已作为根层能力 spec 建立,`I01-I05` / `R01-R05` 已迁入 `spec/platform/`;后续进入代码前,需要按实际实现顺序把对应字段、命令、事件、测试样例和 spike 结果补进 `Axx/Vxx`,不要把 appendix 细节倒灌回核心正文或 platform 契约。 |
 | 风险三档命名中英混用 | **1 open** | [plan/03](./plan/03-guardrails.md) 风险等级「提示级 / critical / blocking」中英混用,critical/blocking 为 spec 枚举值直接入 plan(G1 边界);改为全中文产品命名(如「确认级 / 阻断级」)需动 R10 文本与 [plan/08](./plan/08-approval-and-cascade.md) 引用,属红线级变更,待用户裁决后与 [spec/S04](./spec/S04-turn-orchestration.md) / [spec/S08](./spec/S08-creative-engine.md) 同步。 |
 
 ## 2 · 实施前开放验证
@@ -28,12 +28,11 @@
 | 优先级 | 问题 | 关联 | 暂定处理 |
 |---|---|---|---|
 | P1 | better-sqlite3 多 connection / LRU 策略仍需按“项目数 × 数据库文件数”重算。 | [spec/S01](./spec/S01-project-storage.md) · [A06](./spec/appendix/A06-migration-notes.md) | 待 native binding spike 后定默认上限和关闭策略。 |
-| P1 | `derived: true` 派生文件守卫的写盘、rollback、chokidar 三处实现细节仍需统一。 | [plan/03 红线 R7](./plan/03-guardrails.md) · [spec/S01](./spec/S01-project-storage.md) · [spec/S04](./spec/S04-turn-orchestration.md) · [spec/S06](./spec/S06-knowledge-graph.md) | 代码前补一张实现级接口表,避免守卫只停留在原则。 |
+| P1 | `derived: true` 派生文件守卫的写盘、内部恢复、chokidar 三处实现细节仍需统一。 | [plan/03 红线 R7](./plan/03-guardrails.md) · [spec/S01](./spec/S01-project-storage.md) · [spec/S04](./spec/S04-turn-orchestration.md) · [spec/S06](./spec/S06-knowledge-graph.md) | 代码前补一张实现级接口表,避免守卫只停留在原则。 |
 | P1 | Reflector 并发安全未定义:多个 turn 几乎同时完成时 `learnings` upsert 冲突。 | [plan/10](./plan/10-memory-and-learning.md) · [spec/S02](./spec/S02-runtime-state.md) | 实现前明确 transaction / queue / conflict merge 策略。 |
 | P1 | doom-loop 阈值、结构化输出 retry 与用户 retry 可能叠加成循环。 | [spec/S03](./spec/S03-agent-runtime.md) · [spec/S04](./spec/S04-turn-orchestration.md) | 增加 metrics 与 retry budget;避免 escalate → retry → 再 escalate 的无效循环。 |
 | P1 | `ContextOverflowError` 后的“分卷”兜底未设计。 | [spec/S07](./spec/S07-context-and-query.md) · [plan/05](./plan/05-story-world.md) | 先保留为显式失败;进入长篇真实压测后再设计分卷策略。 |
 | P1 | `extractSemanticDelta` 对中长篇正文 diff 的单次 LLM 稳定性依赖过高。 | [spec/S07](./spec/S07-context-and-query.md) | 需要降级路径:分段 delta、规则预筛或人工确认。 |
-| P2 | 取消入口仍需统一到同一个 rollback 语义。 | [plan/06](./plan/06-agent-team.md) · [spec/S04](./spec/S04-turn-orchestration.md) · [spec/S10](./spec/S10-editor-and-interaction.md) | 实现前统一输入条、命令面板、状态点和 Router action 的取消入口。 |
 | P2 | 魔法常数尚未系统化暴露或归档:doom-loop 0.9、cascade ≤3、weight 阈值、lastMessages=30、tokenBudget 软警等。 | 多文档 | 先保留硬编码默认;Settings/debug 设计时统一归档。 |
 | P2 | 测试策略已有 appendix 归口,但实际 vitest / playwright / LLM golden / spec audit 尚未落地。 | [V01](./spec/appendix/V01-test-matrix.md) · [spec/S00](./spec/S00-system-contract.md) | 开始代码实施后作为第一批工程化任务。 |
 | P2 | 段锚点、差量 reindex、paragraph_embeddings 强耦合,锚点失稳会拖垮知识图谱。 | [spec/S06](./spec/S06-knowledge-graph.md) · [spec/S07](./spec/S07-context-and-query.md) | 需要真实章节样本和 mutation 测试后校准。 |

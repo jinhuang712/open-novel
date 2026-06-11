@@ -7,8 +7,8 @@
 - workspace、project、chapter、setting 文件 frontmatter 字段。
 - project storage 相关表结构和索引。
 - knowledge graph 的 entity、concept、relation、timeline、dependency、anchor、embedding 表。
-- runtime、experience、session history 表。
-- approval、ChangeSet、rollback、trace 的持久化字段。
+- runtime、activity recap、experience、session history 表。
+- approval、ChangeSet、internal recovery、trace 的持久化字段。
 - Universal Search 最近对象、查询历史、preview cache 和索引健康状态字段。
 - settings、onboarding、project lifecycle 的存储字段。
 - migration 和 backfill 步骤。
@@ -23,6 +23,7 @@
 - [M01 Universal Search](../M01-universal-search.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
 - [M08 Approval Cascade](../M08-approval-cascade.md)
+- [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
 ## Experience / Reflector 字段归口
 
@@ -47,4 +48,4 @@ Reflector 关闭语义对应两个独立开关:
 
 ## 边界
 
-字段变化如果只影响存储实现,更新本 appendix。字段变化如果改变写入主路径、审批失效、rollback、上下文优先级或用户可见设置,同步更新对应核心 spec。
+字段变化如果只影响存储实现,更新本 appendix。字段变化如果改变写入主路径、审批失效、内部恢复、上下文优先级或用户可见设置,同步更新对应核心 spec。

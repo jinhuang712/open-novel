@@ -24,7 +24,7 @@
 - **叙事力学诊断** — 节奏、爽点密度、章末钩子与角色弧光的持续体检与偏离预警
 - **发布前读者预演** — 一组模拟读者(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)先于真实读者读完本章,给出弃书风险报告
 - **越用越懂你** — 你的每一次修改、采纳与否决都被记住,系统越写越合你的手感
-- **过程透明** — AI 的每一步提议、依据与影响都在侧栏实时可见,不是黑盒出稿
+- **过程透明** — AI 的每一步提议、依据与影响都在侧栏实时可见,每轮结束都有作者看得懂的 recap,不是黑盒出稿
 
 ## 技术栈
 
@@ -51,12 +51,12 @@
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
 - **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
 - **系统设计**: `S00-S11` 写系统主权、跨层契约、运行时、存储、上下文和底层协议
-- **能力闭环**: `M01-M16` 写用户可触发、可感知、可验收的完整能力
+- **能力闭环**: `M01-M17` 写用户可触发、可感知、可验收的完整能力
 - **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/S01](./spec/S01-project-storage.md) 定义
-- **编排主权**: user turn / cascade / approval / rollback 由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
+- **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
 - **待实查闸门**: 代码前的外部事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
 
 ## 快速启动
@@ -117,15 +117,15 @@ pnpm dev
 
 - [S00-system-contract](./spec/S00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
 - [S01-project-storage](./spec/S01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
-- [S02-runtime-state](./spec/S02-runtime-state.md) — 会话、经验、过程历史和 Reflector 生命周期
+- [S02-runtime-state](./spec/S02-runtime-state.md) — 会话、经验、活动记录、过程历史和 Reflector 生命周期
 - [S03-agent-runtime](./spec/S03-agent-runtime.md) — 受控 runner、prompt 堆叠、工具边界和 JSON 失败循环
-- [S04-turn-orchestration](./spec/S04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批和取消/恢复语义
-- [S05-streaming-ui-protocol](./spec/S05-streaming-ui-protocol.md) — 状态点、Trace、事件分层和断线恢复驾驶舱协议
+- [S04-turn-orchestration](./spec/S04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批、取消和 recap 触发语义
+- [S05-streaming-ui-protocol](./spec/S05-streaming-ui-protocol.md) — 状态点、Trace、Recap ready、事件分层和断线恢复驾驶舱协议
 - [S06-knowledge-graph](./spec/S06-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
 - [S07-context-and-query](./spec/S07-context-and-query.md) — Agent 证据包、影响分析裁判链、事实查询和 overflow 决策
 - [S08-creative-engine](./spec/S08-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
 - [S09-style-and-humanizer](./spec/S09-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
-- [S10-editor-and-interaction](./spec/S10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo/rollback 边界
+- [S10-editor-and-interaction](./spec/S10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
 - [S11-settings-and-onboarding](./spec/S11-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
 
 #### M · User-Facing Capability
@@ -146,6 +146,7 @@ pnpm dev
 - [M14-settings-and-developer-mode](./spec/M14-settings-and-developer-mode.md) — Settings 与 Developer Mode 的可见性、诊断和危险操作
 - [M15-onboarding-and-new-book](./spec/M15-onboarding-and-new-book.md) — 首启、开书向导、样例项目和工作区初始化
 - [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开和跨项目隔离
+- [M17-turn-recap-and-continuation](./spec/M17-turn-recap-and-continuation.md) — Turn Recap、项目活动时间线、停止回执和续接入口
 
 #### Platform · I/R
 
@@ -166,8 +167,8 @@ pnpm dev
 
 - [appendix README](./spec/appendix/README.md) — `A/V` 明细索引与更新规则
 - [A01-schema-tables](./spec/appendix/A01-schema-tables.md) — 表结构、字段字典、索引和迁移字段
-- [A02-json-schemas](./spec/appendix/A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet 和 context package
-- [A03-event-catalog](./spec/appendix/A03-event-catalog.md) — turn、stream、trace、approval 和 UI 事件字段
+- [A02-json-schemas](./spec/appendix/A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet、recap 和 context package
+- [A03-event-catalog](./spec/appendix/A03-event-catalog.md) — turn、stream、trace、approval、recap 和 UI 事件字段
 - [A04-tool-catalog](./spec/appendix/A04-tool-catalog.md) — Agent 工具、查询工具、命令和快捷键明细
 - [A05-prompt-templates](./spec/appendix/A05-prompt-templates.md) — prompt 模板和公共片段全文
 - [A06-migration-notes](./spec/appendix/A06-migration-notes.md) — 外部事实审计、版本能力、native binding 和迁移说明

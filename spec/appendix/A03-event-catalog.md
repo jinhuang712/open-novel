@@ -6,7 +6,8 @@
 
 - stream progress / output / control / diagnostic 事件字段。
 - turn lifecycle 事件。
-- approval、cancel、rollback、recovery 事件。
+- approval、cancel、internal recovery 事件。
+- recap created、author note added、correction requested、continuation selected 事件。
 - trace、tool run、LLM call、cost 事件。
 - Universal Search open/result/preview/action 事件。
 - editor、inline review、query、command、focus、Discuss Mode、ReaderPanel 事件。
@@ -24,6 +25,7 @@
 - [M09 Trace Observability](../M09-trace-observability.md)
 - [M08 Approval Cascade](../M08-approval-cascade.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
+- [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
 ## 边界
 

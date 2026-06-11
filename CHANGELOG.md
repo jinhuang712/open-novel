@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · spec+design · M17 Turn Recap 与 forward-only 历史语义
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 新增 `M17 Turn Recap And Continuation`:把每个 turn 的完成、停止、失败、待审、拒绝、放弃、已落盘和已修正都写成作者可读的项目活动记录;明确 Recap 是用户 changelog,不是作品事实、Trace step 或 Reflector 经验。 | `spec/M17-turn-recap-and-continuation.md` `README.md` `spec/S00-system-contract.md` | 用户确认普通作者不会使用 Git,recap 对他们就是最重要的变更记录。 |
+| 收敛取消和历史修正语义:运行中且未产生 durable change 时停止不需二次确认,但必须留下 stopped recap;已有待审、落盘或不可自动恢复风险时进入 cancel plan;撤销和恢复都生成新的反向修改或恢复提案,经审定后向前追加历史。 | `spec/S04-turn-orchestration.md` `spec/S10-editor-and-interaction.md` `spec/M08-approval-cascade.md` `spec/S01-project-storage.md` `plan/05-story-world.md` `plan/08-approval-and-cascade.md` | 关闭“取消入口仍需统一到同一个 rollback 语义”TODO,用户侧不暴露 Git 式回退。 |
+| UI 和过程可见性接入 recap:状态点新增 stopped recap 表现,Trace 顶部可展示最近 turn recap,S05 增加 `recap ready` 展示协议,M09 明确 Recap 与 Trace 的边界。 | `design/01-main-layout.md` `spec/S05-streaming-ui-protocol.md` `spec/M09-trace-observability.md` | 对齐“终止前内容做简单 recap,挂在界面上”的交互要求。 |
+| appendix 承接实现明细:补 activity recap 表字段、recap payload / event、作者备注、correction request、continuation action 和 Turn Recap 验证矩阵;TODO 的能力范围更新为 `M01-M17`。 | `spec/appendix/A01-schema-tables.md` `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` `spec/appendix/V01-test-matrix.md` `TODO.md` | 保持根层 spec 可读,字段、事件和测试继续后置。 |
+
 ## 2026-06-11 · docs+design · 轻量 TODO 清理
 
 | 变更 | 影响文档 | 关联 |
