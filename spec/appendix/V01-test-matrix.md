@@ -36,6 +36,21 @@
 - [M08 Approval Cascade](../M08-approval-cascade.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
 
+## Memory / Reflector 验证项
+
+经验管理和 Reflector 的测试归本篇维护。实施时至少覆盖:
+
+| 场景 | 预期 |
+|---|---|
+| 经验可见性 | 每条经验展示来源、适用范围、状态和权重;无来源经验不得出现在用户可见列表 |
+| 调高 / 调低 | 保存成功后 context builder 使用新权重;保存失败时 UI 保留原值并提示失败 |
+| 关闭单条经验 | 经验仍可见但不再注入 context;Trace / Debug 能解释未注入原因 |
+| 删除单条经验 | 列表、context 注入和搜索入口都不再出现;删除失败时不得隐藏残留记录 |
+| 关闭 Reflector | 后续 turn 不产生新经验候选;已有 active 经验仍按设置注入 |
+| 停用经验注入 | Reflector 可继续学习新经验,但已有经验不进入 context |
+| 清空经验 | 必须二次确认范围;存在 active writable turn / pending approval 时先阻断或要求处理 |
+| 学习冲突 | 相似或相反经验进入合并 / 排队 / 冲突提示路径,不得重复追加多条噪音经验 |
+
 ## 边界
 
 测试步骤、命令和 fixture 属于 appendix。测试暴露出行为契约不成立时,必须回写对应根层 spec、platform 文档或 TODO;原始外部能力证据进入 [V03](./V03-external-spikes.md)。

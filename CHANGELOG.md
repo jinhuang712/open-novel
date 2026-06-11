@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · docs+design · 轻量 TODO 清理
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 补齐开书旅程的产品承诺:一句故事种子会被拆成可审定的世界起点,样例项目用于直接体验完整故事世界。 | `plan/05-story-world.md` `TODO.md` | 关闭“开书旅程缺 plan 承诺”待办,与 plan/01 场景速览对齐。 |
+| 将经验管理与 Reflector 关闭语义的实现明细落到 appendix:经验字段族、学习开关与注入开关分离、可见 / 调权 / 关闭 / 删除 / 清空 / 冲突测试矩阵。 | `spec/appendix/A01-schema-tables.md` `spec/appendix/V01-test-matrix.md` `TODO.md` | 关闭“经验管理契约缺口”和“Reflector 关闭语义”两项文档待办;核心语义仍在 S02/S11/M12。 |
+| `design/02` 收敛到“章节轨 · 纸面 · 状态点”契约:审批卡改为状态点触发的纸面中央召唤层,`×/Esc` 统一为暂不处理且保持 pending,风险视觉改为细线/弱底/文字色。 | `design/02-approval-cascade.md` `design/prototypes/02-approval-cascade.html` `TODO.md` | 关闭 design 同步项中审批卡定位、取消入口和风险视觉部分;全局 rollback 语义与风险等级命名仍保留独立 TODO。 |
+| `design/01` 原型接入 Universal Search:顶部演示按钮与 `Shift+Shift` 可开关,结果按角色/阵营/章节分组并提供 hover preview。 | `design/prototypes/01-main-layout.html` `TODO.md` | 关闭 design 同步项中 “01 原型尚未接入全局搜索热键”。 |
+
 ## 2026-06-11 · docs · 文档矛盾复查与审定口径收敛
 
 | 变更 | 影响文档 | 关联 |

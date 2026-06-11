@@ -47,6 +47,23 @@
   .lib-row .num { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); width: 24px; flex: none; }
   .lib-sect { padding: 10px 12px 4px; font-size: 10.5px; letter-spacing: .08em; color: var(--text-tertiary); }
   .lib-foot { padding: 10px 20px; font-size: 11px; color: var(--text-tertiary); border-top: 1px solid var(--border); }
+  /* ===== Universal Search (Shift+Shift) ===== */
+  .usearch { position: fixed; left: 50%; top: 14%; transform: translateX(-50%) translateY(6px); width: 720px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px 16px 16px; z-index: 66; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+  .usearch.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
+  .usearch input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; color: var(--text-primary); background: transparent; border: none; outline: none; padding: 2px 0 10px; border-bottom: 1px solid var(--border); }
+  .us-body { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; padding-top: 10px; }
+  .us-group { padding-top: 8px; border-top: 1px solid var(--border); }
+  .us-group:first-child { border-top: none; padding-top: 0; }
+  .us-title { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin: 0 0 4px; }
+  .us-row { display: grid; grid-template-columns: 68px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 6px 0; cursor: pointer; color: var(--text-secondary); font-size: 12.5px; }
+  .us-row:hover, .us-row.on { color: var(--text-primary); }
+  .us-kind { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
+  .us-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .us-meta { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+  .us-preview { border-left: 1px solid var(--border); padding-left: 16px; font-size: 12.5px; line-height: 1.6; color: var(--text-secondary); }
+  .us-preview .p-name { color: var(--text-primary); font-weight: 600; margin-bottom: 4px; }
+  .us-preview .p-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 8px; }
+  .us-hint { display: flex; gap: 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
   /* ===== 查询浮层 (Cmd+E, 一键互换) ===== */
   .query { position: fixed; left: 50%; top: 16%; transform: translateX(-50%) translateY(6px); width: 560px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px 16px 12px; z-index: 65; display: flex; flex-direction: column; gap: 10px; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
   .query.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
@@ -185,6 +202,7 @@
   <button class="btn btn-sm" onclick="toggleLib()">库 (Cmd+B)</button>
   <button class="btn btn-sm" onclick="toggleTrace()">Trace (Cmd+J)</button>
   <button class="btn btn-sm" onclick="toggleComposer()">输入 (Cmd+L)</button>
+  <button class="btn btn-sm" onclick="toggleUSearch()">全局搜索 (Shift×2)</button>
   <button class="btn btn-sm" onclick="toggleQuery()">查询 (Cmd+E)</button>
   <span style="display:inline-flex;gap:2px;align-items:center">状态点:
     <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
@@ -285,6 +303,29 @@
   </div>
 </div>
 
+<div class="usearch" id="usearch">
+  <input id="usInput" placeholder="搜索角色、阵营、概念、章节…" value="林溪">
+  <div class="us-body">
+    <div>
+      <div class="us-group">
+        <div class="us-title">角色</div>
+        <div class="us-row on" data-us="linxi"><span class="us-kind">角色</span><span class="us-name">林溪</span><span class="us-meta">主角 · ch12</span></div>
+        <div class="us-row" data-us="luchen"><span class="us-kind">角色</span><span class="us-name">陆沉</span><span class="us-meta">对手 · ch12</span></div>
+      </div>
+      <div class="us-group">
+        <div class="us-title">阵营 / 组织</div>
+        <div class="us-row" data-us="shouye"><span class="us-kind">阵营</span><span class="us-name">守夜人会</span><span class="us-meta">敌对 · 23 处</span></div>
+      </div>
+      <div class="us-group">
+        <div class="us-title">章节</div>
+        <div class="us-row" data-us="chapter"><span class="us-kind">章节</span><span class="us-name">第 12 章 · 雨夜来客</span><span class="us-meta">当前打开</span></div>
+      </div>
+    </div>
+    <div class="us-preview" id="usPreview"></div>
+  </div>
+  <div class="us-hint"><span>Shift×2 打开/收回</span><span>Enter 打开</span><span>Cmd+Enter 对照打开</span><span>Esc 收回</span></div>
+</div>
+
 <div class="ap-layer" id="apLayer">
   <div class="ap-card">
     <div class="ap-t"><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理 (Esc)">×</button></div>
@@ -332,6 +373,15 @@ function closeComposer() { document.getElementById('composer').classList.remove(
 function openApproval() { document.getElementById('apLayer').classList.add('open'); }
 function closeApproval() { document.getElementById('apLayer').classList.remove('open'); }
 function approve() { closeApproval(); setState('run'); toast('已同意 · cascade 整批审排队中'); }
+function openUSearch() {
+  var u = document.getElementById('usearch');
+  u.classList.add('open');
+  document.getElementById('usInput').focus();
+}
+function closeUSearch() { document.getElementById('usearch').classList.remove('open'); }
+function toggleUSearch() {
+  document.getElementById('usearch').classList.contains('open') ? closeUSearch() : openUSearch();
+}
 
 /* ===== 库面板 ===== */
 var LIB = {
@@ -390,6 +440,30 @@ renderCats('chapters');
 document.getElementById('libList').innerHTML = LIB.chapters.html;
 document.getElementById('libFoot').textContent = LIB.chapters.foot;
 
+/* ===== Universal Search ===== */
+var US_PREVIEW = {
+  linxi: { name: '林溪', meta: '角色 · 主角 · 当前状态:掌握青铜罗盘线索', text: '阵营:知微书馆。关系:与陆沉敌对,与王胖子互信。最近出现:第 12 章雨夜来客。' },
+  luchen: { name: '陆沉', meta: '角色 · 对手 · 首次正面交锋', text: '阵营:纵横资本。关系:守夜人会外围执行者,试图用罗盘交换条件。' },
+  shouye: { name: '守夜人会', meta: '阵营 · 暗线组织 · 敌对', text: '成员:陆沉等。敌对关系:知微书馆。风险:其规则尚未完全公开。' },
+  chapter: { name: '第 12 章 · 雨夜来客', meta: '章节 · 当前打开 · 3,214 字', text: '命中:林溪、陆沉、青铜罗盘。存在 1 个世界规则 violation 和 1 个 cascade 锚点。' }
+};
+function renderUSPreview(key) {
+  var p = US_PREVIEW[key] || US_PREVIEW.linxi;
+  document.getElementById('usPreview').innerHTML = '<div class="p-name">' + p.name + '</div><div class="p-meta">' + p.meta + '</div><div>' + p.text + '</div>';
+}
+document.querySelectorAll('[data-us]').forEach(function (row) {
+  row.addEventListener('mouseenter', function () {
+    document.querySelectorAll('[data-us]').forEach(function (r) { r.classList.remove('on'); });
+    row.classList.add('on');
+    renderUSPreview(row.dataset.us);
+  });
+  row.addEventListener('click', function () {
+    closeUSearch();
+    toast('打开 ' + row.querySelector('.us-name').textContent + '(演示)');
+  });
+});
+renderUSPreview('linxi');
+
 /* ===== 旁注 ===== */
 var NOTES = {
   linxi: { name: '林溪', kind: '角色 · 主角', text: '重生回 2014 年的互联网创业者,知微书馆老板。', file: 'characters/lin.md' },
@@ -430,6 +504,7 @@ noteEl.addEventListener('mouseleave', function () { hideTimer = setTimeout(hideN
 
 /* ===== 状态点 ===== */
 var state = 'run';
+var lastShiftAt = 0;
 function setState(s) {
   state = s;
   var dot = document.getElementById('dot'), label = document.getElementById('dotLabel');
@@ -482,6 +557,18 @@ function toggleQuery() {
 }
 document.addEventListener('keydown', function (e) {
   var cmd = e.metaKey || e.ctrlKey;
+  var active = document.activeElement;
+  var typing = active && /^(INPUT|TEXTAREA)$/.test(active.tagName);
+  if (e.key === 'Shift' && !e.isComposing && !typing) {
+    var now = Date.now();
+    if (now - lastShiftAt < 420) {
+      e.preventDefault();
+      toggleUSearch();
+      lastShiftAt = 0;
+    } else {
+      lastShiftAt = now;
+    }
+  }
   if (cmd && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleLib(); }
   if (cmd && e.key.toLowerCase() === 'j') { e.preventDefault(); toggleTrace(); }
   if (cmd && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleComposer(); }
@@ -496,6 +583,7 @@ document.addEventListener('keydown', function (e) {
   }
   if (e.key === 'Escape') {
     if (document.getElementById('apLayer').classList.contains('open')) closeApproval();
+    else if (document.getElementById('usearch').classList.contains('open')) closeUSearch();
     else if (document.getElementById('query').classList.contains('open')) closeQuery();
     else if (document.getElementById('composer').classList.contains('open')) closeComposer();
     else if (noteEl.classList.contains('show')) hideNote();

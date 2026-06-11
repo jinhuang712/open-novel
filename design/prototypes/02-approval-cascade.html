@@ -13,12 +13,26 @@
 </script>
 <link rel="stylesheet" href="tokens.css">
 <style>
-  .stage { max-width: 600px; margin: 24px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+  body { overflow: hidden; }
+  .shell { height: calc(100vh - 42px); min-width: 980px; display: grid; grid-template-columns: 44px 1fr; background: var(--bg-app); position: relative; }
+  .rail { border-right: 1px solid var(--border); padding: 14px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; }
+  .rail .cur { color: var(--text-primary); position: relative; width: 100%; text-align: center; padding: 8px 0; }
+  .rail .cur::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--accent); }
+  .rail .spacer { flex: 1; }
+  .paper-wrap { overflow: hidden; position: relative; }
+  .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); padding: 82px 60px 160px; box-sizing: border-box; color: var(--text-primary); }
+  .paper h2 { font-family: var(--font-serif); font-size: 23px; margin: 0 0 34px; }
+  .paper p { font-size: 16px; line-height: 1.8; margin: 0 0 .9em; color: var(--text-secondary); }
+  .paper .mark { border-bottom: 1.5px solid var(--accent); color: var(--text-primary); }
+  .overlay { position: absolute; inset: 0; background: var(--bg-overlay); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .stage { width: min(600px, calc(100vw - 120px)); max-height: calc(100vh - 100px); display: flex; flex-direction: column; gap: 10px; }
+  .dotzone { position: fixed; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; z-index: 50; font-size: 12px; color: var(--text-secondary); }
+  .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--accent); }
 
-  .turn-banner { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-secondary); background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 14px; }
-  .turn-banner .right { margin-left: auto; }
+  .turn-banner { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-secondary); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 8px 14px; box-shadow: var(--shadow-sm); }
+  .turn-banner .right { margin-left: auto; color: var(--accent-text); font-weight: 500; }
 
-  .approval { overflow: hidden; }
+  .approval { overflow: hidden; max-height: calc(100vh - 162px); display: flex; flex-direction: column; }
   .ap-head { display: flex; align-items: flex-start; gap: 10px; padding: 14px 18px 12px; border-bottom: 1px solid var(--border); }
   .ap-head .spark { color: var(--accent); font-size: 16px; line-height: 1.4; }
   .ap-title { font-size: 14px; font-weight: 600; }
@@ -31,7 +45,7 @@
   .legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); margin-top: 6px; }
   .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 99px; margin-right: 4px; }
 
-  .rows { display: flex; flex-direction: column; }
+  .rows { display: flex; flex-direction: column; overflow-y: auto; }
   .group-head { display: flex; align-items: center; gap: 8px; padding: 10px 18px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; background: var(--bg-sunken); border-bottom: 1px solid var(--border); user-select: none; }
   .group-head .chev { transition: transform var(--dur-fast) var(--ease); }
   .group.closed .chev { transform: rotate(-90deg); }
@@ -58,10 +72,10 @@
   .edit-area .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
 
   .rules { margin: 12px 18px; display: flex; flex-direction: column; gap: 8px; }
-  .rule-block { border-radius: var(--radius-md); padding: 10px 14px; font-size: 12.5px; }
-  .rule-critical { background: var(--danger-subtle); border: 1px solid var(--danger); }
+  .rule-block { border-radius: var(--radius-sm); padding: 8px 0 8px 12px; font-size: 12.5px; border-left: 2px solid var(--border-strong); background: transparent; }
+  .rule-critical { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 5%, transparent); }
   .rule-critical .rt { color: var(--danger); font-weight: 600; }
-  .rule-major { background: var(--warning-subtle); border: 1px solid transparent; }
+  .rule-major { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 5%, transparent); }
   .rule-major .rt { color: var(--warning); font-weight: 600; }
   .rule-block .jump { color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
   .ack { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-weight: 500; color: var(--danger); }
@@ -89,8 +103,23 @@
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
-<div class="stage">
-  <div class="turn-banner">⏳ 本次对话进行中 · action 1/2<span class="right"><button class="btn btn-sm btn-danger">取消本次对话 · 回退 0 项</button></span></div>
+<div class="shell">
+  <div class="rail">
+    <span>☰</span>
+    <span>009</span><span>010</span><span>011</span><span class="cur">012</span><span>013</span>
+    <span class="spacer"></span><span>?</span><span>⚙</span>
+  </div>
+  <div class="paper-wrap">
+    <div class="paper">
+      <p style="font-size:12px;color:var(--text-tertiary);margin-bottom:8px">第三卷 · 重生七年</p>
+      <h2>第 12 章 · 雨夜来客</h2>
+      <p>雨下到第三天,知微书馆的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。</p>
+      <p>林溪把最后一摞服务器报价单推到桌角,揉了揉眉心。她知道这次改名会牵动前文所有称谓。</p>
+      <p><span class="mark">当前命中处 C-03</span> · 完整连带修改进入审批层,正文只保留轻量锚点。</p>
+    </div>
+    <div class="overlay">
+      <div class="stage">
+  <div class="turn-banner">1 个修改待审批<span class="right">× / Esc 暂不处理,状态点仍待审批</span></div>
 
   <div class="card approval" id="approval">
     <div class="ap-head">
@@ -194,13 +223,13 @@
 
     <div class="rules">
       <div class="rule-block rule-critical">
-        <div class="rt">⛔ 1 项严重违反守则,可能让读者直接弃书 — 人设崩坏</div>
+        <div class="rt">1 项 critical — 人设崩坏</div>
         <div style="margin-top:4px">ch_003 <span class="jump">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让 Writer 重做。</div>
         <label class="ack"><input type="checkbox" id="ackRisk" onchange="refresh()">我已阅读上述风险,明知违反仍通过</label>
       </div>
       <div class="rule-block rule-major">
-        <div class="rt">⚠ 1 项 major — 节奏崩盘风险</div>
-        <div style="margin-top:4px">本批改动集中在前三章,建议改完后跑一次 ReaderPanel 验证黄金三章爽点密度(<span class="jump">查看 spec/25 §黄金三章</span>)。</div>
+        <div class="rt">1 项 major — 节奏崩盘风险</div>
+        <div style="margin-top:4px">本批改动集中在前三章,建议改完后跑一次 ReaderPanel 验证黄金三章爽点密度(<span class="jump">查看 design/03 章节风险</span>)。</div>
       </div>
     </div>
 
@@ -222,8 +251,12 @@
 
   <div class="kbd-hints">
     <span><kbd>Y</kbd> 同意</span><span><kbd>N</kbd> 拒绝</span><span><kbd>E</kbd> 编辑后同意</span>
-    <span><kbd>Cmd+Shift+A</kbd> cascade 全选同意</span><span><kbd>Cmd+]</kbd> 下一条待审</span>
+    <span><kbd>Esc</kbd> 暂不处理</span><span><kbd>Cmd+]</kbd> 下一条待审</span>
   </div>
+      </div>
+    </div>
+  </div>
+  <div class="dotzone"><span>1 个修改待审批 — 查看</span><span class="dot"></span></div>
 </div>
 
 <script>

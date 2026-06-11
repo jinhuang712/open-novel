@@ -20,10 +20,12 @@ flowchart TB
 
 ## 卡片定位与出现
 
-- 出现在主界面召唤式审批表面,优先占用纸面右侧可读空间;必要时临时压低输入条优先级
-- 入场:240ms 上浮 + 渐显;同时输入条进入 disabled 态(见 [design/01 §输入条](./01-main-layout.md#输入条召唤式))
+- 出现在主界面的召唤式审批层:状态点进入待审批态,纸面中央浮出 540-600px 审批卡,背景使用轻遮罩,纸面仍隐约可见;这一路径服从 [design/01 §审批聚焦卡](./01-main-layout.md#审批聚焦卡)
+- 大批量 ChangeSet 可把卡片加宽到 600px 并允许内部滚动,但不改成右侧常驻旁注;跨文档变更的完整裁决只在审批层处理
+- 入场:160ms 淡入 + 8px 上移;同时输入条进入 disabled 态(见 [design/01 §输入条](./01-main-layout.md#输入条召唤式))
 - 多审批排队:卡头右上 `badge-accent「还有 N 条待审」`,`Cmd+]` / `Cmd+[` 切换;一次只显示一张(按 createdAt)
-- chat 顶部常驻 **[取消本次对话]**,直到 turn 终态;已有落盘 action 时按钮文案带计数「取消并回退 2 项」([spec/S04](../spec/S04-turn-orchestration.md))
+- `×` / `Esc` = 暂不处理:卡片收回,状态点保持待审批,输入条仍锁定;拒绝必须走行动栏的必填反馈
+- 取消入口不放在审批卡内常驻。运行态取消跟随状态点;跨进程恢复或返回待审批时,输入条恢复 banner 提供“继续审 / 取消本次对话”入口。全局 rollback 语义以 [spec/S04](../spec/S04-turn-orchestration.md) 为准
 
 ## ChangeRow(每条变更行)
 
@@ -51,10 +53,10 @@ flowchart TB
 
 | 等级 | 视觉 | 行为 |
 |---|---|---|
-| blocking | danger 实底色块 | **同意按钮完全禁用**,只能拒绝;文案指引先解决 promise / 调 deadline |
-| critical | danger 浅底块 | 必须勾「我已阅读上述风险,明知违反仍通过」才解锁同意 |
-| major | warning 浅底块 | 提示,不阻塞 |
-| warn | 橙色弱提示行 | 提示,不阻塞 |
+| blocking | 左侧 2px danger 线 + danger 文本 + 极浅底 | **同意按钮完全禁用**,只能拒绝;文案指引先解决 promise / 调 deadline |
+| critical | 左侧 2px danger 线 + 极浅底 | 必须勾「我已阅读上述风险,明知违反仍通过」才解锁同意 |
+| major | 左侧 2px warning 线 + 无底或极浅底 | 提示,不阻塞 |
+| warn | 细下划线 / 弱提示行 | 提示,不阻塞 |
 
 每条风险可点击 → 跳对应章节段(anchor 跳转,与实体跳转同机制)。write 模式章节类工具时,此区域上方再嵌 ReaderPanel 章节风险报告(见 [design/03](./03-reader-panel.md))。
 
@@ -63,22 +65,22 @@ flowchart TB
 - 右对齐主次序:`全选` `全不选`(ghost)→ `拒绝全部 (N)`(danger 描边)→ `同意勾选项 7/9 (Y)`(primary)
 - 同意按钮 disabled 条件:勾选数 = 0,或存在未确认 critical,或存在 blocking
 - **拒绝必填反馈**:点拒绝弹 inline 反馈框(textarea + 「为什么拒绝?」占位 + 示例),提交后自动发一条输入条消息驱动 Agent 重做([plan/08 §否决要给理由](../plan/08-approval-and-cascade.md#否决要给理由))
-- 键盘(卡片焦点内,[spec/S10](../spec/S10-editor-and-interaction.md)):`Y` 同意 / `N` 拒绝 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;`Esc` 不关卡(无悬挂超时,永远 pending),只取消 inline 编辑
+- 键盘(卡片焦点内,[spec/S10](../spec/S10-editor-and-interaction.md)):`Y` 同意 / `N` 拒绝 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;inline 编辑中 `Esc` 先取消编辑,否则收回卡片并保持 pending
 
 ## 状态矩阵
 
 | 状态 | 表现 |
 |---|---|
 | cascade 分析中(卡未弹) | 状态点显示运行态,Trace 面板记录「影响分析 第 2/3 轮」 |
-| 卡片待决 | 输入条锁定;状态点显示待审批 |
+| 卡片待决 | 输入条锁定;状态点显示待审批;卡片可收回但 pending 不消失 |
 | 提交中(resolve 请求) | 行动栏按钮 loading,勾选框锁定;幂等 — 重复点击不重复落盘 |
 | 同意完成 | 卡片折叠为一行回执:「已落盘 7/9 项 · 撤销入口在 审批历史」+ 240ms 渐出 |
 | 拒绝完成 | 卡片折叠为回执「已拒绝,反馈已发给 Writer」,新一轮生成开始 |
-| 跨进程恢复 | 启动时 hydrate,chat 顶部 banner「有 1 条待审的修改」点击重开卡片 |
+| 跨进程恢复 | 启动时 hydrate,输入条恢复 banner「有 1 条待审的修改」点击重开卡片 |
 | doom-loop 升级 | 卡头替换为 warning 块「Writer 与 Validator 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/S04](../spec/S04-turn-orchestration.md)) |
 
 ## 主题适配
 
 - diff 红绿在两主题各自配浅底深字(见 [00-design-tokens](./00-design-tokens.md#领域色open-novel-特有)),不用纯红纯绿
-- critical/blocking 色块深色主题用 `--danger-subtle`(暗红底)+ `--danger` 文字,不做大面积高饱和红
+- critical/blocking 只使用左侧细线、弱底和文字色,不做大面积高饱和红
 - 影响图谱节点描边色 = cascadeLevel(0 accent / 1 info / 2 warning / 3 neutral),两主题同名 token 自动适配
