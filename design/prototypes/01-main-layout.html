@@ -80,6 +80,14 @@
   .float-toolbar button { font: inherit; border: none; background: none; color: var(--text-primary); padding: 4px 10px; border-radius: var(--radius-sm); cursor: pointer; }
   .float-toolbar button:hover { background: var(--bg-hover); }
   .float-toolbar .spark { color: var(--accent); }
+  .review-source { border-bottom: 1.5px solid var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); padding-bottom: 1px; }
+  .review-delete { color: var(--danger); text-decoration: line-through; text-decoration-thickness: 1.5px; background: color-mix(in srgb, var(--danger) 7%, transparent); }
+  .review-insert { border-bottom: 1.5px solid var(--success); background: color-mix(in srgb, var(--success) 8%, transparent); padding-bottom: 1px; }
+  .review-note { display: inline-flex; align-items: center; gap: 8px; margin-left: 8px; color: var(--text-tertiary); font-size: 11.5px; white-space: nowrap; vertical-align: baseline; }
+  .review-note b { color: var(--text-secondary); font-weight: 500; }
+  .review-note button { border: none; background: none; padding: 0; font: inherit; font-size: 11.5px; color: var(--accent-text); cursor: pointer; }
+  .review-note button.reject { color: var(--danger); }
+  .cascade-chip { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; color: var(--accent-text); font-family: var(--font-mono); font-size: 10.5px; border-bottom: 1px solid var(--accent); cursor: pointer; }
 
   /* 旁注 (纸面右缘) */
   .note { position: absolute; width: 190px; font-size: 12px; line-height: 1.55; color: var(--text-secondary); border-left: 2px solid var(--entity-character); padding: 2px 0 2px 12px; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); transform: translateY(4px); z-index: 30; }
@@ -215,6 +223,7 @@
       <p>门铃响的时候是凌晨一点十四分。</p>
       <p>来人收了伞,雨水顺着伞尖在地板上积出一小滩。<span class="ent ent-char" data-note="luchen">陆沉</span>就站在那滩水后面,西装笔挺得不像一个深夜造访的人。"林总,"他笑了笑,"我替<span class="ent ent-org" data-note="shouye">守夜人会</span>带个话。"</p>
       <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span> 让 AI 修改 <kbd>Cmd+K</kbd></button><button onclick="openQuery('林溪的指尖在桌沿轻轻敲了两下')">查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
+      <p>林溪低头看了一眼自己的手。<span class="review-delete">这是她紧张时的旧习惯。</span><span class="review-insert">那枚旧习惯又从指尖漏了出来。</span><span class="review-note"><b>太直白</b><button>接受</button><button class="reject">拒绝</button><button>重试</button></span><span class="cascade-chip" onclick="toast('打开 C-03 cascade(演示)')">C-03</span></p>
       <p>"带话之前,先把东西还我。"她目光落在对方手里的<span class="ent ent-item" data-note="luopan">青铜罗盘</span>上——盘面上的<span class="violation" data-note="lingqi">灵气</span>纹路在灯下泛着不正常的青色。</p>
       <p>陆沉挑了挑眉,没接话,只是把罗盘放在了吧台上,推过来。</p>
     </div>

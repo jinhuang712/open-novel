@@ -54,17 +54,25 @@ flowchart TB
 ## 框选 AI 改写(Cmd+K)
 
 ```mermaid
-flowchart LR
-  SEL[框选段落] --> BTN["浮动条: ✦ 让 AI 修改 (Cmd+K) | 查询"]
-  BTN --> INPUT["就地 inline 输入条: 修改要求 + 发送"]
-  INPUT --> GEN["流式生成 (选区出虚线框 + 进度)"]
-  GEN --> CARD["ApprovalCard (diff 高亮 from/to)"]
-  CARD -->|同意| APPLY[replaceRange 落盘]
-  CARD -->|拒绝+反馈| GEN
+flowchart TB
+  SEL[框选文字] --> BTN["浮动条: ✦ 让 AI 修改 (Cmd+K) | 查询"]
+  BTN --> INPUT["就地输入条: 修改要求 + 发送"]
+  INPUT --> GEN["流式生成: 选区细线进度"]
+  GEN --> REVIEW["批阅层: 原文附近显示修订痕迹"]
+  REVIEW --> SCOPE{影响范围}
+  SCOPE -->|句内 / 小选区| INLINE["近文小注<br/>接受 / 拒绝 / 重试"]
+  SCOPE -->|当前文档段落级| MARGIN["当前页段落旁注<br/>接受 / 拒绝 / 重试"]
+  SCOPE -->|跨文档 / 事实 / 剧情 / 设定| ANCHOR["当前命中锚点<br/>标出 cascade 序号"]
+  INLINE --> APPLY[replaceRange + 编辑器 undo]
+  MARGIN --> APPLY
+  ANCHOR --> CASCADE[Approval Cascade]
 ```
 
 - inline 输入条吸附选区下方:`✦` accent 图标 + 单行输入(占位「怎么改这段?例:语气更克制」)+ 发送;`Esc` 收起
-- 生成期间选区披 accent 虚线框;结果不直接替换 — 一律走 ApprovalCard([design/02](./02-approval-cascade.md)),同意后才 `replaceRange`
+- 生成期间只保留细线进度与弱化选区,不弹大卡、不遮正文;结果默认进入批阅层
+- 句内、小选区和表达润色用近文小注:细下划线、淡底色、删除线 / 新增线足够表达差异;操作贴在标记附近,接受后才 `replaceRange`
+- 当前文档的段落级问题可以在纸面右缘出现旁注,但它只服务当前页当前段,不承载跨文档裁决
+- 跨文档、跨章节、事实、剧情、设定、关系变更必须升级到 Approval Cascade([design/02](./02-approval-cascade.md));当前页仍在命中位置留下轻量锚点或序号 chip,点击打开对应 cascade 项
 - 「查询」分支:选中文字直接发 queryFacts,结果在右栏查询面板展示,不动正文
 
 ## Toast

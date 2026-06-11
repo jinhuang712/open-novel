@@ -23,11 +23,12 @@ flowchart LR
   Style --> Rewrite[Humanizer 改写]
   Rewrite --> Diff[差异说明]
   Diff --> Guard[事实/守则复核]
-  Guard -->|安全| Proposal[改写 proposal]
-  Guard -->|触碰事实| Reject[作废或人工确认]
+  Guard -->|句内/小选区安全| Inline[Inline Review]
+  Guard -->|单文档段落级| Margin[段落批阅]
+  Guard -->|跨文档或触碰事实| Escalate[升级为 proposal / cascade]
 ```
 
-Humanizer 的输出默认仍是 proposal。替换正文需要审批路径或明确安全的编辑器操作。
+Humanizer 的常见输出是 inline review,不是审批卡。只有句内或小选区、只改表达且复核安全时,它才能在文字附近给出修订痕迹和接受动作。单文档段落级建议可以进入当前页旁注;跨文档、跨章节、事实、剧情、设定或守则阻断级变化必须升级为 proposal / cascade。
 
 ## 风格来源的可信度
 
@@ -69,17 +70,19 @@ flowchart TD
 
 用户需要知道改写改变了什么,而不是只看到一段“更顺”的文字。
 
+Inline review 的说明必须贴近被标记文本。只有单文档段落级问题才允许使用旁注;跨文档问题只能在当前命中处留下 cascade 锚点,完整解释和决策进入 Approval Cascade。
+
 ## 越权判定
 
 ```mermaid
 stateDiagram-v2
   [*] --> ExpressionOnly
-  ExpressionOnly --> SafeProposal: 只改表达
+  ExpressionOnly --> InlineReview: 只改表达
   ExpressionOnly --> NeedsReview: 可能改变语义
-  NeedsReview --> SafeProposal: 用户确认仍是表达调整
+  NeedsReview --> InlineReview: 用户确认仍是表达调整
   NeedsReview --> Escalated: 涉及事实/剧情/守则
   Escalated --> WritingFlow: 转入写作或审批链路
-  SafeProposal --> [*]
+  InlineReview --> [*]
 ```
 
 判定标准不是“改动大不大”,而是“是否改变读者会理解到的事实”。一句话重写得很短也可能越权;一整段润色如果只改节奏也可以是表达层。
@@ -90,18 +93,18 @@ stateDiagram-v2
 |---|---|
 | Context And Query | 提供不可改事实、章节语境、风格经验 |
 | Creative Engine | 复核改写是否触发守则风险 |
-| Turn Orchestration | 把改写作为 proposal 或审批项 |
-| Editor Interaction | 承接选区改写、undo、diff 展示 |
+| Turn Orchestration | 承接升级后的 proposal 或审批项 |
+| Editor Interaction | 承接 inline review、近文批注、undo、diff 展示 |
 | Runtime State | 提供和管理风格经验 |
 
 ## 失败收场
 
 | 失败 | 收场 |
 |---|---|
-| 改写改变事实 | 作废或进入人工确认 |
+| 改写改变事实 | 作废或升级为 proposal / cascade |
 | 风格依据不足 | 降级为轻度去模板化并说明 |
 | 风格漂移 | 保留原文,允许调整风格后重试 |
-| 输出不可解析 | 不进入正文和审批 |
+| 输出不可解析 | 不进入正文、inline review 和审批 |
 | 与当前指令冲突 | 当前指令优先 |
 | 与守则冲突 | 交给 Creative Engine 风险处理 |
 
@@ -121,7 +124,7 @@ A: 标记依据不足,做轻度去模板化,不要强行拟合一个不存在的
 
 **Q: 改写能不能直接替换编辑器选区?**
 
-A: 只有在明确安全且可 undo 的交互中可以;高风险正文应进入审批或确认。
+A: 可以,但只限明确安全的 inline review:用户在文字附近看到修订痕迹并接受后替换,且可 editor undo。高风险、跨段或跨文档改写应进入段落批阅或 Approval Cascade。
 
 **Q: “去 AI 味”如何验证?**
 

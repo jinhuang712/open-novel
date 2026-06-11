@@ -77,6 +77,7 @@ stateDiagram-v2
 |---|---|
 | Universal Search | Search 只提供动作入口,写入动作转成 ChangeSet |
 | Discuss Mode | Discuss 只能建议切换,用户确认后再生成 proposal |
+| Inline Review | 跨文档、跨章节、事实/剧情/设定变化或阻断级风险升级为 ChangeSet |
 | Writing / Planning | 生成草稿或设定 proposal 后进入审批 |
 | ReaderPanel | 高风险报告可作为审批说明,不直接裁决 |
 | Trace | 解释影响分析和落盘过程 |
@@ -105,6 +106,7 @@ stateDiagram-v2
 | 逐项 | 选择性接受不破坏事务边界 |
 | rollback | apply 或 reindex 失败后用户能看清最终状态 |
 | Search 联动 | Search 发起改名不会绕过审批 |
+| Inline Review 联动 | 跨文档命中在当前页只显示锚点,决策跳到整批审批 |
 | Trace 联动 | 影响分析和落盘 step 可追踪 |
 
 ## FAQ

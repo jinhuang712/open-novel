@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · spec+design · Inline Review 默认路径与跨文档 Cascade 边界
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将轻量选区改写和 Humanizer 的默认路径从审批卡改为正文批阅层:句内 / 小选区在原文附近展示修订痕迹、近文小注和接受 / 拒绝 / 重试;接受后才替换并进入编辑器 undo。 | `spec/M07-inline-rewrite-and-humanizer.md` `spec/S09-style-and-humanizer.md` `spec/S10-editor-and-interaction.md` | 用户明确轻量 editor accept 是大多数场景,希望像高级批阅而不是卡片审批。 |
+| 收紧跨文档变更边界:跨文档、跨章节、事实、剧情、设定和关系变更不能在当前页旁注中裁决;当前命中处必须保留轻量锚点或 cascade 序号,完整解释和选择进入 Approval Cascade。 | `spec/M07-inline-rewrite-and-humanizer.md` `spec/M08-approval-cascade.md` `design/01-main-layout.md` `design/06-command-palette.md` | 用户指出跨文档变更不应使用旁注,但也不能在正文里完全没有标注。 |
+| README、plan 红线和 design 原则澄清为“作者显式审定必经”:小改可就地接受,连带修改整批审定,保持无静默落盘。 | `README.md` `plan/03-guardrails.md` `plan/08-approval-and-cascade.md` `plan/09-narrative-and-reader.md` `design/README.md` | 避免全局原则与 inline review 主路径冲突,保留 R1 的用户驾驶位含义。 |
+| 同步命令面板与主界面原型中的 Cmd+K 样例:展示克制的细线、淡底、删除/新增标记、近文操作和 cascade 锚点,移除旧的“卡片审批默认路径”文案。 | `design/prototypes/01-main-layout.html` `design/prototypes/06-command-palette.html` | 设计原型必须随 spec/design 文档同步,避免继续展示旧交互。 |
+
 ## 2026-06-11 · docs · spec 编号残留与审计归口修正
 
 | 变更 | 影响文档 | 关联 |
