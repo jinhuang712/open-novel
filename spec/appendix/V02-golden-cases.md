@@ -1,6 +1,6 @@
 # V02 · Golden Cases
 
-Golden Cases 保存 LLM、叙事诊断、ReaderPanel、Humanizer 和关键工作流的样例输入输出。它是验证明细,不是行为主权文档。
+Golden Cases 保存 LLM、叙事诊断、ReaderPanel、Humanizer 和关键工作流的样例输入输出。它是验证明细,不是行为主权文档。[S11 · Evaluation And Golden Regression](../S11-evaluation-and-golden-regression.md) 定义 golden 如何成为质量门禁。
 
 ## 归口内容
 
@@ -18,14 +18,16 @@ Golden Cases 保存 LLM、叙事诊断、ReaderPanel、Humanizer 和关键工作
 |---|---|
 | Search / Fact Query | 角色、阵营、概念、章节命中;hover preview;来源跳转失效 |
 | Discuss / Planning / Writing | 只读讨论、升级确认、章节 proposal、守则风险进入审批 |
+| Prompt / Context / Tooling | prompt injection、context overflow、long-form partition、tool failure、二次 LLM 边界 |
+| Harness / Evaluation | replay evidence、golden pass/warn/fail、缺 fixture 的 needs data |
 | Inline Review / Humanizer | 句内表达改写、段落批阅、跨文档升级为 ChangeSet |
 | Approval / Cascade | 改名 cascade、低置信搁置、部分通过、拒绝理由重做 |
 | Trace / Recap | stopped recap、failed recap、applied recap、作者备注、续接动作 |
 | Memory / Agent Controls | 经验候选、调权、关闭、删除、agent 开关影响 |
-| ReaderPanel / Creative Engine | persona 分歧、inconclusive、确认级/阻断级风险 |
+| ReaderPanel / S12 Creative Engine | persona 分歧、inconclusive、确认级/阻断级风险 |
 | Settings / Onboarding / Library | 首启开书、样例项目、danger action、项目切换隔离 |
 | platform/Rxx | backup restore、migration failure、index repair、diagnostic export |
 
 ## 边界
 
-golden 可以帮助回归,但不能替代根层 spec。若 golden 与 spec 冲突,以 spec 为准并更新 golden。
+golden 可以帮助回归,但不能替代根层 spec。若 golden 与 spec 冲突,以 spec 为准并更新 golden;若 prompt/context/tool/runner 改动没有可判断的 golden 或 replay evidence,按 [S11](../S11-evaluation-and-golden-regression.md) 的 `needs data` 处理。

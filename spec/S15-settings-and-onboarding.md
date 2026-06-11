@@ -1,4 +1,4 @@
-# S11 · Settings And Onboarding
+# S15 · Settings And Onboarding
 
 这篇把 Settings 写成控制面板,不是内部参数仓库。它只放用户能理解、能控制、且会改变产品行为的东西。Onboarding 则只负责把用户带到第一个可写项目,不把所有高级开关塞进首启。
 
@@ -40,7 +40,7 @@ flowchart LR
   Settings[Settings UI] --> Runtime[Runtime State]
   Settings --> Storage[Project Storage]
   Settings --> Creative[Creative Engine]
-  Settings --> Agent[Agent Runtime]
+  Settings --> Agent[Agent Runner]
   Settings --> Editor[Editor Interaction]
   Dev[Developer Mode] -.read only.-> Runtime
   Dev -.read only.-> Storage

@@ -17,15 +17,14 @@
   .stage-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--text-tertiary); margin-top: 16px; }
 
   .rp-head { display: flex; gap: 16px; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); }
-  .ring { position: relative; width: 64px; height: 64px; flex: none; }
-  .ring svg { transform: rotate(-90deg); }
-  .ring .val { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 600; font-size: 17px; line-height: 1; }
-  .ring .val small { font-size: 9px; font-weight: 500; color: var(--text-tertiary); margin-top: 2px; }
+  .risk-summary { min-width: 86px; padding: 8px 10px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-sunken); flex: none; }
+  .risk-summary strong { display: block; font-size: 14px; color: var(--warning); }
+  .risk-summary span { display: block; margin-top: 3px; font-size: 11px; color: var(--text-tertiary); }
   .rp-meta { flex: 1; }
   .rp-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .rp-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
   .pdots { display: flex; gap: 6px; margin-top: 8px; }
-  .pdot { width: 11px; height: 11px; border-radius: 99px; background: var(--agent-reader); cursor: help; }
+  .pdot { width: 11px; height: 11px; border-radius: 99px; background: var(--agent-reader-panel); cursor: help; }
   .pdot.fail { background: transparent; border: 1.5px dashed var(--text-tertiary); }
   .pdot.todo { background: var(--bg-active); }
 
@@ -52,7 +51,7 @@
   .pc-name { font-weight: 600; font-size: 13px; }
   .pc-tag { font-size: 11.5px; color: var(--text-tertiary); }
   .pc-metrics { margin-left: auto; display: flex; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
-  .pc-quote { margin: 8px 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--agent-reader); font-family: var(--font-serif); font-style: italic; font-size: 13px; line-height: 1.7; color: var(--text-primary); }
+  .pc-quote { margin: 8px 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--agent-reader-panel); font-family: var(--font-serif); font-style: italic; font-size: 13px; line-height: 1.7; color: var(--text-primary); }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chips .where { cursor: pointer; }
 
@@ -81,22 +80,19 @@
 
   <div class="card">
     <div class="rp-head">
-      <div class="ring">
-        <svg width="64" height="64" viewBox="0 0 64 64">
-          <circle cx="32" cy="32" r="26" fill="none" stroke="var(--bg-active)" stroke-width="6"/>
-          <circle cx="32" cy="32" r="26" fill="none" stroke="var(--warning)" stroke-width="6" stroke-linecap="round" stroke-dasharray="109.5 163.4"/>
-        </svg>
-        <div class="val">67<small>留存预测</small></div>
+      <div class="risk-summary">
+        <strong>小修</strong>
+        <span>节奏 · AI 味</span>
       </div>
       <div class="rp-meta">
-        <div class="rp-title">第 12 章 · 雨夜来客 <span class="badge badge-warning">minor-tweak</span></div>
+        <div class="rp-title">第 12 章 · 雨夜来客 <span class="badge badge-warning">3/5 标记节奏风险</span></div>
         <div class="rp-sub">5/5 个读者完成 · 平均阅读视角耗时 19.8s · 触发: write 审批前自动</div>
         <div class="pdots">
-          <span class="pdot" title="追更党 ✓ 留存 78"></span>
-          <span class="pdot" title="逻辑控 ✓ 留存 64"></span>
-          <span class="pdot" title="情感党 ✓ 留存 70"></span>
-          <span class="pdot" title="毒舌读者 ✓ 留存 41"></span>
-          <span class="pdot" title="潜水大佬 ✓ 留存 80"></span>
+          <span class="pdot" title="追更党 ✓ 追更意愿高"></span>
+          <span class="pdot" title="逻辑控 ✓ 铺垫不足"></span>
+          <span class="pdot" title="情感党 ✓ 人物细节有效"></span>
+          <span class="pdot" title="毒舌读者 ✓ AI 味风险"></span>
+          <span class="pdot" title="潜水大佬 ✓ 长线伏笔有效"></span>
         </div>
       </div>
     </div>
@@ -116,31 +112,31 @@
 
     <div class="fold" id="fold">
       <div class="fold-head" onclick="document.getElementById('fold').classList.toggle('open')">
-        展开 5 个读者反馈 <span class="mini">追更 +62 · 逻辑 +18 · 情感 +35 · 毒舌 −28 · 潜水 +51</span><span class="chev">▾</span>
+        展开 5 个读者反馈 <span class="mini">追更:想看下章 · 逻辑:缺铺垫 · 情感:有共鸣 · 毒舌:AI 味 · 潜水:伏笔有效</span><span class="chev">▾</span>
       </div>
       <div class="fold-body">
         <div class="pcard">
-          <div class="pc-head"><span class="pc-name">追更党</span><span class="pc-tag">节奏 · 爽点 · 钩子</span><span class="pc-metrics"><span>情绪 +62</span><span>留存 78</span><span>弃书 12%</span></span></div>
+          <div class="pc-head"><span class="pc-name">追更党</span><span class="pc-tag">节奏 · 爽点 · 钩子</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿高</span><span>弃书风险低</span></span></div>
           <div class="pc-quote">结尾陆沉把罗盘推过来那下我是真想点下一章。但中间报价单那三段,差点让我划走——商战细节留一半就够了。</div>
           <div class="chips"><span class="badge badge-success where">爽点 · 章末</span><span class="badge badge-danger where">节奏拖 · 第 5-7 段</span></div>
         </div>
         <div class="pcard">
-          <div class="pc-head"><span class="pc-name">逻辑控</span><span class="pc-tag">一致性 · 伏笔 · 推理链</span><span class="pc-metrics"><span>情绪 +18</span><span>留存 64</span><span>弃书 22%</span></span></div>
+          <div class="pc-head"><span class="pc-name">逻辑控</span><span class="pc-tag">一致性 · 伏笔 · 推理链</span><span class="pc-metrics"><span>情绪中性</span><span>追更意愿中</span><span>弃书风险中</span></span></div>
           <div class="pc-quote">守夜人会上一章还只是酒桌传闻,这章直接登门递话,中间缺一环。罗盘的来历倒是和第 9 章对得上,加分。</div>
           <div class="chips"><span class="badge badge-danger where">突兀 · 第 4 段</span><span class="badge badge-success where">伏笔回收 · 罗盘</span></div>
         </div>
         <div class="pcard">
-          <div class="pc-head"><span class="pc-name">情感党</span><span class="pc-tag">关系 · 张力 · 共鸣</span><span class="pc-metrics"><span>情绪 +35</span><span>留存 70</span><span>弃书 18%</span></span></div>
+          <div class="pc-head"><span class="pc-name">情感党</span><span class="pc-tag">关系 · 张力 · 共鸣</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿中</span><span>弃书风险低</span></span></div>
           <div class="pc-quote">林溪敲桌沿那个旧习惯写得好——重生七年都戒不掉的小动作,比一万字心理描写都戳。和陆沉的对峙再多两句潜台词就更妙了。</div>
           <div class="chips"><span class="badge badge-success where">亮点 · 第 4 段</span></div>
         </div>
         <div class="pcard">
-          <div class="pc-head"><span class="pc-name">毒舌读者</span><span class="pc-tag">AI 味 · 老套 · 文字硬伤</span><span class="pc-metrics"><span>情绪 −28</span><span>留存 41</span><span>弃书 45%</span></span></div>
+          <div class="pc-head"><span class="pc-name">毒舌读者</span><span class="pc-tag">AI 味 · 老套 · 文字硬伤</span><span class="pc-metrics"><span>情绪偏负</span><span>追更意愿低</span><span>弃书风险高</span></span></div>
           <div class="pc-quote">"西装笔挺得不像一个深夜造访的人"——这句可以。但第 3 段一口气七十多字不带喘,"在某种程度上"还来了两次,AI 味没洗干净。</div>
           <div class="chips"><span class="badge badge-danger where">AI 味 · 第 3 段</span><span class="badge badge-warning where">长句过密</span></div>
         </div>
         <div class="pcard">
-          <div class="pc-head"><span class="pc-name">潜水大佬</span><span class="pc-tag">长线 · 世界观 · 层次</span><span class="pc-metrics"><span>情绪 +51</span><span>留存 80</span><span>弃书 8%</span></span></div>
+          <div class="pc-head"><span class="pc-name">潜水大佬</span><span class="pc-tag">长线 · 世界观 · 层次</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿高</span><span>弃书风险低</span></span></div>
           <div class="pc-quote">罗盘纹路发青如果是伏笔,这一手布得不错。世界观从纯商战往异闻斜了一度,是惊喜也是风险,看后面三章怎么圆。</div>
           <div class="chips"><span class="badge badge-success where">设定彩蛋 · 罗盘</span></div>
         </div>
@@ -168,7 +164,7 @@
         <span class="pdot todo" title="毒舌读者 · 进行中"></span>
         <span class="pdot todo" title="潜水大佬 · 排队中"></span>
       </div>
-      <div class="prog-row" style="font-size:11.5px;color:var(--text-tertiary)">取消会保留已完成的反应;不足 3 个成功时不出 recommendation(标 insufficient)。</div>
+      <div class="prog-row" style="font-size:11.5px;color:var(--text-tertiary)">取消会保留已完成的反应;不足 3 个成功时只显示证据不足,不出分类建议。</div>
     </div>
     <div class="skel" style="width:62%"></div>
     <div class="skel" style="width:78%"></div>
@@ -178,7 +174,7 @@
   <div class="stage-label">失败降级 — 不足 3 个成功</div>
   <div class="card" style="padding:14px 18px; display:flex; gap:12px; align-items:center">
     <span class="badge badge-neutral">insufficient</span>
-    <span style="font-size:12.5px; color:var(--text-secondary)">仅 2/5 个读者完成,样本不足,不给 recommendation。</span>
+    <span style="font-size:12.5px; color:var(--text-secondary)">仅 2/5 个读者完成,样本不足,不给分类建议。</span>
     <button class="btn btn-sm" style="margin-left:auto">补跑失败的 3 个</button>
   </div>
 </div>

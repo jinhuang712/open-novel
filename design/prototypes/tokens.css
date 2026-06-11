@@ -55,7 +55,8 @@ html[data-theme="light"] {
   --agent-checker: #B8862C;
   --agent-reflector: #8A6FB8;
   --agent-humanizer: #4E9B8F;
-  --agent-reader: #C95F8E;
+  --agent-reader-panel: #C95F8E;
+  --agent-reader: var(--agent-reader-panel);
 
   /* —— 置信度 —— */
   --confidence-high: var(--success);
@@ -113,7 +114,8 @@ html[data-theme="dark"] {
   --agent-checker: #D9A645;
   --agent-reflector: #AC93D9;
   --agent-humanizer: #6FB8AC;
-  --agent-reader: #D9849E;
+  --agent-reader-panel: #D9849E;
+  --agent-reader: var(--agent-reader-panel);
 
   --diff-del-bg: #46302E;  --diff-del-text: #E5938A;
   --diff-add-bg: #2E3A2F;  --diff-add-text: #A4C9A0;

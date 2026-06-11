@@ -8,6 +8,7 @@
 - project storage 相关表结构和索引。
 - knowledge graph 的 entity、concept、relation、timeline、dependency、anchor、embedding 表。
 - runtime、activity recap、experience、session history 表。
+- canonical agent role id、agent 设置、成本归因和 prompt 名称映射。
 - approval、ChangeSet、internal recovery、trace 的持久化字段。
 - Universal Search 最近对象、查询历史、preview cache 和索引健康状态字段。
 - settings、onboarding、project lifecycle 的存储字段。
@@ -19,7 +20,7 @@
 - [S02 Runtime State](../S02-runtime-state.md)
 - [S04 Turn Orchestration](../S04-turn-orchestration.md)
 - [S06 Knowledge Graph](../S06-knowledge-graph.md)
-- [S11 Settings And Onboarding](../S11-settings-and-onboarding.md)
+- [S15 Settings And Onboarding](../S15-settings-and-onboarding.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
 - [M08 Approval Cascade](../M08-approval-cascade.md)
@@ -41,9 +42,25 @@
 | platform/Ixx | provider capability cache、editor adapter state、watcher cursor、import/export manifest、desktop permission |
 | platform/Rxx | lifecycle state、backup manifest、migration version、repair job、diagnostics export audit |
 
+## Canonical Agent Role 字段
+
+角色相关持久化字段必须使用 [M13](../M13-agent-team-controls.md) 定义的 canonical id:
+
+| id | 中文展示名 | 使用位置 |
+|---|---|---|
+| `router` | 调度员 | route event、trace badge、prompt template、cost row |
+| `writer` | 写手 | draft/proposal、writing cost、prompt template |
+| `checker` | 审稿人 | risk report、creative diagnostics、trace |
+| `validator` | 一致性守护者 | dependency、impact、阻断原因、trace |
+| `reader_panel` | 读者评审团 | persona aggregate、reader report、cost |
+| `humanizer` | 润色师 | inline suggestion、style report、cost |
+| `reflector` | 反思学习者 | learning item、experience audit、cost |
+
+数据库 enum、JSON schema、event payload、prompt name 和 design token 不得另写一套角色 id。
+
 ## Experience / Reflector 字段归口
 
-经验管理的实现明细归本篇维护,根层语义以 [S02](../S02-runtime-state.md)、[S11](../S11-settings-and-onboarding.md) 和 [M12](../M12-memory-learning-management.md) 为准。实施时至少需要记录下列字段族:
+经验管理的实现明细归本篇维护,根层语义以 [S02](../S02-runtime-state.md)、[S11](../S15-settings-and-onboarding.md) 和 [M12](../M12-memory-learning-management.md) 为准。实施时至少需要记录下列字段族:
 
 | 字段族 | 目的 | 行为约束 |
 |---|---|---|

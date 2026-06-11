@@ -1,38 +1,37 @@
-# TODO · 开放问题与实施前验证
+# TODO · 开放问题入口
 
-本文件只维护当前仍开放的问题、代码实施前验证项和后续架构决策。已关闭的文档迁移、HTML/CAST 时代审计和历史清零记录归 [CHANGELOG.md](./CHANGELOG.md) 与 [progress](./progress/README.md) 追溯。
+本文件只维护当前没有主权文档、没有验证入口、或需要用户重新裁决的开放问题。已归口的架构风险不再重复放在这里,而是进入对应 plan/spec/platform/appendix 文档。
 
-## 1 · 当前文档待办
+## 当前状态
 
-当前无开放文档待办。已关闭的文档迁移、appendix 抽取规则、M/platform 明细覆盖和风险等级命名收敛见 [CHANGELOG.md](./CHANGELOG.md)。
+截至 2026-06-12,本轮 plan/spec/design 架构复查发现的待办已经归口:
 
-## 2 · 实施前开放验证
+| 原问题族 | 当前归口 |
+|---|---|
+| LLM 质量闭环、prompt/context/runner/tool/harness/golden 门禁 | [S03](./spec/S03-agent-runner.md) · [S07](./spec/S07-context-management.md) · [S08](./spec/S08-prompt-system.md) · [S09](./spec/S09-agent-tooling-boundary.md) · [S10](./spec/S10-llm-quality-harness.md) · [S11](./spec/S11-evaluation-and-golden-regression.md) · [A05](./spec/appendix/A05-prompt-templates.md) · [V01](./spec/appendix/V01-test-matrix.md) · [V02](./spec/appendix/V02-golden-cases.md) |
+| Approval Cascade 部分通过、dependency group、residual obligation、writing-blocked | [plan/08](./plan/08-approval-and-cascade.md) · [S04](./spec/S04-turn-orchestration.md) · [M08](./spec/M08-approval-cascade.md) · [A02](./spec/appendix/A02-json-schemas.md) · [V01](./spec/appendix/V01-test-matrix.md) |
+| 单窗口、项目 lock/lease、多实例接管 | [plan/04](./plan/04-goals-and-non-goals.md) · [S01](./spec/S01-project-storage.md) · [S04](./spec/S04-turn-orchestration.md) · [I03](./spec/platform/I03-filesystem-and-watcher.md) · [I05](./spec/platform/I05-desktop-shell-contract.md) · [R01](./spec/platform/R01-project-lifecycle.md) · [V01](./spec/appendix/V01-test-matrix.md) |
+| Watcher cursor、event watermark、reconciliation、repair job、index health severity | [S01](./spec/S01-project-storage.md) · [S06](./spec/S06-knowledge-graph.md) · [I03](./spec/platform/I03-filesystem-and-watcher.md) · [R04](./spec/platform/R04-index-health-and-repair.md) · [V01](./spec/appendix/V01-test-matrix.md) · [V03](./spec/appendix/V03-external-spikes.md) |
+| Long-form partition、ContextOverflow、`extractSemanticDelta` 降级 | [S07](./spec/S07-context-management.md) · [V01](./spec/appendix/V01-test-matrix.md) |
+| 设计风险等级与 ReaderPanel 总分心智 | [design/02](./design/02-approval-cascade.md) · [design/03](./design/03-reader-panel.md) · `design/prototypes/02-approval-cascade.html` · `design/prototypes/03-reader-panel.html` |
+| 七个 Agent canonical id、中文展示名、Trace/成本/prompt/schema 归因 | [M13](./spec/M13-agent-team-controls.md) · [A01](./spec/appendix/A01-schema-tables.md) · [A03](./spec/appendix/A03-event-catalog.md) · [A05](./spec/appendix/A05-prompt-templates.md) · [design/00](./design/00-design-tokens.md) |
+| 桌面/本地壳路线 | [plan/04](./plan/04-goals-and-non-goals.md) · [S00](./spec/S00-system-contract.md) · [I05](./spec/platform/I05-desktop-shell-contract.md) · [R01](./spec/platform/R01-project-lifecycle.md) · [V03](./spec/appendix/V03-external-spikes.md) |
+| Active appendix 最小接口抽取 | [appendix README](./spec/appendix/README.md) · [A01](./spec/appendix/A01-schema-tables.md) · [A02](./spec/appendix/A02-json-schemas.md) · [A03](./spec/appendix/A03-event-catalog.md) · [A04](./spec/appendix/A04-tool-catalog.md) · [A05](./spec/appendix/A05-prompt-templates.md) · [V01](./spec/appendix/V01-test-matrix.md) · [V02](./spec/appendix/V02-golden-cases.md) |
 
-以下项需要真实代码、依赖或运行数据验证。文档已给出暂定策略,但不能在文档层直接关闭。
+## 实施前验证入口
 
-| 优先级 | 问题 | 关联文档 | 回头解决方式 |
-|---|---|---|---|
-| P0 | DeepSeek `cache_control` 字段服务端识别情况未实查。 | [spec/S00](./spec/S00-system-contract.md) · [spec/S03](./spec/S03-agent-runtime.md) · [A06](./spec/appendix/A06-migration-notes.md) | 做最小复现;若不支持,降级为稳定头部排布,功能不变但 token 成本上升。 |
-| P0 | 1M context + per-agent 装齐契约的真实 token 成本未基线化。 | [spec/S07](./spec/S07-context-and-query.md) · [plan/05](./plan/05-story-world.md) | 用 DeepSeek tokenizer / 真实请求记录基线;校验 Writer 单次章节调用估算是否偏离。 |
-| P0 | AI SDK 6 `stopWhen` + tool result marker + `onStepFinish` 的端到端行为未跑通。 | [spec/S00](./spec/S00-system-contract.md) · [spec/S03](./spec/S03-agent-runtime.md) | 写最小 runner spike;若 `stopWhen` 不可靠,回退纯手写 while runner。 |
-| P0 | `sqlite-vec` + `better-sqlite3` + Drizzle 在 macOS arm64 / Linux x64 的 native binding 与 JOIN 行为未实测。 | [spec/S00](./spec/S00-system-contract.md) · [spec/S06](./spec/S06-knowledge-graph.md) | 跑 `db.loadExtension(sqliteVec.path)`、`vec0` CRUD、普通表 JOIN;失败再评估替代方案。 |
-| P0 | `better-sqlite3` 在 Next.js Route Handler 中的同步调用、WAL 并发写与 dev hot-reload connection 泄漏未实测。 | [spec/S00](./spec/S00-system-contract.md) · [spec/S01](./spec/S01-project-storage.md) | 做 Route Handler 并发写 spike;失败时把写操作隔离到 worker thread。 |
-| P2 | design token → Tailwind v4 / shadcn 变量映射与 `@custom-variant dark`(绑 `data-theme`)未在真实组件实测;深色主题「深字浅钮」的 `--primary-foreground` 需过一遍 shadcn Button 全 variant。 | [design/00 §实现对接](./design/00-design-tokens.md) | 前端搭建时随首个 shadcn 组件接入验证;有冲突回写 00 映射表并记 CHANGELOG。 |
+需要真实代码、依赖或运行数据证明的事项不再作为 TODO 漂浮:
 
-## 3 · 后续架构决策
+- 测试矩阵和未来工程化测试归 [V01 · Test Matrix](./spec/appendix/V01-test-matrix.md)。
+- golden cases 和 LLM 回归样例归 [V02 · Golden Cases](./spec/appendix/V02-golden-cases.md)。
+- DeepSeek cache、1M context token 成本、AI SDK loop、SQLite/native binding、watcher、desktop shell、Tailwind/shadcn 映射等外部实查归 [V03 · External Spikes](./spec/appendix/V03-external-spikes.md)。
 
-| 优先级 | 问题 | 关联 | 暂定处理 |
-|---|---|---|---|
-| P1 | better-sqlite3 多 connection / LRU 策略仍需按“项目数 × 数据库文件数”重算。 | [spec/S01](./spec/S01-project-storage.md) · [A06](./spec/appendix/A06-migration-notes.md) | 待 native binding spike 后定默认上限和关闭策略。 |
-| P1 | `derived: true` 派生文件守卫的写盘、内部恢复、chokidar 三处实现细节仍需统一。 | [plan/03 红线 R7](./plan/03-guardrails.md) · [spec/S01](./spec/S01-project-storage.md) · [spec/S04](./spec/S04-turn-orchestration.md) · [spec/S06](./spec/S06-knowledge-graph.md) | 代码前补一张实现级接口表,避免守卫只停留在原则。 |
-| P1 | Reflector 并发安全未定义:多个 turn 几乎同时完成时 `learnings` upsert 冲突。 | [plan/10](./plan/10-memory-and-learning.md) · [spec/S02](./spec/S02-runtime-state.md) | 实现前明确 transaction / queue / conflict merge 策略。 |
-| P1 | doom-loop 阈值、结构化输出 retry 与用户 retry 可能叠加成循环。 | [spec/S03](./spec/S03-agent-runtime.md) · [spec/S04](./spec/S04-turn-orchestration.md) | 增加 metrics 与 retry budget;避免 escalate → retry → 再 escalate 的无效循环。 |
-| P1 | `ContextOverflowError` 后的“分卷”兜底未设计。 | [spec/S07](./spec/S07-context-and-query.md) · [plan/05](./plan/05-story-world.md) | 先保留为显式失败;进入长篇真实压测后再设计分卷策略。 |
-| P1 | `extractSemanticDelta` 对中长篇正文 diff 的单次 LLM 稳定性依赖过高。 | [spec/S07](./spec/S07-context-and-query.md) | 需要降级路径:分段 delta、规则预筛或人工确认。 |
-| P2 | 魔法常数尚未系统化暴露或归档:doom-loop 0.9、cascade ≤3、weight 阈值、lastMessages=30、tokenBudget 软警等。 | 多文档 | 先保留硬编码默认;Settings/debug 设计时统一归档。 |
-| P2 | 测试策略已有 appendix 归口,但实际 vitest / playwright / LLM golden / spec audit 尚未落地。 | [V01](./spec/appendix/V01-test-matrix.md) · [spec/S00](./spec/S00-system-contract.md) | 开始代码实施后作为第一批工程化任务。 |
-| P2 | 段锚点、差量 reindex、paragraph_embeddings 强耦合,锚点失稳会拖垮知识图谱。 | [spec/S06](./spec/S06-knowledge-graph.md) · [spec/S07](./spec/S07-context-and-query.md) | 需要真实章节样本和 mutation 测试后校准。 |
+## 新增 TODO 规则
 
-## 4 · 变更日志
+只有满足以下任一条件的新问题才进入本文件:
 
-跨文档变更流水线见 [CHANGELOG.md](./CHANGELOG.md)。历史审计和迁移复盘见 [progress](./progress/README.md)。
+- 没有明确 plan/spec/platform/appendix 主权文档。
+- 需要用户在多个方向中重新裁决。
+- 当前文档无法安全给出契约,只能先保留未知。
+
+写入 TODO 时必须同时说明关联文档、为什么不能直接归口、以及回头关闭条件。

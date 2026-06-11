@@ -66,7 +66,7 @@ stateDiagram-v2
 | 用户经验 | 可用 | 只影响表达和建议风格 |
 | 过程日志 | 按需 | 只用于解释“刚才发生什么” |
 
-Discuss 的上下文包由 [Context And Query](./S07-context-and-query.md) 提供。上下文不足时,Discuss 不能靠模型常识补成项目事实;它只能提出假设、追问或建议用户打开相关来源。
+Discuss 的上下文包由 [S07 · Context Management](./S07-context-management.md) 提供。上下文不足时,Discuss 不能靠模型常识补成项目事实;它只能提出假设、追问或建议用户打开相关来源。
 
 ## 输出类型
 

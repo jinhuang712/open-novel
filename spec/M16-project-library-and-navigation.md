@@ -20,7 +20,7 @@ flowchart LR
   Rail[章节轨] --> Open
   Quick[M02 Quick Open] --> Open
   Search[M01 Search] --> Open
-  Open --> Editor[S10 Editor]
+  Open --> Editor[S14 Editor]
   Open --> Recent[Runtime Recent]
 ```
 

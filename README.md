@@ -48,9 +48,9 @@
 
 当前实现方向已统一为:
 
-- **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
+- **Agent runner**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;prompt、context、tool、harness 和 golden gate 各有系统主权层
 - **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
-- **系统设计**: `S00-S11` 写系统主权、跨层契约、运行时、存储、上下文和底层协议
+- **系统设计**: `S00-S15` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
 - **能力闭环**: `M01-M17` 写用户可触发、可感知、可验收的完整能力
 - **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
@@ -80,7 +80,7 @@ pnpm dev
 ├── WORKFLOW.md                # 文档与实现协作流程
 ├── AGENTS.md                  # Agent 工作规范(与 CLAUDE.md 内容一致)
 ├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
-├── TODO.md                    # TODO + 已知问题 + 未决问题
+├── TODO.md                    # 当前未归口开放问题入口
 ├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 产品 PRD(纯产品定义)
 ├── spec/                      # 核心技术文档(S/M) + platform/ + appendix/
@@ -118,15 +118,19 @@ pnpm dev
 - [S00-system-contract](./spec/S00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
 - [S01-project-storage](./spec/S01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
 - [S02-runtime-state](./spec/S02-runtime-state.md) — 会话、经验、活动记录、过程历史和 Reflector 生命周期
-- [S03-agent-runtime](./spec/S03-agent-runtime.md) — 受控 runner、prompt 堆叠、工具边界和 JSON 失败循环
+- [S03-agent-runner](./spec/S03-agent-runner.md) — 受控 runner 生命周期、结构化输出、tool loop、retry 和失败循环
 - [S04-turn-orchestration](./spec/S04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批、取消和 recap 触发语义
 - [S05-streaming-ui-protocol](./spec/S05-streaming-ui-protocol.md) — 状态点、Trace、Recap ready、事件分层和断线恢复驾驶舱协议
 - [S06-knowledge-graph](./spec/S06-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
-- [S07-context-and-query](./spec/S07-context-and-query.md) — Agent 证据包、影响分析裁判链、事实查询和 overflow 决策
-- [S08-creative-engine](./spec/S08-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
-- [S09-style-and-humanizer](./spec/S09-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
-- [S10-editor-and-interaction](./spec/S10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
-- [S11-settings-and-onboarding](./spec/S11-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
+- [S07-context-management](./spec/S07-context-management.md) — Agent 证据包、长篇分卷、影响分析裁判链、事实查询和 overflow 决策
+- [S08-prompt-system](./spec/S08-prompt-system.md) — prompt 分层、优先级、不可信内容围栏和 prompt 变更治理
+- [S09-agent-tooling-boundary](./spec/S09-agent-tooling-boundary.md) — 工具白名单、读/提议/内部工具、工具失败和二次 LLM 调用边界
+- [S10-llm-quality-harness](./spec/S10-llm-quality-harness.md) — 真实/模拟任务 replay、输入输出证据包和失败复现
+- [S11-evaluation-and-golden-regression](./spec/S11-evaluation-and-golden-regression.md) — golden cases、回归门禁、质量指标和 prompt/context 改动验收
+- [S12-creative-engine](./spec/S12-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
+- [S13-style-and-humanizer](./spec/S13-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
+- [S14-editor-and-interaction](./spec/S14-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
+- [S15-settings-and-onboarding](./spec/S15-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
 
 #### M · User-Facing Capability
 
@@ -206,7 +210,7 @@ pnpm dev
 
 ### 项目档案
 
-- [TODO.md](./TODO.md) — TODO + 已知问题 + 未决问题
+- [TODO.md](./TODO.md) — 当前未归口开放问题入口
 - [CHANGELOG.md](./CHANGELOG.md) — 跨文档变更流水线
 - [WORKFLOW.md](./WORKFLOW.md) — 文档与实现协作流程
 - [AGENTS.md](./AGENTS.md) / [CLAUDE.md](./CLAUDE.md) — Agent 工作规范(两份内容一致)

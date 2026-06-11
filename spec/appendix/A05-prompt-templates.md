@@ -1,12 +1,12 @@
 # A05 · Prompt Templates
 
-本 appendix 是 prompt 模板全文、公共片段和示例的归口。根层 spec 定义 prompt 的职责、注入顺序、安全边界和失败语义。
+本 appendix 是 prompt 模板全文、公共片段和示例的归口。[S08 · Prompt System](../S08-prompt-system.md) 定义 prompt 的职责、分层优先级、不可信内容围栏、变更治理和失败语义。
 
 ## 归口内容
 
 - stable header 公共片段。
 - 不可信内容围栏。
-- Router、Writer、Validator、Checker、Reflector、Humanizer、ReaderPanel prompt。
+- `router`、`writer`、`validator`、`checker`、`reflector`、`humanizer`、`reader_panel` prompt。
 - Discuss Mode prompt 和 Search-to-Discuss 转问答片段。
 - JSON retry prompt。
 - 五大守则、叙事诊断、persona prompt。
@@ -14,10 +14,13 @@
 
 ## 对应核心文档
 
-- [S03 Agent Runtime](../S03-agent-runtime.md)
-- [S07 Context And Query](../S07-context-and-query.md)
-- [S08 Creative Engine](../S08-creative-engine.md)
-- [S09 Style And Humanizer](../S09-style-and-humanizer.md)
+- [S03 Agent Runner](../S03-agent-runner.md)
+- [S07 Context Management](../S07-context-management.md)
+- [S08 Prompt System](../S08-prompt-system.md)
+- [S10 LLM Quality Harness](../S10-llm-quality-harness.md)
+- [S11 Evaluation And Golden Regression](../S11-evaluation-and-golden-regression.md)
+- [S12 Creative Engine](../S12-creative-engine.md)
+- [S13 Style And Humanizer](../S13-style-and-humanizer.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
 
@@ -36,4 +39,4 @@
 
 ## 边界
 
-prompt 文案可以在 appendix 迭代。若 prompt 变化改变 Agent 职责、审批边界、写入权限、上下文优先级或失败处理,必须同步根层 spec。
+prompt 文案可以在 appendix 迭代。若 prompt 变化改变 Agent 职责、审批边界、写入权限、上下文优先级、工具权限、失败处理或质量门禁,必须同步 [S08](../S08-prompt-system.md)、受影响的根层 spec 和 V01/V02 验收项。

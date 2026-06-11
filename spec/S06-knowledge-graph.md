@@ -77,6 +77,8 @@ stateDiagram-v2
 
 段落锚点是图谱可信度的地基。锚点不稳,下游必须跟着降级。
 
+锚点、差量 reindex 和 paragraph embeddings 必须一起验证。任何会改变段落切分、锚点迁移或 embedding 刷新策略的实现,都要在 [V01](./appendix/V01-test-matrix.md) 覆盖 mutation 测试;涉及 native binding、watcher 或 provider 行为时,原始证据进入 [V03](./appendix/V03-external-spikes.md)。
+
 ## 冲突不是自动修复信号
 
 如果抽取发现“同一角色在同一时间既失明又正常视物”,系统不能自动改正文。它应该:
@@ -92,7 +94,7 @@ stateDiagram-v2
 
 | 消费方 | 使用方式 | 失败时降级 |
 |---|---|---|
-| Context And Query | 装配事实、查询来源、语义召回 | 缺失关键事实则阻断高风险 Agent |
+| Context Management | 装配事实、查询来源、语义召回 | 缺失关键事实则阻断高风险 Agent |
 | Turn Orchestration | cascade 候选范围、审批冲突 | 低置信候选进入审批 |
 | Creative Engine | 守则、人设、伏笔兑现 | 不展示假通过 |
 | Editor Interaction | 高亮、旁注、跳转 | 弱化或隐藏过期提示 |

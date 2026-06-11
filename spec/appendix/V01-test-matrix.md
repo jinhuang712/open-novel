@@ -6,11 +6,11 @@
 
 - 外部事实审计需要覆盖的验证项,原始证据反链到 V03。
 - storage / reindex / internal recovery 测试。
-- runner / JSON retry / tool failure 测试。
+- runner / JSON retry / tool failure / tool boundary / harness replay 测试。
 - turn / approval / cancel / recovery / recap 测试。
 - stream 断线、重复、乱序测试。
 - context overflow、impact analysis、fact query 测试。
-- creative engine golden、reader aggregation、cardinal rules 风险分级测试。
+- golden regression、creative engine、reader aggregation、cardinal rules 风险分级测试。
 - editor IME、focus trap、shortcut conflict、undo 测试。
 - Universal Search: `Shift+Shift`、分组排序、hover preview、索引降级和 pending approval 只读限制。
 - Discuss Mode: 只读边界、来源缺口、升级到 Planning/Writing、Trace 解释。
@@ -24,13 +24,20 @@
 
 - [S00 System Contract](../S00-system-contract.md)
 - [S01 Project Storage](../S01-project-storage.md)
-- [S03 Agent Runtime](../S03-agent-runtime.md)
+- [S02 Runtime State](../S02-runtime-state.md)
+- [S03 Agent Runner](../S03-agent-runner.md)
 - [S04 Turn Orchestration](../S04-turn-orchestration.md)
 - [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [S07 Context And Query](../S07-context-and-query.md)
-- [S08 Creative Engine](../S08-creative-engine.md)
-- [S10 Editor And Interaction](../S10-editor-and-interaction.md)
-- [S11 Settings And Onboarding](../S11-settings-and-onboarding.md)
+- [S06 Knowledge Graph](../S06-knowledge-graph.md)
+- [S07 Context Management](../S07-context-management.md)
+- [S08 Prompt System](../S08-prompt-system.md)
+- [S09 Agent Tooling Boundary](../S09-agent-tooling-boundary.md)
+- [S10 LLM Quality Harness](../S10-llm-quality-harness.md)
+- [S11 Evaluation And Golden Regression](../S11-evaluation-and-golden-regression.md)
+- [S12 Creative Engine](../S12-creative-engine.md)
+- [S13 Style And Humanizer](../S13-style-and-humanizer.md)
+- [S14 Editor And Interaction](../S14-editor-and-interaction.md)
+- [S15 Settings And Onboarding](../S15-settings-and-onboarding.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
@@ -43,15 +50,31 @@
 | 能力/平台 | 必测场景 |
 |---|---|
 | S01/S06 storage + graph | 原子写、外部编辑冲突、reindex 降级、anchor 失效、派生文件守卫 |
-| S03/S04 runtime + orchestration | JSON retry、tool failure、doom-loop、cancel plan、stopped recap、approval idempotency |
-| S05/S10 UI + editor | stream 恢复、事件乱序、IME/focus trap、inline review accept/reject、editor undo bridge |
-| S07/S08/S09 context + creative | context overflow、impact analysis 收敛、风险分级、Humanizer 越权升级 |
+| S03/S04 runner + orchestration | JSON retry、doom-loop、cancel plan、stopped recap、approval idempotency |
+| S05/S14 UI + editor | stream 恢复、事件乱序、IME/focus trap、inline review accept/reject、editor undo bridge |
+| S07/S08/S09 context + prompt + tools | context overflow、long-form partition、impact analysis 收敛、prompt injection、tool permission、二次 LLM 失败 |
+| S10/S11 harness + evaluation | run evidence、failure replay、golden regression、阻断阈值、prompt/context/tool 改动验收 |
+| S12/S13 creative + humanizer | 风险分级、ReaderPanel 聚合、Humanizer 越权升级 |
 | M01-M04 search/query/discuss | Shift+Shift、fact query 来源跳转、command routing、只读边界 |
-| M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、低置信项、部分接受和失败收场 |
+| M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、dependency group、低置信项、residual obligation、writing-blocked、部分接受和失败收场 |
 | M09-M13 trace/memory/agent controls | Trace 层级、经验可见/关闭/删除、agent 开关和预算限制 |
 | M14-M17 settings/onboarding/library/recap | danger action、workspace 初始化、项目切换隔离、Activity append-only |
 | platform/Ixx | provider probe、editor adapter、watcher、import/export、desktop permission |
 | platform/Rxx | project lifecycle、backup/restore、migration、repair、diagnostics export |
+
+## 外部 spike 对应验证
+
+原始实查证据归 [V03](./V03-external-spikes.md),本篇只记录进入实现前必须有测试或复现脚本覆盖的门禁。
+
+| 验证项 | V01 门禁 | V03 证据 |
+|---|---|---|
+| DeepSeek `cache_control` / stable prompt header | prompt packet 记录 cache/stable header 降级,不影响 S08 layer manifest | provider response 与成本证据 |
+| 1M context 成本 | Writer/Validator/ReaderPanel 典型 context package 的 token 预算、overflow 和用户可见说明 | tokenizer 或真实请求记录 |
+| AI SDK loop | stopWhen/tool marker/onStepFinish 或手写 loop 的等价测试,覆盖 cancel、tool result、step finish | 最小 runner spike |
+| SQLite/native binding | `sqlite-vec` CRUD/JOIN、WAL 并发、Route Handler 连接泄漏测试 | macOS arm64 / Linux x64 原始输出 |
+| watcher / repair | cursor、水位、reconcile scan、repair job lifecycle、健康级别降级测试 | 文件系统平台行为实查 |
+| desktop shell | 权限、窗口恢复、系统菜单、多实例 lease 和接管测试 | 打包/权限/系统行为实查 |
+| design token mapping | Tailwind/shadcn dark variant、Button variant、深色主题前景色测试 | 首个真实组件验证结果 |
 
 ## Memory / Reflector 验证项
 

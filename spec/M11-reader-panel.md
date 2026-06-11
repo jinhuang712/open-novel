@@ -1,6 +1,6 @@
 # M11 · ReaderPanel
 
-ReaderPanel 是发布前读者预演能力。根层 [Creative Engine](./S08-creative-engine.md) 定义质量信号和守则;本篇定义读者报告如何生成、展示和进入审批解释。
+ReaderPanel 是发布前读者预演能力。根层 [Creative Engine](./S12-creative-engine.md) 定义质量信号和守则;本篇定义读者报告如何生成、展示和进入审批解释。
 
 ## 读者预演要回答什么
 
@@ -98,7 +98,7 @@ ReaderPanel 不直接阻断发布。只有报告中的风险被 Validator/守则
 
 ## Design
 
-[design/03 ReaderPanel](../design/03-reader-panel.md) 定义报告布局和可视化。行为主权以本篇和 [Creative Engine](./S08-creative-engine.md) 为准。
+[design/03 ReaderPanel](../design/03-reader-panel.md) 定义报告布局和可视化。行为主权以本篇和 [Creative Engine](./S12-creative-engine.md) 为准。
 
 ## 测试清单
 

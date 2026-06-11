@@ -13,6 +13,20 @@
 
 Project Storage 的核心价值不是“把数据存起来”,而是让每个事故都有可信的收场。
 
+## 项目写入权
+
+同一项目同一时刻只有一个 writable owner。写入权由项目级 lock/lease 表示,保护 active writable turn、pending approval、recap、index repair 和外部编辑冲突处理。
+
+| 场景 | 存储层要求 |
+|---|---|
+| 第一个窗口打开项目 | 获取 writable lease,可进入写作和审批路径。 |
+| 第二个窗口打开同项目 | 默认只读,可查询和查看,不可提交审批或写入。 |
+| 用户显式接管 | 原 owner lease 失效,新窗口必须重新加载项目状态和 pending 事务。 |
+| lease 过期或丢失 | 当前窗口降级只读,active writable turn 停止进入危险路径。 |
+| pending approval 存在 | 接管前必须展示 pending 内容和风险,不能静默关闭。 |
+
+Storage 不用“最后写入者获胜”解决冲突。任何绕过 lease 的写入都视为外部编辑,按冲突判定让相关审批失效。
+
 ## 事实账本
 
 | 对象 | 例子 | 是否作品真源 | 读者需要知道什么 |
@@ -121,9 +135,11 @@ stateDiagram-v2
 |---|---|---|
 | [S04](./S04-turn-orchestration.md) | 落盘结果、内部恢复结果、冲突状态和修正建议 | 已审批 ChangeSet 和事务意图 |
 | [S06](./S06-knowledge-graph.md) | 文件变更范围、版本、派生写入边界 | reindex 健康度和过期范围 |
-| [S07](./S07-context-and-query.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
-| [S10](./S10-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
-| [S11](./S11-settings-and-onboarding.md) | workspace/project 生命周期结果 | 导入、导出、删除等危险操作确认 |
+| [S07](./S07-context-management.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
+| [S14](./S14-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
+| [S15](./S15-settings-and-onboarding.md) | workspace/project 生命周期结果 | 导入、导出、删除等危险操作确认 |
+| [I03](./platform/I03-filesystem-and-watcher.md) | watcher cursor、外部编辑事件和 lease loss | 平台层不能绕过存储写入权 |
+| [R01](./platform/R01-project-lifecycle.md) | 打开、关闭、接管和恢复流程 | 项目 open/close 必须尊重 lease |
 
 ## FAQ
 

@@ -14,7 +14,7 @@
 
 - [S00 System Contract](../S00-system-contract.md)
 - [S01 Project Storage](../S01-project-storage.md)
-- [S03 Agent Runtime](../S03-agent-runtime.md)
+- [S03 Agent Runner](../S03-agent-runner.md)
 - [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
 - [S06 Knowledge Graph](../S06-knowledge-graph.md)
 

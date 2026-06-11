@@ -25,6 +25,21 @@ appendix 不保存:
 
 历史归档不再需要被“整理完”才能开始实现。实现某个 `S/M/platform` 文档前,只需要按下表把该能力的必要字段、schema、事件、工具、prompt、测试和外部 spike 抽到对应 A/V 文件;没有被实现触发的旧细节继续留在历史归档,不进入 active appendix。
 
+## 最小接口先行
+
+开始实现任何可写 vertical slice 前,必须先补齐该 slice 的最小实现接口,而不是把历史 appendix 全量搬回来。
+
+| slice 需要什么 | 归口 |
+|---|---|
+| ChangeSet 字段、dependency group、decision payload、residual obligation | `A02` |
+| 持久字段、role id、repair job、lease 状态 | `A01` |
+| turn、approval、trace、tool、recap、repair 事件 | `A03` |
+| 工具参数、权限、命令和快捷键 | `A04` |
+| prompt template id、公共片段和模板全文 | `A05` |
+| 测试矩阵、golden case、外部 spike | `V01` / `V02` / `V03` |
+
+没有被当前 slice 触发的旧细节继续留在历史归档。appendix 不是“先补完整再开工”的大仓库,而是每个实现入口的最小接口闸门。
+
 | 触发场景 | 必补 appendix | 关闭标准 |
 |---|---|---|
 | 新增或实现一个 `Sxx` 系统契约 | `A01` / `A02` / `A03` / `V01`;涉及 provider、native binding 或版本能力时补 `V03` + `A06` | 根层主路径可读,实现者能在 appendix 找到字段、schema、事件和验证项 |

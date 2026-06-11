@@ -26,7 +26,7 @@
 | [00-design-tokens](./00-design-tokens.md) | 色彩 / 字体 / 圆角 / 动效 token,双主题机制 | `prototypes/tokens.css` |
 | [01-main-layout](./01-main-layout.md) | 主界面:章节轨 · 纸面 · 状态点(库 / Trace / 输入条 / 审批聚焦卡召唤式) | `prototypes/01-main-layout.html` |
 | [02-approval-cascade](./02-approval-cascade.md) | ApprovalCard 整批审:diff、cascade 分级勾选、守则风险、拒绝反馈 | `prototypes/02-approval-cascade.html` |
-| [03-reader-panel](./03-reader-panel.md) | ReaderPanel 章节风险报告:留存预测、5 persona 反馈 | `prototypes/03-reader-panel.html` |
+| [03-reader-panel](./03-reader-panel.md) | ReaderPanel 章节风险报告:分类风险、多人共识、5 persona 反馈 | `prototypes/03-reader-panel.html` |
 | [04-settings](./04-settings.md) | SettingsDialog:9 section、全局/项目分层、危险操作 | `prototypes/04-settings.html` |
 | [05-onboarding](./05-onboarding.md) | 首启引导 4 步向导 + 渐进式 tooltip | `prototypes/05-onboarding.html` |
 | [06-command-palette](./06-command-palette.md) | Universal Search、命令面板、Cmd+P、@文件引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
@@ -44,7 +44,7 @@ flowchart LR
 
 - 交互行为以 plan/spec 为准(本目录不重复定义协议与 schema,只引用);核心能力如 Universal Search / Trace / Approval / ReaderPanel 直接引用对应根层 spec
 - 视觉与组件状态以本目录为准;实现期发现冲突,回写本目录并记 `CHANGELOG.md`
-- 原型中的文案、数据均为样例,以 [spec/S03 Agent Runtime](../spec/S03-agent-runtime.md) 与真实数据为准
+- 原型中的文案、数据均为样例,以 [S03 Agent Runner](../spec/S03-agent-runner.md)、[S08 Prompt System](../spec/S08-prompt-system.md) 和 [S11 Evaluation](../spec/S11-evaluation-and-golden-regression.md) 的契约与真实数据为准
 
 ## 交付与验收(Claude Code 落地流程)
 
@@ -58,6 +58,6 @@ flowchart LR
 
 - 双主题逐屏与原型对照,light/dark 都不允许硬编码 hex(可用 `rg "#[0-9A-Fa-f]{6}" --glob '!globals.css'` 做 CI 检查)
 - 文字对比度落在 00 规定区间(正文 7:1–9:1、次要 4.5:1–5.5:1、占位 ≥3:1、accent 按钮字 ≥4.5:1)
-- 全部浮层 `Esc` 可关、模态 Focus Trap、焦点环用 `--focus-ring`([spec/S10](../spec/S10-editor-and-interaction.md))
+- 全部浮层 `Esc` 可关、模态 Focus Trap、焦点环用 `--focus-ring`([spec/S14](../spec/S14-editor-and-interaction.md))
 - `prefers-reduced-motion` 下动效降级
 - 实现与设计冲突时:回写本目录文档 + 记 `CHANGELOG.md`,不允许实现侧静默偏离

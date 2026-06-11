@@ -73,10 +73,10 @@
 
   .rules { margin: 12px 18px; display: flex; flex-direction: column; gap: 8px; }
   .rule-block { border-radius: var(--radius-sm); padding: 8px 0 8px 12px; font-size: 12.5px; border-left: 2px solid var(--border-strong); background: transparent; }
-  .rule-critical { border-left-color: var(--danger); background: color-mix(in srgb, var(--danger) 5%, transparent); }
-  .rule-critical .rt { color: var(--danger); font-weight: 600; }
-  .rule-major { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 5%, transparent); }
-  .rule-major .rt { color: var(--warning); font-weight: 600; }
+  .rule-confirm { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 5%, transparent); }
+  .rule-confirm .rt { color: var(--warning); font-weight: 600; }
+  .rule-tip { border-left-color: var(--border-strong); background: transparent; }
+  .rule-tip .rt { color: var(--text-secondary); font-weight: 600; }
   .rule-block .jump { color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
   .ack { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-weight: 500; color: var(--danger); }
   .ack input { accent-color: var(--danger); margin-top: 2px; }
@@ -125,7 +125,7 @@
     <div class="ap-head">
       <span class="spark">✱</span>
       <div>
-        <div class="ap-title">Writer 想要 writeSetting: <code>characters/lin.md</code></div>
+        <div class="ap-title">写手想要 writeSetting: <code>characters/lin.md</code></div>
         <div class="ap-reason">原因: 用户要求把主角性别改为女 — 名字 林川 → 林溪</div>
       </div>
       <div class="ap-badges">
@@ -222,13 +222,13 @@
     </div>
 
     <div class="rules">
-      <div class="rule-block rule-critical">
-        <div class="rt">1 项 critical — 人设崩坏</div>
-        <div style="margin-top:4px">ch_003 <span class="jump">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让 Writer 重做。</div>
-        <label class="ack"><input type="checkbox" id="ackRisk" onchange="refresh()">我已阅读上述风险,明知违反仍通过</label>
+      <div class="rule-block rule-confirm">
+        <div class="rt">1 项确认级 — 人设风险</div>
+        <div style="margin-top:4px">ch_003 <span class="jump">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让写手重做。</div>
+        <label class="ack"><input type="checkbox" id="ackRisk" onchange="refresh()">我已阅读上述风险,明知风险仍通过</label>
       </div>
-      <div class="rule-block rule-major">
-        <div class="rt">1 项 major — 节奏崩盘风险</div>
+      <div class="rule-block rule-tip">
+        <div class="rt">1 项提示级 — 节奏风险</div>
         <div style="margin-top:4px">本批改动集中在前三章,建议改完后跑一次 ReaderPanel 验证黄金三章爽点密度(<span class="jump">查看 design/03 章节风险</span>)。</div>
       </div>
     </div>
@@ -242,7 +242,7 @@
     </div>
 
     <div class="reject-pane">
-      <label>为什么拒绝?(必填 — 会作为反馈让 Writer 重做)</label>
+      <label>为什么拒绝?(必填 — 会作为反馈让写手重做)</label>
       <textarea placeholder="例:改性别后语气还是男性化的,口吻没调整"></textarea>
       <div class="hint">提交后自动发一条消息驱动 Agent 带着拒绝理由重新生成。</div>
       <div class="row"><button class="btn btn-sm" onclick="document.getElementById('approval').classList.remove('rejecting')">取消</button><button class="btn btn-primary btn-sm">提交反馈并拒绝</button></div>
@@ -288,7 +288,7 @@ function refresh() {
   var acked = document.getElementById('ackRisk').checked;
   var btn = document.getElementById('approveBtn');
   btn.disabled = on === 0 || !acked;
-  btn.title = !acked ? '存在 critical 风险:先勾选"明知违反仍通过"' : (on === 0 ? '至少勾选一项' : '');
+  btn.title = !acked ? '存在确认级风险:先勾选"明知风险仍通过"' : (on === 0 ? '至少勾选一项' : '');
   document.querySelectorAll('.group').forEach(function (g) {
     var gc = g.querySelectorAll('[data-check]');
     var gon = Array.prototype.filter.call(gc, function (c) { return c.checked; }).length;

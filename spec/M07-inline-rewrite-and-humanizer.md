@@ -14,7 +14,7 @@ Inline Rewrite 和 Humanizer 是表达层改写能力。用户框选文字或主
 ```mermaid
 flowchart LR
   Selection[选区] --> Intent[改写意图]
-  Intent --> Style[S09 Style Boundary]
+  Intent --> Style[S13 Style Boundary]
   Style --> Draft[Rewrite Draft]
   Draft --> Mark[批阅层标记]
   Mark --> Decision{范围和风险}

@@ -34,7 +34,7 @@ flowchart LR
 | [M01 Universal Search](./M01-universal-search.md) | 搜项目对象、事实和语义相关结果 |
 | [M03 Fact Query](./M03-fact-query.md) | 回答结构化事实问题 |
 | [M04 Discuss Mode](./M04-discuss-mode.md) | 自然语言讨论和解释 |
-| [S10 Editor And Interaction](./S10-editor-and-interaction.md) | 焦点、快捷键优先级和编辑器命令治理 |
+| [S14 Editor And Interaction](./S14-editor-and-interaction.md) | 焦点、快捷键优先级和编辑器命令治理 |
 
 ## 失败收场
 

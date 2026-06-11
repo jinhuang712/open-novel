@@ -255,11 +255,11 @@
       </div>
       <div class="tr-body">
         <div class="ag">
-          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-router)"></span>Router <span class="done">✓</span><span class="time">0.8s</span></div>
-          <div class="ag-b"><div>意图: 修改主角性别 → 委派 Writer + Validator(并行)· actions[2]</div></div>
+          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-router)"></span>调度员 <span class="done">✓</span><span class="time">0.8s</span></div>
+          <div class="ag-b"><div>意图: 修改主角性别 → 委派写手 + 一致性守护者(并行)· actions[2]</div></div>
         </div>
         <div class="ag">
-          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-writer)"></span>Writer <span class="time">12.3s</span></div>
+          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-writer)"></span>写手 <span class="time">12.3s</span></div>
           <div class="ag-b">
             <div class="tool"><b>readSetting</b>('characters/lin.md') → 1,234 字</div>
             <details class="tj"><summary class="tool"><b>writeSettingProposal</b>(…) → proposal ap_3e9d ▸ JSON</summary>
@@ -274,7 +274,7 @@
           </div>
         </div>
         <div class="ag" style="border-bottom:none">
-          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-validator)"></span>Validator <span class="done">✓</span><span class="time">8.9s</span></div>
+          <div class="ag-h"><span class="ag-dot" style="background:var(--agent-validator)"></span>一致性守护者 <span class="done">✓</span><span class="time">8.9s</span></div>
           <div class="ag-b">
             <div class="tool"><b>analyzeImpact</b>(outline.md) → 3 处引用</div>
             <div class="tool"><b>analyzeImpact</b>(chapters/*) → 5 处冲突</div>
@@ -329,7 +329,7 @@
 <div class="ap-layer" id="apLayer">
   <div class="ap-card">
     <div class="ap-t"><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理 (Esc)">×</button></div>
-    <div class="ap-path">characters/lin.md · proposal ap_3e9d · Writer</div>
+    <div class="ap-path">characters/lin.md · proposal ap_3e9d · 写手</div>
     <div class="diff">
       <div class="del">- 林川,男,29 岁,重生前是纵横资本的数据分析师</div>
       <div class="add">+ 林溪,女,29 岁,重生前是纵横资本的数据分析师</div>
@@ -517,7 +517,7 @@ function setState(s) {
     dot.onclick = function () { toggleComposer(); };
     dot.title = '对话 (Cmd+L)';
   } else if (s === 'run') {
-    label.innerHTML = 'Writer 正在生成 diff · 12s <span class="track"><span class="fill"></span></span> 3/5 · 毒舌读者 <button class="cancel" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button>';
+    label.innerHTML = '写手正在生成 diff · 12s <span class="track"><span class="fill"></span></span> 3/5 · 毒舌读者 <button class="cancel" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button>';
     label.classList.add('show');
     dot.onclick = function () { toggleTrace(); };
     dot.title = '查看 trace (Cmd+J)';

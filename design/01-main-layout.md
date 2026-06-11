@@ -1,6 +1,6 @@
 # design/01 — 主界面:章节轨 · 纸面 · 状态点
 
-> 原型:`design/prototypes/01-main-layout.html` · 上游:[plan/07 协作与三模式](../plan/07-collaboration-and-modes.md) · [plan/05 故事世界(边写边查)](../plan/05-story-world.md) · [spec/S10 编辑器与交互](../spec/S10-editor-and-interaction.md)(布局契约 2026-06-11 修订,以本篇为主权)
+> 原型:`design/prototypes/01-main-layout.html` · 上游:[plan/07 协作与三模式](../plan/07-collaboration-and-modes.md) · [plan/05 故事世界(边写边查)](../plan/05-story-world.md) · [spec/S14 编辑器与交互](../spec/S14-editor-and-interaction.md)(布局契约 2026-06-11 修订,以本篇为主权)
 
 设计立场:**简约、素雅、克制**。常驻屏幕的只有三样——左缘章节轨、正文纸面、右下状态点;库、对话、trace、审批、调试全部召唤式,`Esc` 即走。层级靠留白与发丝线(1px 边),不靠色块与投影;不引入任何文化符号装饰;除状态点运行态的缓慢呼吸外,没有循环动画,全部过渡只用 120/200ms 的淡入与小位移。
 
@@ -33,7 +33,7 @@ flowchart TB
   ED -.-> REV
 ```
 
-推开式面板用 `react-resizable-panels`(纸面让位不被遮挡);输入条、批阅层近文操作与审批卡是召唤层。各区尺寸见上图与下文各节;快捷键以 [spec/S10](../spec/S10-editor-and-interaction.md) 为准。
+推开式面板用 `react-resizable-panels`(纸面让位不被遮挡);输入条、批阅层近文操作与审批卡是召唤层。各区尺寸见上图与下文各节;快捷键以 [spec/S14](../spec/S14-editor-and-interaction.md) 为准。
 
 ## 视觉分层(双主题)
 
@@ -57,7 +57,7 @@ flowchart TB
 
 - 召出:`Cmd+B` / 点库按钮;推开式,纸面右移
 - 顶部:纯文字类目行(章节 / 角色 / 世界观 / 大纲),活动类目 `--text-primary` + 底部 2px accent 短线,其余 `--text-secondary`;`Cmd+1~4` 直达(面板收起时先展开)
-- 列表:行高 32px,文字 + 右侧弱化元信息(字数/修改时间);活动行左缘 2px accent 线,不做整行底色;`_` 前缀派生文件默认隐藏(Developer Mode 显示并标「派生」,read-only,[spec/S11](../spec/S11-settings-and-onboarding.md))
+- 列表:行高 32px,文字 + 右侧弱化元信息(字数/修改时间);活动行左缘 2px accent 线,不做整行底色;`_` 前缀派生文件默认隐藏(Developer Mode 显示并标「派生」,read-only,[spec/S15](../spec/S15-settings-and-onboarding.md))
 - 「最近」置于章节类目顶部一组(替代 Tabs 的多文件心智);空态(新项目):居中衬线短句 +「让 AI 起草第一章」按钮 → 召出输入条并预填
 - 库面板只放「能打开的东西」;查询是动作(独立浮层,见下节),偏好是 AI 沉淀的规则(归 Settings)
 
@@ -84,14 +84,14 @@ queryFacts 是动词不是文件,独立成一键浮层:
 
 ## 偏好(learnings)的去处
 
-不在主界面常驻:查看与编辑都在 **Settings §风格定制**(learnings 列表:权重 + 条目 + 来源 turn,[design/04](./04-settings.md));Reflector 新沉淀一条偏好时,在 Trace 面板的 Reflector 块内联展示,点击可跳 Settings 对应条目。
+不在主界面常驻:查看与编辑都在 **Settings §风格定制**(learnings 列表:权重 + 条目 + 来源 turn,[design/04](./04-settings.md));反思学习者新沉淀一条偏好时,在 Trace 面板的对应块内联展示,点击可跳 Settings 对应条目。
 
 ## 纸面
 
 - 正文 16px / 行距 1.8 / 段距 0.9em;首行不缩进;最大行宽 720px 居中;章题衬线 22px 在纸内,其上 12px 弱化卷名一行
 - 左下微标(纸面外左下角,11px 等宽,`--text-tertiary`,hover 升为 `--text-secondary`):`3,214 字 · 已保存 01:12 · ⚠ 1`;点 ⚠ 跳段
-- **实体高亮**:1.5px 下划线按 category 着色(角色蓝 / 地点绿 / 物品橙 / 组织紫);hover 100ms 在**纸面右缘浮出旁注**(190px:名称 + 类别 + 两行摘要 +「打开 →」),与所在段落顶对齐,左缘 2px 实体色线;移开 200ms 收回;点击右侧对照打开,`Cmd+Click` 全屏;F12/Shift+F12/F2 见 [spec/S10](../spec/S10-editor-and-interaction.md)
-- **concept violation**:红色虚线下划线,hover 旁注红色语义(「此世界不存在」+ 建议改写);汇总 = 左下 ⚠ 微标 + 滚动条 marker;无段落 gutter 图标(见 [spec/S10](../spec/S10-editor-and-interaction.md))
+- **实体高亮**:1.5px 下划线按 category 着色(角色蓝 / 地点绿 / 物品橙 / 组织紫);hover 100ms 在**纸面右缘浮出旁注**(190px:名称 + 类别 + 两行摘要 +「打开 →」),与所在段落顶对齐,左缘 2px 实体色线;移开 200ms 收回;点击右侧对照打开,`Cmd+Click` 全屏;F12/Shift+F12/F2 见 [spec/S14](../spec/S14-editor-and-interaction.md)
+- **concept violation**:红色虚线下划线,hover 旁注红色语义(「此世界不存在」+ 建议改写);汇总 = 左下 ⚠ 微标 + 滚动条 marker;无段落 gutter 图标(见 [spec/S14](../spec/S14-editor-and-interaction.md))
 - **框选浮动条**:选区上方 8px:「✦ 让 AI 修改 (Cmd+K)」「查询」;发丝线边框,无投影放大
 - **AI 批阅层**:句内 / 小选区改写在原文附近显示细下划线、淡底色、删除线 / 新增线和近文操作;当前文档段落级问题可用纸面右缘旁注;跨文档变更只在命中位置留锚点或 cascade 序号,完整裁决进入审批流
 
@@ -102,7 +102,7 @@ queryFacts 是动词不是文件,独立成一键浮层:
 | 态 | 点 | 旁文 | 点击 |
 |---|---|---|---|
 | 空闲 | `--text-tertiary` | 无;hover 浮现「✦ 对话 Cmd+L」 | 召出输入条 |
-| 运行中 | `--accent`,2.4s 透明度呼吸(全应用唯一循环动效;`prefers-reduced-motion` 下静止) | 「Writer 正在生成 diff · 12s」+ 进度 `3/5 · 毒舌读者` + 取消 | 展开 Trace 面板 |
+| 运行中 | `--accent`,2.4s 透明度呼吸(全应用唯一循环动效;`prefers-reduced-motion` 下静止) | 「写手正在生成 diff · 12s」+ 进度 `3/5 · 毒舌读者` + 取消 | 展开 Trace 面板 |
 | 待审批 | `--accent`,静止 | 「1 个修改待审批 — 查看」(`--accent-text`) | 弹审批聚焦卡 |
 | 已停止 | `--text-tertiary`,静止 | 「已停止 · 没有修改 · 查看 recap」 | 展开 Trace 面板 |
 | 错误 | `--danger` | 「连接失败 · 去 Settings 检查 key」 | 直达 Settings §API Keys |
@@ -176,7 +176,7 @@ Activity 时间线由 Trace 顶部的「全部活动」进入,仍是召唤式面
 
 - 打开角色 / 地点等设定文件时,正文之后(纸面内底部)出现一个弱化区块「被 N 处引用」:每条 = 章节名 + 命中处前后约 30 字的 snippet,样式同库面板列表行
 - 点击一条 → 跳到该章对应位置(对照打开,当前设定文件不关,不丢上下文)
-- 引用数据随章节保存在后台更新,不打断书写(数据与索引时机见 [spec/S10](../spec/S10-editor-and-interaction.md))
+- 引用数据随章节保存在后台更新,不打断书写(数据与索引时机见 [spec/S14](../spec/S14-editor-and-interaction.md))
 
 ## 开放问题
 

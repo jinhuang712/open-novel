@@ -19,7 +19,7 @@ Open Novel 的自有视觉语言,关键词是**轻盈、纸感、书卷气**,落
 
 - 所有颜色一律经 CSS 变量引用,**禁止在组件样式中硬编码 hex**
 - `html[data-theme="light" | "dark"]` 切换整套变量;首次进入跟随系统 `prefers-color-scheme`,用户手动切换后写入本地配置(原型中为 `localStorage.onovel-theme`,产品中为 `settings.json.theme: 'auto' | 'light' | 'dark'`)
-- 命令面板提供 `view.toggleDarkMode`(见 [spec/S10 编辑器与交互契约](../spec/S10-editor-and-interaction.md))
+- 命令面板提供 `view.toggleDarkMode`(见 [spec/S14 编辑器与交互契约](../spec/S14-editor-and-interaction.md))
 - 对比度验收(两套主题同标准):**正文 7:1–9:1、次要文字 4.5:1–5.5:1、占位/disabled ≥ 3:1、accent 底上的按钮文字 ≥ 4.5:1**。区间上限是设计约束(书卷气),下限是可达性红线
 
 ```mermaid
@@ -62,8 +62,8 @@ flowchart LR
 | `--text-on-accent` | `#F6FBF7` | `#0D2418` | accent 底上的文字(实测 4.7 / 5.0;深色主题为深字浅钮) |
 | `--info` | `#4F7DAF` | `#7FA7D1` | 信息(各配 `-subtle` 浅底) |
 | `--success` | `#5E8C61` | `#82A886` | 成功 / 已验证 / 新增 diff(灰绿,与高饱和的 accent 拉开) |
-| `--warning` | `#B8862C` | `#D9A645` | 警示 / major 风险 |
-| `--danger` | `#BF4D43` | `#D97066` | 危险 / critical / 删除 diff |
+| `--warning` | `#B8862C` | `#D9A645` | 警示 / 确认级风险 |
+| `--danger` | `#BF4D43` | `#D97066` | 危险 / 阻断级风险 / 删除 diff |
 
 > 注意:accent 与 success 同为绿系,区分逻辑是**饱和度与角色**——accent 是高饱和嫩叶绿、只出现在可点击/选中/品牌处;success 是低饱和灰绿、只做状态徽标与 diff。两者不得互换使用。
 
@@ -71,18 +71,18 @@ flowchart LR
 
 | 组 | Token | Light | Dark | 用途 |
 |---|---|---|---|---|
-| 实体 | `--entity-character` | `#4F7DAF` | `#7FA7D1` | 角色(下划线/hover 卡,见 [spec/S10](../spec/S10-editor-and-interaction.md)) |
+| 实体 | `--entity-character` | `#4F7DAF` | `#7FA7D1` | 角色(下划线/hover 卡,见 [spec/S14](../spec/S14-editor-and-interaction.md)) |
 | 实体 | `--entity-place` | `#5E8C61` | `#82A886` | 地点 |
 | 实体 | `--entity-item` | `#C2762D` | `#D99A55` | 物品 |
 | 实体 | `--entity-org` | `#8A6FB8` | `#AC93D9` | 阵营 / 组织 |
 | 实体 | `--entity-violation` | `#BF4D43` | `#D97066` | concept violation 红色虚线 |
-| Agent | `--agent-router` | `#838683` | `#8E908E` | Router(Trace 摘要色) |
-| Agent | `--agent-writer` | `#158243` | `#3DA066` | Writer(品牌色,与 accent 同值) |
-| Agent | `--agent-validator` | `#4F7DAF` | `#7FA7D1` | Validator |
-| Agent | `--agent-checker` | `#B8862C` | `#D9A645` | Checker |
-| Agent | `--agent-reflector` | `#8A6FB8` | `#AC93D9` | Reflector |
-| Agent | `--agent-humanizer` | `#4E9B8F` | `#6FB8AC` | Humanizer |
-| Agent | `--agent-reader` | `#C95F8E` | `#D9849E` | ReaderPanel |
+| Agent | `--agent-router` | `#838683` | `#8E908E` | `router` 调度员(Trace 摘要色) |
+| Agent | `--agent-writer` | `#158243` | `#3DA066` | `writer` 写手(品牌色,与 accent 同值) |
+| Agent | `--agent-validator` | `#4F7DAF` | `#7FA7D1` | `validator` 一致性守护者 |
+| Agent | `--agent-checker` | `#B8862C` | `#D9A645` | `checker` 审稿人 |
+| Agent | `--agent-reflector` | `#8A6FB8` | `#AC93D9` | `reflector` 反思学习者 |
+| Agent | `--agent-humanizer` | `#4E9B8F` | `#6FB8AC` | `humanizer` 润色师 |
+| Agent | `--agent-reader-panel` | `#C95F8E` | `#D9849E` | `reader_panel` 读者评审团 |
 | 置信度 | `--confidence-high/-mid/-low` | 复用 success / warning / tertiary | 同左 | cascade 勾选默认值的视觉对应 |
 | Diff | `--diff-del-bg/-text` | `#FBEAE8` / `#A33D34` | `#46302E` / `#E5938A` | 删除行 |
 | Diff | `--diff-add-bg/-text` | `#E8F2E8` / `#44693F` | `#2E3A2F` / `#A4C9A0` | 新增行 |
@@ -111,7 +111,7 @@ flowchart LR
 - 键盘焦点一律 `box-shadow: 0 0 0 3px var(--focus-ring)`(accent 半透明),不裸用浏览器默认 outline
 - 低反差是美学选择,不是可达性妥协:全部文字 token 带实测对比度,不允许任何文字低于其档位下限;Settings 后续可加「提高对比度」开关(映射到一套高反差变量覆盖,暂记为非必做)
 - 颜色不是唯一信号:置信度同时有文字(高/中/低),violation 同时有 ⚠ 图标,diff 同时有 +/- 前缀
-- 全部浮层可被 `Esc` 关闭(硬约束,[spec/S10](../spec/S10-editor-and-interaction.md));模态实现 Focus Trap
+- 全部浮层可被 `Esc` 关闭(硬约束,[spec/S14](../spec/S14-editor-and-interaction.md));模态实现 Focus Trap
 
 ## 实现对接(Tailwind v4 + shadcn/ui)
 

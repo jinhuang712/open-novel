@@ -1,6 +1,6 @@
 # design/04 — SettingsDialog
 
-> 原型:`design/prototypes/04-settings.html` · 上游:[spec/S11 Settings 与 Onboarding](../spec/S11-settings-and-onboarding.md)(字段与路由契约以 spec 为准,本文只定交互与视觉)
+> 原型:`design/prototypes/04-settings.html` · 上游:[spec/S15 Settings 与 Onboarding](../spec/S15-settings-and-onboarding.md)(字段与路由契约以 spec 为准,本文只定交互与视觉)
 
 ## 结构
 
@@ -44,8 +44,8 @@ flowchart LR
 
 - **API Keys**:masked 输入 + 显隐 toggle +「测试连接」(loading → ✓ 已验证 success / ✗ 失败 danger + 原因);月度预算数字输入 + 当月用量进度条(超 80% warning,超 100% danger + 「已触顶,LLM 调用暂停」说明)
 - **模型分配**:每 Agent 一行,`Pro / Flash` 下拉;项目覆盖开启时该行右侧出现「覆盖中 · 还原」
-- **快捷键**:表格(命令 / 默认键 / 当前键 / 重绑按钮);重绑进入捕获态「按下新组合键…」,冲突即时红字提示并禁止保存;`Esc` 退出捕获(不可绑 Esc,[spec/S10](../spec/S10-editor-and-interaction.md))
-- **数据管理**:全局区(workspace 路径 / trace 清理 / 本月用量)+ 项目区(改名 / 归档 / 导出 zip / 删除);**危险区域**独立 danger 描边卡,删除/清空/重置走「输入指定字样」二次确认([spec/S11](../spec/S11-settings-and-onboarding.md)),确认按钮在字样完全匹配前 disabled
+- **快捷键**:表格(命令 / 默认键 / 当前键 / 重绑按钮);重绑进入捕获态「按下新组合键…」,冲突即时红字提示并禁止保存;`Esc` 退出捕获(不可绑 Esc,[spec/S14](../spec/S14-editor-and-interaction.md))
+- **数据管理**:全局区(workspace 路径 / trace 清理 / 本月用量)+ 项目区(改名 / 归档 / 导出 zip / 删除);**危险区域**独立 danger 描边卡,删除/清空/重置走「输入指定字样」二次确认([spec/S15](../spec/S15-settings-and-onboarding.md)),确认按钮在字样完全匹配前 disabled
 - **Developer Mode**:单 toggle + 影响清单(派生文件可见 / Debug 面板默认展开 / Trace 全文 / ChangeSet JSON 入口等);开启时 toast「Developer Mode 已开启 (Cmd+Shift+D)」
 
 ## Dirty 状态与底部条

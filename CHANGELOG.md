@@ -1,5 +1,15 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/spec · S 层 LLM 质量闭环重分层
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| S 层从 `S00-S11` 扩展为 `S00-S15`:`S03` 收窄为 Agent Runner,`S07` 收窄为 Context Management,新增 `S08 Prompt System`、`S09 Agent Tooling Boundary`、`S10 LLM Quality Harness`、`S11 Evaluation And Golden Regression`;原 Creative/Style/Editor/Settings 后移为 `S12-S15`。 | `README.md` `spec/S00-system-contract.md` `spec/S03-agent-runner.md` `spec/S07-context-management.md` `spec/S08-prompt-system.md` `spec/S09-agent-tooling-boundary.md` `spec/S10-llm-quality-harness.md` `spec/S11-evaluation-and-golden-regression.md` `spec/S12-S15` | 关闭“context / prompt / runner / tool / harness / golden 没有系统主权层”的文档缺口。 |
+| Appendix 反链按新主权层重归口:`A05` 只放 prompt 模板全文,`A04` 只放工具参数明细,`V01/V02/V03` 分别承接测试矩阵、golden 明细和外部 spike;质量门禁语义上移到 S10/S11。 | `spec/appendix/README.md` `A01-A05` `V01` `V02` `V03` `spec/platform/I01` | 关闭 prompt/harness/golden 只有明细、没有门禁的问题。 |
+| TODO 活跃表收口为“开放问题入口”:已归口的架构风险写入对应 plan/spec/platform/appendix,真实依赖验证进入 `V01/V03`,不再在 TODO 中重复漂浮。 | `TODO.md` `spec/appendix/V01-test-matrix.md` `spec/appendix/V03-external-spikes.md` | 用户要求把剩余 TODO 一并清理。 |
+| 补齐剩余架构契约:Approval Cascade dependency group / residual obligation / writing-blocked,项目级 lock/lease,watcher cursor / reconcile / repair job,canonical agent role id,桌面壳生产包装边界。 | `plan/04` `plan/08` `spec/S01` `spec/S04` `spec/M08` `spec/M13` `spec/platform/I03` `spec/platform/I05` `spec/platform/R01` `spec/platform/R04` | 关闭本轮 plan/spec/design 复查中可通过文档主权关闭的缺陷。 |
+| design 与原型同步风险语言和 ReaderPanel 心智:Approval 风险统一为「提示级 / 确认级 / 阻断级」,ReaderPanel 去掉 0-100 留存预测总分,改为分类风险和多人共识。 | `design/02-approval-cascade.md` `design/03-reader-panel.md` `design/prototypes/02-approval-cascade.html` `design/prototypes/03-reader-panel.html` `design/00-design-tokens.md` | 关闭 design 与 plan/spec 的风险枚举和评分心智冲突。 |
+
 ## 2026-06-12 · docs · 文档待办清理与 appendix 覆盖矩阵
 
 | 变更 | 影响文档 | 关联 |
@@ -13,7 +23,7 @@
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
 | 新增 `M17 Turn Recap And Continuation`:把每个 turn 的完成、停止、失败、待审、拒绝、放弃、已落盘和已修正都写成作者可读的项目活动记录;明确 Recap 是用户 changelog,不是作品事实、Trace step 或 Reflector 经验。 | `spec/M17-turn-recap-and-continuation.md` `README.md` `spec/S00-system-contract.md` | 用户确认普通作者不会使用 Git,recap 对他们就是最重要的变更记录。 |
-| 收敛取消和历史修正语义:运行中且未产生 durable change 时停止不需二次确认,但必须留下 stopped recap;已有待审、落盘或不可自动恢复风险时进入 cancel plan;撤销和恢复都生成新的反向修改或恢复提案,经审定后向前追加历史。 | `spec/S04-turn-orchestration.md` `spec/S10-editor-and-interaction.md` `spec/M08-approval-cascade.md` `spec/S01-project-storage.md` `plan/05-story-world.md` `plan/08-approval-and-cascade.md` | 关闭“取消入口仍需统一到同一个 rollback 语义”TODO,用户侧不暴露 Git 式回退。 |
+| 收敛取消和历史修正语义:运行中且未产生 durable change 时停止不需二次确认,但必须留下 stopped recap;已有待审、落盘或不可自动恢复风险时进入 cancel plan;撤销和恢复都生成新的反向修改或恢复提案,经审定后向前追加历史。 | `spec/S04-turn-orchestration.md` `spec/S14-editor-and-interaction.md` `spec/M08-approval-cascade.md` `spec/S01-project-storage.md` `plan/05-story-world.md` `plan/08-approval-and-cascade.md` | 关闭“取消入口仍需统一到同一个 rollback 语义”TODO,用户侧不暴露 Git 式回退。 |
 | UI 和过程可见性接入 recap:状态点新增 stopped recap 表现,Trace 顶部可展示最近 turn recap,S05 增加 `recap ready` 展示协议,M09 明确 Recap 与 Trace 的边界。 | `design/01-main-layout.md` `spec/S05-streaming-ui-protocol.md` `spec/M09-trace-observability.md` | 对齐“终止前内容做简单 recap,挂在界面上”的交互要求。 |
 | appendix 承接实现明细:补 activity recap 表字段、recap payload / event、作者备注、correction request、continuation action 和 Turn Recap 验证矩阵;TODO 的能力范围更新为 `M01-M17`。 | `spec/appendix/A01-schema-tables.md` `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` `spec/appendix/V01-test-matrix.md` `TODO.md` | 保持根层 spec 可读,字段、事件和测试继续后置。 |
 
@@ -31,7 +41,7 @@
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
 | 将产品层“审批”口径收敛为“作者审定”:小处表达走正文批阅层就地确认,连带修改和高风险变更进入整批审批;避免 plan 继续暗示所有写入都走同一个审批卡闸门。 | `plan/02-principles.md` `plan/05-story-world.md` `plan/06-agent-team.md` `plan/07-collaboration-and-modes.md` | 本轮文档矛盾复查发现 plan 与 inline review 主路径冲突。 |
-| 将系统总契约纳入批阅建议路径:Agent 输出形态从回答 / 报告 / proposal 扩展为回答 / 报告 / 批阅建议 / proposal,写入节点统一称为作者审定。 | `spec/S00-system-contract.md` `spec/S10-editor-and-interaction.md` `spec/platform/I02-editor-adapter-contract.md` | 避免 S00/I02 只承认审批后落盘,遗漏 inline review 接受后的 editor undo 路径。 |
+| 将系统总契约纳入批阅建议路径:Agent 输出形态从回答 / 报告 / proposal 扩展为回答 / 报告 / 批阅建议 / proposal,写入节点统一称为作者审定。 | `spec/S00-system-contract.md` `spec/S14-editor-and-interaction.md` `spec/platform/I02-editor-adapter-contract.md` | 避免 S00/I02 只承认审批后落盘,遗漏 inline review 接受后的 editor undo 路径。 |
 | 补齐 inline review 的 appendix 归口:批阅建议 schema、inline review 事件进入 A02/A03,实现明细仍后置到 appendix。 | `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` | 核心 spec 已定义行为,appendix 需要承接字段与事件明细。 |
 | 清理 design 与原型旧 UI 命名:ChatBox、ThinkingPanel、DebugConsole、FileTree 等残留改为输入条、Trace、Developer Console、库面板;Onboarding 改为“就地确认 + 审批卡”双层心智。 | `design/00-design-tokens.md` `design/03-reader-panel.md` `design/05-onboarding.md` `design/prototypes/04-settings.html` `design/prototypes/05-onboarding.html` `design/prototypes/tokens.css` | 避免旧五区心智继续污染写作优先主界面契约。 |
 | 更新剩余 TODO:design 同步项从 02-05 全部残留缩小到 design/02 审批卡复查与 01 原型全局搜索热键。 | `TODO.md` | 本轮已处理 03/04/05 的明显旧命名和 onboarding 旧审批口径。 |
@@ -40,7 +50,7 @@
 
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
-| 将轻量选区改写和 Humanizer 的默认路径从审批卡改为正文批阅层:句内 / 小选区在原文附近展示修订痕迹、近文小注和接受 / 拒绝 / 重试;接受后才替换并进入编辑器 undo。 | `spec/M07-inline-rewrite-and-humanizer.md` `spec/S09-style-and-humanizer.md` `spec/S10-editor-and-interaction.md` | 用户明确轻量 editor accept 是大多数场景,希望像高级批阅而不是卡片审批。 |
+| 将轻量选区改写和 Humanizer 的默认路径从审批卡改为正文批阅层:句内 / 小选区在原文附近展示修订痕迹、近文小注和接受 / 拒绝 / 重试;接受后才替换并进入编辑器 undo。 | `spec/M07-inline-rewrite-and-humanizer.md` `spec/S13-style-and-humanizer.md` `spec/S14-editor-and-interaction.md` | 用户明确轻量 editor accept 是大多数场景,希望像高级批阅而不是卡片审批。 |
 | 收紧跨文档变更边界:跨文档、跨章节、事实、剧情、设定和关系变更不能在当前页旁注中裁决;当前命中处必须保留轻量锚点或 cascade 序号,完整解释和选择进入 Approval Cascade。 | `spec/M07-inline-rewrite-and-humanizer.md` `spec/M08-approval-cascade.md` `design/01-main-layout.md` `design/06-command-palette.md` | 用户指出跨文档变更不应使用旁注,但也不能在正文里完全没有标注。 |
 | README、plan 红线和 design 原则澄清为“作者显式审定必经”:小改可就地接受,连带修改整批审定,保持无静默落盘。 | `README.md` `plan/03-guardrails.md` `plan/08-approval-and-cascade.md` `plan/09-narrative-and-reader.md` `design/README.md` | 避免全局原则与 inline review 主路径冲突,保留 R1 的用户驾驶位含义。 |
 | 同步命令面板与主界面原型中的 Cmd+K 样例:展示克制的细线、淡底、删除/新增标记、近文操作和 cascade 锚点,移除旧的“卡片审批默认路径”文案。 | `design/prototypes/01-main-layout.html` `design/prototypes/06-command-palette.html` | 设计原型必须随 spec/design 文档同步,避免继续展示旧交互。 |
@@ -100,7 +110,7 @@
 
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
-| spec 根层从 29 篇历史增量功能文档重组为 12 篇系统契约文档:`S00-system-contract`、`S01-project-storage`、`S02-runtime-state`、`S03-agent-runtime`、`S04-turn-orchestration`、`S05-streaming-ui-protocol`、`S06-knowledge-graph`、`S07-context-and-query`、`S08-creative-engine`、`S09-style-and-humanizer`、`S10-editor-and-interaction`、`S11-settings-and-onboarding`。核心 spec 只写技术路径、职责边界、主权对象和失败语义。 | `spec/S00-S11` `README.md` | 用户确认 spec 应减少技术细节堆砌,先讲清技术路径和设计。 |
+| spec 根层从 29 篇历史增量功能文档重组为当时的 12 篇系统契约文档。核心 spec 只写技术路径、职责边界、主权对象和失败语义。2026-06-12 后当前文件名以本日志顶部的 S 层重分层条目为准。 | `spec/S00-S11` `README.md` | 用户确认 spec 应减少技术细节堆砌,先讲清技术路径和设计。 |
 | 表结构、JSON schema、事件枚举、工具参数、prompt 模板、测试矩阵、版本审计和旧迁移明细后置到 `spec/appendix/`;旧 29 篇 spec 原文在后续同日整理中迁入 `progress/spec-archive/`,作为字段、schema、参数和历史细节来源,不再作为根层 spec 主权骨架。 | `spec/appendix/*` `progress/spec-archive/*` | 同上;避免细节丢失,同时降低核心 spec 噪音。 |
 | 文档规范新增 spec 写作纪律:S1 核心 spec 必须说明职责边界、主权对象、输入输出、关键流程、失败语义和用户可见结果;S2 技术细节后置;S3 同一生命周期、状态机、失败语义、数据主权或上下文规则只能有一个权威定义位置。 | `AGENTS.md` `CLAUDE.md` | 用户要求把“核心 spec 不能太虚、appendix 不能变垃圾桶、关键约束不能完全挪走”纳入长期要求。 |
 | README 的 spec 导航与当前实现方向改为新骨架;TODO 活跃项和实施前验证项同步改指核心 spec 或 appendix,旧断链风险从入口文档移除。 | `README.md` `TODO.md` | 同上。 |
@@ -127,8 +137,8 @@
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
 | plan/ 重定义为**纯产品 PRD**——零技术细节、无历史包袱:旧 12 篇半技术 PRD 删除,重组为 10 篇纯产品 PRD,技术内容迁入 spec([spec/28 — 技术栈](./spec/S00-system-contract.md) 为本次新增);纯产品写作纪律已立入章程 `CLAUDE.md` / `AGENTS.md`。旧 → 新对照见本节下表。 | 全部 `plan/*.md` `spec/S00-system-contract.md` `CLAUDE.md` `AGENTS.md` | [progress/P008-plan-rewrite.md](./progress/P008-plan-rewrite.md) 为本次迁移的执行计划存档。 |
-| 技术设计取舍(ADR)迁移:旧 plan/03、plan/04、plan/08 的技术 ADR 分别入 [spec/S05](./spec/S10-editor-and-interaction.md)、[spec/S01](./spec/S01-project-storage.md) 与 [spec/17](./spec/S06-knowledge-graph.md)、[spec/28](./spec/S00-system-contract.md) 的 §设计取舍;产品级决策理由不再以 ADR 表存在,内联进新 plan 各篇正文。 | `spec/S05` `spec/S01` `spec/17` `spec/28` 全部新 `plan/*.md` | 同上。 |
-| 红线编号映射:旧 plan/01 不变性 #1-12 → 新 [plan/03](./plan/03-guardrails.md) 红线 R1-R10;其中 #5 入 [spec/S02](./spec/S03-agent-runtime.md),#7 入 `CLAUDE.md` / `AGENTS.md` 工作规范,#12 的 JSON 面入 [spec/24](./spec/S03-agent-runtime.md)。 | `plan/03-guardrails.md` `spec/S02` `spec/24` `CLAUDE.md` `AGENTS.md` | 历史文档中的旧编号按本映射换算。 |
+| 技术设计取舍(ADR)迁移:旧 plan/03、plan/04、plan/08 的技术 ADR 分别入 [spec/S05](./spec/S14-editor-and-interaction.md)、[spec/S01](./spec/S01-project-storage.md) 与 [spec/17](./spec/S06-knowledge-graph.md)、[spec/28](./spec/S00-system-contract.md) 的 §设计取舍;产品级决策理由不再以 ADR 表存在,内联进新 plan 各篇正文。 | `spec/S05` `spec/S01` `spec/17` `spec/28` 全部新 `plan/*.md` | 同上。 |
+| 红线编号映射:旧 plan/01 不变性 #1-12 → 新 [plan/03](./plan/03-guardrails.md) 红线 R1-R10;其中 #5 入 [spec/S02](./spec/S03-agent-runner.md),#7 入 `CLAUDE.md` / `AGENTS.md` 工作规范,#12 的 JSON 面入 [spec/24](./spec/S03-agent-runner.md)。 | `plan/03-guardrails.md` `spec/S02` `spec/24` `CLAUDE.md` `AGENTS.md` | 历史文档中的旧编号按本映射换算。 |
 | README 导航与全仓交叉引用已同步到新 plan 结构。 | `README.md` 及全仓 plan/spec/design/progress 引用 | 同上。 |
 
 旧 → 新对照(旧篇已删,旧名仅为历史名称,只以行内代码标注、不作链接):

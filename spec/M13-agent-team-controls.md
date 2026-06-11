@@ -2,26 +2,42 @@
 
 Agent Team Controls 定义作者如何理解和调配七个 AI 角色。它不是模型参数页,而是编辑部的可见控制面。
 
+## Canonical role id
+
+以下 id 是持久化、事件、Trace、成本归因和 prompt 名称的唯一角色标识。中文名是用户可见展示,可以本地化;id 不能随文案变化。
+
+| canonical id | 中文展示名 | 用户可见职责 |
+|---|---|---|
+| `router` | 调度员 | 理解意图、选择模式和动作入口。 |
+| `writer` | 写手 | 生成章节草稿、段落扩写和写作 proposal。 |
+| `checker` | 审稿人 | 发现节奏、爽点、守则和表达风险。 |
+| `validator` | 一致性守护者 | 复核事实、依赖、连带影响和阻断级一致性。 |
+| `reader_panel` | 读者评审团 | 用多类读者视角给出风险和反应。 |
+| `humanizer` | 润色师 | 做表达层改写和去 AI 味。 |
+| `reflector` | 反思学习者 | 从作者审定和明确反馈中沉淀经验。 |
+
+Design token、prompt template、cost row、trace badge、schema enum 和 settings 开关都必须派生自这组 id。不得在不同文档里另起 `ReaderPanel` / `Validator` / `Checker` 等混合命名作为持久化值。
+
 ## 控制对象
 
 | 角色 | 用户能做 |
 |---|---|
-| Router | 查看调度结果,不能关闭主入口 |
-| Writer | 调整档位和写作强度 |
-| Checker | 调整诊断灵敏度 |
-| Validator | 查看一致性守护,阻断级不可关闭 |
-| ReaderPanel | 调整 persona 和深度 |
-| Humanizer | 按需调用和调风格 |
-| Reflector | 整体关闭学习或管理经验 |
+| 调度员 | 查看调度结果,不能关闭主入口 |
+| 写手 | 调整档位和写作强度 |
+| 审稿人 | 调整诊断灵敏度 |
+| 一致性守护者 | 查看一致性守护,阻断级不可关闭 |
+| 读者评审团 | 调整 persona 和深度 |
+| 润色师 | 按需调用和调风格 |
+| 反思学习者 | 整体关闭学习或管理经验 |
 
 ## 控制边界
 
 ```mermaid
 flowchart LR
   Settings[Agent Controls] --> Runtime[S02 Runtime]
-  Settings --> Agent[S03 Agent Runtime]
+  Settings --> Agent[S03 Agent Runner]
   Agent --> Trace[M09 Trace]
-  Runtime --> Context[S07 Context]
+  Runtime --> Context[S07 Context Management]
 ```
 
 角色开关只能影响未来 turn。正在运行的 turn 按 [S04](./S04-turn-orchestration.md) 取消或完成,不能被设置页静默改写。
@@ -47,6 +63,7 @@ flowchart LR
 | 生效 | 设置变更只影响后续 turn |
 | Trace | 每条建议可归因到角色 |
 | 成本 | 用量按角色可见 |
+| ID | schema、event、prompt、design token 使用同一 canonical id |
 
 ## FAQ
 

@@ -24,7 +24,7 @@ flowchart TB
   Experience[用户经验 L3] --> Builder
   Recent[会话历史 L2] --> Builder
   Scratch[工作记忆 L1] --> Builder
-  Builder --> Agent[Agent Runtime]
+  Builder --> Agent[Agent Runner]
 
   Recap[用户活动记录] -.只做回执和续接.-> UI[Trace / Activity]
   Trace[过程历史] -.只解释过程.-> UI[Trace / Debug]
@@ -71,7 +71,7 @@ Reflector 关闭的含义很具体:不再学习新经验。它不等于清空已
 | 过程 trace | 用户问“刚才为什么这样做”或 Debug 展示 | 不参与作品事实 |
 | 失败记录 | 用于恢复、提示、诊断 | 持久 turn 状态 |
 
-Agent 不能自己挑 runtime 材料。所有注入都经 [S07](./S07-context-and-query.md) 的 context builder。
+Agent 不能自己挑 runtime 材料。所有注入都经 [S07](./S07-context-management.md) 的 context builder。
 
 ## 恢复不是重放
 

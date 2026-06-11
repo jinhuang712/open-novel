@@ -17,7 +17,7 @@ Editor Adapter Contract 定义编辑器内核与 Open Novel 命令系统之间�
 ```mermaid
 flowchart LR
   EditorCore[Editor Core] --> Adapter[Editor Adapter]
-  Adapter --> S10[S10 Editor Interaction]
+  Adapter --> S14[S14 Editor Interaction]
   Adapter --> M07[M07 Inline Rewrite]
   Adapter --> M10[M10 Knowledge Surface]
   Adapter --> Approval[M08 Approval]

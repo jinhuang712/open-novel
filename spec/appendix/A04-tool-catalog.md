@@ -1,6 +1,6 @@
 # A04 · Tool Catalog
 
-本 appendix 是工具、命令、快捷键和查询能力参数的归口。根层 spec 定义工具能做什么、不能做什么、失败如何处理和是否需要审批。
+本 appendix 是工具、命令、快捷键和查询能力参数的归口。[S09 · Agent Tooling Boundary](../S09-agent-tooling-boundary.md) 定义工具能做什么、不能做什么、失败如何处理、二次 LLM 调用如何受控和是否需要审批。
 
 ## 归口内容
 
@@ -14,11 +14,12 @@
 
 ## 对应核心文档
 
-- [S03 Agent Runtime](../S03-agent-runtime.md)
+- [S03 Agent Runner](../S03-agent-runner.md)
 - [S04 Turn Orchestration](../S04-turn-orchestration.md)
 - [S06 Knowledge Graph](../S06-knowledge-graph.md)
-- [S07 Context And Query](../S07-context-and-query.md)
-- [S10 Editor And Interaction](../S10-editor-and-interaction.md)
+- [S07 Context Management](../S07-context-management.md)
+- [S09 Agent Tooling Boundary](../S09-agent-tooling-boundary.md)
+- [S14 Editor And Interaction](../S14-editor-and-interaction.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M08 Approval Cascade](../M08-approval-cascade.md)
@@ -38,4 +39,4 @@
 
 ## 边界
 
-工具参数变化可以只改 appendix。工具是否允许读取、是否允许构造 proposal、是否可能写入、是否触发审批或内部恢复,必须在根层 spec 说明。
+工具参数变化可以只改 appendix。工具是否允许读取、是否允许构造 proposal、是否可能写入、是否触发审批、是否允许二次 LLM 调用或内部恢复,必须在 [S09](../S09-agent-tooling-boundary.md) 及受影响的根层 spec 说明。

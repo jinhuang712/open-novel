@@ -1,0 +1,167 @@
+# S03 · Agent Runner
+
+这篇把 Agent Runner 写成一台受控执行器。Runner 只负责把一次已授权的 Agent run 跑完:调用模型、执行允许的工具、收集 step、校验结构化输出、在预算内重试,最后把结果交还给 [S04 · Turn Orchestration](./S04-turn-orchestration.md)。
+
+它不拥有 prompt 优先级、不拥有上下文取舍、不拥有工具权限、不拥有质量门禁,更不能批准写入作品。
+
+## Runner 在链路里的位置
+
+```mermaid
+sequenceDiagram
+  participant O as S04 Turn Orchestration
+  participant C as S07 Context Management
+  participant P as S08 Prompt System
+  participant B as S09 Tooling Boundary
+  participant R as S03 Agent Runner
+  participant M as Model Provider
+  participant H as S10 Quality Harness
+
+  O->>C: request context package
+  C-->>O: context package + gaps
+  O->>P: request prompt packet
+  P-->>O: ordered prompt packet + version
+  O->>B: request tool policy
+  B-->>O: allowed tool manifest
+  O->>R: run envelope
+  R->>M: model call
+  M-->>R: text / tool call / structured object
+  R->>B: execute allowed tool call
+  B-->>R: tool result or tool failure
+  R->>H: record run evidence
+  R-->>O: runner result
+```
+
+Runner 是运行时边界,不是总控。只要结果会改变作品,Runner 的返回值只能成为 proposal、批阅建议或失败状态,等待 S04 进入审定、取消或 recap。
+
+## Runner 拥有什么
+
+| Runner 主权 | 说明 |
+|---|---|
+| run envelope | 记录本次 role、mode、output contract、prompt version、context package id、tool policy id、model profile 和取消信号。 |
+| model loop | 控制一次模型调用、工具调用、继续调用和结束条件,不把循环交给模型自由延展。 |
+| structured result | 校验模型输出是否满足本次 output contract;失败只能重试、降级为 failure 或交回 S04。 |
+| retry budget | 管理结构化修复、工具失败恢复和 provider transient retry 的上限,防止 doom-loop。 |
+| stream step | 把 step、tool call、partial text、failure 和 final result 映射为 [S05](./S05-streaming-ui-protocol.md) 可恢复事件。 |
+| cancellation | 接收 S04 的 stop/cancel 信号,停止后交回已发生的 step 和未完成状态,不能自行决定写入。 |
+
+## Runner 不拥有什么
+
+| 不归 Runner | 主权位置 |
+|---|---|
+| 哪些事实必须装入、哪些事实可裁 | [S07 · Context Management](./S07-context-management.md) |
+| prompt 分层、优先级、不可信内容围栏 | [S08 · Prompt System](./S08-prompt-system.md) |
+| 工具白名单、工具权限、二次 LLM 调用边界 | [S09 · Agent Tooling Boundary](./S09-agent-tooling-boundary.md) |
+| 真实任务回放、输入输出记录、失败复现 | [S10 · LLM Quality Harness](./S10-llm-quality-harness.md) |
+| golden regression、质量指标、阻断门禁 | [S11 · Evaluation And Golden Regression](./S11-evaluation-and-golden-regression.md) |
+| 审批、落盘、取消计划、recap | [S04 · Turn Orchestration](./S04-turn-orchestration.md) |
+
+## 一次 run 的状态机
+
+```mermaid
+stateDiagram-v2
+  [*] --> Accepted
+  Accepted --> Prepared: prompt/context/tools ready
+  Prepared --> CallingModel
+  CallingModel --> ToolRequested: allowed tool call
+  ToolRequested --> CallingModel: tool result
+  ToolRequested --> Failed: tool policy or tool failure exhausted
+  CallingModel --> Validating: model returns final
+  Validating --> Repairing: contract failure within budget
+  Repairing --> CallingModel: retry with bounded error summary
+  Validating --> Completed: output contract passes
+  Validating --> Failed: retry budget exceeded
+  CallingModel --> Stopped: S04 stop signal
+  Completed --> [*]
+  Failed --> [*]
+  Stopped --> [*]
+```
+
+`Completed` 不代表作品已改变,只代表 Runner 得到一个可交给 S04 的结果。`Stopped` 也不是失败;它会带上已完成 step 和不可用 artifact 的解释,由 S04 生成 stopped recap 或 cancel plan。
+
+## Tool loop 与 stop 条件
+
+Runner 可以使用外部 SDK 的 step loop,也可以使用手写 while loop,但对上层暴露同一个 `RunnerLoop` 语义:
+
+| 循环点 | 契约 |
+|---|---|
+| tool result marker | 每个工具结果必须明确回到本次 run,不能被模型当成用户新指令。 |
+| step finish | 每一步结束都产生可记录 step,便于 Trace、harness 和失败复现。 |
+| stop condition | 达到 final output、工具次数上限、retry budget、取消信号或 provider failure 时必须停。 |
+| fallback | 如果 SDK 的 `stopWhen`、tool marker 或 step callback 实查不稳定,实现退回手写 loop,上层契约不变。 |
+
+外部行为实查归 [V03 · External Spikes](./appendix/V03-external-spikes.md);测试矩阵归 [V01 · Test Matrix](./appendix/V01-test-matrix.md)。代码实现前不能把未验证 SDK 行为当作已成立前提。
+
+## 结构化输出失败如何收场
+
+```mermaid
+flowchart TD
+  Output[模型输出] --> Parse{可解析?}
+  Parse -->|否| Retry{修复预算内?}
+  Parse -->|是| Contract{满足 output contract?}
+  Contract -->|是| Business{业务关键字段完整?}
+  Business -->|是| Return[返回 Completed]
+  Business -->|否| Retry
+  Contract -->|否| Retry
+  Retry -->|是| Repair[带错误摘要重试]
+  Repair --> Output
+  Retry -->|否| Failure[返回 Failed]
+```
+
+“补默认值”只能用于不会影响行为的展示字段。影响审批、落盘、风险、上下文、来源解释或工具调用的字段缺失时,Runner 必须失败,不能把自然语言解释当结构化结果继续编排。
+
+## Retry budget 防 doom-loop
+
+Runner 与 S04 共享同一条防循环规则:自动重试只能修复可证明的 transient 或 contract failure,不能把失败包装成新的无限 turn。
+
+| 预算 | 归属 | 超限后 |
+|---|---|---|
+| structured repair budget | S03 | 返回 structured-output failure,附最近错误摘要。 |
+| tool retry budget | S03 + S09 | 返回 tool failure,保留工具名、来源和失败类型。 |
+| provider retry budget | S03 + I01 | 返回 provider failure,不再自动换模型写入。 |
+| user retry budget | S04 | 进入用户可见失败或需要修改输入的提示。 |
+
+每次重试都必须记录 `retry_reason`、`attempt_count`、`contract` 和最后一次失败摘要,供 [S10](./S10-llm-quality-harness.md) 复现。任何 retry budget 超限后,系统不能自动生成“再试一次”的新 turn。
+
+## Runner result
+
+Runner result 只表达运行结果,不表达审批决定。
+
+| 结果 | 含义 | 下一站 |
+|---|---|---|
+| answer | 讨论模式解释、澄清、建议 | S04/S05 展示,不落盘。 |
+| report | 守则诊断、读者反馈、查询解释 | S04 决定展示或附到审批解释。 |
+| review suggestion | 小选区批阅建议 | S04/S14 进入就地审定路径。 |
+| proposal | 章节草稿、设定修改、跨章节 ChangeSet | S04 进入审批或 cascade。 |
+| failure | provider、tool、schema、cancel、overflow 等运行失败 | S04 决定失败回执、recap 或恢复入口。 |
+
+完整 schema 归 [A02 · JSON Schemas](./appendix/A02-json-schemas.md)。Runner 只在根层说明哪些结果能被继续编排。
+
+## FAQ
+
+**Q: Router 也是 Agent,为什么不能直接执行动作?**
+
+A: Router 只能返回 action proposal。action 是否可执行、是否危险、是否需要审批,由 S04 判断。
+
+**Q: Agent 能不能自己查数据库补上下文?**
+
+A: 不能随意查。Runner 只能执行 S09 允许的工具,上下文主入口仍是 S07。
+
+**Q: prompt injection 在哪里处理?**
+
+A: S08 定义不可信内容围栏,S09 限制工具能力,S03 只执行已经组装好的 prompt packet 和 tool policy。
+
+**Q: 流式文本能不能边写进编辑器?**
+
+A: 可以展示草稿流。替换作品、进入审批或生成 recap 必须等 Runner result 完整并由 S04 接管。
+
+**Q: 内部辅助 Agent 会不会成为隐藏 Agent?**
+
+A: 不允许。任何二次 LLM 调用都必须由 S09 定义边界,由 S03/S10 记录运行证据,不能绕过 Trace、harness 和审批。
+
+## Appendix
+
+- [A02 · JSON Schemas](./appendix/A02-json-schemas.md) 保存 Runner result、structured output、failure envelope 等 schema。
+- [A03 · Event Catalog](./appendix/A03-event-catalog.md) 保存 step、trace、stream 和 failure 事件字段。
+- [A04 · Tool Catalog](./appendix/A04-tool-catalog.md) 保存工具参数明细;权限和失败语义由 [S09](./S09-agent-tooling-boundary.md) 定义。
+- [A05 · Prompt Templates](./appendix/A05-prompt-templates.md) 保存 prompt 模板全文;prompt 主权由 [S08](./S08-prompt-system.md) 定义。
+- [V01 · Test Matrix](./appendix/V01-test-matrix.md) 保存 Runner loop、retry 和 cancellation 的验证矩阵。

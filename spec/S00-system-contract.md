@@ -6,14 +6,19 @@
 
 ## 十分钟读法
 
-先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实,Agent 产生回答或提议,作者审定,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。
+先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实和 prompt,Agent Runner 受控执行,质量证据被记录和验收,作者审定,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。
 
 ```mermaid
 flowchart LR
   Author[作者] --> Turn[Turn Orchestration]
-  Turn --> Context[Context And Query]
-  Context --> Agent[Agent Runtime]
-  Agent --> Draft[回答 / 报告 / 批阅建议 / Proposal]
+  Turn --> Context[Context Management]
+  Context --> Prompt[Prompt System]
+  Prompt --> Agent[Agent Runner]
+  Agent --> Tools[Tooling Boundary]
+  Tools --> Agent
+  Agent --> Harness[Quality Harness]
+  Harness --> Eval[Evaluation / Golden Gate]
+  Eval --> Draft[回答 / 报告 / 批阅建议 / Proposal]
   Draft --> Approval{是否写入作品?}
   Approval -->|否| Stream[Streaming UI]
   Approval -->|是,需审定| Decision[作者审定]
@@ -24,6 +29,7 @@ flowchart LR
   Stream --> Editor[Editor And Interaction]
   Settings[Settings And Onboarding] --> Turn
   Runtime[Runtime State] --> Context
+  Runtime --> Prompt
   Runtime --> Stream
 ```
 
@@ -48,8 +54,9 @@ sequenceDiagram
   participant U as 作者
   participant E as Editor
   participant O as Turn Orchestration
-  participant Q as Context/Query
-  participant R as Agent Runtime
+  participant Q as Context Management
+  participant R as Agent Runner
+  participant H as Quality Gate
   participant S as Storage
   participant K as Knowledge Graph
   participant V as Streaming UI
@@ -60,7 +67,8 @@ sequenceDiagram
   Q->>K: 查实体、伏笔、章节锚点
   K-->>Q: 候选章节和来源
   Q->>R: 请求复核和生成候选改写
-  R-->>O: ChangeSet proposal
+  R->>H: 记录并验收 LLM run
+  H-->>O: ChangeSet proposal + quality evidence
   O->>V: 展示待审批状态
   U->>O: 接受 / 修改后接受 / 拒绝
   O->>S: 审批后落盘
@@ -110,10 +118,11 @@ flowchart TB
 | 决策 | 当前路线 | 根层关心的理由 |
 |---|---|---|
 | 应用形态 | 本地单机工作台,一个应用承载前端、后端接口、Agent runner 和本地存储 | 用户数据在本机;路径、权限、导入导出必须可解释 |
-| Agent loop | 自定义 runner 显式控制模型调用、工具、结构化输出、retry、stream | 不把审批、memory、workflow 交给黑盒框架 |
+| Agent loop | 自定义 runner 显式控制模型调用、结构化输出、retry、tool loop 和 stream | 不把审批、memory、workflow 交给黑盒框架 |
+| LLM 质量闭环 | prompt、context、tool、harness 和 golden regression 分层拥有主权 | LLM 行为变化必须可复现、可验收、可阻断 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
 | UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、Universal Search 和查询浮层暴露 | 过程透明,但不让日志淹没写作 |
-| 明细归口 | 字段、schema、prompt、工具参数、测试矩阵和 spike 证据进 appendix;接入、恢复、迁移、诊断契约进 platform | 核心 spec 读完必须懂设计,不被字段表打断 |
+| 明细归口 | 字段、schema、模板全文、工具参数、测试矩阵、golden 明细和 spike 证据进 appendix;接入、恢复、迁移、诊断契约进 platform | 核心 spec 读完必须懂设计,不被字段表打断 |
 
 具体包版本、字段定义、JSON schema 和命令参数不是本篇职责。它们只有在会改变系统律或失败语义时才回到根层。
 
@@ -123,13 +132,14 @@ flowchart TB
 
 | 审计对象 | 必须证明什么 | 失败后的处理 |
 |---|---|---|
-| 模型能力 | 上下文长度、结构化输出、流式行为满足核心路径 | 不伪装支持;回写 TODO 或换路线 |
+| 模型能力 | 上下文长度、结构化输出、流式行为满足核心路径 | 不伪装支持;进入 V03 或换路线 |
 | Runner 能力 | stop、tool result、stream callback 能端到端工作 | 不能让 Agent loop 处在半隐式状态 |
+| Prompt / tool / harness | prompt cache、tool marker、二次 LLM、replay evidence 和 golden gate 可证明 | 不能让 LLM 质量闭环停在文档愿望 |
 | 本地数据库和向量扩展 | native binding、WAL、JOIN、热重载连接稳定 | 写入和索引能力未验证前不进入实现主路径 |
 | 文件系统 | workspace 权限、外部编辑监听、原子写/回滚可行 | 不允许出现“UI 成功、文件失败”的假状态 |
 | 前端交互 | 编辑器、IME、快捷键、断线恢复符合 design/spec 契约 | 不能让交互层绕过 turn 状态 |
 
-审计证据归 appendix,行为契约回写对应的根层 `S/M` 或 `platform/I/R` 文档。未能关闭的问题进 TODO;路线变化必须同步 CHANGELOG。
+审计证据归 `V03`,测试矩阵归 `V01`,golden 明细归 `V02`;行为契约回写对应的根层 `S/M` 或 `platform/I/R` 文档。只有没有主权文档或需要用户重新裁决的问题才进入 TODO;路线变化必须同步 CHANGELOG。
 
 ## 读者导航
 
@@ -139,15 +149,19 @@ flowchart TB
 |---|---|
 | 作品事实怎么保存、外部编辑怎么处理 | [S01 · Project Storage](./S01-project-storage.md) |
 | 系统记住什么、Reflector 关闭是什么意思 | [S02 · Runtime State](./S02-runtime-state.md) |
-| Agent 怎么运行、工具和 JSON 失败怎么办 | [S03 · Agent Runtime](./S03-agent-runtime.md) |
+| Agent Runner 怎么运行、结构化输出和 retry 怎么收场 | [S03 · Agent Runner](./S03-agent-runner.md) |
 | 一次 turn 怎么审批、取消和收场 | [S04 · Turn Orchestration](./S04-turn-orchestration.md) |
 | UI 怎么看见过程、断线怎么恢复 | [S05 · Streaming UI Protocol](./S05-streaming-ui-protocol.md) |
 | 实体、锚点、embedding 怎么维护 | [S06 · Knowledge Graph](./S06-knowledge-graph.md) |
-| 上下文和影响分析怎么装配 | [S07 · Context And Query](./S07-context-and-query.md) |
-| 五大守则和读者预演怎么进入审批 | [S08 · Creative Engine](./S08-creative-engine.md) |
-| 去 AI 味如何不改剧情 | [S09 · Style And Humanizer](./S09-style-and-humanizer.md) |
-| 编辑器、命令、焦点、查询怎么协作 | [S10 · Editor And Interaction](./S10-editor-and-interaction.md) |
-| 首启、设置、经验管理、危险操作归哪 | [S11 · Settings And Onboarding](./S11-settings-and-onboarding.md) |
+| 上下文、分卷、影响分析和 overflow 怎么装配 | [S07 · Context Management](./S07-context-management.md) |
+| prompt 分层、优先级和不可信内容围栏归哪 | [S08 · Prompt System](./S08-prompt-system.md) |
+| 工具白名单、工具失败和二次 LLM 调用归哪 | [S09 · Agent Tooling Boundary](./S09-agent-tooling-boundary.md) |
+| LLM run 如何记录、回放和复现失败 | [S10 · LLM Quality Harness](./S10-llm-quality-harness.md) |
+| golden regression 和质量门禁如何阻断合入 | [S11 · Evaluation And Golden Regression](./S11-evaluation-and-golden-regression.md) |
+| 五大守则和读者预演怎么进入审批 | [S12 · Creative Engine](./S12-creative-engine.md) |
+| 去 AI 味如何不改剧情 | [S13 · Style And Humanizer](./S13-style-and-humanizer.md) |
+| 编辑器、命令、焦点、查询怎么协作 | [S14 · Editor And Interaction](./S14-editor-and-interaction.md) |
+| 首启、设置、经验管理、危险操作归哪 | [S15 · Settings And Onboarding](./S15-settings-and-onboarding.md) |
 | 全局搜索如何查角色、阵营、概念、章节和来源 | [M01 · Universal Search](./M01-universal-search.md) |
 | 命令面板和快速打开如何分工 | [M02 · Command Palette / Quick Open](./M02-command-palette-and-quick-open.md) |
 | 查询浮层如何只解释事实、不写作品 | [M03 · Fact Query](./M03-fact-query.md) |
