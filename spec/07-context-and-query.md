@@ -89,6 +89,8 @@ flowchart LR
 
 查不到时,系统说“当前项目事实中未找到”,而不是编一个合理答案。
 
+Universal Search 使用本篇的 fact query 和 semantic recall 作为底层能力,但它不是本篇的替代品。Search 的入口、排序、分组、hover preview 和快捷键语义见 [12 · Universal Search](./12-universal-search.md)。
+
 ## Overflow 决策树
 
 ```mermaid

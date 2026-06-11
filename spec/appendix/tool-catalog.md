@@ -8,7 +8,8 @@
 - proposal 工具参数。
 - analyzeImpact、assembleContext、queryFacts 工具明细。
 - reindex、anchor health、knowledge graph 查询工具。
-- CommandRegistry 与 ShortcutRegistry 全表。
+- Universal Search source fanout、ranker 参数、preview action 和快捷键。
+- CommandRegistry、ShortcutRegistry、Quick Open、Discuss Mode 入口全表。
 - Settings / Debug 只读诊断命令。
 
 ## 对应核心文档
@@ -18,6 +19,10 @@
 - [06 Knowledge Graph](../06-knowledge-graph.md)
 - [07 Context And Query](../07-context-and-query.md)
 - [10 Editor And Interaction](../10-editor-and-interaction.md)
+- [12 Universal Search](../12-universal-search.md)
+- [13 Discuss Mode](../13-discuss-mode.md)
+- [15 Approval Cascade](../15-approval-cascade.md)
+- [16 ReaderPanel](../16-reader-panel.md)
 
 ## 边界
 

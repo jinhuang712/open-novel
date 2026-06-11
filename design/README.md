@@ -29,7 +29,7 @@
 | [03-reader-panel](./03-reader-panel.md) | ReaderPanel 章节风险报告:留存预测、5 persona 反馈 | `prototypes/03-reader-panel.html` |
 | [04-settings](./04-settings.md) | SettingsDialog:9 section、全局/项目分层、危险操作 | `prototypes/04-settings.html` |
 | [05-onboarding](./05-onboarding.md) | 首启引导 4 步向导 + 渐进式 tooltip | `prototypes/05-onboarding.html` |
-| [06-command-palette](./06-command-palette.md) | 命令面板、Cmd+P、@文件引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
+| [06-command-palette](./06-command-palette.md) | Universal Search、命令面板、Cmd+P、@文件引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
 
 ## 与 plan / spec 的关系
 
@@ -42,7 +42,7 @@ flowchart LR
   PROTO -. 视觉验收基准 .-> CODE
 ```
 
-- 交互行为以 plan/spec 为准(本目录不重复定义协议与 schema,只引用)
+- 交互行为以 plan/spec 为准(本目录不重复定义协议与 schema,只引用);核心能力如 Universal Search / Trace / Approval / ReaderPanel 直接引用对应根层 spec
 - 视觉与组件状态以本目录为准;实现期发现冲突,回写本目录并记 `CHANGELOG.md`
 - 原型中的文案、数据均为样例,以 [spec/03 Agent Runtime](../spec/03-agent-runtime.md) 与真实数据为准
 

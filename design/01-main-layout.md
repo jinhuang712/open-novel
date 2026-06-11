@@ -17,12 +17,16 @@ flowchart TB
   subgraph SUMMON["召唤层"]
     LIB["库面板 320px<br/>Cmd+B / 点章节轨顶部"]
     TRC["Trace 面板 380px<br/>Cmd+J / 点状态点"]
+    US["Universal Search<br/>Shift+Shift"]
+    QRY["事实查询<br/>Cmd+E"]
     CMP["输入条 600px 悬浮<br/>Cmd+L / 状态点 ✦"]
     APP["审批聚焦卡<br/>await_approval 自动"]
   end
   RAIL -.-> LIB
   DOT -.-> TRC
   DOT -.-> APP
+  ED -.-> US
+  ED -.-> QRY
 ```
 
 推开式面板用 `react-resizable-panels`(纸面让位不被遮挡);输入条与审批卡是悬浮层。各区尺寸见上图与下文各节;快捷键以 [spec/10](../spec/10-editor-and-interaction.md) 为准。
@@ -52,14 +56,26 @@ flowchart TB
 - 「最近」置于章节类目顶部一组(替代 Tabs 的多文件心智);空态(新项目):居中衬线短句 +「让 AI 起草第一章」按钮 → 召出输入条并预填
 - 库面板只放「能打开的东西」;查询是动作(独立浮层,见下节),偏好是 AI 沉淀的规则(归 Settings)
 
-## 查询浮层(召唤式,一键互换)
+## Universal Search 与查询浮层
+
+Universal Search 是全局对象搜索,查询浮层是结构化事实查询,二者都属于召唤层,但服务不同意图。
+
+### Universal Search(`Shift+Shift`)
+
+- 召出:`Shift+Shift`;再按 `Shift+Shift` 或 `Esc` 收回;IME composition、模态 focus trap、文本拖拽中不触发
+- 形态:屏幕上 1/4 处居中 720px(`--bg-raised` + 1px 边 + `--shadow-md`):单行输入 → 左侧分组结果(角色 / 阵营 / 概念 / 章节 / 可能相关)→ 右侧 hover preview
+- 结果行:名称 + 类型 + 来源状态 + 一行摘要;`Enter` 打开,`Cmd+Enter` 对照打开,`Tab` 在类型 filter 间循环
+- hover preview:角色展示阵营/状态/关系/最近出现;阵营展示成员/敌对关系;概念展示规则/代价/风险;章节展示命中 snippet
+- 与 spec 对齐:行为主权见 [spec/12 Universal Search](../spec/12-universal-search.md);本篇只定交互形态和视觉层级
+
+### 查询浮层(`Cmd+E`)
 
 queryFacts 是动词不是文件,独立成一键浮层:
 
 - 召出:`Cmd+E`;再按 `Cmd+E` 或 `Esc` 收回(同键互换);框选浮动条的「查询」= 召出并预填选区文字
 - 形态:屏幕上 1/4 处居中 560px(`--bg-raised` + 1px 边 + `--shadow-md`):查询输入 → 四类型纯文字 tab(entity-at / relations / mentions / semantic,**`Tab` 键循环互换**,IME 不抢键)→ 等宽结果行(可点击跳转来源章节)
 - 结果行点击 → 关浮层并跳到对应位置;`Enter` 执行查询
-- 与命令面板的分工:`Cmd+P` 打开文件、`Cmd+Shift+P` 执行命令、`Cmd+E` 问事实([design/06](./06-command-palette.md))
+- 与命令面板的分工:`Shift+Shift` 搜一切、`Cmd+P` 打开文件、`Cmd+Shift+P` 执行命令、`Cmd+E` 问事实([design/06](./06-command-palette.md))
 
 ## 偏好(learnings)的去处
 

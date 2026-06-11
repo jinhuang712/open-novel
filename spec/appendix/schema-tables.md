@@ -9,6 +9,7 @@
 - knowledge graph 的 entity、concept、relation、timeline、dependency、anchor、embedding 表。
 - runtime、experience、session history 表。
 - approval、ChangeSet、rollback、trace 的持久化字段。
+- Universal Search 最近对象、查询历史、preview cache 和索引健康状态字段。
 - settings、onboarding、project lifecycle 的存储字段。
 - migration 和 backfill 步骤。
 
@@ -19,6 +20,9 @@
 - [04 Turn Orchestration](../04-turn-orchestration.md)
 - [06 Knowledge Graph](../06-knowledge-graph.md)
 - [11 Settings And Onboarding](../11-settings-and-onboarding.md)
+- [12 Universal Search](../12-universal-search.md)
+- [14 Trace Observability](../14-trace-observability.md)
+- [15 Approval Cascade](../15-approval-cascade.md)
 
 ## 边界
 

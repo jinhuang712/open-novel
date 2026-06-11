@@ -6,8 +6,9 @@
 
 | 类别 | 状态 | 说明 |
 |---|---|---|
-| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍有旧五区语境残留;待按「章节轨 · 纸面 · 状态点」契约逐篇同步(库面板 / 状态点 / 输入条 / 旁注 / 查询浮层 / 动效清单约束),入口表述以 design/01 为准。 |
+| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/06` 文档与原型已补 Universal Search / `Shift+Shift` / hover preview 口径;`design/01` 原型尚未接入全局搜索热键,`design/02-05` 文档与原型仍有旧五区语境残留,待按「章节轨 · 纸面 · 状态点」契约逐篇同步。 |
 | appendix 明细抽取 | **1 open** | active [spec appendix](./spec/appendix/README.md) 已收敛为分类归口,旧 29 篇原文已归档;后续实现前需按需从 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md) 抽取当前有效的表结构、schema、工具参数、prompt 和测试矩阵,避免重新把历史噪音搬回 appendix。 |
+| 能力级核心 spec 延展 | **1 open** | [spec/12-16](./spec/12-universal-search.md) 已把 Universal Search、Discuss Mode、Trace、Approval Cascade、ReaderPanel 提升为根层能力 spec;后续若 Command Palette、Settings 子面板、Humanizer 工作台、Knowledge Surface 等能力需要独立实现和测试,继续直接新增根层 `spec/NN-*`,不要另建二级能力目录。 |
 | 经验管理契约缺口 | **1 open** | [spec/02](./spec/02-runtime-state.md) 与 [spec/11](./spec/11-settings-and-onboarding.md) 已点名经验可见 / 可调 / 可删的目标语义;仍需把经验字段、交互细节和失败场景补入 [appendix/schema-tables](./spec/appendix/schema-tables.md) 与 [appendix/testing-matrix](./spec/appendix/testing-matrix.md),并与 [plan/10 §经验对你透明](./plan/10-memory-and-learning.md) 对齐。 |
 | Reflector 关闭语义 | **1 open** | [plan/06 可关矩阵](./plan/06-agent-team.md) 新增「反思学习者可整体关闭」(关闭后不学新经验、已沉淀经验继续生效);核心语义已进入 [spec/02](./spec/02-runtime-state.md) 与 [spec/11](./spec/11-settings-and-onboarding.md),仍需把具体 settings 字段、经验注入开关和测试场景补入 appendix 明细。 |
 | 开书旅程缺 plan 承诺 | **1 open** | [plan/01 场景速览](./plan/01-overview.md) 第 1 条(故事种子逐项生成 + 样例项目)在 plan/05-10 没有承诺出处,目前主要由 [design/05](./design/05-onboarding.md) 与 [spec/11](./spec/11-settings-and-onboarding.md) 承载;待在能力章(建议 plan/05 或 plan/07)补一段「开书」产品承诺,或调整 plan/01 场景表述。 |

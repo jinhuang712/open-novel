@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · spec+design · 用户可感知能力提升为根层核心 spec
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 新增 `spec/12-16` 五篇根层能力 spec:Universal Search、Discuss Mode、Trace Observability、Approval Cascade、ReaderPanel。Universal Search 明确 `Shift+Shift` 全局搜索、角色/阵营/概念/章节分组、hover preview、排序降级和 Search→审批/讨论边界;其余四篇补齐触发、读写边界、失败收场、design 对接和测试清单。 | `spec/12-16` `README.md` | 用户要求补 Global Search / universal search hover overlay,并要求不要放入 `/modules`,直接放到核心 spec 级别。 |
+| 文档规则从“模块目录”收敛为“能力级核心 spec”:用户可感知且可独立实现/测试的能力直接进入根层编号 spec;不另建二级能力目录。WORKFLOW 新增需求进入 plan/spec/design/TODO/CHANGELOG 的更新顺序和能力 spec 检查表。 | `WORKFLOW.md` `AGENTS.md` `CLAUDE.md` `README.md` | 用户指出文档不是按能力拆,但不接受二级能力目录概念;需要大胆拆到核心 spec。 |
+| design 被重新接入文档流:主界面和命令面板文档补 Universal Search 与 `Cmd+E` fact query 的分工,design README 明确 design 不是 SoT,但必须随能力 spec 同步更新。 | `design/01-main-layout.md` `design/06-command-palette.md` `design/README.md` | 用户指出 `/design` 长期被遗忘,但不希望 design 成为 SoT。 |
+| appendix、TODO 同步新归口:Search/Discuss/Trace/Approval/ReaderPanel 的 schema、事件、工具、测试明细归 appendix;未完成的原型同步和后续能力 spec 延展进入 TODO。 | `spec/appendix/*` `TODO.md` | 保持核心 spec 可读,把机器级明细和未关闭工作放到正确位置。 |
+
 ## 2026-06-11 · spec · 12 篇核心 spec 完全重写为差异化技术设计
 
 | 变更 | 影响文档 | 关联 |

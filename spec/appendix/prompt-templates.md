@@ -7,6 +7,7 @@
 - stable header 公共片段。
 - 不可信内容围栏。
 - Router、Writer、Validator、Checker、Reflector、Humanizer、ReaderPanel prompt。
+- Discuss Mode prompt 和 Search-to-Discuss 转问答片段。
 - JSON retry prompt。
 - 五大守则、叙事诊断、persona prompt。
 - 风格范文分析片段。
@@ -17,6 +18,8 @@
 - [07 Context And Query](../07-context-and-query.md)
 - [08 Creative Engine](../08-creative-engine.md)
 - [09 Style And Humanizer](../09-style-and-humanizer.md)
+- [13 Discuss Mode](../13-discuss-mode.md)
+- [16 ReaderPanel](../16-reader-panel.md)
 
 ## 边界
 

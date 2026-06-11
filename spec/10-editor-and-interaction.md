@@ -8,6 +8,7 @@
 flowchart TB
   Editor[纸面编辑器] --> Selection[选区/光标]
   Selection --> Command[Command Registry]
+  Command --> Search[Universal Search]
   Command --> Query[查询浮层]
   Command --> Composer[Agent 输入条]
   Command --> Approval[审批卡]
@@ -69,15 +70,18 @@ flowchart TD
 
 ## 查询浮层不是输入条
 
-| 能力 | 查询浮层 | Agent 输入条 |
-|---|---|---|
-| 目标 | 查项目事实 | 发起讨论/规划/写作 |
-| 输入来源 | 选区、高亮、手输查询 | 用户自然语言指令 |
-| 输出 | 带来源的结果和跳转 | 回答、报告、proposal |
-| 写入能力 | 无 | 可能触发审批路径 |
-| pending approval 时 | 可查 | 危险输入需阻止或提示 |
+| 能力 | Universal Search | 查询浮层 | Agent 输入条 |
+|---|---|---|---|
+| 目标 | 找任何项目对象并导航 | 查项目事实 | 发起讨论/规划/写作 |
+| 快捷键 | `Shift+Shift` | `Cmd+E` | `Cmd+L` |
+| 输入来源 | 名称、别名、阵营、概念、章节片段 | 选区、高亮、手输查询 | 用户自然语言指令 |
+| 输出 | 分组结果 + hover preview + 打开动作 | 带来源的事实答案 | 回答、报告、proposal |
+| 写入能力 | 无;危险动作转审批 | 无 | 可能触发审批路径 |
+| pending approval 时 | 可查可打开,危险动作禁用 | 可查 | 危险输入需阻止或提示 |
 
 把两者混成一个入口会让用户分不清“我是在查事实”还是“我在让 Agent 做事”。
+
+Universal Search 的完整设计见 [12 · Universal Search](./12-universal-search.md)。本篇只保留它在编辑器焦点和命令路由中的位置。
 
 ## Esc 和取消
 

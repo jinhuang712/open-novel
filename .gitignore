@@ -40,6 +40,7 @@ coverage/
 .cache/
 .turbo/
 .eslintcache
+.superpowers/
 
 # User data 永远不应进仓库 (实际位置在 ~/.open-novel/)
 # 兜底防误提交:

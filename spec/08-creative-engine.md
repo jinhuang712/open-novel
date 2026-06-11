@@ -74,6 +74,8 @@ sequenceDiagram
 
 ReaderPanel 是发布前预演,不是硬性审稿委员会。只有它发现的风险进入审批语义时,才会影响写入路径。
 
+ReaderPanel 作为独立用户模块的报告闭环、persona 边界和 design 对接见 [16 · ReaderPanel](./16-reader-panel.md)。本篇只保留它在 Creative Engine 风险体系中的位置。
+
 ## 用户反馈如何变成经验
 
 ```mermaid

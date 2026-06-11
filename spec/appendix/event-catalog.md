@@ -8,7 +8,8 @@
 - turn lifecycle 事件。
 - approval、cancel、rollback、recovery 事件。
 - trace、tool run、LLM call、cost 事件。
-- editor、query、command、focus 事件。
+- Universal Search open/result/preview/action 事件。
+- editor、query、command、focus、Discuss Mode、ReaderPanel 事件。
 - 事件去重、乱序恢复和断线重连规则。
 
 ## 对应核心文档
@@ -17,6 +18,11 @@
 - [05 Streaming UI Protocol](../05-streaming-ui-protocol.md)
 - [10 Editor And Interaction](../10-editor-and-interaction.md)
 - [02 Runtime State](../02-runtime-state.md)
+- [12 Universal Search](../12-universal-search.md)
+- [13 Discuss Mode](../13-discuss-mode.md)
+- [14 Trace Observability](../14-trace-observability.md)
+- [15 Approval Cascade](../15-approval-cascade.md)
+- [16 ReaderPanel](../16-reader-panel.md)
 
 ## 边界
 

@@ -112,7 +112,7 @@ flowchart TB
 | 应用形态 | 本地单机工作台,一个应用承载前端、后端接口、Agent runner 和本地存储 | 用户数据在本机;路径、权限、导入导出必须可解释 |
 | Agent loop | 自定义 runner 显式控制模型调用、工具、结构化输出、retry、stream | 不把审批、memory、workflow 交给黑盒框架 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
-| UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、查询浮层暴露 | 过程透明,但不让日志淹没写作 |
+| UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、Universal Search 和查询浮层暴露 | 过程透明,但不让日志淹没写作 |
 | 明细归口 | 表结构、schema、prompt、工具参数、测试矩阵进 appendix | 核心 spec 读完必须懂设计,不被字段表打断 |
 
 具体包版本、字段定义、JSON schema 和命令参数不是本篇职责。它们只有在会改变系统律或失败语义时才回到根层。
@@ -146,6 +146,11 @@ flowchart TB
 | 去 AI 味如何不改剧情 | [09 · Style And Humanizer](./09-style-and-humanizer.md) |
 | 编辑器、命令、焦点、查询怎么协作 | [10 · Editor And Interaction](./10-editor-and-interaction.md) |
 | 首启、设置、经验管理、危险操作归哪 | [11 · Settings And Onboarding](./11-settings-and-onboarding.md) |
+| 全局搜索如何查角色、阵营、概念、章节和来源 | [12 · Universal Search](./12-universal-search.md) |
+| 讨论模式如何保证只聊不写 | [13 · Discuss Mode](./13-discuss-mode.md) |
+| Trace 如何成为用户可读的过程证据 | [14 · Trace Observability](./14-trace-observability.md) |
+| 整批审批如何作为可审定模块落地 | [15 · Approval Cascade](./15-approval-cascade.md) |
+| ReaderPanel 如何生成和展示读者预演 | [16 · ReaderPanel](./16-reader-panel.md) |
 
 ## 失败不是错误码
 

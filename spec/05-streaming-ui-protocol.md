@@ -102,7 +102,7 @@ Trace 不是越多越好。每条 trace 应能回答一个问题:
 | 为什么失败 | 工具/模型/schema/存储的失败点 |
 | 哪些能力降级 | 索引过期、语义召回不可用、日志缺失 |
 
-Developer Mode 可以看更多诊断,但普通 Trace 应服务作者理解,不是堆内部字段。
+Developer Mode 可以看更多诊断,但普通 Trace 应服务作者理解,不是堆内部字段。Trace 作为用户可读产品能力的完整闭环见 [14 · Trace Observability](./14-trace-observability.md)。
 
 ## 事件事故处理
 

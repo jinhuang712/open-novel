@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
 <title>Open Novel · 命令面板与快捷交互</title>
 <script>
 (function () {
@@ -13,7 +14,7 @@
 </script>
 <link rel="stylesheet" href="tokens.css">
 <style>
-  .stage { max-width: 640px; margin: 24px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; }
+  .stage { max-width: 760px; margin: 24px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 14px; }
   .stage-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--text-tertiary); margin-top: 18px; }
 
   .overlay-demo { background: var(--bg-overlay); border-radius: var(--radius-xl); padding: 36px 24px 48px; display: flex; justify-content: center; }
@@ -34,6 +35,17 @@
   .pal-row .when { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
   .pal-empty { padding: 22px 10px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
   .pal-foot { display: flex; gap: 16px; justify-content: center; padding: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-tertiary); background: var(--bg-sunken); }
+
+  .search-palette { width: 700px; }
+  .search-body { display: grid; grid-template-columns: minmax(0, 1fr) 270px; min-height: 318px; }
+  .search-body .pal-list { max-height: none; border-right: 1px solid var(--border); }
+  .preview { padding: 14px; font-size: 12.5px; line-height: 1.6; }
+  .preview-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .preview-sub { color: var(--text-secondary); margin-bottom: 12px; }
+  .preview-block { border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+  .preview-block b { display: block; font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; }
+  .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .mini-pill { border: 1px solid var(--border); border-radius: 99px; padding: 2px 7px; color: var(--text-secondary); }
 
   .chat-mock { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; position: relative; }
   .chat-mock .ta { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); padding: 10px 12px; font-size: 13.5px; min-height: 40px; }
@@ -62,13 +74,43 @@
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
-  <span class="proto-title">06 · 命令面板与快捷交互</span>
-  <span>文档: design/06-command-palette.md · 清单: spec/12</span>
+  <span class="proto-title">06 · Universal Search 与快捷交互</span>
+  <span>文档: design/06-command-palette.md · 上游: spec/10 / spec/12</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="stage">
+  <div class="stage-label">UNIVERSAL SEARCH — SHIFT+SHIFT(全局搜索对象 / 章节 / 设定,HOVER 展示预览)</div>
+  <div class="overlay-demo">
+    <div class="palette search-palette">
+      <div class="pal-input"><span class="pfx">⌕</span><input value="青岚" readonly><span class="keys"><kbd>Tab</kbd> 类型</span></div>
+      <div class="search-body">
+        <div class="pal-list">
+          <div class="pal-group">Best Match</div>
+          <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>青岚</mark></span><span class="cat">角色 · 主角阵营</span><span class="keys"><kbd>↵</kbd></span></div>
+          <div class="pal-group">Factions</div>
+          <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>青岚</mark>宗</span><span class="cat">组织 · 敌友关系</span></div>
+          <div class="pal-group">Concepts</div>
+          <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span><mark>青岚</mark>剑诀</span><span class="cat">能力 · 代价规则</span></div>
+          <div class="pal-group">Chapters</div>
+          <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 18 章 · <mark>青岚</mark>初战</span><span class="cat">命中片段</span></div>
+          <div class="pal-group">Maybe Related</div>
+          <div class="pal-row"><span style="color:var(--text-tertiary)">≈</span><span>雨夜剑痕与青色灵压</span><span class="cat">低置信语义召回</span></div>
+        </div>
+        <div class="preview">
+          <div class="preview-title">青岚</div>
+          <div class="preview-sub">角色 · 主角阵营 · 最近出现:第 37 章</div>
+          <div class="pill-row"><span class="mini-pill">别名:青娘</span><span class="mini-pill">阵营:青岚宗</span><span class="mini-pill">状态:负伤</span></div>
+          <div class="preview-block"><b>来源</b>characters/qinglan.md · chapters/037.md · relation:师承</div>
+          <div class="preview-block"><b>可执行动作</b><div class="pill-row"><span class="mini-pill">打开角色卡</span><span class="mini-pill">查看引用</span><span class="mini-pill">对照打开</span></div></div>
+          <div class="preview-block"><b>降级语义</b>来源缺失时只显示基础行;语义召回不能伪装成事实。</div>
+        </div>
+      </div>
+      <div class="pal-foot"><span><kbd>↑↓</kbd> 选择</span><span><kbd>Enter</kbd> 打开</span><span><kbd>⌘Enter</kbd> 对照</span><span><kbd>Esc</kbd> 关闭</span></div>
+    </div>
+  </div>
+
   <div class="stage-label">命令面板 — CMD+SHIFT+P / F1(输入框可真实过滤,↑↓ 选择)</div>
   <div class="overlay-demo">
     <div class="palette">

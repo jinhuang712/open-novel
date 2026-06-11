@@ -11,6 +11,9 @@
 - narrative report、reader report、cardinal rules report。
 - humanizer diff 和 style report。
 - streaming control payload 和 recoverable error payload。
+- Universal Search query intent、result group、preview payload。
+- Discuss Mode answer/report/switch suggestion payload。
+- Trace step、degraded state、developer detail envelope。
 
 ## 对应核心文档
 
@@ -20,6 +23,10 @@
 - [07 Context And Query](../07-context-and-query.md)
 - [08 Creative Engine](../08-creative-engine.md)
 - [09 Style And Humanizer](../09-style-and-humanizer.md)
+- [12 Universal Search](../12-universal-search.md)
+- [13 Discuss Mode](../13-discuss-mode.md)
+- [14 Trace Observability](../14-trace-observability.md)
+- [16 ReaderPanel](../16-reader-panel.md)
 
 ## 边界
 

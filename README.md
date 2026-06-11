@@ -9,7 +9,7 @@
 - **前置设定**: 世界观 / 大纲 / 角色 / 节奏 / 爽点的逐项生成与审阅
 - **章节创作**: 一键章节概要 → 一键章节正文 → 一键去 AI 化
 - **改完连带改**: 改了角色性别,系统自动找出所有相关章节段落,整批审批 + 落盘
-- **边写边查**: 设定中的角色名 / 地点名自动高亮 + 跳转引用(像代码的 Goto Definition)
+- **边写边查**: 设定中的角色名 / 地点名自动高亮 + 跳转引用;`Shift+Shift` 可全局搜索角色、阵营、概念、章节片段
 - **多项目并行**: 数据互不污染
 
 它不是一键生成器,而是 Agent 提议 + 用户审批 + 系统持久的合伙人。
@@ -44,12 +44,12 @@
 
 ## 文档状态
 
-本仓库的全部文档是纯 Markdown:`README.md`(本文件,导航入口)、`plan/*.md`、`spec/*.md`、`design/*.md`、`progress/*.md`、`TODO.md`、`CHANGELOG.md`。图表一律使用 mermaid 代码块,不允许 ASCII 框图。唯一的 HTML 例外是 `design/prototypes/*.html` — 浏览器直接打开的高保真界面原型(非文档站)。Agent 工作规范见 [AGENTS.md](./AGENTS.md)(与 `CLAUDE.md` 内容一致)。
+本仓库的全部文档是纯 Markdown:`README.md`(本文件,导航入口)、`WORKFLOW.md`、`plan/*.md`、`spec/*.md`、`design/*.md`、`progress/*.md`、`TODO.md`、`CHANGELOG.md`。图表一律使用 mermaid 代码块,不允许 ASCII 框图。唯一的 HTML 例外是 `design/prototypes/*.html` — 浏览器直接打开的高保真界面原型(非文档站)。Agent 工作规范见 [AGENTS.md](./AGENTS.md)(与 `CLAUDE.md` 内容一致),文档更新流程见 [WORKFLOW.md](./WORKFLOW.md)。
 
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **核心 spec**: 根层 `spec/00-11` 写可直接阅读的技术设计,每篇按主题采用不同骨架,用场景、mermaid、表格和 FAQ 讲清系统主路径、职责边界、失败语义和用户可见结果
+- **核心 spec**: 根层 `spec/00-16` 写可直接阅读的技术设计;`00-11` 是系统主权地图,`12+` 是用户可感知能力的完整契约
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/02](./spec/02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/01](./spec/01-project-storage.md) 定义
@@ -74,6 +74,7 @@ pnpm dev
 ```
 .
 ├── README.md                  # 本文件,文档导航入口
+├── WORKFLOW.md                # 文档与实现协作流程
 ├── AGENTS.md                  # Agent 工作规范(与 CLAUDE.md 内容一致)
 ├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
 ├── TODO.md                    # TODO + 已知问题 + 未决问题
@@ -107,7 +108,7 @@ pnpm dev
 
 ### 核心技术文档 (spec/) — 系统契约 (How / Boundaries)
 
-根层 spec 是可直接阅读的技术设计:每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
+根层 spec 是可直接阅读的技术设计:`00-11` 讲系统主权和跨层契约,`12+` 讲用户可感知能力的完整闭环。每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
 
 - [00-system-contract](./spec/00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
 - [01-project-storage](./spec/01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
@@ -121,6 +122,11 @@ pnpm dev
 - [09-style-and-humanizer](./spec/09-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
 - [10-editor-and-interaction](./spec/10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo/rollback 边界
 - [11-settings-and-onboarding](./spec/11-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
+- [12-universal-search](./spec/12-universal-search.md) — Shift+Shift 全局搜索、角色/阵营/概念/章节分组、hover preview 和降级语义
+- [13-discuss-mode](./spec/13-discuss-mode.md) — 讨论模式只聊不写、只读上下文和升级到规划/写作的边界
+- [14-trace-observability](./spec/14-trace-observability.md) — Trace 用户可读过程证据、Developer Mode 分层和可见条目结构
+- [15-approval-cascade](./spec/15-approval-cascade.md) — Approval Cascade 能力闭环、审批卡解释内容和 design 对接
+- [16-reader-panel](./spec/16-reader-panel.md) — ReaderPanel 报告闭环、persona 边界和审批解释关系
 - [appendix](./spec/appendix/README.md) — 表结构、schema、事件、工具、prompt、测试和迁移明细;旧 29 篇 spec 原文已归档到 progress
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)
@@ -155,6 +161,7 @@ pnpm dev
 
 - [TODO.md](./TODO.md) — TODO + 已知问题 + 未决问题
 - [CHANGELOG.md](./CHANGELOG.md) — 跨文档变更流水线
+- [WORKFLOW.md](./WORKFLOW.md) — 文档与实现协作流程
 - [AGENTS.md](./AGENTS.md) / [CLAUDE.md](./CLAUDE.md) — Agent 工作规范(两份内容一致)
 
 ## 设计原则

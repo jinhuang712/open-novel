@@ -1,8 +1,25 @@
 # design/06 — 命令面板与快捷交互
 
-> 原型:`design/prototypes/06-command-palette.html` · 上游:[spec/10 编辑器与交互](../spec/10-editor-and-interaction.md)(命令清单 / 上下文优先级 / IME 闸门以 spec 为准)
+> 原型:`design/prototypes/06-command-palette.html` · 上游:[spec/10 编辑器与交互](../spec/10-editor-and-interaction.md)(命令清单 / 上下文优先级 / IME 闸门以 spec 为准) · [spec/12 Universal Search](../spec/12-universal-search.md)
 
-本篇收口五个"轻浮层"交互:命令面板、快速打开文件、@文件引用、框选 AI 改写(Cmd+K)、toast。它们共享同一套浮层视觉:`--bg-raised` + `--radius-lg` + `--shadow-lg`,顶部 1/4 处垂直定位,`Esc` 关闭,Focus Trap。
+本篇收口六个"轻浮层"交互:Universal Search、命令面板、快速打开文件、@文件引用、框选 AI 改写(Cmd+K)、toast。它们共享同一套浮层视觉:`--bg-raised` + `--radius-lg` + `--shadow-lg`,顶部 1/4 处垂直定位,`Esc` 关闭,Focus Trap。
+
+## Universal Search(Shift+Shift)
+
+```mermaid
+flowchart TB
+  IN["输入行: 搜角色 / 阵营 / 概念 / 章节 / 片段"]
+  RES["左栏: 分组结果<br/>Best / Characters / Factions / Concepts / Chapters / Maybe"]
+  PRE["右栏: hover preview<br/>来源 / 关系 / 最近出现 / 主动作"]
+  FOOT["底部提示: ↑↓ 选择 · Tab 类型 · Enter 打开 · Cmd+Enter 对照"]
+  IN --> RES --> PRE --> FOOT
+```
+
+- 行结构:名称 + 类型徽标 + 来源状态 + 一行摘要;精确命中优先,低置信语义命中进入 Maybe Related 并降权
+- hover/focus preview 不只是 tooltip:角色显示阵营/状态/关系/最近出现;阵营显示成员/敌对;概念显示规则/代价/风险;章节显示 snippet
+- `Shift+Shift` 打开/关闭;`Esc` 关闭但不取消 turn;IME composition、模态 focus trap、文本拖拽中不触发
+- `Enter` 打开,`Cmd+Enter` 对照打开,危险动作(如全项目改名)只作为入口,必须进入 Approval Cascade
+- 与相邻入口分工:`Cmd+P` 只打开文件,`Cmd+Shift+P` 执行命令,`Cmd+E` 问事实;完整行为见 [spec/12](../spec/12-universal-search.md)
 
 ## 命令面板(Cmd+Shift+P / F1)
 
@@ -62,6 +79,7 @@ flowchart LR
 |---|---|---|
 | `Cmd+Shift+P` / `F1` | 全局 | 命令面板 |
 | `Cmd+P` | 全局 | 快速打开;输入 `>` 转命令 |
+| `Shift+Shift` | 全局(IME / focus trap 中禁用) | Universal Search |
 | `@` | 输入条 | 文件引用 popover(字面键) |
 | `Cmd+K` | Editor 有选区 | inline 改写输入条 |
 | `↑↓` / `Enter` / `Esc` | 浮层内 | 选择 / 执行 / 关闭(Esc 硬约束不可重绑) |
