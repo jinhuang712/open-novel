@@ -19,7 +19,7 @@ Open Novel 的自有视觉语言,关键词是**轻盈、纸感、书卷气**,落
 
 - 所有颜色一律经 CSS 变量引用,**禁止在组件样式中硬编码 hex**
 - `html[data-theme="light" | "dark"]` 切换整套变量;首次进入跟随系统 `prefers-color-scheme`,用户手动切换后写入本地配置(原型中为 `localStorage.onovel-theme`,产品中为 `settings.json.theme: 'auto' | 'light' | 'dark'`)
-- 命令面板提供 `view.toggleDarkMode`(见 [spec/10 编辑器与交互契约](../spec/10-editor-and-interaction.md))
+- 命令面板提供 `view.toggleDarkMode`(见 [spec/S10 编辑器与交互契约](../spec/S10-editor-and-interaction.md))
 - 对比度验收(两套主题同标准):**正文 7:1–9:1、次要文字 4.5:1–5.5:1、占位/disabled ≥ 3:1、accent 底上的按钮文字 ≥ 4.5:1**。区间上限是设计约束(书卷气),下限是可达性红线
 
 ```mermaid
@@ -71,7 +71,7 @@ flowchart LR
 
 | 组 | Token | Light | Dark | 用途 |
 |---|---|---|---|---|
-| 实体 | `--entity-character` | `#4F7DAF` | `#7FA7D1` | 角色(下划线/hover 卡,见 [spec/10](../spec/10-editor-and-interaction.md)) |
+| 实体 | `--entity-character` | `#4F7DAF` | `#7FA7D1` | 角色(下划线/hover 卡,见 [spec/S10](../spec/S10-editor-and-interaction.md)) |
 | 实体 | `--entity-place` | `#5E8C61` | `#82A886` | 地点 |
 | 实体 | `--entity-item` | `#C2762D` | `#D99A55` | 物品 |
 | 实体 | `--entity-org` | `#8A6FB8` | `#AC93D9` | 阵营 / 组织 |
@@ -111,11 +111,11 @@ flowchart LR
 - 键盘焦点一律 `box-shadow: 0 0 0 3px var(--focus-ring)`(accent 半透明),不裸用浏览器默认 outline
 - 低反差是美学选择,不是可达性妥协:全部文字 token 带实测对比度,不允许任何文字低于其档位下限;Settings 后续可加「提高对比度」开关(映射到一套高反差变量覆盖,暂记为非必做)
 - 颜色不是唯一信号:置信度同时有文字(高/中/低),violation 同时有 ⚠ 图标,diff 同时有 +/- 前缀
-- 全部浮层可被 `Esc` 关闭(硬约束,[spec/10](../spec/10-editor-and-interaction.md));模态实现 Focus Trap
+- 全部浮层可被 `Esc` 关闭(硬约束,[spec/S10](../spec/S10-editor-and-interaction.md));模态实现 Focus Trap
 
 ## 实现对接(Tailwind v4 + shadcn/ui)
 
-技术栈已锁定 Next.js 15 + Tailwind v4 + shadcn/ui([spec/00](../spec/00-system-contract.md))。落地时 `tokens.css` 原样进入 `app/globals.css`,再做两件事:
+技术栈已锁定 Next.js 15 + Tailwind v4 + shadcn/ui([spec/S00](../spec/S00-system-contract.md))。落地时 `tokens.css` 原样进入 `app/globals.css`,再做两件事:
 
 ### 1. dark variant 绑定 data-theme
 
@@ -166,5 +166,5 @@ flowchart LR
 
 ## 关联文档
 
-- 上游:[design/README §设计原则](./README.md) · [spec/00 技术路线](../spec/00-system-contract.md)
+- 上游:[design/README §设计原则](./README.md) · [spec/S00 技术路线](../spec/S00-system-contract.md)
 - 应用:design/01~06 全部界面文档,`design/prototypes/*.html` 全部原型

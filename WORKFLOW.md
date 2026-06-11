@@ -30,18 +30,37 @@ flowchart LR
 
 跨文档变更必须写入 `CHANGELOG.md`。
 
+## 编号体系
+
+Open Novel 的文档编号采用“单字母 + 数字”。字母表示读法,数字表示该类文档内部顺序。
+
+| 前缀 | 位置 | 含义 | 适用内容 |
+|---|---|---|---|
+| `Sxx` | `spec/` 根层 | System Design | 系统主权、跨层契约、运行时、存储、上下文、底层协议 |
+| `Mxx` | `spec/` 根层 | User-facing Capability | 用户可触发、可感知、可验收的能力闭环 |
+| `Ixx` | `spec/` 根层 | Integration Contract | 模型、编辑器、文件系统、导入导出、桌面壳等跨边界接入 |
+| `Rxx` | `spec/` 根层 | Reliability / Runtime Operations | 项目生命周期、备份恢复、迁移升级、索引修复、诊断排障 |
+| `Axx` | `spec/appendix/` | Appendix Implementation Detail | 表结构、schema、事件、工具、prompt、迁移明细 |
+| `Vxx` | `spec/appendix/` | Verification Detail | 测试矩阵、golden cases、外部能力 spike |
+| `Pxxx` | `progress/` | Progress Record | 历史进度、迁移记录、复盘归档 |
+
+不新增二级能力目录。`S/M/I/R` 都是核心 spec,直接在 `spec/` 根层;`A/V` 保留在 appendix;`P` 只用于历史档案。
+
 ## spec 更新流程
 
 | 类型 | 做法 |
 |---|---|
-| 系统主权变化 | 更新根层 `spec/00-11` 对应文档 |
-| 用户可感知能力变化 | 直接新增或更新根层编号 spec,例如 `12-universal-search.md` |
-| schema / event / tool / prompt 明细变化 | 更新 `spec/appendix/*` |
-| 历史材料迁移 | 归 `progress/`,不要放回 active spec |
+| 系统主权变化 | 更新根层 `Sxx` |
+| 用户可感知能力变化 | 新增或更新根层 `Mxx`,例如 `M01-universal-search.md` |
+| 跨边界接入变化 | 新增或更新根层 `Ixx`,例如 `I01-llm-provider-contract.md` |
+| 运行维护/恢复/诊断变化 | 新增或更新根层 `Rxx`,例如 `R04-index-health-and-repair.md` |
+| schema / event / tool / prompt 明细变化 | 更新 appendix `Axx` |
+| 测试 / golden / spike 变化 | 更新 appendix `Vxx` |
+| 历史材料迁移 | 归 `progress/Pxxx` 或专题 archive,不要放回 active spec |
 
 ### 能力级核心 spec 规则
 
-新能力不要另建二级能力目录。如果一个能力值得单独实现、测试和设计验收,它就是核心 spec,直接进入 `spec/NN-name.md`。
+新能力不要另建二级能力目录。如果一个能力值得单独实现、测试和设计验收,它就是核心 spec,直接进入 `spec/MNN-name.md`。
 
 能力 spec 必须讲完整闭环:
 
@@ -57,11 +76,42 @@ flowchart LR
 
 | 能力 | 文档 | design |
 |---|---|---|
-| Universal Search | [spec/12](./spec/12-universal-search.md) | [design/01](./design/01-main-layout.md) · [design/06](./design/06-command-palette.md) |
-| Discuss Mode | [spec/13](./spec/13-discuss-mode.md) | [design/01](./design/01-main-layout.md) |
-| Trace Observability | [spec/14](./spec/14-trace-observability.md) | [design/01](./design/01-main-layout.md) · [design/04](./design/04-settings.md) |
-| Approval Cascade | [spec/15](./spec/15-approval-cascade.md) | [design/02](./design/02-approval-cascade.md) |
-| ReaderPanel | [spec/16](./spec/16-reader-panel.md) | [design/03](./design/03-reader-panel.md) |
+| Universal Search | [M01](./spec/M01-universal-search.md) | [design/01](./design/01-main-layout.md) · [design/06](./design/06-command-palette.md) |
+| Command Palette / Quick Open | [M02](./spec/M02-command-palette-and-quick-open.md) | [design/06](./design/06-command-palette.md) |
+| Fact Query | [M03](./spec/M03-fact-query.md) | [design/01](./design/01-main-layout.md) · [design/06](./design/06-command-palette.md) |
+| Discuss Mode | [M04](./spec/M04-discuss-mode.md) | [design/01](./design/01-main-layout.md) |
+| Planning Mode | [M05](./spec/M05-planning-mode.md) | [design/01](./design/01-main-layout.md) |
+| Writing Mode | [M06](./spec/M06-writing-mode.md) | [design/01](./design/01-main-layout.md) · [design/02](./design/02-approval-cascade.md) |
+| Inline Rewrite / Humanizer | [M07](./spec/M07-inline-rewrite-and-humanizer.md) | [design/06](./design/06-command-palette.md) |
+| Approval Cascade | [M08](./spec/M08-approval-cascade.md) | [design/02](./design/02-approval-cascade.md) |
+| Trace Observability | [M09](./spec/M09-trace-observability.md) | [design/01](./design/01-main-layout.md) · [design/04](./design/04-settings.md) |
+| Knowledge Surface | [M10](./spec/M10-knowledge-surface.md) | [design/01](./design/01-main-layout.md) |
+| ReaderPanel | [M11](./spec/M11-reader-panel.md) | [design/03](./design/03-reader-panel.md) |
+| Memory / Learning Management | [M12](./spec/M12-memory-learning-management.md) | [design/04](./design/04-settings.md) |
+| Agent Team Controls | [M13](./spec/M13-agent-team-controls.md) | [design/04](./design/04-settings.md) |
+| Settings / Developer Mode | [M14](./spec/M14-settings-and-developer-mode.md) | [design/04](./design/04-settings.md) |
+| Onboarding / New Book | [M15](./spec/M15-onboarding-and-new-book.md) | [design/05](./design/05-onboarding.md) |
+| Project Library / Navigation | [M16](./spec/M16-project-library-and-navigation.md) | [design/01](./design/01-main-layout.md) |
+
+当前集成契约:
+
+| 集成边界 | 文档 |
+|---|---|
+| LLM provider | [I01](./spec/I01-llm-provider-contract.md) |
+| Editor adapter | [I02](./spec/I02-editor-adapter-contract.md) |
+| Filesystem / watcher | [I03](./spec/I03-filesystem-and-watcher.md) |
+| Import / export | [I04](./spec/I04-import-export-contract.md) |
+| Desktop shell | [I05](./spec/I05-desktop-shell-contract.md) |
+
+当前可靠性/运维契约:
+
+| 运维闭环 | 文档 |
+|---|---|
+| Project lifecycle | [R01](./spec/R01-project-lifecycle.md) |
+| Backup / restore | [R02](./spec/R02-backup-restore.md) |
+| Migration / upgrade | [R03](./spec/R03-migration-and-upgrade.md) |
+| Index health / repair | [R04](./spec/R04-index-health-and-repair.md) |
+| Diagnostics / Debug Mode | [R05](./spec/R05-diagnostics-and-debug-mode.md) |
 
 ## design 更新流程
 

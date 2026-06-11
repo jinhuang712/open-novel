@@ -2,7 +2,7 @@
 
 本目录保存 2026-06-11 根层 spec 二层重整前的 29 篇旧 spec 原文。它们是历史材料,用于追溯字段、schema、prompt、测试和迁移细节的来源。
 
-这些文件不再作为 active appendix,也不再定义当前技术契约。当前主权以根层 [spec/00-11](../../../spec/00-system-contract.md) 和 [spec/appendix](../../../spec/appendix/README.md) 为准。
+这些文件不再作为 active appendix,也不再定义当前技术契约。当前主权以根层 [spec/S00](../../../spec/S00-system-contract.md)、README 中的 `S/M/I/R` 导航和 [spec/appendix](../../../spec/appendix/README.md) 为准。
 
 ## 使用规则
 

@@ -1,6 +1,6 @@
 # design/06 — 命令面板与快捷交互
 
-> 原型:`design/prototypes/06-command-palette.html` · 上游:[spec/10 编辑器与交互](../spec/10-editor-and-interaction.md)(命令清单 / 上下文优先级 / IME 闸门以 spec 为准) · [spec/12 Universal Search](../spec/12-universal-search.md)
+> 原型:`design/prototypes/06-command-palette.html` · 上游:[spec/S10 编辑器与交互](../spec/S10-editor-and-interaction.md)(命令清单 / 上下文优先级 / IME 闸门以 spec 为准) · [spec/M01 Universal Search](../spec/M01-universal-search.md)
 
 本篇收口六个"轻浮层"交互:Universal Search、命令面板、快速打开文件、@文件引用、框选 AI 改写(Cmd+K)、toast。它们共享同一套浮层视觉:`--bg-raised` + `--radius-lg` + `--shadow-lg`,顶部 1/4 处垂直定位,`Esc` 关闭,Focus Trap。
 
@@ -19,7 +19,7 @@ flowchart TB
 - hover/focus preview 不只是 tooltip:角色显示阵营/状态/关系/最近出现;阵营显示成员/敌对;概念显示规则/代价/风险;章节显示 snippet
 - `Shift+Shift` 打开/关闭;`Esc` 关闭但不取消 turn;IME composition、模态 focus trap、文本拖拽中不触发
 - `Enter` 打开,`Cmd+Enter` 对照打开,危险动作(如全项目改名)只作为入口,必须进入 Approval Cascade
-- 与相邻入口分工:`Cmd+P` 只打开文件,`Cmd+Shift+P` 执行命令,`Cmd+E` 问事实;完整行为见 [spec/12](../spec/12-universal-search.md)
+- 与相邻入口分工:`Cmd+P` 只打开文件,`Cmd+Shift+P` 执行命令,`Cmd+E` 问事实;完整行为见 [spec/M01](../spec/M01-universal-search.md)
 
 ## 命令面板(Cmd+Shift+P / F1)
 
@@ -49,7 +49,7 @@ flowchart TB
 - 输入 `@` 100ms 后在光标下方弹 popover(不抢 `@` 字符;IME composition 中不弹)
 - 源:实体 + 章节 + 设定文件,fuzzy;行 = 类目色点 + 名称 + 路径
 - `↑↓` 选,`Enter` 确认 → textarea 中 `@xxx` 替换为 mention chip(accent-subtle 底圆角块,含 ×);`Esc` 取消保留字面 `@xxx`
-- chip 在发送 prompt 时展开为 `[@角色名](mention://char_xxx)` 契约形态([spec/10](../spec/10-editor-and-interaction.md))
+- chip 在发送 prompt 时展开为 `[@角色名](mention://char_xxx)` 契约形态([spec/S10](../spec/S10-editor-and-interaction.md))
 
 ## 框选 AI 改写(Cmd+K)
 

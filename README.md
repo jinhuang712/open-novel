@@ -40,7 +40,7 @@
 | 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
-技术路线入口见 [spec/00-system-contract](./spec/00-system-contract.md)。表结构、schema、工具、prompt、测试和审计明细的归口见 [spec appendix](./spec/appendix/README.md);旧细节原文已归档,需要时再抽取成当前明细。
+技术路线入口见 [spec/S00-system-contract](./spec/S00-system-contract.md)。表结构、schema、工具、prompt、测试和审计明细的归口见 [spec appendix](./spec/appendix/README.md);旧细节原文已归档,需要时再抽取成当前明细。
 
 ## 文档状态
 
@@ -49,12 +49,15 @@
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **核心 spec**: 根层 `spec/00-16` 写可直接阅读的技术设计;`00-11` 是系统主权地图,`12+` 是用户可感知能力的完整契约
-- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
-- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/02](./spec/02-runtime-state.md)
-- **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/01](./spec/01-project-storage.md) 定义
-- **编排主权**: user turn / cascade / approval / rollback 由 [spec/04](./spec/04-turn-orchestration.md) 定义
-- **待实查闸门**: 代码前的外部事实审计由 [spec/00](./spec/00-system-contract.md) 统筹,明细见 appendix
+- **核心 spec 编号**: 根层 `spec/` 使用 `S/M/I/R` 四类编号;appendix 使用 `A/V`;progress 使用 `P`
+- **系统设计**: `S00-S11` 写系统主权、跨层契约、运行时、存储、上下文和底层协议
+- **能力闭环**: `M01-M16` 写用户可触发、可感知、可验收的完整能力
+- **集成与可靠性**: `I01-I05` 写跨边界接入契约;`R01-R05` 写生命周期、恢复、迁移、修复和诊断
+- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
+- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
+- **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/S01](./spec/S01-project-storage.md) 定义
+- **编排主权**: user turn / cascade / approval / rollback 由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
+- **待实查闸门**: 代码前的外部事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
 
 ## 快速启动
 
@@ -108,26 +111,70 @@ pnpm dev
 
 ### 核心技术文档 (spec/) — 系统契约 (How / Boundaries)
 
-根层 spec 是可直接阅读的技术设计:`00-11` 讲系统主权和跨层契约,`12+` 讲用户可感知能力的完整闭环。每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
+根层 spec 是可直接阅读的技术设计。`S` 讲系统主权和跨层契约,`M` 讲用户可感知能力,`I` 讲外部/跨边界接入,`R` 讲运行可靠性和恢复闭环。每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
 
-- [00-system-contract](./spec/00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
-- [01-project-storage](./spec/01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
-- [02-runtime-state](./spec/02-runtime-state.md) — 会话、经验、过程历史和 Reflector 生命周期
-- [03-agent-runtime](./spec/03-agent-runtime.md) — 受控 runner、prompt 堆叠、工具边界和 JSON 失败循环
-- [04-turn-orchestration](./spec/04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批和取消/恢复语义
-- [05-streaming-ui-protocol](./spec/05-streaming-ui-protocol.md) — 状态点、Trace、事件分层和断线恢复驾驶舱协议
-- [06-knowledge-graph](./spec/06-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
-- [07-context-and-query](./spec/07-context-and-query.md) — Agent 证据包、影响分析裁判链、事实查询和 overflow 决策
-- [08-creative-engine](./spec/08-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
-- [09-style-and-humanizer](./spec/09-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
-- [10-editor-and-interaction](./spec/10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo/rollback 边界
-- [11-settings-and-onboarding](./spec/11-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
-- [12-universal-search](./spec/12-universal-search.md) — Shift+Shift 全局搜索、角色/阵营/概念/章节分组、hover preview 和降级语义
-- [13-discuss-mode](./spec/13-discuss-mode.md) — 讨论模式只聊不写、只读上下文和升级到规划/写作的边界
-- [14-trace-observability](./spec/14-trace-observability.md) — Trace 用户可读过程证据、Developer Mode 分层和可见条目结构
-- [15-approval-cascade](./spec/15-approval-cascade.md) — Approval Cascade 能力闭环、审批卡解释内容和 design 对接
-- [16-reader-panel](./spec/16-reader-panel.md) — ReaderPanel 报告闭环、persona 边界和审批解释关系
-- [appendix](./spec/appendix/README.md) — 表结构、schema、事件、工具、prompt、测试和迁移明细;旧 29 篇 spec 原文已归档到 progress
+#### S · System Design
+
+- [S00-system-contract](./spec/S00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
+- [S01-project-storage](./spec/S01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
+- [S02-runtime-state](./spec/S02-runtime-state.md) — 会话、经验、过程历史和 Reflector 生命周期
+- [S03-agent-runtime](./spec/S03-agent-runtime.md) — 受控 runner、prompt 堆叠、工具边界和 JSON 失败循环
+- [S04-turn-orchestration](./spec/S04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批和取消/恢复语义
+- [S05-streaming-ui-protocol](./spec/S05-streaming-ui-protocol.md) — 状态点、Trace、事件分层和断线恢复驾驶舱协议
+- [S06-knowledge-graph](./spec/S06-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
+- [S07-context-and-query](./spec/S07-context-and-query.md) — Agent 证据包、影响分析裁判链、事实查询和 overflow 决策
+- [S08-creative-engine](./spec/S08-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
+- [S09-style-and-humanizer](./spec/S09-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
+- [S10-editor-and-interaction](./spec/S10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo/rollback 边界
+- [S11-settings-and-onboarding](./spec/S11-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
+
+#### M · User-Facing Capability
+
+- [M01-universal-search](./spec/M01-universal-search.md) — Shift+Shift 全局搜索、角色/阵营/概念/章节分组、hover preview 和降级语义
+- [M02-command-palette-and-quick-open](./spec/M02-command-palette-and-quick-open.md) — 命令面板、快速打开、模式切换和快捷命令路由
+- [M03-fact-query](./spec/M03-fact-query.md) — 事实查询浮层、来源跳转和只读证据解释
+- [M04-discuss-mode](./spec/M04-discuss-mode.md) — 讨论模式只聊不写、只读上下文和升级到规划/写作的边界
+- [M05-planning-mode](./spec/M05-planning-mode.md) — 规划模式如何改设定、大纲和结构,但不碰正文
+- [M06-writing-mode](./spec/M06-writing-mode.md) — 写作模式如何产出章节内容并进入审批
+- [M07-inline-rewrite-and-humanizer](./spec/M07-inline-rewrite-and-humanizer.md) — 选区改写、去 AI 味和表达层边界
+- [M08-approval-cascade](./spec/M08-approval-cascade.md) — Approval Cascade 能力闭环、审批卡解释内容和 design 对接
+- [M09-trace-observability](./spec/M09-trace-observability.md) — Trace 用户可读过程证据、Developer Mode 分层和可见条目结构
+- [M10-knowledge-surface](./spec/M10-knowledge-surface.md) — 角色、阵营、概念和世界观的知识面板
+- [M11-reader-panel](./spec/M11-reader-panel.md) — ReaderPanel 报告闭环、persona 边界和审批解释关系
+- [M12-memory-learning-management](./spec/M12-memory-learning-management.md) — 经验可见、可调、可删和 Reflector 管理
+- [M13-agent-team-controls](./spec/M13-agent-team-controls.md) — 七个 AI 角色的开关、档位和能力边界
+- [M14-settings-and-developer-mode](./spec/M14-settings-and-developer-mode.md) — Settings 与 Developer Mode 的可见性、诊断和危险操作
+- [M15-onboarding-and-new-book](./spec/M15-onboarding-and-new-book.md) — 首启、开书向导、样例项目和工作区初始化
+- [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开和跨项目隔离
+
+#### I · Integration Contract
+
+- [I01-llm-provider-contract](./spec/I01-llm-provider-contract.md) — 模型 provider 能力、失败、审计和降级边界
+- [I02-editor-adapter-contract](./spec/I02-editor-adapter-contract.md) — 编辑器适配层的选择、锚点、选区和 undo 责任
+- [I03-filesystem-and-watcher](./spec/I03-filesystem-and-watcher.md) — 文件系统、外部编辑监听、原子写和冲突处理
+- [I04-import-export-contract](./spec/I04-import-export-contract.md) — 导入、导出、可迁移格式和错误收场
+- [I05-desktop-shell-contract](./spec/I05-desktop-shell-contract.md) — 桌面壳、系统权限、窗口与本地路径契约
+
+#### R · Reliability / Runtime Operations
+
+- [R01-project-lifecycle](./spec/R01-project-lifecycle.md) — 项目创建、打开、关闭、归档和恢复入口
+- [R02-backup-restore](./spec/R02-backup-restore.md) — 备份、恢复、版本保留和不可恢复提示
+- [R03-migration-and-upgrade](./spec/R03-migration-and-upgrade.md) — 文档、数据和索引迁移升级策略
+- [R04-index-health-and-repair](./spec/R04-index-health-and-repair.md) — 索引健康、重建、降级查询和修复体验
+- [R05-diagnostics-and-debug-mode](./spec/R05-diagnostics-and-debug-mode.md) — 诊断包、Debug Mode、导出边界和隐私保护
+
+#### Appendix · A/V
+
+- [appendix README](./spec/appendix/README.md) — `A/V` 明细索引与更新规则
+- [A01-schema-tables](./spec/appendix/A01-schema-tables.md) — 表结构、字段字典、索引和迁移字段
+- [A02-json-schemas](./spec/appendix/A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet 和 context package
+- [A03-event-catalog](./spec/appendix/A03-event-catalog.md) — turn、stream、trace、approval 和 UI 事件字段
+- [A04-tool-catalog](./spec/appendix/A04-tool-catalog.md) — Agent 工具、查询工具、命令和快捷键明细
+- [A05-prompt-templates](./spec/appendix/A05-prompt-templates.md) — prompt 模板和公共片段全文
+- [A06-migration-notes](./spec/appendix/A06-migration-notes.md) — 外部事实审计、版本能力、native binding 和迁移说明
+- [V01-test-matrix](./spec/appendix/V01-test-matrix.md) — 实施前验证、单测、集成、E2E 和 LLM golden
+- [V02-golden-cases](./spec/appendix/V02-golden-cases.md) — 关键能力的 golden cases 和验收样例
+- [V03-external-spikes](./spec/appendix/V03-external-spikes.md) — 外部依赖 spike、实查结果和替代路线
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)
 
@@ -147,15 +194,15 @@ pnpm dev
 保留项目启动、阶段收尾、文档审计和架构收敛记录,用于追溯设计变化。
 
 - [README](./progress/README.md) — 日志索引规则与模板
-- [000-init](./progress/000-init.md) — 项目启动记录
-- [001-scaffolding](./progress/001-scaffolding.md) — W2 期起始计划与收尾 retro
-- [002-narrative-reader](./progress/002-narrative-reader.md) — 叙事引擎 + 读者仿真器
-- [003-shortcuts-and-settings](./progress/003-shortcuts-and-settings.md) — 快捷键 + Settings UX 治理
-- [004-docs-hardening](./progress/004-docs-hardening.md) — W3 启动前 day-1 blocker 排查
-- [005-knowledge-graph](./progress/005-knowledge-graph.md) — 知识图谱专攻(cascade + RAG 地基)
-- [006-memory-and-context](./progress/006-memory-and-context.md) — 记忆 / 上下文 / JSON / 守则一致性优先重设计
-- [007-opencode-borrowings](./progress/007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
-- [008-plan-rewrite](./progress/008-plan-rewrite.md) — plan/ 纯产品 PRD 重写实施计划
+- [P000-init](./progress/P000-init.md) — 项目启动记录
+- [P001-scaffolding](./progress/P001-scaffolding.md) — W2 期起始计划与收尾 retro
+- [P002-narrative-reader](./progress/P002-narrative-reader.md) — 叙事引擎 + 读者仿真器
+- [P003-shortcuts-and-settings](./progress/P003-shortcuts-and-settings.md) — 快捷键 + Settings UX 治理
+- [P004-docs-hardening](./progress/P004-docs-hardening.md) — W3 启动前 day-1 blocker 排查
+- [P005-knowledge-graph](./progress/P005-knowledge-graph.md) — 知识图谱专攻(cascade + RAG 地基)
+- [P006-memory-and-context](./progress/P006-memory-and-context.md) — 记忆 / 上下文 / JSON / 守则一致性优先重设计
+- [P007-opencode-borrowings](./progress/P007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
+- [P008-plan-rewrite](./progress/P008-plan-rewrite.md) — plan/ 纯产品 PRD 重写实施计划
 
 ### 项目档案
 
@@ -195,7 +242,7 @@ pnpm dev
 - 写作中实时干预
 - 替作者决策的闸门化评分
 
-每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经 WSL)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/00](./spec/00-system-contract.md),完整历史明细见 [spec appendix](./spec/appendix/README.md)。
+每一条"为什么不该做"的理由与平台约束(本地单机、桌面平台、Windows 经 WSL)详见 [plan/04 §非目标](./plan/04-goals-and-non-goals.md#非目标);技术栈层面的取舍(如不使用 Mastra / LangGraph 等 Agent 框架)见 [spec/S00](./spec/S00-system-contract.md),完整历史明细见 [spec appendix](./spec/appendix/README.md)。
 
 ## 许可
 

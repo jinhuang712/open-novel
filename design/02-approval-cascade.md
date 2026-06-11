@@ -1,6 +1,6 @@
 # design/02 — ApprovalCard 审批与 Cascade
 
-> 原型:`design/prototypes/02-approval-cascade.html` · 上游:[plan/07 协作与三模式](../plan/07-collaboration-and-modes.md) · [plan/08 审批与连带修改](../plan/08-approval-and-cascade.md) · [spec/04 Turn 编排](../spec/04-turn-orchestration.md) · [spec/08 创作质量](../spec/08-creative-engine.md)
+> 原型:`design/prototypes/02-approval-cascade.html` · 上游:[plan/07 协作与三模式](../plan/07-collaboration-and-modes.md) · [plan/08 审批与连带修改](../plan/08-approval-and-cascade.md) · [spec/S04 Turn 编排](../spec/S04-turn-orchestration.md) · [spec/S08 创作质量](../spec/S08-creative-engine.md)
 
 整个 ChangeSet(主修改 + 1~3 级 cascade)在**一张卡**里一次审完;这是产品最重的交互,层级必须一眼可读:**发生了什么 → 波及多大 → 有什么风险 → 我怎么决定**。
 
@@ -23,7 +23,7 @@ flowchart TB
 - 出现在主界面召唤式审批表面,优先占用纸面右侧可读空间;必要时临时压低输入条优先级
 - 入场:240ms 上浮 + 渐显;同时输入条进入 disabled 态(见 [design/01 §输入条](./01-main-layout.md#输入条召唤式))
 - 多审批排队:卡头右上 `badge-accent「还有 N 条待审」`,`Cmd+]` / `Cmd+[` 切换;一次只显示一张(按 createdAt)
-- chat 顶部常驻 **[取消本次对话]**,直到 turn 终态;已有落盘 action 时按钮文案带计数「取消并回退 2 项」([spec/04](../spec/04-turn-orchestration.md))
+- chat 顶部常驻 **[取消本次对话]**,直到 turn 终态;已有落盘 action 时按钮文案带计数「取消并回退 2 项」([spec/S04](../spec/S04-turn-orchestration.md))
 
 ## ChangeRow(每条变更行)
 
@@ -43,11 +43,11 @@ flowchart TB
 - 按 cascadeLevel 1/2/3 分组折叠;组头:`一级 cascade(5)` + 组内已勾计数 + 展开箭头
 - 一级默认展开;二三级默认折叠(组头露出已勾计数即可)
 - 影响图谱与行联动:hover 图谱节点 → 对应行高亮;反之亦然
-- 大批量(>20 项)时组内虚拟滚动,组头加「只看未勾 / 只看低置信」过滤([spec/04](../spec/04-turn-orchestration.md))
+- 大批量(>20 项)时组内虚拟滚动,组头加「只看未勾 / 只看低置信」过滤([spec/S04](../spec/S04-turn-orchestration.md))
 
 ## 五大守则风险报告
 
-渲染规则源自 [spec/04 Turn 编排](../spec/04-turn-orchestration.md):
+渲染规则源自 [spec/S04 Turn 编排](../spec/S04-turn-orchestration.md):
 
 | 等级 | 视觉 | 行为 |
 |---|---|---|
@@ -63,7 +63,7 @@ flowchart TB
 - 右对齐主次序:`全选` `全不选`(ghost)→ `拒绝全部 (N)`(danger 描边)→ `同意勾选项 7/9 (Y)`(primary)
 - 同意按钮 disabled 条件:勾选数 = 0,或存在未确认 critical,或存在 blocking
 - **拒绝必填反馈**:点拒绝弹 inline 反馈框(textarea + 「为什么拒绝?」占位 + 示例),提交后自动发一条输入条消息驱动 Agent 重做([plan/08 §否决要给理由](../plan/08-approval-and-cascade.md#否决要给理由))
-- 键盘(卡片焦点内,[spec/10](../spec/10-editor-and-interaction.md)):`Y` 同意 / `N` 拒绝 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;`Esc` 不关卡(无悬挂超时,永远 pending),只取消 inline 编辑
+- 键盘(卡片焦点内,[spec/S10](../spec/S10-editor-and-interaction.md)):`Y` 同意 / `N` 拒绝 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;`Esc` 不关卡(无悬挂超时,永远 pending),只取消 inline 编辑
 
 ## 状态矩阵
 
@@ -75,7 +75,7 @@ flowchart TB
 | 同意完成 | 卡片折叠为一行回执:「已落盘 7/9 项 · 撤销入口在 审批历史」+ 240ms 渐出 |
 | 拒绝完成 | 卡片折叠为回执「已拒绝,反馈已发给 Writer」,新一轮生成开始 |
 | 跨进程恢复 | 启动时 hydrate,chat 顶部 banner「有 1 条待审的修改」点击重开卡片 |
-| doom-loop 升级 | 卡头替换为 warning 块「Writer 与 Validator 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/04](../spec/04-turn-orchestration.md)) |
+| doom-loop 升级 | 卡头替换为 warning 块「Writer 与 Validator 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/S04](../spec/S04-turn-orchestration.md)) |
 
 ## 主题适配
 
