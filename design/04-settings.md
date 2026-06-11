@@ -46,7 +46,7 @@ flowchart LR
 - **模型分配**:每 Agent 一行,`Pro / Flash` 下拉;项目覆盖开启时该行右侧出现「覆盖中 · 还原」
 - **快捷键**:表格(命令 / 默认键 / 当前键 / 重绑按钮);重绑进入捕获态「按下新组合键…」,冲突即时红字提示并禁止保存;`Esc` 退出捕获(不可绑 Esc,[spec/10](../spec/10-editor-and-interaction.md))
 - **数据管理**:全局区(workspace 路径 / trace 清理 / 本月用量)+ 项目区(改名 / 归档 / 导出 zip / 删除);**危险区域**独立 danger 描边卡,删除/清空/重置走「输入指定字样」二次确认([spec/11](../spec/11-settings-and-onboarding.md)),确认按钮在字样完全匹配前 disabled
-- **Developer Mode**:单 toggle + 影响清单(FileTree `_` 文件 / DebugConsole 默认展开 / ThinkingPanel 全文 / ChangeSet JSON 入口等);开启时 toast「Developer Mode 已开启 (Cmd+Shift+D)」
+- **Developer Mode**:单 toggle + 影响清单(派生文件可见 / Debug 面板默认展开 / Trace 全文 / ChangeSet JSON 入口等);开启时 toast「Developer Mode 已开启 (Cmd+Shift+D)」
 
 ## Dirty 状态与底部条
 
@@ -60,7 +60,7 @@ flowchart LR
 |---|---|
 | 首启无 key 被引导打开 | 直接定位 Section 1,顶部 info 条「填入 DeepSeek API Key 后开始」 |
 | 测试连接中 | 按钮 loading,输入锁定 |
-| 预算触顶 | Section 1 顶部 danger 条;状态栏同步红点(见 [design/01 §Editor](./01-main-layout.md#editor)) |
+| 预算触顶 | Section 1 顶部 danger 条;状态点同步错误态(见 [design/01 §状态点](./01-main-layout.md#状态点常驻与-trace-面板召唤)) |
 | 项目归档/删除完成 | 对话框关闭 + toast;若删的是当前项目,回到项目选择页 |
 | 导入 json 校验失败 | danger 条列出非法字段,不应用任何变更 |
 

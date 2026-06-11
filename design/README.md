@@ -50,7 +50,7 @@ flowchart LR
 
 本目录即开发交付物,coding agent 按以下顺序消费,无需额外设计稿:
 
-1. **先读 [00-design-tokens](./00-design-tokens.md)**:`prototypes/tokens.css` 原样进入 `app/globals.css`,按 [00 §实现对接](./00-design-tokens.md#实现对接tailwind-v4--shadcnui) 完成 `@custom-variant` 与 shadcn 变量映射(注意 shadcn `--accent` ≠ 品牌色)
+1. **先读 [00-design-tokens](./00-design-tokens.md)**:`prototypes/tokens.css` 原样进入 `app/globals.css`,按 00 中「实现对接」章节完成 `@custom-variant` 与 shadcn 变量映射(注意 shadcn `--accent` ≠ 品牌色)
 2. **按界面读 01~06 文档**:每篇都给出布局结构、组件状态(含空/错/加载态)、键盘与主题行为,即组件验收标准;协议与数据结构跟随文中 spec 链接
 3. **打开对应原型页对照实现**:原型是视觉验收基准——布局层级、间距、圆角、双主题观感以原型为准;文案与数据是样例,不照抄
 

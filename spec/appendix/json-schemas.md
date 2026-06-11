@@ -1,24 +1,26 @@
 # Appendix · JSON Schemas
 
-本 appendix 索引结构化输出、报告对象和可机器校验的 schema 明细。核心 spec 只定义输出语义、失败策略和主权边界。
+本 appendix 是结构化输出对象 schema 的归口。根层 spec 定义输出语义、失败处理和主权边界;这里按需展开字段、校验规则和样例。
 
-## 结构化输出
+## 归口内容
 
-- [details/24-json-output](./details/24-json-output.md) 保存统一 JSON 输出、校验、重试和失败升级细节。
-- [details/02-agent-tools](./details/02-agent-tools.md) 保存 Agent 工具返回形态和内部调用旧细节。
+- Router actions。
+- ChangeSet、approval item、rollback result。
+- context package、impact analysis result、fact query result。
+- tool result envelope。
+- narrative report、reader report、cardinal rules report。
+- humanizer diff 和 style report。
+- streaming control payload 和 recoverable error payload。
 
-## 创作报告
+## 对应核心文档
 
-- [details/10-narrative-engine](./details/10-narrative-engine.md) 保存叙事诊断输出旧细节。
-- [details/11-reader-personas](./details/11-reader-personas.md) 保存模拟读者报告旧细节。
-- [details/25-cardinal-rules](./details/25-cardinal-rules.md) 保存五大守则机器化报告旧细节。
+- [03 Agent Runtime](../03-agent-runtime.md)
+- [04 Turn Orchestration](../04-turn-orchestration.md)
+- [05 Streaming UI Protocol](../05-streaming-ui-protocol.md)
+- [07 Context And Query](../07-context-and-query.md)
+- [08 Creative Engine](../08-creative-engine.md)
+- [09 Style And Humanizer](../09-style-and-humanizer.md)
 
-## 影响分析与上下文
+## 边界
 
-- [details/19-impact-analysis](./details/19-impact-analysis.md) 保存影响分析结构化结果旧细节。
-- [details/20-context-assembly](./details/20-context-assembly.md) 保存上下文装配输出旧细节。
-- [details/21-fact-query](./details/21-fact-query.md) 保存事实查询输出旧细节。
-
-## 使用边界
-
-schema 变化如果改变 retry、blocking、approval 或用户可见结果,必须同步更新核心 spec;否则保留在本 appendix。
+schema 可在 appendix 细化;但如果某个字段缺失会改变 retry、approval、blocking、rollback 或用户可见风险,根层 spec 必须点名该字段的行为意义。

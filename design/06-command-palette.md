@@ -24,10 +24,10 @@ flowchart TB
 ## 快速打开文件(Cmd+P)
 
 - 同壳不同源:搜章节 / 设定文件名 + 路径;行 = 类目图标 + 文件名 + 次要路径
-- `Enter` 当前 tab 预览模式打开,`Cmd+Enter` 新 tab 永久打开(与 Tabs 单击/双击心智一致,[design/01 §Tabs](./01-main-layout.md#tabs))
+- `Enter` 在当前纸面打开,`Cmd+Enter` 以对照视图打开(与章节轨 / 库面板「最近」心智一致,[design/01 §章节轨](./01-main-layout.md#章节轨常驻44px))
 - 输入 `>` 前缀即转命令面板(VSCode 习惯)
 
-## @文件引用(ChatBox 内)
+## @文件引用(输入条内)
 
 - 输入 `@` 100ms 后在光标下方弹 popover(不抢 `@` 字符;IME composition 中不弹)
 - 源:实体 + 章节 + 设定文件,fuzzy;行 = 类目色点 + 名称 + 路径
@@ -62,7 +62,7 @@ flowchart LR
 |---|---|---|
 | `Cmd+Shift+P` / `F1` | 全局 | 命令面板 |
 | `Cmd+P` | 全局 | 快速打开;输入 `>` 转命令 |
-| `@` | ChatBox | 文件引用 popover(字面键) |
+| `@` | 输入条 | 文件引用 popover(字面键) |
 | `Cmd+K` | Editor 有选区 | inline 改写输入条 |
 | `↑↓` / `Enter` / `Esc` | 浮层内 | 选择 / 执行 / 关闭(Esc 硬约束不可重绑) |
 

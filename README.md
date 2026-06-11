@@ -40,7 +40,7 @@
 | 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
-技术路线入口见 [spec/00-system-contract](./spec/00-system-contract.md),完整技术栈明细保留在 [spec appendix](./spec/appendix/README.md)。
+技术路线入口见 [spec/00-system-contract](./spec/00-system-contract.md)。表结构、schema、工具、prompt、测试和审计明细的归口见 [spec appendix](./spec/appendix/README.md);旧细节原文已归档,需要时再抽取成当前明细。
 
 ## 文档状态
 
@@ -49,8 +49,8 @@
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **核心 spec**: 根层 `spec/00-11` 写系统契约、技术路径、职责边界和失败语义
-- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节进入 [spec/appendix](./spec/appendix/README.md)
+- **核心 spec**: 根层 `spec/00-11` 写可直接阅读的技术设计,读完应能理解系统主路径、职责边界、失败语义和用户可见结果
+- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/02](./spec/02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/01](./spec/01-project-storage.md) 定义
 - **编排主权**: user turn / cascade / approval / rollback 由 [spec/04](./spec/04-turn-orchestration.md) 定义
@@ -107,7 +107,7 @@ pnpm dev
 
 ### 核心技术文档 (spec/) — 系统契约 (How / Boundaries)
 
-根层 spec 只写系统契约、技术路径、职责边界和失败语义;表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
+根层 spec 是可直接阅读的技术设计:先讲系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
 
 - [00-system-contract](./spec/00-system-contract.md) — 技术路线入口、spec 写作契约和审计闸门
 - [01-project-storage](./spec/01-project-storage.md) — 项目文件、项目事实库、派生索引和存储失败语义
@@ -121,7 +121,7 @@ pnpm dev
 - [09-style-and-humanizer](./spec/09-style-and-humanizer.md) — 去 AI 味、人味改写和风格守恒边界
 - [10-editor-and-interaction](./spec/10-editor-and-interaction.md) — 编辑器、高亮、快捷键、查询入口和输入焦点契约
 - [11-settings-and-onboarding](./spec/11-settings-and-onboarding.md) — Settings、Onboarding、经验管理、项目生命周期和危险操作
-- [appendix](./spec/appendix/README.md) — 表结构、schema、事件、工具、prompt、测试和迁移明细
+- [appendix](./spec/appendix/README.md) — 表结构、schema、事件、工具、prompt、测试和迁移明细;旧 29 篇 spec 原文已归档到 progress
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)
 
@@ -149,6 +149,7 @@ pnpm dev
 - [005-knowledge-graph](./progress/005-knowledge-graph.md) — 知识图谱专攻(cascade + RAG 地基)
 - [006-memory-and-context](./progress/006-memory-and-context.md) — 记忆 / 上下文 / JSON / 守则一致性优先重设计
 - [007-opencode-borrowings](./progress/007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
+- [008-plan-rewrite](./progress/008-plan-rewrite.md) — plan/ 纯产品 PRD 重写实施计划
 
 ### 项目档案
 

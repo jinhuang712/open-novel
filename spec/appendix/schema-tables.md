@@ -1,19 +1,25 @@
 # Appendix · Schema Tables
 
-本 appendix 索引表结构、frontmatter、存储字段和迁移细节。核心 spec 只点名会影响行为的关键对象,完整字段以这里引用的细节文档为准。
+本 appendix 是表结构、字段字典、索引、frontmatter、迁移脚本和存储配置的归口。根层 spec 只保留理解系统必需的对象和主权关系;具体明细按需从历史归档抽取并整理到这里。
 
-## 项目事实与文件契约
+## 归口内容
 
-- [details/01-storage-schema](./details/01-storage-schema.md) 保存项目文件结构、frontmatter、项目事实库、连接池、审批记录和派生索引的旧细节。
-- [details/16-knowledge-schema](./details/16-knowledge-schema.md) 保存知识图谱相关 schema 和设定目录契约的旧细节。
-- [details/17-paragraph-anchors](./details/17-paragraph-anchors.md) 保存段落锚点、reindex 和外部编辑冲突的旧细节。
-- [details/18-embeddings](./details/18-embeddings.md) 保存 embedding 相关 schema 和检索细节。
+- workspace、project、chapter、setting 文件 frontmatter 字段。
+- project storage 相关表结构和索引。
+- knowledge graph 的 entity、concept、relation、timeline、dependency、anchor、embedding 表。
+- runtime、experience、session history 表。
+- approval、ChangeSet、rollback、trace 的持久化字段。
+- settings、onboarding、project lifecycle 的存储字段。
+- migration 和 backfill 步骤。
 
-## 运行时与过程历史
+## 对应核心文档
 
-- [details/22-memory-and-history](./details/22-memory-and-history.md) 保存 runtime 记忆、经验和历史压缩的旧细节。
-- [details/27-session-history](./details/27-session-history.md) 保存过程日志和 trace 存储的旧细节。
+- [01 Project Storage](../01-project-storage.md)
+- [02 Runtime State](../02-runtime-state.md)
+- [04 Turn Orchestration](../04-turn-orchestration.md)
+- [06 Knowledge Graph](../06-knowledge-graph.md)
+- [11 Settings And Onboarding](../11-settings-and-onboarding.md)
 
-## 使用边界
+## 边界
 
-字段变化如果只影响实现,更新本 appendix。字段变化如果改变职责边界、失败语义或用户可见承诺,必须同步更新对应核心 spec。
+字段变化如果只影响存储实现,更新本 appendix。字段变化如果改变写入主路径、审批失效、rollback、上下文优先级或用户可见设置,同步更新对应核心 spec。

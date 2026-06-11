@@ -1,65 +1,123 @@
 # 07 · Context And Query
 
-本文档定义系统如何为 Agent 装配上下文、分析影响范围、回答事实查询。它是 L4 知识检索到 L1 工作记忆之间的桥。
+本文档定义系统如何为 Agent 装配上下文、分析连带影响、回答用户事实查询。读完本篇应能理解:写作前必须装哪些事实,影响分析为什么规则先出、LLM 只复核,以及 context overflow 时为什么不能静默裁掉关键设定。
 
-## 职责边界
+## 要解决的问题
 
-本篇负责:
+Agent 写长篇时,质量取决于它拿到的上下文。上下文太少会写崩角色、忘记伏笔、违背世界规则;上下文太多会超出模型窗口或引入噪音。Context And Query 的职责是在“完整一致性”和“可执行上下文”之间建立明确规则。
 
-- 影响分析的职责边界。
-- 上下文装配的优先级和失败语义。
-- 用户事实查询与 Agent 内部检索的关系。
-- 上下文溢出时的处理原则。
-
-本篇不负责:
-
-- 知识图谱底层索引生成。
-- Agent 输出校验。
-- UI 查询浮层视觉。
-- 完整工具参数表。
+本篇同时负责用户查询,因为用户查询和 Agent 写作应读取同一套事实来源,只是输出形态不同。
 
 ## 主权对象
 
-Context and query 拥有:
+Context And Query 拥有:
 
-- impact analysis 结果。
 - context package。
-- fact query 结果。
-- 每类 Agent 的上下文需求。
-- context overflow 语义。
+- per-agent context contract。
+- impact analysis。
+- fact query。
+- semantic recall 消费规则。
+- context overflow 失败语义。
 
-它不拥有项目事实本身。它只能读取、筛选、组织和解释事实。
+它不拥有项目事实、知识图谱索引生成或 Agent 输出校验。
 
-## 输入、输出与依赖
+## 上下文来源
 
-输入是 Agent 任务、用户查询、变更 delta、知识图谱结果、会话历史和长期经验。输出是上下文包、影响范围、事实查询答案和 overflow 失败。本篇依赖 knowledge graph 提供可检索事实,依赖 runtime state 提供历史和经验,并为 agent runtime 与 turn orchestration 提供依据。
+上下文来源按优先级组织:
 
-## 技术路径
+1. 用户当前显式指令。
+2. 当前章节和当前选区。
+3. 项目事实:角色、关系、世界规则、伏笔、章节摘要。
+4. 五大守则和不可违背红线。
+5. 影响范围内的原文段落和锚点。
+6. 近期会话历史。
+7. 用户经验和风格偏好。
+8. 语义召回补充材料。
 
-当用户提问、Agent 写作或系统执行 cascade 时,context builder 根据当前任务装配上下文。装配来源包括项目事实、知识图谱、近期会话、长期经验、章节摘要和语义召回。
+项目事实和红线不能为了节省 token 被静默裁掉。无法装入时,系统进入 overflow 失败或把任务拆成用户可理解的步骤。
 
-一致性所需数据优先于成本节流。系统不能为了省 token 静默裁掉关键设定、红线、承诺或已知冲突。确实无法装下时,进入显式 overflow 失败或用户可理解的分步处理。
+## Per-Agent Context Contract
 
-影响分析先用确定性规则找半径,再用模型判断是否真正受影响。模型只做复核和解释,不拥有影响半径主权。
+每类 Agent 都有必装上下文和禁止装入内容:
 
-用户查询使用同一批事实来源,但输出面向解释和跳转,而不是直接驱动写入。
+| Agent 类型 | 必装 | 不应装入 |
+|---|---|---|
+| Writer | 当前章节目标、角色状态、关系、伏笔、最近章节、守则、用户偏好 | 无关项目历史、过程日志 |
+| Validator | 待写入差异、相关设定、依赖、守则、冲突来源 | 与判断无关的全文噪音 |
+| ReaderPanel | 本章文本、必要前情、读者 persona 配置 | 内部工具日志 |
+| Humanizer | 待改写文本、不可改事实、风格偏好、章节语境 | 可诱导改设定的无关材料 |
+| Router | 用户输入、当前模式、可用命令、pending 状态 | 大段正文全文 |
+
+Agent 不能自己从数据库随意拼上下文。context builder 是唯一入口。
+
+## Impact Analysis
+
+影响分析用于 cascade。它的原则是“确定性候选先出,LLM 二次过滤”:
+
+1. 从变更 delta 提取涉及实体、概念、关系、锚点和依赖。
+2. 用索引、SQL、反向引用、段落锚点找候选范围。
+3. 用 LLM 判断候选是否真受影响,并解释原因。
+4. 低置信候选保守进入审批或用户确认。
+5. 递归扩展必须单调收缩,不能无限连锁。
+
+LLM 不拥有影响半径主权。它不能凭感觉新增没有索引来源的影响项;只能复核、补充解释或标记不确定。
+
+## Fact Query
+
+用户查询与 Agent 内部查询使用同一事实来源。典型查询能力包括:
+
+- entity-at:某个角色/地点/物品在某章某段的状态。
+- relations-of:某实体与其他实体的关系。
+- mentions-of:某实体、概念或伏笔出现在哪里。
+- semantic-search:语义相近段落召回。
+
+查询结果必须带来源和跳转能力。系统不能用 LLM 编造没有引用的事实答案。没有查到时,应说明“未在当前项目事实中找到”,而不是补一个看似合理的回答。
+
+## Context Package
+
+context package 是 Agent Runtime 的输入,包含:
+
+- 任务说明。
+- 必装事实摘要。
+- 引用来源。
+- 相关原文片段。
+- 约束和红线。
+- 用户经验。
+- 不确定项和降级状态。
+
+上下文包需要保留“为什么放入”的解释,以便 Trace 和用户质疑时可追溯。
+
+## Overflow
+
+context overflow 是显式失败,不是静默裁剪。处理顺序是:
+
+1. 去掉非关键噪音和重复材料。
+2. 用已验证摘要替代长原文。
+3. 拆分任务或分阶段处理。
+4. 仍无法保证一致性时失败并说明缺口。
+
+不能裁掉的内容包括:用户当前指令、当前章节关键上下文、角色核心状态、世界规则、已触发守则、待修改段落和受影响依赖。
+
+## 与记忆和经验的关系
+
+会话历史和用户经验只能通过 context builder 进入 Agent。经验注入要遵守 [02](./02-runtime-state.md) 的优先级:当前指令优先于经验,项目事实优先于经验。经验冲突时,上下文包应标记冲突,不让 Agent 自行裁决。
 
 ## 失败语义
 
-- 影响分析不确定:升级为用户确认或保守扩大审查范围。
-- 上下文缺关键事实:当前 Agent 不继续生成高风险内容。
-- 语义检索失败:退回精确事实查询和显式提示。
-- context overflow:不静默裁剪关键约束,记录为待设计或要求拆分处理。
+| 失败 | 系统行为 |
+|---|---|
+| 关键事实缺失 | 高风险 Agent 不继续生成 |
+| 影响分析低置信 | 保守扩大审查范围或用户确认 |
+| 语义召回不可用 | 降级到精确查询并提示覆盖不足 |
+| 查询无来源 | 不输出事实性结论 |
+| overflow | 拆分、失败或要求用户确认,不静默裁剪 |
+| LLM 复核与索引冲突 | 以索引来源为准,冲突进入解释 |
 
 ## 用户可见结果
 
-用户看到的是查询答案、影响范围、生成依据和需要确认的风险。系统必须能说明“为什么这段内容被纳入上下文”或“为什么某次改动影响这些位置”。
+用户看到查询答案、引用跳转、影响范围、生成依据和风险说明。系统必须能回答:“为什么这段被拿来当上下文?”以及“为什么改这个会影响那些章节?”
 
-## Appendix 引用
+## Appendix
 
-- [appendix/tool-catalog](./appendix/tool-catalog.md) 维护 analyzeImpact、assembleContext、queryFacts 等工具明细。
-- [appendix/json-schemas](./appendix/json-schemas.md) 维护影响分析和查询输出 schema。
-- [appendix/details/19-impact-analysis](./appendix/details/19-impact-analysis.md) 保留旧影响分析细节。
-- [appendix/details/20-context-assembly](./appendix/details/20-context-assembly.md) 保留旧上下文装配细节。
-- [appendix/details/21-fact-query](./appendix/details/21-fact-query.md) 保留旧事实查询细节。
-- [appendix/details/23-context-contracts](./appendix/details/23-context-contracts.md) 保留旧 per-agent 上下文细节。
+- [appendix/tool-catalog](./appendix/tool-catalog.md) 保存 analyzeImpact、assembleContext、queryFacts 等工具参数。
+- [appendix/json-schemas](./appendix/json-schemas.md) 保存 context package、impact result 和 query result schema。

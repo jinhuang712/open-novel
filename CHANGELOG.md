@@ -1,11 +1,20 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-11 · spec · 根层 spec 扩写为可读技术设计 + active appendix 精简
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 12 篇根层 spec 从抽象规章模板扩写为可直接阅读的技术设计:每篇补回主路径、主权对象、关键设计、失败语义和用户可见结果;重点回填 turn/cascade/approval、context/impact/query、knowledge graph、creative engine、editor interaction 与 settings 的核心契约。 | `spec/00-11` | 用户反馈“核心 spec 里啥也没有,appendix 太多”,要求读完核心文档就能明白。 |
+| active appendix 改为 7 个分类明细入口,只承接表结构、schema、事件字段、工具参数、prompt、测试和审计;不再逐篇链接旧 spec details。 | `spec/appendix/*` | appendix 应是用户不需要主动读的实现明细,不是主文档内容仓库。 |
+| 旧 29 篇 spec 原文从 `spec/appendix/details/` 迁入历史归档 `progress/spec-archive/2026-06-11-pre-core-spec-details/`,作为追溯材料而非当前契约入口。 | `progress/spec-archive/2026-06-11-pre-core-spec-details/*` `README.md` | 保留细节来源,但移出 active appendix,避免 appendix 臃肿和误导。 |
+| README、TODO、agent 写作规范同步新分工:核心 spec 必须讲清主路径,appendix 只放机器级明细,历史原文归 progress archive。 | `README.md` `TODO.md` `AGENTS.md` `CLAUDE.md` | 保持后续 agent 不再把旧 details 当 active spec。 |
+
 ## 2026-06-11 · spec · 根层 spec 激进重组为 12 篇系统契约 + appendix 明细
 
 | 变更 | 影响文档 | 关联 |
 |---|---|---|
 | spec 根层从 29 篇历史增量功能文档重组为 12 篇系统契约文档:`00-system-contract`、`01-project-storage`、`02-runtime-state`、`03-agent-runtime`、`04-turn-orchestration`、`05-streaming-ui-protocol`、`06-knowledge-graph`、`07-context-and-query`、`08-creative-engine`、`09-style-and-humanizer`、`10-editor-and-interaction`、`11-settings-and-onboarding`。核心 spec 只写技术路径、职责边界、主权对象和失败语义。 | `spec/00-11` `README.md` | 用户确认 spec 应减少技术细节堆砌,先讲清技术路径和设计。 |
-| 表结构、JSON schema、事件枚举、工具参数、prompt 模板、测试矩阵、版本审计和旧迁移明细后置到 `spec/appendix/`;旧 29 篇 spec 原文保留在 `spec/appendix/details/`,作为字段、schema、参数和历史细节来源,不再作为根层 spec 主权骨架。 | `spec/appendix/*` `spec/appendix/details/*` | 同上;避免细节丢失,同时降低核心 spec 噪音。 |
+| 表结构、JSON schema、事件枚举、工具参数、prompt 模板、测试矩阵、版本审计和旧迁移明细后置到 `spec/appendix/`;旧 29 篇 spec 原文在后续同日整理中迁入 `progress/spec-archive/`,作为字段、schema、参数和历史细节来源,不再作为根层 spec 主权骨架。 | `spec/appendix/*` `progress/spec-archive/*` | 同上;避免细节丢失,同时降低核心 spec 噪音。 |
 | 文档规范新增 spec 写作纪律:S1 核心 spec 必须说明职责边界、主权对象、输入输出、关键流程、失败语义和用户可见结果;S2 技术细节后置;S3 同一生命周期、状态机、失败语义、数据主权或上下文规则只能有一个权威定义位置。 | `AGENTS.md` `CLAUDE.md` | 用户要求把“核心 spec 不能太虚、appendix 不能变垃圾桶、关键约束不能完全挪走”纳入长期要求。 |
 | README 的 spec 导航与当前实现方向改为新骨架;TODO 活跃项和实施前验证项同步改指核心 spec 或 appendix,旧断链风险从入口文档移除。 | `README.md` `TODO.md` | 同上。 |
 

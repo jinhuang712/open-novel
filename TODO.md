@@ -1,21 +1,17 @@
-# TODO · 文档清零与开放问题
+# TODO · 开放问题与实施前验证
 
-> **[success]** **文档类 TODO 已清零。** 2026-06-02 已按 `site/docs.json` 对 53 个发布 HTML 与 README / TODO / Changelist 源做全量审计:历史 spec 体例升级、progress 角色混乱、已关闭 P0/P1/P2 项仍挂 TODO、README 陈旧导航和图表源码标题残留均已处理或转入 changelist 记录。
->
-> 本页只保留**不能靠文档改写直接解决**的代码实施前验证、产品决策和后续架构实测项。已关闭的历史问题不再留在 TODO 活跃区,请从 [CHANGELOG.md](./CHANGELOG.md) 追溯。
+本文件只维护当前仍开放的问题、代码实施前验证项和后续架构决策。已关闭的文档迁移、HTML/CAST 时代审计和历史清零记录归 [CHANGELOG.md](./CHANGELOG.md) 与 [progress](./progress/README.md) 追溯。
 
 ## 1 · 当前文档待办
 
 | 类别 | 状态 | 说明 |
 |---|---|---|
-| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍按旧五区语境写作(Tabs、右栏 ChatBox、底部状态栏、ThinkingPanel 常驻等表述);待按「章节轨 · 纸面 · 状态点」契约逐篇同步(库面板 / 状态点 / 输入条 / 旁注 / 查询浮层 / 动效清单约束),入口表述以 design/01 为准。同批处理:[spec/10](./spec/10-editor-and-interaction.md) 补齐 `chat.focusComposer`(Cmd+L)与 `query.open`(Cmd+E),ChatBox 上下文更名为输入条;design/04 Settings §风格定制补 learnings 查看与编辑区(偏好从主界面库面板移出后的唯一入口)。 |
-| 经验管理契约缺口 | **1 open** | [spec/02](./spec/02-runtime-state.md) 与 [spec/11](./spec/11-settings-and-onboarding.md) 已点名经验可见 / 可调 / 可删的目标语义,但 appendix/details 中仍保留旧「MVP 不做」存根;需把旧明细迁成与 [plan/10 §经验对你透明](./plan/10-memory-and-learning.md) 一致的字段、交互和失败语义。 |
-| Reflector 关闭语义 | **1 open** | [plan/06 可关矩阵](./plan/06-agent-team.md) 新增「反思学习者可整体关闭」(关闭后不学新经验、已沉淀经验继续生效);核心语义已进入 [spec/02](./spec/02-runtime-state.md) 与 [spec/11](./spec/11-settings-and-onboarding.md),仍需把旧 Agent / memory / settings 明细迁到 appendix 并消除旧矛盾。 |
+| design 写作优先同步 | **1 open** | 2026-06-11 设计思想转向后(见 [design/01](./design/01-main-layout.md)),`design/02-06` 文档与原型仍有旧五区语境残留;待按「章节轨 · 纸面 · 状态点」契约逐篇同步(库面板 / 状态点 / 输入条 / 旁注 / 查询浮层 / 动效清单约束),入口表述以 design/01 为准。 |
+| appendix 明细抽取 | **1 open** | active [spec appendix](./spec/appendix/README.md) 已收敛为分类归口,旧 29 篇原文已归档;后续实现前需按需从 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md) 抽取当前有效的表结构、schema、工具参数、prompt 和测试矩阵,避免重新把历史噪音搬回 appendix。 |
+| 经验管理契约缺口 | **1 open** | [spec/02](./spec/02-runtime-state.md) 与 [spec/11](./spec/11-settings-and-onboarding.md) 已点名经验可见 / 可调 / 可删的目标语义;仍需把经验字段、交互细节和失败场景补入 [appendix/schema-tables](./spec/appendix/schema-tables.md) 与 [appendix/testing-matrix](./spec/appendix/testing-matrix.md),并与 [plan/10 §经验对你透明](./plan/10-memory-and-learning.md) 对齐。 |
+| Reflector 关闭语义 | **1 open** | [plan/06 可关矩阵](./plan/06-agent-team.md) 新增「反思学习者可整体关闭」(关闭后不学新经验、已沉淀经验继续生效);核心语义已进入 [spec/02](./spec/02-runtime-state.md) 与 [spec/11](./spec/11-settings-and-onboarding.md),仍需把具体 settings 字段、经验注入开关和测试场景补入 appendix 明细。 |
 | 开书旅程缺 plan 承诺 | **1 open** | [plan/01 场景速览](./plan/01-overview.md) 第 1 条(故事种子逐项生成 + 样例项目)在 plan/05-10 没有承诺出处,目前主要由 [design/05](./design/05-onboarding.md) 与 [spec/11](./spec/11-settings-and-onboarding.md) 承载;待在能力章(建议 plan/05 或 plan/07)补一段「开书」产品承诺,或调整 plan/01 场景表述。 |
 | 风险三档命名中英混用 | **1 open** | [plan/03](./plan/03-guardrails.md) 风险等级「提示级 / critical / blocking」中英混用,critical/blocking 为 spec 枚举值直接入 plan(G1 边界);改为全中文产品命名(如「确认级 / 阻断级」)需动 R10 文本与 [plan/08](./plan/08-approval-and-cascade.md) 引用,属红线级变更,待用户裁决后与 [spec/04](./spec/04-turn-orchestration.md) / [spec/08](./spec/08-creative-engine.md) 同步。 |
-| 文档重写 / CAST 化 | **0 open** | 所有 manifest 页面已重渲染到 CAST shell;Mermaid 作者源恢复到 `site/diagram-sources.json`,渲染器禁止图表 caption / body 暴露 Mermaid 方向声明等源码首行。 |
-| 文档导航 / 索引 | **0 open** | README、index、progress README、TODO、Changelist 的职责边界已收敛;README 不再指向过期 progress 重构项。 |
-| 已关闭历史项 | **0 open** | Embedding provider、schema 主权拆分、cascade controller 主权、reindex 失败语义、analyzeImpact Writer 边界等已决事项从 TODO 活跃区移除,保留在 changelist / 对应 spec 中。 |
 
 ## 2 · 实施前开放验证
 
@@ -23,12 +19,12 @@
 
 | 优先级 | 问题 | 关联文档 | 回头解决方式 |
 |---|---|---|---|
-| P0 | DeepSeek `cache_control` 字段服务端识别情况未实查。 | [spec/00](./spec/00-system-contract.md) · [spec/03](./spec/03-agent-runtime.md) · [appendix/migration-notes](./spec/appendix/migration-notes.md) | W3 day-1 最小复现;若不支持,降级为稳定头部排布,功能不变但 token 成本上升。 |
+| P0 | DeepSeek `cache_control` 字段服务端识别情况未实查。 | [spec/00](./spec/00-system-contract.md) · [spec/03](./spec/03-agent-runtime.md) · [appendix/migration-notes](./spec/appendix/migration-notes.md) | 做最小复现;若不支持,降级为稳定头部排布,功能不变但 token 成本上升。 |
 | P0 | 1M context + per-agent 装齐契约的真实 token 成本未基线化。 | [spec/07](./spec/07-context-and-query.md) · [plan/05](./plan/05-story-world.md) | 用 DeepSeek tokenizer / 真实请求记录基线;校验 Writer 单次章节调用估算是否偏离。 |
 | P0 | AI SDK 6 `stopWhen` + tool result marker + `onStepFinish` 的端到端行为未跑通。 | [spec/00](./spec/00-system-contract.md) · [spec/03](./spec/03-agent-runtime.md) | 写最小 runner spike;若 `stopWhen` 不可靠,回退纯手写 while runner。 |
-| P0 | `sqlite-vec` + `better-sqlite3` + Drizzle 在 macOS arm64 / Linux x64 的 native binding 与 JOIN 行为未实测。 | [spec/00](./spec/00-system-contract.md) · [spec/06](./spec/06-knowledge-graph.md) | 跑 `db.loadExtension(sqliteVec.path)`、`vec0` CRUD、普通表 JOIN;失败再评估 sqlite-vss / hnswlib-node。 |
+| P0 | `sqlite-vec` + `better-sqlite3` + Drizzle 在 macOS arm64 / Linux x64 的 native binding 与 JOIN 行为未实测。 | [spec/00](./spec/00-system-contract.md) · [spec/06](./spec/06-knowledge-graph.md) | 跑 `db.loadExtension(sqliteVec.path)`、`vec0` CRUD、普通表 JOIN;失败再评估替代方案。 |
 | P0 | `better-sqlite3` 在 Next.js Route Handler 中的同步调用、WAL 并发写与 dev hot-reload connection 泄漏未实测。 | [spec/00](./spec/00-system-contract.md) · [spec/01](./spec/01-project-storage.md) | 做 Route Handler 并发写 spike;失败时把写操作隔离到 worker thread。 |
-| P2 | design token → Tailwind v4 / shadcn 变量映射与 `@custom-variant dark`(绑 `data-theme`)未在真实组件实测;深色主题「深字浅钮」的 `--primary-foreground` 需过一遍 shadcn Button 全 variant。 | [design/00 §实现对接](./design/00-design-tokens.md) | W6 前端搭建时随首个 shadcn 组件接入验证;有冲突回写 00 映射表并记 CHANGELOG。 |
+| P2 | design token → Tailwind v4 / shadcn 变量映射与 `@custom-variant dark`(绑 `data-theme`)未在真实组件实测;深色主题「深字浅钮」的 `--primary-foreground` 需过一遍 shadcn Button 全 variant。 | [design/00 §实现对接](./design/00-design-tokens.md) | 前端搭建时随首个 shadcn 组件接入验证;有冲突回写 00 映射表并记 CHANGELOG。 |
 
 ## 3 · 后续架构决策
 
@@ -40,22 +36,11 @@
 | P1 | doom-loop 阈值、结构化输出 retry 与用户 retry 可能叠加成循环。 | [spec/03](./spec/03-agent-runtime.md) · [spec/04](./spec/04-turn-orchestration.md) | 增加 metrics 与 retry budget;避免 escalate → retry → 再 escalate 的无效循环。 |
 | P1 | `ContextOverflowError` 后的“分卷”兜底未设计。 | [spec/07](./spec/07-context-and-query.md) · [plan/05](./plan/05-story-world.md) | 先保留为显式失败;进入长篇真实压测后再设计分卷策略。 |
 | P1 | `extractSemanticDelta` 对中长篇正文 diff 的单次 LLM 稳定性依赖过高。 | [spec/07](./spec/07-context-and-query.md) | 需要降级路径:分段 delta、规则预筛或人工确认。 |
-| P2 | 取消路径仍有两套入口:Router action 与 ChatBox 顶部“取消本次对话”。 | [plan/06](./plan/06-agent-team.md) · [spec/04](./spec/04-turn-orchestration.md) · [spec/10](./spec/10-editor-and-interaction.md) | 实现前统一为同一个 rollback 语义。 |
+| P2 | 取消入口仍需统一到同一个 rollback 语义。 | [plan/06](./plan/06-agent-team.md) · [spec/04](./spec/04-turn-orchestration.md) · [spec/10](./spec/10-editor-and-interaction.md) | 实现前统一输入条、命令面板、状态点和 Router action 的取消入口。 |
 | P2 | 魔法常数尚未系统化暴露或归档:doom-loop 0.9、cascade ≤3、weight 阈值、lastMessages=30、tokenBudget 软警等。 | 多文档 | 先保留硬编码默认;Settings/debug 设计时统一归档。 |
-| P2 | 测试策略已有 appendix,但实际 vitest / playwright / LLM golden / spec audit 尚未落地。 | [appendix/testing-matrix](./spec/appendix/testing-matrix.md) · [spec/00](./spec/00-system-contract.md) | 开始代码实施后作为第一批工程化任务。 |
+| P2 | 测试策略已有 appendix 归口,但实际 vitest / playwright / LLM golden / spec audit 尚未落地。 | [appendix/testing-matrix](./spec/appendix/testing-matrix.md) · [spec/00](./spec/00-system-contract.md) | 开始代码实施后作为第一批工程化任务。 |
 | P2 | 段锚点、差量 reindex、paragraph_embeddings 强耦合,锚点失稳会拖垮知识图谱。 | [spec/06](./spec/06-knowledge-graph.md) · [spec/07](./spec/07-context-and-query.md) | 需要真实章节样本和 mutation 测试后校准。 |
 
-## 4 · 本轮文档审计记录
+## 4 · 变更日志
 
-| 检查项 | 结果 | 落地 |
-|---|---|---|
-| 发布文档清单 | 53 个 HTML artifact,来自 `site/docs.json` + index / TODO / changelist / CHANGELOG 兼容页。 | 通过 `scripts/render_all_docs.py --validate` 和 CAST HTML validator 复核。 |
-| 图表源码残留 | 发现 63 个 figure caption/body 仍显示 Mermaid 方向声明等源码首行。 | 恢复 63 段 Mermaid 作者源到 `site/diagram-sources.json`;渲染器改为语义 caption + CAST 安全 SVG。 |
-| README / progress 角色 | README 仍指向过期 progress 重构说明,progress README 仍像 rolling plan 模板。 | README 改为历史档案说明;progress README 改为归档规则。 |
-| 已关闭项挂 TODO | P0-4、P0-5、P2-1、OQ-1、OQ-2 等已关闭事项仍在 TODO 活跃区。 | 移出活跃 TODO,由 changelist 和对应 spec 承担历史追溯。 |
-| 不确定事项 | 代码 / 依赖 / 运行数据才能验证的事项无法凭文档关闭。 | 保留在本页 §2 / §3,作为回头解决的开放问题。 |
-| 文档形态迁移 | 2026-06-10 全部 53 个 HTML 文档迁移为纯 Markdown,CAST 渲染基础设施(`scripts/` `site/` `assets/` `.cast-docs/`)已删除。 | 本表以上各行为 HTML 时代的审计存档;现行文档规范见 [AGENTS.md](./AGENTS.md),变更详情见 [CHANGELOG.md](./CHANGELOG.md)。 |
-
-## 5 · 变更日志
-
-跨文档变更流水线见 [CHANGELOG.md](./CHANGELOG.md)。本文件只维护当前开放问题。
+跨文档变更流水线见 [CHANGELOG.md](./CHANGELOG.md)。历史审计和迁移复盘见 [progress](./progress/README.md)。

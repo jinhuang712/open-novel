@@ -1,15 +1,23 @@
 # Appendix · Prompt Templates
 
-本 appendix 索引 prompt 模板、公共片段和各 Agent 的输出要求。核心 spec 只定义 prompt 的职责、注入顺序和安全边界。
+本 appendix 是 prompt 模板全文、公共片段和示例的归口。根层 spec 定义 prompt 的职责、注入顺序、安全边界和失败语义。
 
-## Prompt 明细
+## 归口内容
 
-- [details/03-prompts](./details/03-prompts.md) 保存 Agent prompt 模板和公共片段旧细节。
-- [details/08-de-ai-pipeline](./details/08-de-ai-pipeline.md) 保存 Humanizer prompt 和去 AI 味流程旧细节。
-- [details/10-narrative-engine](./details/10-narrative-engine.md) 保存叙事诊断 prompt 旧细节。
-- [details/11-reader-personas](./details/11-reader-personas.md) 保存模拟读者 prompt 旧细节。
-- [details/25-cardinal-rules](./details/25-cardinal-rules.md) 保存守则检测 prompt 旧细节。
+- stable header 公共片段。
+- 不可信内容围栏。
+- Router、Writer、Validator、Checker、Reflector、Humanizer、ReaderPanel prompt。
+- JSON retry prompt。
+- 五大守则、叙事诊断、persona prompt。
+- 风格范文分析片段。
 
-## 使用边界
+## 对应核心文档
 
-prompt 文案可在 appendix 迭代;如果 prompt 变化改变 Agent 职责、审批边界、写入权限或失败语义,必须同步核心 spec。
+- [03 Agent Runtime](../03-agent-runtime.md)
+- [07 Context And Query](../07-context-and-query.md)
+- [08 Creative Engine](../08-creative-engine.md)
+- [09 Style And Humanizer](../09-style-and-humanizer.md)
+
+## 边界
+
+prompt 文案可以在 appendix 迭代。若 prompt 变化改变 Agent 职责、审批边界、写入权限、上下文优先级或失败处理,必须同步根层 spec。
