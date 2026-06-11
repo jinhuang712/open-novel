@@ -109,7 +109,7 @@ flowchart LR
 ## 焦点与可达性
 
 - 键盘焦点一律 `box-shadow: 0 0 0 3px var(--focus-ring)`(accent 半透明),不裸用浏览器默认 outline
-- 低反差是美学选择,不是可达性妥协:全部文字 token 带实测对比度,不允许任何文字低于其档位下限;Settings 后续可加「提高对比度」开关(映射到一套高反差变量覆盖,暂记为非必做)
+- 低反差是美学选择,不是可达性妥协:全部文字 token 带实测对比度,不允许任何文字低于其档位下限;Settings 提供「提高对比度」开关,映射到一套高反差变量覆盖。
 - 颜色不是唯一信号:置信度同时有文字(高/中/低),violation 同时有 ⚠ 图标,diff 同时有 +/- 前缀
 - 全部浮层可被 `Esc` 关闭(硬约束,[spec/S14](../spec/S14-editor-and-interaction.md));模态实现 Focus Trap
 

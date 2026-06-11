@@ -57,7 +57,7 @@
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/S01](./spec/S01-project-storage.md) 定义
 - **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
-- **待实查闸门**: 代码前的外部事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
+- **外部事实审计闸门**: 代码前的外部依赖和运行事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
 
 ## 快速启动
 
@@ -80,7 +80,7 @@ pnpm dev
 ├── WORKFLOW.md                # 文档与实现协作流程
 ├── AGENTS.md                  # Agent 工作规范(与 CLAUDE.md 内容一致)
 ├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
-├── TODO.md                    # 当前未归口开放问题入口
+├── TODO.md                    # 当前无活跃开放项 + 新增规则
 ├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 产品 PRD(纯产品定义)
 ├── spec/                      # 核心技术文档(S/M) + platform/ + appendix/
@@ -210,7 +210,7 @@ pnpm dev
 
 ### 项目档案
 
-- [TODO.md](./TODO.md) — 当前未归口开放问题入口
+- [TODO.md](./TODO.md) — 当前无活跃开放项与新增规则
 - [CHANGELOG.md](./CHANGELOG.md) — 跨文档变更流水线
 - [WORKFLOW.md](./WORKFLOW.md) — 文档与实现协作流程
 - [AGENTS.md](./AGENTS.md) / [CLAUDE.md](./CLAUDE.md) — Agent 工作规范(两份内容一致)
@@ -250,4 +250,4 @@ pnpm dev
 
 ## 许可
 
-当前仓库尚未声明开源许可证;发布或复用前需要由项目所有者补充正式 LICENSE。
+当前仓库未随附开源许可证;默认不授权复制、分发、修改或商用。任何公开发布或复用授权必须以独立变更新增 LICENSE 后才生效。

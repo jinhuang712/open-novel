@@ -31,7 +31,7 @@ flowchart LR
 | 3 快捷键 | 🌐 |
 | 4 风格定制 | 📂 |
 | 5 读者仿真器 + 叙事引擎 | 📂 |
-| 6 联网 | 🌐(二期,整项灰显 + 「二期」徽标) |
+| 6 外部研究 | 🌐(非目标说明,整项灰显 + 「不提供」徽标) |
 | 7 数据管理 | 🌐+📂 |
 | 8 Developer Mode | 🌐 |
 | 9 关于 | 🌐 |
@@ -46,6 +46,7 @@ flowchart LR
 - **模型分配**:每 Agent 一行,`Pro / Flash` 下拉;项目覆盖开启时该行右侧出现「覆盖中 · 还原」
 - **快捷键**:表格(命令 / 默认键 / 当前键 / 重绑按钮);重绑进入捕获态「按下新组合键…」,冲突即时红字提示并禁止保存;`Esc` 退出捕获(不可绑 Esc,[spec/S14](../spec/S14-editor-and-interaction.md))
 - **数据管理**:全局区(workspace 路径 / trace 清理 / 本月用量)+ 项目区(改名 / 归档 / 导出 zip / 删除);**危险区域**独立 danger 描边卡,删除/清空/重置走「输入指定字样」二次确认([spec/S15](../spec/S15-settings-and-onboarding.md)),确认按钮在字样完全匹配前 disabled
+- **外部研究**:灰显说明本产品不内置联网研究、素材搜索或自动采集;作者可手动把外部材料导入工作区,导入边界见 [spec/platform/I04](../spec/platform/I04-import-export-contract.md)
 - **Developer Mode**:单 toggle + 影响清单(派生文件可见 / Debug 面板默认展开 / Trace 全文 / ChangeSet JSON 入口等);开启时 toast「Developer Mode 已开启 (Cmd+Shift+D)」
 
 ## Dirty 状态与底部条
@@ -68,4 +69,4 @@ flowchart LR
 
 - 弹窗表面 `--bg-raised`;nav 用 `--bg-sunken` 与右 pane 区分,两主题层次顺序一致
 - 危险区域深色主题:`--danger-subtle` 暗红底 + `--danger` 描边,避免大红块刺眼
-- Settings 本身提供外观设置(浅色/深色/跟随系统,存全局 settings.json),原型在 Section 4 风格定制顶部以「外观」字段组演示(标注 🌐 全局徽标,切换即时生效);产品中的字段落点(归 Section 4 全局组或独立小节)回写 spec/M04 时定
+- Settings 本身提供外观设置(浅色/深色/跟随系统,存全局 settings.json),原型在 Section 4 风格定制顶部以「外观」字段组演示(标注 🌐 全局徽标,切换即时生效);字段归口见 [spec/M14](../spec/M14-settings-and-developer-mode.md) 与 [spec/S15](../spec/S15-settings-and-onboarding.md)

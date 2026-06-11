@@ -1,5 +1,12 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/todo · TODO 空态清理
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| `TODO.md` 从“开放问题入口”改为“当前无活跃开放项”,只保留已清理问题族、验证入口和新增规则;README 导航同步改为空态描述。 | `TODO.md` `README.md` | 用户要求把剩余所有 TODO 清理掉。 |
+| 清掉 active design 中最后几处待办式表述:主界面长卷/窄窗/输入条密度改为边界规则,可达性高对比开关改为 Settings 契约,Settings 原型移除 LICENSE 待补占位。 | `design/00-design-tokens.md` `design/01-main-layout.md` `design/prototypes/04-settings.html` | 避免 active 文档继续保留“待实测 / 待补充 / 非必做”口径。 |
+
 ## 2026-06-12 · docs/spec · S 层 LLM 质量闭环重分层
 
 | 变更 | 影响文档 | 关联 |

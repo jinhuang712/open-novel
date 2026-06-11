@@ -122,7 +122,7 @@
         <button class="btn" onclick="testKey()">测试连接</button>
       </div>
       <div class="key-state" id="keyState"></div>
-      <span class="mock-link" onclick="useMock()">跳过 — 用 Mock 模式先看看界面(占位文本,流程走通)</span>
+      <span class="mock-link" onclick="useMock()">跳过 — 用 Mock 模式先看看界面(示例文本,流程走通)</span>
     </div>
 
     <div class="step" id="s3">
@@ -228,7 +228,7 @@ function testKey() {
 function useMock() {
   keyOk = true;
   document.getElementById('wizard').classList.add('mock');
-  document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选 Mock 模式 — 占位文本,可随时在 Settings 填入真实 key</span>';
+  document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选 Mock 模式 — 示例文本,可随时在 Settings 填入真实 key</span>';
   render();
 }
 document.addEventListener('keydown', function (e) {
