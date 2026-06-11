@@ -49,7 +49,7 @@
 当前实现方向已统一为:
 
 - **Agent runtime**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架
-- **核心 spec**: 根层 `spec/00-11` 写可直接阅读的技术设计,读完应能理解系统主路径、职责边界、失败语义和用户可见结果
+- **核心 spec**: 根层 `spec/00-11` 写可直接阅读的技术设计,每篇按主题采用不同骨架,用场景、mermaid、表格和 FAQ 讲清系统主路径、职责边界、失败语义和用户可见结果
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/02](./spec/02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/01](./spec/01-project-storage.md) 定义
@@ -107,20 +107,20 @@ pnpm dev
 
 ### 核心技术文档 (spec/) — 系统契约 (How / Boundaries)
 
-根层 spec 是可直接阅读的技术设计:先讲系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
+根层 spec 是可直接阅读的技术设计:每篇按主题选择自己的骨架,先用场景、图表、表格和 FAQ 讲清系统主路径、职责边界、设计取舍、失败语义和用户可见结果;表结构、完整 JSON schema、事件字段、工具参数、prompt、测试矩阵和迁移细节统一后置到 appendix。界面原型与交互设计仍归 design/。
 
-- [00-system-contract](./spec/00-system-contract.md) — 技术路线入口、spec 写作契约和审计闸门
-- [01-project-storage](./spec/01-project-storage.md) — 项目文件、项目事实库、派生索引和存储失败语义
-- [02-runtime-state](./spec/02-runtime-state.md) — 会话记忆、过程历史、经验管理和 Reflector 关闭语义
-- [03-agent-runtime](./spec/03-agent-runtime.md) — Agent runner、工具边界、prompt 组织和结构化输出失败语义
-- [04-turn-orchestration](./spec/04-turn-orchestration.md) — user turn、cascade、approval、rollback 和 UI 状态边界
-- [05-streaming-ui-protocol](./spec/05-streaming-ui-protocol.md) — 事件流、trace、状态点和前端恢复语义
-- [06-knowledge-graph](./spec/06-knowledge-graph.md) — 实体、概念、关系、段落锚点和 embedding 的一致性主权
-- [07-context-and-query](./spec/07-context-and-query.md) — 影响分析、上下文装配、事实查询和 overflow 语义
-- [08-creative-engine](./spec/08-creative-engine.md) — 五大守则、叙事诊断和模拟读者的创作质量契约
-- [09-style-and-humanizer](./spec/09-style-and-humanizer.md) — 去 AI 味、人味改写和风格守恒边界
-- [10-editor-and-interaction](./spec/10-editor-and-interaction.md) — 编辑器、高亮、快捷键、查询入口和输入焦点契约
-- [11-settings-and-onboarding](./spec/11-settings-and-onboarding.md) — Settings、Onboarding、经验管理、项目生命周期和危险操作
+- [00-system-contract](./spec/00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
+- [01-project-storage](./spec/01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
+- [02-runtime-state](./spec/02-runtime-state.md) — 会话、经验、过程历史和 Reflector 生命周期
+- [03-agent-runtime](./spec/03-agent-runtime.md) — 受控 runner、prompt 堆叠、工具边界和 JSON 失败循环
+- [04-turn-orchestration](./spec/04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批和取消/恢复语义
+- [05-streaming-ui-protocol](./spec/05-streaming-ui-protocol.md) — 状态点、Trace、事件分层和断线恢复驾驶舱协议
+- [06-knowledge-graph](./spec/06-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
+- [07-context-and-query](./spec/07-context-and-query.md) — Agent 证据包、影响分析裁判链、事实查询和 overflow 决策
+- [08-creative-engine](./spec/08-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
+- [09-style-and-humanizer](./spec/09-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
+- [10-editor-and-interaction](./spec/10-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo/rollback 边界
+- [11-settings-and-onboarding](./spec/11-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
 - [appendix](./spec/appendix/README.md) — 表结构、schema、事件、工具、prompt、测试和迁移明细;旧 29 篇 spec 原文已归档到 progress
 
 ### 界面设计 (design/) — 交互与视觉 (Look & Feel)

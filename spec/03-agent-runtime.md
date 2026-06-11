@@ -1,45 +1,10 @@
 # 03 · Agent Runtime
 
-本文档定义 Agent 如何被调用、如何拿上下文、如何使用工具、如何输出自然语言或结构化结果。读完本篇应能理解系统为什么使用自定义 runner,哪些工具可以读、哪些只能提议,以及 JSON 输出失败时不能怎么“糊弄过去”。
+这篇把 Agent 当成“受控执行器”来写,不是把它当成一个会自己管理流程的黑盒。Agent Runtime 只负责拿到任务、上下文和工具后产出结果;它不批准写入、不保存项目、不决定 UI 状态。
 
-## 要解决的问题
+## 一次 Writer 调用的台前幕后
 
-Open Novel 需要多个 Agent 角色协作,但不能把写作主权交给一个黑盒 Agent 框架。系统需要明确知道:
-
-- 现在运行的是哪个角色。
-- 它拿到了哪些上下文。
-- 它调用了哪些工具。
-- 它输出的是回答、报告还是变更提议。
-- 输出失败、工具失败、模型失败时由谁处理。
-
-Agent Runtime 因此只负责“执行 Agent”,不负责“批准写入”。
-
-## 主权对象
-
-Agent Runtime 拥有:
-
-- Agent runner。
-- 模型调用入口。
-- prompt 组装顺序。
-- 工具调用边界。
-- 结构化输出校验、重试和升级。
-- Agent 角色的输入/输出契约。
-
-它不拥有审批、落盘、rollback、UI 状态机或项目事实主权。
-
-## Agent 类型
-
-系统中的 Agent 可以分为三类:
-
-| 类型 | 作用 | 输出 |
-|---|---|---|
-| 对话/路由 Agent | 理解用户意图,决定本 turn 做什么 | 回答或 action |
-| 创作/分析 Agent | 写章节、诊断、读者预演、去 AI 味 | 文本、报告、proposal |
-| 内部辅助 Agent | 影响复核、上下文摘要、结构化提取 | 结构化中间结果 |
-
-内部辅助 Agent 不直接面对用户,也不能绕过主路径写入作品。它们的结果必须回到 runner、context 或 turn orchestration 继续处理。
-
-## Runner 主路径
+作者点“写本章正文”时,系统不会把整本书丢给模型然后等待奇迹。实际发生的是:
 
 ```mermaid
 sequenceDiagram
@@ -49,73 +14,120 @@ sequenceDiagram
   participant M as Model
   participant T as Tools
 
-  O->>C: 请求任务上下文
-  C-->>O: context package
-  O->>R: agent role + task + context
-  R->>R: 组装 prompt 和输出契约
+  O->>C: 需要 Writer 上下文
+  C-->>O: context package + 缺口说明
+  O->>R: role=Writer, task, output contract
+  R->>R: 拼 prompt,隔离不可信内容
   R->>M: 调用模型
-  M->>R: text / tool call / JSON
-  R->>T: 执行允许的工具
-  T-->>R: 读结果 / proposal
-  R-->>O: answer / report / proposal / failure
+  M-->>R: 文本 / tool call / 结构化对象
+  R->>T: 执行允许工具
+  T-->>R: 来源明确的结果
+  R-->>O: draft/report/proposal/failure
 ```
 
-runner 的输出只返回给编排层。凡是会写入作品、修改设定、改变项目文件或更新长期经验的结果,都必须被包装成可审查结果,由 [04](./04-turn-orchestration.md) 决定下一步。
+runner 的返回值只回到编排层。只要结果会改变作品,它必须成为 proposal 或 ChangeSet,等待 [04](./04-turn-orchestration.md) 处理。
+
+## Runner 不是 Agent 框架
+
+| 选择 | 本项目做法 | 原因 |
+|---|---|---|
+| workflow | 显式 turn orchestration | 审批、取消、回滚需要可恢复状态 |
+| memory | 应用层 runtime/context builder | 不能让框架隐式塞历史 |
+| tools | 白名单工具,分读/提议/内部 | 防止工具绕过审批写入 |
+| JSON | runner 校验并有限重试 | 结构化失败不能靠自然语言猜 |
+| stream | 事件和持久状态分离 | UI 断线后可恢复 |
+
+通用框架可以提供灵感,但不能拥有主流程主权。
+
+## Prompt 堆叠图
+
+```mermaid
+flowchart TB
+  System[系统红线和不可信内容规则]
+  Role[Agent 角色职责]
+  Mode[当前协作模式]
+  Output[输出契约]
+  Task[本次任务]
+  Context[context package]
+  Experience[用户经验]
+  User[用户显式指令]
+  Fenced[围栏内不可信正文/资料]
+
+  System --> Role --> Mode --> Output --> Task --> Context --> Experience --> User --> Fenced
+```
+
+prompt 的顺序表达优先级。章节正文、导入资料和用户粘贴内容必须被围栏隔离,不能变成高优先级系统指令。
 
 ## 工具边界
 
-工具分三类:
+| 工具类型 | 能做什么 | 不能做什么 |
+|---|---|---|
+| 读取工具 | 查项目事实、上下文、索引、会话材料 | 读取 workspace 外文件 |
+| 提议工具 | 构造 ChangeSet、候选改写、风险报告 | 直接写盘或标记审批通过 |
+| 内部工具 | 摘要、结构化提取、影响复核、校验 | 产生用户不可见的第二条写入链路 |
+| 查询工具 | 返回带来源的事实或引用 | 用 LLM 编造无来源事实 |
 
-- 读取工具:读取项目事实、知识图谱、会话历史、上下文包。
-- 提议工具:构造 ChangeSet、报告或候选修改,不直接写盘。
-- 内部工具:做结构化提取、影响复核、摘要和校验。
+如果工具内部需要再调用模型,仍走同一 runner 纪律:上下文来源、结构化校验、trace 和失败语义都不能省略。
 
-工具必须遵守路径和项目边界。任何工具都不能读取 workspace 外的用户文件,不能把不可信正文当系统指令,不能把失败结果伪装成空结果。
+## 输出有四种
 
-工具内部如果再次调用模型,仍必须走同一套结构化输出、trace 和失败语义,不能变成“藏起来的第二条 Agent 路线”。
+| 输出 | 例子 | 下一站 |
+|---|---|---|
+| answer | 讨论模式里的解释、澄清、建议 | UI 展示 |
+| report | 守则诊断、读者反馈、查询结果 | UI/审批解释 |
+| proposal | 章节草稿、改写候选、设定修改 | Approval/ChangeSet |
+| failure | 模型失败、工具失败、JSON 无法校验 | Turn Orchestration 决定恢复 |
 
-## Prompt 组装
+自然语言并不低级,但它不能承载自动编排所需的关键状态。只要下游要用它落盘、审批、判断风险或装配上下文,就必须结构化。
 
-prompt 由稳定头部和动态正文组成:
+## JSON 失败循环
 
-- 稳定头部说明角色、系统红线、模式边界、输出契约和不可信内容规则。
-- 动态正文注入本次任务、上下文包、用户显式指令、相关经验和必要引用。
+```mermaid
+stateDiagram-v2
+  [*] --> Generated
+  Generated --> Valid: schema and business checks pass
+  Generated --> Retryable: parse/schema failure within budget
+  Retryable --> Generated: retry with error summary
+  Retryable --> Escalated: retry budget exceeded
+  Generated --> Escalated: missing critical business field
+  Valid --> ReturnResult
+  Escalated --> ReturnFailure
+```
 
-不可信内容必须被围栏隔离。章节正文、用户粘贴内容、导入资料和外部文件内容都不能被模型当作高优先级指令。
+“补默认值”只能用于不会影响行为的可选字段。影响审批、落盘、风险、上下文或来源解释的字段缺失时,必须失败。
 
-完整 prompt 模板属于 appendix。根层只规定注入顺序和安全边界。
+## 模型输出的安全门
 
-## 结构化输出
-
-结构化 Agent 必须产出可校验对象。校验路径是:
-
-1. 模型按当前任务输出 JSON 或结构化对象。
-2. runner 校验 schema 和业务必填项。
-3. 失败时有限重试,重试 prompt 必须说明错误。
-4. 仍失败则升级为可解释失败。
-
-系统不允许用默认值静默补齐关键字段,也不允许把无法解析的 JSON 当作成功。可选字段可以缺省,但会影响审批、落盘、上下文或风险判断的字段缺失时必须失败。
-
-流式场景下,JSON 分析态可以展示“正在分析”,不能逐字展示半成品 JSON,也不能让半截结构进入 turn 状态。
-
-## 自然语言输出
-
-不是所有 Agent 都需要 JSON。讨论模式下的解释、澄清问题、普通回答可以是自然语言。但只要输出会进入自动编排、审批、落盘、风险判断或上下文装配,就必须转成可校验结构。
-
-## 失败语义
-
-| 失败 | 处理 |
+| 风险 | runner 的门 |
 |---|---|
-| 模型调用失败 | 返回 Agent failure,由 turn orchestration 决定重试/取消/提示 |
-| 工具失败 | 工具结果标记失败,Agent 不得伪造成功 |
-| JSON 校验失败 | 有限重试后升级失败 |
-| prompt 超长 | 交给 context overflow 语义,不能静默裁关键事实 |
-| 不可信内容越权 | 拒绝执行,记录 trace |
-| 提议含直接写入 | 转为 proposal 或拒绝 |
+| prompt injection | 不可信内容围栏 + 工具权限限制 |
+| 幻觉事实 | 查询结果必须带来源,无来源不输出事实结论 |
+| 长上下文被裁 | 交给 context overflow,不静默裁关键事实 |
+| 工具失败被模型圆过去 | 工具失败作为失败结果进入 runner |
+| 直接写入意图 | 降为 proposal 或拒绝 |
+| 半截流式 JSON | 只展示分析态,不进入业务状态 |
 
-## 用户可见结果
+## FAQ
 
-用户看到的是 Agent 当前角色、正在做的事、输出是否可信、失败原因和需要自己确认的点。用户不需要看到工具参数全表,但系统必须能解释“为什么这个 Agent 不能继续”。
+**Q: 为什么 Router 也是 Agent,却不能直接执行动作?**
+
+A: Router 只输出结构化 action。action 是否可执行、是否危险、是否需要审批,由 turn orchestration 判断。
+
+**Q: Agent 能不能自己查数据库补上下文?**
+
+A: 不能随意查。它只能调用白名单工具,且上下文主入口是 context builder。
+
+**Q: 结构化输出失败后为什么不让模型“解释一下”?**
+
+A: 可以解释失败给用户看,但不能把解释当结构化结果继续编排。
+
+**Q: 流式文本是不是可以边写边进入编辑器?**
+
+A: 可以展示草稿流,但替换作品或进入审批状态必须等结果完整并通过对应校验。
+
+**Q: 内部辅助 Agent 会不会成为隐藏 Agent?**
+
+A: 不允许。内部辅助 Agent 的输入、输出、trace 和失败都必须回到主 runner,不能绕过可观测性和审批。
 
 ## Appendix
 

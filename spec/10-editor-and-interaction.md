@@ -1,114 +1,134 @@
 # 10 · Editor And Interaction
 
-本文档定义编辑器、实体高亮、命令入口、快捷键、查询浮层和输入条焦点的实现契约。读完本篇应能理解:编辑器如何保持作品正文主权,命令系统如何避免抢焦点,以及外部编辑、IME、审批卡和 AI rewrite 的 undo 如何处理。
+这篇把编辑器写成“命令路由面”。正文纸面是主角,高亮、旁注、查询、输入条、审批卡和快捷键都只是围绕纸面工作的入口。它们不能抢焦点,不能制造不可撤销的 AI 替换,也不能把派生提示伪装成正文事实。
 
-## 要解决的问题
+## 交互表面的地图
 
-Open Novel 的主界面是写作纸面,不是工具面板集合。编辑器既要承载正文输入,又要展示实体高亮、旁注、查询入口、Agent 输入和审批提示。Editor And Interaction 的任务是把这些交互统一到可预测的命令和焦点规则中。
+```mermaid
+flowchart TB
+  Editor[纸面编辑器] --> Selection[选区/光标]
+  Selection --> Command[Command Registry]
+  Command --> Query[查询浮层]
+  Command --> Composer[Agent 输入条]
+  Command --> Approval[审批卡]
+  Command --> Rewrite[AI rewrite]
+  KG[Knowledge Graph] --> Highlight[高亮/旁注]
+  Highlight --> Query
+  Rewrite --> Undo[Editor undo/approval]
+  Approval --> Storage[Project Storage]
+```
 
-## 主权对象
+所有入口最终都应该落到命令系统或 turn orchestration,而不是各自直接操作正文。
 
-Editor And Interaction 拥有:
+## 正文事实边界
 
-- 编辑器适配层。
-- 高亮与旁注展示契约。
-- CommandRegistry。
-- ShortcutRegistry。
-- 查询浮层。
-- 输入条焦点。
-- IME 和 focus trap 规则。
-- undo/redo 与 AI rewrite 边界。
+| 在编辑器里看到的东西 | 是否正文事实 | 说明 |
+|---|---|---|
+| 用户直接输入的正文 | 是 | 保存后进入项目文件 |
+| AI 改写 proposal | 否,直到接受 | 必须可审、可 undo |
+| 实体高亮 | 否 | 来自派生索引 |
+| 旁注 | 否 | 解释来源或风险 |
+| violation marker | 否 | 风险提示 |
+| 查询结果 | 否 | 带来源的事实展示 |
 
-视觉、动效和布局以 design 为准;本篇只定义行为。
+编辑器可以展示很多层信息,但只有用户输入和审批后落盘的内容改变作品事实。
 
-## 编辑器事实边界
+## 命令解析顺序
 
-编辑器展示和修改作品文件。用户直接输入是作品事实来源之一。高亮、旁注、violation marker 和查询结果都是派生显示,不能改变正文。
+```mermaid
+flowchart TD
+  Key[键盘/按钮/菜单/命令面板] --> IME{IME 组合态?}
+  IME -->|是| Text[交给文本输入]
+  IME -->|否| Modal{有 focus trap?}
+  Modal -->|是| ModalCmd[浮层命令]
+  Modal -->|否| Selection{编辑器选区?}
+  Selection -->|是| EditorCmd[编辑器命令]
+  Selection -->|否| Query{查询浮层打开?}
+  Query -->|是| QueryCmd[查询命令]
+  Query -->|否| Composer{输入条聚焦?}
+  Composer -->|是| ComposerCmd[输入条命令]
+  Composer -->|否| Global[全局命令]
+```
 
-AI rewrite 不能直接替换正文成为不可撤销操作。它必须进入编辑器 undo 栈或审批路径,并能解释修改来源。
+快捷键不是全局暴力监听。当前焦点上下文拥有优先权。
 
-## 高亮与旁注
+## 命令登记表
 
-高亮来自知识图谱的实体、概念和风险标记。它们用于:
+每个命令都必须声明:
 
-- 提醒用户这段文字有可查询事实。
-- 跳转到定义或引用。
-- 展示旁注和冲突提示。
-- 辅助查询浮层预填。
-
-高亮索引过期时,UI 应弱化或隐藏,不能展示为最新事实。
-
-## 命令系统
-
-CommandRegistry 是统一入口,ShortcutRegistry 只是触发方式之一。命令可以来自快捷键、命令面板、按钮、菜单或上下文操作。
-
-命令必须声明:
-
-- 可用上下文。
-- 是否需要焦点。
-- 是否危险。
-- 是否会触发 Agent。
-- 是否会进入审批或确认。
-
-这避免“同一个快捷键在不同浮层里猜测执行”。
-
-## 焦点与快捷键
-
-快捷键解析按上下文优先:
-
-1. 正在输入中文或 IME 组合态时,不抢占文本输入。
-2. Dialog / ApprovalCard / Command Palette 有 focus trap 时,优先处理浮层命令。
-3. 编辑器正文有选区时,文本编辑命令优先。
-4. 查询浮层打开时,Tab 在查询类型或结果中切换。
-5. 输入条聚焦时,Enter / Tab 遵循输入条语义。
-6. 全局快捷键只在没有更高优先级上下文时执行。
-
-Esc 分层关闭:先关闭最上层浮层,再取消输入态,最后才进入 turn cancel 语义。
-
-## 查询浮层与输入条
-
-查询浮层用于查事实,输入条用于和 Agent 对话。二者不能混成一个隐式模式。
-
-查询浮层应支持:
-
-- 通过选区或高亮预填查询。
-- 在实体、关系、引用、语义搜索等类型间切换。
-- 结果带来源和跳转。
-- 查询失败时保留用户输入。
-
-输入条应支持:
-
-- 讨论、规划、写作等模式边界。
-- 明确提交给 Agent。
-- pending approval 时阻止危险新输入或提示用户先处理。
-
-## Onboarding 交互
-
-首启和渐进提示属于 [11](./11-settings-and-onboarding.md) 的生命周期,但编辑器需要承接提示入口。提示不能遮挡写作主体,也不能把用户带到一个无法退出的教学状态。
-
-## 外部编辑冲突
-
-当外部编辑改变当前文件:
-
-- 编辑器提示文件已变化。
-- 相关 pending AI rewrite 或审批失效。
-- 用户选择重载、保留当前编辑或手动合并。
-- 系统不自动把 AI 提议套到新文件上。
-
-## 失败语义
-
-| 失败 | 系统行为 |
+| 字段 | 为什么需要 |
 |---|---|
-| 高亮索引过期 | 弱化/隐藏并提示索引状态 |
-| 快捷键冲突 | 当前焦点上下文优先 |
-| IME 组合态 | 不执行全局快捷键 |
-| 查询失败 | 保留输入,展示可解释失败 |
-| AI rewrite 无法进入 undo/审批 | 不替换正文 |
-| 外部文件冲突 | 失效相关审批,用户选择处理 |
+| 可用上下文 | 防止命令在错误界面触发 |
+| 焦点需求 | 防止抢输入 |
+| 是否危险 | 触发确认或审批 |
+| 是否调用 Agent | 进入 turn 生命周期 |
+| 是否修改正文 | 进入 undo 或审批路径 |
+| 失败提示 | 用户知道如何恢复 |
 
-## 用户可见结果
+完整命令清单归 appendix;根层只定义命令治理规则。
 
-用户看到稳定纸面、可靠旁注、可预测快捷键、独立查询入口和明确输入焦点。系统不会让工具层 UI 抢走写作主体。
+## 查询浮层不是输入条
+
+| 能力 | 查询浮层 | Agent 输入条 |
+|---|---|---|
+| 目标 | 查项目事实 | 发起讨论/规划/写作 |
+| 输入来源 | 选区、高亮、手输查询 | 用户自然语言指令 |
+| 输出 | 带来源的结果和跳转 | 回答、报告、proposal |
+| 写入能力 | 无 | 可能触发审批路径 |
+| pending approval 时 | 可查 | 危险输入需阻止或提示 |
+
+把两者混成一个入口会让用户分不清“我是在查事实”还是“我在让 Agent 做事”。
+
+## Esc 和取消
+
+```mermaid
+stateDiagram-v2
+  [*] --> Paper
+  Paper --> QueryOpen
+  Paper --> ComposerOpen
+  Paper --> ApprovalOpen
+  QueryOpen --> Paper: Esc close
+  ComposerOpen --> Paper: Esc blur/close draft
+  ApprovalOpen --> Paper: Esc close if safe
+  Paper --> TurnCancel: explicit cancel command
+  ApprovalOpen --> TurnCancel: explicit cancel approval
+```
+
+Esc 先关闭最上层界面,不默认取消正在运行的 turn。取消 turn 需要明确命令,并进入 [04](./04-turn-orchestration.md) 的统一取消语义。
+
+## 外部编辑和 undo
+
+| 场景 | 处理 |
+|---|---|
+| 外部文件变化 | 提示重载/保留/手动合并,相关审批失效 |
+| AI rewrite 替换选区 | 必须进入 undo 栈或审批路径 |
+| 审批落盘后撤销 | 走 rollback,不是普通编辑器 undo |
+| 高亮索引过期 | 弱化或隐藏 |
+| 查询失败 | 保留输入和类型 |
+
+编辑器 undo 解决本地文本操作;审批后落盘属于系统变更,需要 rollback 语义。
+
+## FAQ
+
+**Q: 为什么 Esc 不直接取消 Agent?**
+
+A: 因为 Esc 常用于关闭浮层或退出输入。取消 Agent 是危险动作,要显式触发并进入统一 cancel。
+
+**Q: 高亮不准时怎么办?**
+
+A: 弱化或隐藏,提示索引状态。不能把过期高亮当最新事实。
+
+**Q: AI 改写能不能像普通输入一样进入 undo?**
+
+A: 轻量选区改写可以,但必须可撤销;高风险或跨文件改写应走审批。
+
+**Q: 命令面板和快捷键谁是主入口?**
+
+A: Command Registry 是主入口。快捷键、按钮、菜单、命令面板只是触发方式。
+
+**Q: IME 为什么要特别写进 spec?**
+
+A: 中文写作里 IME 组合态很常见。抢键会直接破坏写作体验,属于核心交互契约。
 
 ## Appendix
 

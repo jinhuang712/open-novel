@@ -1,107 +1,131 @@
 # 11 · Settings And Onboarding
 
-本文档定义首次启动、Settings、经验管理、模型配置、预算展示、项目生命周期和危险操作的实现契约。读完本篇应能理解:哪些设置是用户能理解和控制的产品行为,哪些只是实现参数不该暴露,以及 Reflector、守则阈值和 Debug 面板如何归口。
+这篇把 Settings 写成控制面板,不是内部参数仓库。它只放用户能理解、能控制、且会改变产品行为的东西。Onboarding 则只负责把用户带到第一个可写项目,不把所有高级开关塞进首启。
 
-## 要解决的问题
-
-设置页不能变成内部参数垃圾桶。它只承载用户能理解、能控制、且会改变产品行为的开关。Onboarding 则负责让用户完成最小可用配置,进入第一个项目。
-
-## 主权对象
-
-Settings And Onboarding 拥有:
-
-- workspace 选择。
-- API key 与模型能力配置入口。
-- Agent 开关和档位。
-- Reflector 开关。
-- 经验查看、调高、调低、删除。
-- 守则阈值和风险提示偏好。
-- 预算与用量展示。
-- Debug / Developer Mode 的只读诊断入口。
-- 项目导入、导出、删除。
-- 危险操作确认。
-- 首启和渐进式提示。
-
-## Onboarding 主路径
+## 首启路径
 
 ```mermaid
 flowchart TD
   Start[首次打开] --> Workspace[选择 workspace]
   Workspace --> Credential[配置模型凭据]
-  Credential --> Verify[验证基础能力]
-  Verify --> Project[创建/导入项目]
-  Project --> Ready[进入写作界面]
+  Credential --> Verify[验证核心能力]
+  Verify --> Project{创建还是导入?}
+  Project -->|创建| Seed[故事种子/样例结构]
+  Project -->|导入| Import[选择项目文件]
+  Seed --> Ready[进入写作界面]
+  Import --> Ready
 ```
 
-首启只要求最小可用配置。高级设置留在 Settings,不阻塞用户进入产品,除非缺失项会导致核心路径不可用。
+首启只验证核心路径:能保存项目、能调用模型、能进入写作界面。高级 Agent 档位、风格细节、Developer Mode 留给 Settings。
 
-## Settings 分类
+## Settings 分区
 
-Settings 应按用户心智分组:
+| 分区 | 用户问题 | 放什么 |
+|---|---|---|
+| Workspace | 我的项目放在哪里 | 路径、项目列表、导入导出 |
+| Model | AI 能不能用 | 凭据、连通性、可用模型 |
+| Agents | 哪些角色参与、强度如何 | 角色开关、档位、Reflector 学习 |
+| Style | 文字像不像我 | 风格偏好、范文、Humanizer 相关经验 |
+| Rules | 风险提示多严格 | 五大守则阈值、提示偏好 |
+| Memory | 系统学到了什么 | 经验查看、权重、关闭、删除 |
+| Usage | 花了多少 | 用量、预算、成本提示 |
+| Developer | 出问题怎么查 | Trace、过程日志、索引健康度、审计结果 |
 
-| 分类 | 内容 |
+内部 retry 常数、SQL 字段、prompt 片段、包版本和 native binding 细节不作为普通设置暴露。
+
+## 控制面板边界图
+
+```mermaid
+flowchart LR
+  Settings[Settings UI] --> Runtime[Runtime State]
+  Settings --> Storage[Project Storage]
+  Settings --> Creative[Creative Engine]
+  Settings --> Agent[Agent Runtime]
+  Settings --> Editor[Editor Interaction]
+  Dev[Developer Mode] -.read only.-> Runtime
+  Dev -.read only.-> Storage
+  Dev -.read only.-> Agent
+```
+
+Developer Mode 是只读诊断入口。它不能绕过审批,不能从过程日志恢复作品事实。
+
+## 经验管理的用户语义
+
+| 用户动作 | 系统含义 |
 |---|---|
-| Workspace | 存储位置、项目列表、导入导出 |
-| Model | 凭据、可用模型、基础连通性 |
-| Agents | 角色开关、档位、Reflector 是否学习 |
-| Style | 风格偏好、范文、Humanizer 相关经验 |
-| Rules | 五大守则阈值、风险提示偏好 |
-| Memory | 经验查看、权重调整、删除 |
-| Usage | 用量、预算、成本提示 |
-| Developer | Trace、过程日志、索引健康度、调试只读信息 |
+| 开启 Reflector | turn 完成后可学习新经验 |
+| 关闭 Reflector | 不再学习新经验 |
+| 关闭某条经验 | 后续不注入该经验 |
+| 调高/调低经验 | 改变 context builder 选用权重 |
+| 删除经验 | 从长期经验中移除 |
+| 清空经验 | 危险操作,需要确认范围 |
 
-内部包版本、SQL 字段、prompt 片段、retry 常数和 native binding 细节不直接作为普通设置暴露。
+“关闭学习”不等于“忘掉已经学会的东西”。这点必须在 UI 文案和实现上都清楚。
 
-## 经验管理
+## 危险操作工作流
 
-经验管理必须对用户透明:
+```mermaid
+sequenceDiagram
+  participant U as 用户
+  participant UI as Settings
+  participant S as Storage/Runtime
+  participant T as Turn Orchestration
 
-- 看得到系统学到了什么。
-- 看得到经验大致来源。
-- 能调高、调低或删除。
-- 能关闭继续学习。
-- 能区分“停止学习新经验”和“已有经验不再注入”。
+  U->>UI: 点击删除项目/清空经验/重置设置
+  UI->>UI: 展示影响范围和不可逆说明
+  U->>UI: 二次确认
+  UI->>T: 检查 active turn / pending approval
+  T-->>UI: 可执行或需先处理
+  UI->>S: 执行危险操作
+  S-->>UI: 成功/失败和恢复建议
+```
 
-Reflector 关闭后不产生新经验;已有经验默认继续生效。用户若希望完全不使用已有经验,需要在 Memory/Style 设置中关闭或删除。
+危险操作不能和 active writable turn 抢主权。存在 pending approval 时,用户应先处理审批或明确放弃。
 
-## 守则与风险设置
+## 守则设置的边界
 
-五大守则是核心产品契约,不能被普通设置完全绕过。Settings 可以调整阈值、提示强度和某些偏好,但不能允许用户在无提示情况下让阻断级风险静默落盘。
+| 设置 | 可以 | 不可以 |
+|---|---|---|
+| 提示强度 | 调整提示频率和展示方式 | 让阻断级风险静默落盘 |
+| 阈值 | 影响后续检测 | 自动改历史报告 |
+| 自定义偏好 | 改变诊断解释口径 | 覆盖项目事实 |
+| Agent 档位 | 调整分析深度 | 绕过审批主路径 |
 
-阈值变化需要影响后续检测,不应回写已完成历史报告,除非用户主动重新分析。
+守则是产品契约,不是纯偏好。Settings 可以调节体验,不能让系统变成无提示的静默改稿器。
 
-## Debug / Developer Mode
+## 设置失败收场
 
-Developer Mode 展示过程历史、Trace、索引健康度、上下文装配和外部事实审计结果。它是只读诊断入口:
+| 失败 | 用户可见 | 系统状态 |
+|---|---|---|
+| workspace 不可写 | 首启无法完成 | 不创建假项目 |
+| 凭据不可用 | 模型未配置 | 不标记 ready |
+| 设置保存失败 | 保存失败并保留原值 | 不显示为已生效 |
+| 经验更新失败 | 经验未改变 | context 继续用旧状态 |
+| 导入冲突 | 要求选择处理方式 | 不 silent overwrite |
+| 删除失败 | 显示残留范围 | 不从列表假删除 |
+| Debug 数据缺失 | 诊断不完整 | 不影响作品事实 |
 
-- 不能从 session_history 恢复项目事实。
-- 不能绕过审批直接写入。
-- 不能把内部事件变成用户可编辑作品内容。
+## FAQ
 
-## 项目生命周期
+**Q: 为什么首启不让用户配置所有 Agent?**
 
-导入、导出、删除和重置都是危险操作或高风险操作:
+A: 首启目标是进入可用项目。高级控制放在 Settings,避免首启变成参数考试。
 
-- 导入冲突必须让用户选择处理方式。
-- 导出应说明包含哪些项目文件和派生数据。
-- 删除项目必须二次确认。
-- 清空历史、清空经验、重置设置必须说明不可逆范围。
+**Q: 用户能不能完全不用经验?**
 
-## 失败语义
+A: 可以关闭或删除经验注入;但关闭 Reflector 只是不学新经验,不是自动停用旧经验。
 
-| 失败 | 系统行为 |
-|---|---|
-| workspace 不可写 | 不能完成首启 |
-| 凭据不可用 | 不能标记模型已配置 |
-| 设置保存失败 | UI 不显示为已生效 |
-| 经验更新失败 | 保留原状态并提示 |
-| 阈值保存失败 | 不影响既有守则契约 |
-| 导入冲突 | 用户选择,不 silent overwrite |
-| Debug 数据缺失 | 展示诊断缺口,不影响事实 |
+**Q: Developer Mode 能不能修数据库?**
 
-## 用户可见结果
+A: 根层契约里它是只读诊断入口。修复工具若存在,必须有独立危险操作和确认。
 
-用户看到清晰的首启流程、可理解的设置分组、可管理的经验、可调但不可绕过的风险规则、明确的危险操作确认和只读调试入口。
+**Q: 删除项目是否也删除运行时历史?**
+
+A: UI 必须说明删除范围。项目文件、派生索引、运行时历史和经验是否删除要分别确认或按明确规则执行。
+
+**Q: 模型凭据验证失败时能否进入离线模式?**
+
+A: 可以进入不依赖模型的只读/编辑能力,但不能把 Agent 能力显示为可用。
 
 ## Appendix
 

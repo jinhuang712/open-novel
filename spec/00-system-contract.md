@@ -1,112 +1,185 @@
 # 00 · System Contract
 
-本文档是 Open Novel 技术体系的入口。读完本篇应能理解系统整体怎么分层、一次创作请求会经过哪些主干能力、哪些事实需要在代码前验证,以及核心 spec 与 appendix 各自承担什么角色。
+这是一张系统总图,不是目录。读完本篇,实现者应该能回答三个问题:一次创作请求会穿过哪些层,每层最多能做什么,哪类失败必须停下来让用户或文档重新裁决。
 
-核心判断:根层 spec 不是目录,也不是规章模板。根层 spec 必须让实现者读完就知道系统如何工作;appendix 只保存不需要主动阅读的机器级明细。
+本篇的写法刻意不像其他 spec:它是全局契约地图。细节进入后面的专题文档;这里保留系统的不可让渡规则、读文档的顺序和跨层事故处理方式。
 
-## 系统形态
+## 十分钟读法
 
-Open Novel 是本地单机创作工作台。它以一个应用承载前端、后端接口、Agent runner、存储访问、编辑器集成和本地项目管理。系统不把创作流程交给通用 Agent 框架的隐式 memory / workflow,而是用自定义 runner 明确连接模型调用、工具执行、结构化输出、审批挂起、回滚和流式可观测性。
-
-系统的主干链路是:
+先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实,Agent 产生回答或提议,作者审批,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。
 
 ```mermaid
 flowchart LR
-  User[作者输入或编辑] --> Turn[Turn Orchestration]
+  Author[作者] --> Turn[Turn Orchestration]
   Turn --> Context[Context And Query]
   Context --> Agent[Agent Runtime]
-  Agent --> Proposal[Proposal / Report / Answer]
-  Proposal --> Approval[Approval / User Decision]
-  Approval --> Storage[Project Storage]
+  Agent --> Draft[回答 / 报告 / Proposal]
+  Draft --> Approval{是否写入作品?}
+  Approval -->|否| Stream[Streaming UI]
+  Approval -->|是,需审定| Decision[作者审批]
+  Decision --> Storage[Project Storage]
   Storage --> KG[Knowledge Graph]
   KG --> Context
-  Turn --> Stream[Streaming UI Protocol]
-  Stream --> UI[Editor / Trace / Approval UI]
+  Turn --> Stream
+  Stream --> Editor[Editor And Interaction]
+  Settings[Settings And Onboarding] --> Turn
+  Runtime[Runtime State] --> Context
+  Runtime --> Stream
 ```
 
-这条链路有两个不可变约束:
+如果只能记住一件事,就是:系统可以自动分析、自动提议、自动解释,但不能静默改变作品事实。任何看起来“方便”的捷径,只要绕过审批、主权边界或可恢复状态,都是架构错误。
 
-- AI 只产生回答、报告或变更提议;写入作品事实必须经过用户直接编辑或审批路径。
-- 一致性所需事实不能被上下文、prompt、事件流或 appendix 隐式裁掉;放不下时显式失败或拆分处理。
+## 三条系统律
 
-## 数据分层
-
-系统数据分为四类,它们不能互相替代:
-
-| 类型 | 作用 | 主权位置 |
+| 系统律 | 具体含义 | 一旦违反会发生什么 |
 |---|---|---|
-| 作品事实 | 作者真正拥有的设定、章节、审批后变更 | project storage |
-| 派生索引 | 实体、概念、锚点、embedding、反向引用 | knowledge graph |
-| 运行时记忆 | thread、message、压缩摘要、经验注入 | runtime state |
-| 过程历史 | 模型调用、工具运行、trace、成本、调试事件 | runtime state / streaming |
+| 作者文件优先 | 章节、设定、大纲、角色卡等可读文件和审批后事实是作品主权来源 | 派生索引、会话历史、Trace 都不能覆盖作品事实 |
+| 提议先于写入 | Agent 输出只能是回答、报告或可审批 proposal | 直接写盘、隐式落盘、模型自批自改都视为阻断级错误 |
+| 可解释失败优先于猜测继续 | 关键事实、上下文、索引、结构化输出缺失时必须显式失败或降级 | 不允许用默认值、自然语言猜测或静默裁剪伪装成功 |
 
-作品事实永远高于派生索引。派生索引用于查询、上下文装配和 UI 提醒,不能反向覆盖作者文件。过程历史只解释“系统刚刚做过什么”,不能作为项目恢复或作品事实恢复的来源。
+这三条系统律高于单篇 spec 的局部便利。后续文档只是在各自领域解释它们如何落地。
 
-## 技术路线
+## 一次“改角色设定”的完整旅程
 
-当前实现路线由四个决定组成:
+用一个具体场景理解系统:作者把主角的能力代价从“失眠”改成“短暂失明”,并要求全书同步。
 
-- 单应用本地运行,用户数据在本机 workspace 中管理。
-- 模型调用走显式 runner,由系统控制 stop、tool、JSON 校验、retry 和升级失败。
-- 作品文件与本地数据库并用:作者可读内容保存在文件系统,高频查询和一致性索引进入本地数据库。
-- UI 以写作为主体,Agent 过程通过状态点、Trace、审批卡和查询浮层暴露,不让实现细节占据主界面。
+```mermaid
+sequenceDiagram
+  participant U as 作者
+  participant E as Editor
+  participant O as Turn Orchestration
+  participant Q as Context/Query
+  participant R as Agent Runtime
+  participant S as Storage
+  participant K as Knowledge Graph
+  participant V as Streaming UI
 
-技术路线不是版本锁定表。具体包版本、native binding 组合、构建配置和实查命令属于 appendix 或 TODO;根层只记录它们是否会阻塞主路径。
+  U->>E: 输入设定修改
+  E->>O: 提交 user turn
+  O->>Q: 计算影响范围
+  Q->>K: 查实体、伏笔、章节锚点
+  K-->>Q: 候选章节和来源
+  Q->>R: 请求复核和生成候选改写
+  R-->>O: ChangeSet proposal
+  O->>V: 展示待审批状态
+  U->>O: 接受 / 修改后接受 / 拒绝
+  O->>S: 审批后落盘
+  S->>K: 局部 reindex
+  K-->>V: 索引健康度和可见结果
+```
 
-## 外部事实审计
+这个旅程里没有任何一步允许 Agent “顺手改文件”。影响范围由索引和规则先找出,模型只复核和生成候选;用户一次看全再决定;落盘后再刷新派生索引。
 
-下列事实会直接影响系统路径,代码前必须实查:
+## 层与层之间的主权线
 
-- 模型是否支持所需上下文长度、结构化输出和流式行为。
-- runner 所依赖的 stop、tool result、stream callback 是否能端到端工作。
-- 本地数据库、向量扩展、native binding 与运行时环境是否兼容。
-- 构建工具、server runtime 和本机文件权限是否允许同步写入与本地扩展加载。
-- 深浅主题、编辑器、快捷键与本地浏览器行为是否符合 design 契约。
+```mermaid
+flowchart TB
+  subgraph Sovereign[主权层]
+    Files[作者文件]
+    Approved[审批后项目事实]
+    TurnState[持久 turn 状态]
+  end
 
-审计失败不能静默改路线。例如结构化输出不可用时,不能把 JSON 契约偷偷降级成自然语言解析;本地扩展不可加载时,不能让知识图谱假装语义检索可用。失败只能进入三类处理:显式阻断、用户确认的降级、或回写 spec/TODO 重新设计。
+  subgraph Derived[派生层]
+    KG[实体 / 概念 / 锚点 / embedding]
+    Context[Context package]
+    Reports[诊断和读者报告]
+  end
 
-## Spec 与 Appendix 分工
+  subgraph Runtime[运行层]
+    Threads[会话和摘要]
+    Trace[工具调用 / 模型调用 / 成本]
+    UIEvents[流式事件]
+  end
 
-根层 spec 必须自洽可读。每篇核心 spec 至少说明:
+  Files --> KG
+  Approved --> KG
+  KG --> Context
+  Threads --> Context
+  Context --> Reports
+  TurnState --> UIEvents
+  Trace --> UIEvents
+  Derived -.不能反写主权.-> Sovereign
+  Runtime -.不能恢复作品事实.-> Sovereign
+```
 
-- 解决什么问题。
-- 谁拥有主权,谁只是调用者。
-- 一次主路径如何流转。
-- 哪些对象、状态和失败会影响用户。
-- 哪些实现明细后置到 appendix。
+主权层决定业务结果。派生层提高查询和写作能力。运行层解释过程。三者可以互相引用,但不能互相伪装。
 
-appendix 只放读者不需要主动阅读的明细,包括完整表结构、完整 JSON Schema、工具参数全表、prompt 全文、测试矩阵、版本审计和迁移命令。appendix 不能成为旧文档堆场;历史原文归 progress archive。
+## 技术路线的边界
 
-当一个字段、事件或状态会改变系统行为时,根层 spec 必须点名它的存在。appendix 可以展开字段,但不能独占行为语义。
-
-## 主权地图
-
-| 主权 | 根层文档 | 说明 |
+| 决策 | 当前路线 | 根层关心的理由 |
 |---|---|---|
-| 技术路线与审计闸门 | 本篇 | 不允许未审计事实进入实现主路径 |
-| 项目事实与文件落盘 | [01](./01-project-storage.md) | 作者文件、项目事实库、派生索引边界 |
-| 会话、经验与过程历史 | [02](./02-runtime-state.md) | runtime.db 与 session_history.db 的职责 |
-| 模型调用与工具边界 | [03](./03-agent-runtime.md) | runner、prompt、tool、JSON 输出 |
-| turn、cascade、approval、rollback | [04](./04-turn-orchestration.md) | 一次用户输入如何变成可审批结果 |
-| 流式事件与 UI 可观测性 | [05](./05-streaming-ui-protocol.md) | 过程如何被前端看见 |
-| 知识图谱与派生事实 | [06](./06-knowledge-graph.md) | 实体、概念、锚点、embedding |
-| 上下文、影响分析与查询 | [07](./07-context-and-query.md) | Agent 写作和用户查询如何取事实 |
-| 创作质量与守则 | [08](./08-creative-engine.md) | 五大守则、叙事诊断、模拟读者 |
-| 风格与去 AI 味 | [09](./09-style-and-humanizer.md) | 表达层改写不能越过事实 |
-| 编辑器与交互 | [10](./10-editor-and-interaction.md) | 高亮、命令、查询、焦点 |
-| 设置与首启 | [11](./11-settings-and-onboarding.md) | 用户可配置和危险操作 |
+| 应用形态 | 本地单机工作台,一个应用承载前端、后端接口、Agent runner 和本地存储 | 用户数据在本机;路径、权限、导入导出必须可解释 |
+| Agent loop | 自定义 runner 显式控制模型调用、工具、结构化输出、retry、stream | 不把审批、memory、workflow 交给黑盒框架 |
+| 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
+| UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、查询浮层暴露 | 过程透明,但不让日志淹没写作 |
+| 明细归口 | 表结构、schema、prompt、工具参数、测试矩阵进 appendix | 核心 spec 读完必须懂设计,不被字段表打断 |
 
-## 失败语义
+具体包版本、字段定义、JSON schema 和命令参数不是本篇职责。它们只有在会改变系统律或失败语义时才回到根层。
 
-系统级失败按来源处理:
+## 外部事实审计闸门
 
-- 事实未验证:阻塞实现并写入 TODO 或审计 appendix。
-- 能力不满足:回写技术路线,不得让业务层绕行。
-- 契约冲突:以主权文档为准,重复定义处改成引用。
-- 派生数据失败:作品事实保留,派生能力进入可解释降级。
-- 过程事件失败:不把 UI 事件当事实源,从持久 turn 状态恢复。
+有些事实不能靠文档想象,必须在代码前实查。它们不是“实现细节”,因为一旦不成立,主路径会变。
 
-任何“默认值继续”“忽略失败继续”“用模型猜事实继续”的写法都必须被视为契约冲突,除非根层 spec 明确允许该降级并定义用户可见提示。
+| 审计对象 | 必须证明什么 | 失败后的处理 |
+|---|---|---|
+| 模型能力 | 上下文长度、结构化输出、流式行为满足核心路径 | 不伪装支持;回写 TODO 或换路线 |
+| Runner 能力 | stop、tool result、stream callback 能端到端工作 | 不能让 Agent loop 处在半隐式状态 |
+| 本地数据库和向量扩展 | native binding、WAL、JOIN、热重载连接稳定 | 写入和索引能力未验证前不进入实现主路径 |
+| 文件系统 | workspace 权限、外部编辑监听、原子写/回滚可行 | 不允许出现“UI 成功、文件失败”的假状态 |
+| 前端交互 | 编辑器、IME、快捷键、断线恢复符合 design/spec 契约 | 不能让交互层绕过 turn 状态 |
+
+审计结果归 appendix 或 TODO;路线变化必须同步根层 spec 和 CHANGELOG。
+
+## 读者导航
+
+| 想理解的问题 | 先读 |
+|---|---|
+| 作品事实怎么保存、外部编辑怎么处理 | [01 · Project Storage](./01-project-storage.md) |
+| 系统记住什么、Reflector 关闭是什么意思 | [02 · Runtime State](./02-runtime-state.md) |
+| Agent 怎么运行、工具和 JSON 失败怎么办 | [03 · Agent Runtime](./03-agent-runtime.md) |
+| 一次 turn 怎么审批、取消、回滚 | [04 · Turn Orchestration](./04-turn-orchestration.md) |
+| UI 怎么看见过程、断线怎么恢复 | [05 · Streaming UI Protocol](./05-streaming-ui-protocol.md) |
+| 实体、锚点、embedding 怎么维护 | [06 · Knowledge Graph](./06-knowledge-graph.md) |
+| 上下文和影响分析怎么装配 | [07 · Context And Query](./07-context-and-query.md) |
+| 五大守则和读者预演怎么进入审批 | [08 · Creative Engine](./08-creative-engine.md) |
+| 去 AI 味如何不改剧情 | [09 · Style And Humanizer](./09-style-and-humanizer.md) |
+| 编辑器、命令、焦点、查询怎么协作 | [10 · Editor And Interaction](./10-editor-and-interaction.md) |
+| 首启、设置、经验管理、危险操作归哪 | [11 · Settings And Onboarding](./11-settings-and-onboarding.md) |
+
+## 失败不是错误码
+
+本项目里的“失败语义”不是列错误码,而是回答五个问题:谁还拥有真相,哪些结果已经生效,用户能看到什么,系统能否重试,哪些动作绝对不能自动做。
+
+| 事故类型 | 真相归谁 | 系统能做 | 系统不能做 |
+|---|---|---|---|
+| Agent 输出坏了 | turn 状态和上下文包 | 重试、解释失败、要求用户调整输入 | 把坏 JSON 当自然语言猜出来 |
+| 文件写入坏了 | 审批前快照和文件系统 | 停止落盘、保留 pending/failed 状态 | 标记审批已生效 |
+| 索引刷新坏了 | 作者文件和审批后事实 | 标记索引过期、降级查询 | 用旧索引继续高风险生成 |
+| stream 断了 | 持久 turn 状态 | 重连后恢复状态和 Trace | 用浏览器内存判断业务结果 |
+| 经验学习坏了 | 本次审批结果 | 本次写入照常收尾、标记未学习 | 生成一条模糊经验继续注入 |
+
+## FAQ
+
+**Q: 为什么不把完整表结构直接放在每篇 spec 里?**
+
+A: 因为读者首先需要理解系统行为。字段表会变化,主权边界和失败收场不能散落在字段里。
+
+**Q: appendix 会不会又变成垃圾桶?**
+
+A: 不允许。appendix 只放服务某篇根层契约的机器级明细;如果明细改变行为,必须回到根层 spec。
+
+**Q: 为什么不用通用 Agent 框架接管 workflow?**
+
+A: 这里最关键的是审批、回滚、上下文、流式可观测性和文件主权。它们需要显式控制,不能藏在框架记忆或隐式 workflow 里。
+
+**Q: Agent 能不能在用户授权后自动批量改?**
+
+A: 可以批量生成 proposal,也可以在用户审批后批量落盘;不能跳过“用户看到并审定这一批具体变更”的动作。
+
+**Q: 技术路线之后变了怎么办?**
+
+A: 能力实查失败或实现证据推翻路线时,更新本篇的路线/审计闸门,同步相关 spec、TODO 和 CHANGELOG。
 
 ## Appendix
 

@@ -1,124 +1,153 @@
 # 01 · Project Storage
 
-本文档定义项目事实如何保存、写入、回滚和重新索引。读完本篇应能理解:哪些内容是作者真正拥有的事实,哪些只是系统派生索引,一次审批通过后如何落盘,外部编辑或索引失败时系统如何保持可解释。
+这篇不是数据库设计,而是一份“作品事实保管协议”。它解释作者文件、项目事实库和派生索引如何一起工作,以及在外部编辑、写入失败、索引失败时系统如何避免撒谎。
 
-## 要解决的问题
+## 两个开场事故
 
-作者写的是长篇小说,项目既要能被人直接带走和审查,又要支持高频一致性查询、连带修改、引用跳转和上下文装配。因此项目存储采用“双层事实”:
+先用两个事故定义存储层。
 
-- 人类可读文件保存作品事实。
-- 本地项目事实库保存可查询索引、审批记录和派生状态。
-
-这不是两套真源。文件和审批后项目事实是主权来源;实体引用、embedding、反向链接和查询缓存只是派生能力。
-
-## 主权对象
-
-Project Storage 拥有:
-
-- workspace 与 project 边界。
-- 章节、设定、大纲、角色、世界观等作者文件。
-- 文件 frontmatter 的校验与归一化。
-- 项目事实库的生命周期。
-- 审批落盘记录。
-- 派生索引刷新触发点。
-- 外部编辑冲突和 rollback 落点。
-
-Project Storage 不拥有 Agent 意图解释,也不决定某个变更是否应该被用户接受。它只在 turn orchestration 已经给出可落盘决定后执行持久化。
-
-## 存储拓扑
-
-一个项目至少包含三类内容:
-
-| 层 | 内容 | 是否真源 |
+| 事故 | 如果设计错误 | 本篇要求 |
 |---|---|---|
-| 项目文件 | 章节正文、设定资料、项目元信息、用户可读产物 | 是 |
-| 项目事实库 | 实体、关系、审批、索引状态、派生表 | 部分是,部分派生 |
-| 派生缓存 | embedding、反向引用、搜索缓存、临时诊断结果 | 否 |
+| 作者在外部编辑器改了同一章,同时应用里还有一个待审批改写 | AI 提议被直接套到新文件上,覆盖作者刚改的内容 | 外部编辑让相关审批失效,用户重新审定 |
+| 审批通过后文件写成功,索引刷新失败 | UI 显示“全部完成”,但查询和高亮还在旧事实上 | 作品事实生效,索引标记过期,下游能力显式降级 |
 
-运行时会话和过程历史不属于项目存储主权。它们分别由 [02](./02-runtime-state.md) 管理,避免一本书的事实和跨项目对话、调试日志混在一起。
+Project Storage 的核心价值不是“把数据存起来”,而是让每个事故都有可信的收场。
 
-## 写入主路径
+## 事实账本
+
+| 对象 | 例子 | 是否作品真源 | 读者需要知道什么 |
+|---|---|---|---|
+| 作者文件 | 章节、设定、角色、大纲、项目元信息 | 是 | 可以被人直接打开、迁移、审查 |
+| 审批后项目事实 | 已接受的 ChangeSet、文件版本、落盘记录 | 是 | 解释“这次变更何时生效” |
+| 项目索引 | 实体、关系、锚点、引用、embedding | 否 | 只帮助查询和生成,不能覆盖文件 |
+| 运行时历史 | thread、trace、tool run、成本 | 否 | 不属于项目存储主权 |
+
+作者文件和审批后事实共同构成作品账本。派生索引是账本的目录和检索卡片,不是第二本账。
+
+## 项目拓扑
+
+```mermaid
+flowchart TB
+  Workspace[workspace]
+  Workspace --> ProjectA[project]
+  ProjectA --> Files[human-readable files]
+  ProjectA --> ProjectDB[project fact/index db]
+  ProjectA --> Derived[derived caches]
+  Runtime[global runtime db] -.separate.-> Workspace
+  Session[session history db] -.per project but diagnostic.-> ProjectA
+
+  Files --> ProjectDB
+  ProjectDB --> Derived
+  Files -.external editor may change.-> Files
+```
+
+运行时会话可以引用项目,但不能成为项目事实。过程历史可以解释一次操作,但不能恢复章节正文。这个隔离让“带走项目文件”和“调试系统过程”不混在一起。
+
+## 落盘剧本
+
+审批通过后的写入必须像事务剧本一样走完,不能边走边宣称完成。
 
 ```mermaid
 sequenceDiagram
-  participant T as Turn Orchestration
-  participant A as Approval
+  participant O as Turn Orchestration
   participant S as Project Storage
+  participant F as Files
+  participant D as Project DB
   participant K as Knowledge Graph
-  participant U as UI
+  participant UI as Streaming UI
 
-  T->>A: 提交 ChangeSet
-  A->>T: 用户接受 / 修改后接受
-  T->>S: 请求落盘
-  S->>S: 校验路径、frontmatter、外部版本
-  S->>S: 写文件与项目事实
-  S->>K: 触发局部 reindex
-  K-->>S: 索引刷新结果
-  S-->>U: 生效 / 部分过期 / 失败
+  O->>S: apply approved ChangeSet
+  S->>S: 校验项目边界和版本指纹
+  S->>F: 写作者文件
+  S->>D: 记录审批后事实和写入结果
+  S->>K: 请求局部 reindex
+  alt reindex ok
+    K-->>S: 索引健康
+    S-->>UI: 已生效
+  else reindex failed
+    K-->>S: 索引过期范围
+    S-->>UI: 作品已保存,派生能力降级
+  end
 ```
 
-落盘必须满足三点:
+关键点是:落盘成功和 reindex 成功不是同一件事。作品可以已经保存,索引仍然过期;UI 必须区分这两种状态。
 
-- 路径在项目边界内,不能越权写入 workspace 之外。
-- 写入基于审批时看到的前置版本,外部编辑命中时审批失效。
-- 文件和数据库状态不能半成功地对用户伪装成已完成。
+## 文件可以被人读,但不能被随意解释
 
-## 文件与 Frontmatter
+作者文件承担迁移和审查价值,因此正文、设定和大纲要保持人类可读。系统依赖 frontmatter 或等价元信息来识别文件身份、类型、版本和派生属性。
 
-作者可读文件是项目可迁移性的基础。文件内容允许被普通编辑器打开;frontmatter 保存系统理解文件所需的最小结构信息,例如身份、类型、派生标记和版本指纹。
-
-frontmatter 校验失败时,系统不能把文件当成可信事实继续生成高风险内容。它可以提示用户修复,也可以把该文件从某些派生能力中临时排除,但必须让用户知道一致性能力不完整。
-
-编码和换行归一化属于存储层责任。归一化不能改变正文语义,也不能在没有审批的情况下改写作品内容。
-
-## 派生索引
-
-派生索引服务四类能力:
-
-- 查询:快速找到实体、概念、段落和引用。
-- 上下文:为 Agent 装配写作所需事实。
-- 一致性:判断变更影响范围和冲突。
-- UI:高亮、旁注、跳转和风险提示。
-
-派生索引由 reindex 维护,不是作者事实。索引过期时,系统应展示“索引过期 / 局部不可用”的状态,而不是让查询或 Agent 继续假装掌握完整事实。
-
-## 外部编辑
-
-用户可以绕过应用直接改项目文件。系统检测到外部变更时:
-
-- 文件事实优先于 pending 审批。
-- 命中同一文件或同一锚点范围的审批失效。
-- 相关派生索引进入待刷新。
-- UI 需要解释哪些待审批内容不再可用。
-
-系统不自动合并外部编辑和 AI 提议,除非用户重新审定。
-
-## 并发与连接
-
-项目存储必须把写入串行化到可解释的顺序。多个 turn、reindex、外部文件 watcher 和设置操作不能同时写出互相覆盖的状态。
-
-数据库连接、WAL、native binding 和热重载连接泄漏属于实施前验证项。根层契约只要求:如果连接或 native binding 异常,写入路径必须阻断,不能落入“文件已改、事实库未改、UI 显示成功”的状态。
-
-## Rollback
-
-rollback 是按已生效变更逆序撤销,不是重新让 Agent 猜一遍。rollback 需要依赖审批前快照、变更摘要和文件版本。如果快照缺失或外部编辑已经改变同一区域,rollback 失败必须显式展示并停止后续动作。
-
-## 失败语义
-
-| 失败 | 系统行为 |
+| 情况 | 存储层处理 |
 |---|---|
-| 文件不可写 | 审批不能标记为已生效 |
-| frontmatter 不合法 | 阻断依赖该文件的高风险生成或要求修复 |
-| 外部编辑冲突 | 命中审批失效,用户重新审定 |
-| 数据库写入失败 | 落盘失败,不得展示成功 |
-| reindex 失败 | 作品事实保留,知识图谱标记部分过期 |
-| rollback 失败 | 保留错误状态、停止连锁动作、提示人工处理 |
+| frontmatter 合法 | 文件进入项目事实和索引刷新路径 |
+| frontmatter 缺失但可识别 | 提示修复或进入受限导入流程 |
+| frontmatter 损坏 | 阻断高风险生成,不把文件当可信事实 |
+| 文件标记为派生 | 防止派生内容伪装成作者原始事实 |
+| 编码/换行不一致 | 只做不改变语义的归一化 |
 
-## 用户可见结果
+文件可读不等于模型可随意相信。导入资料、用户粘贴正文和外部编辑内容仍是普通内容,不能变成系统指令。
 
-用户看到的是项目文件是否保存、审批是否生效、哪些索引或查询能力暂不可用、哪些待审批内容因外部编辑失效。用户不需要理解表结构,但必须能理解“为什么这次不能继续”。
+## 外部编辑的冲突判定
+
+```mermaid
+stateDiagram-v2
+  [*] --> Clean
+  Clean --> PendingApproval: ChangeSet created
+  Clean --> ExternalChanged: external file edit
+  PendingApproval --> Invalidated: same file or anchor changed externally
+  PendingApproval --> Applicable: no overlap
+  Invalidated --> RebuildProposal: user requests re-run
+  Applicable --> Applied: user accepts
+  ExternalChanged --> ReindexNeeded
+  Applied --> ReindexNeeded
+  ReindexNeeded --> Clean: index refreshed
+```
+
+系统不自动把旧 proposal 套到新文件。只要外部编辑命中同一文件、同一段落锚点或同一版本指纹,相关审批就失效。
+
+## 失败收场表
+
+| 失败现场 | 已生效的东西 | 用户看到 | 可重试动作 |
+|---|---|---|---|
+| 路径越界或 workspace 不可写 | 无 | 无法写入项目位置 | 修复路径/权限后重试 |
+| 文件写失败 | 无或部分临时状态 | 审批未生效 | 从失败点重试或取消 |
+| 项目事实库写失败 | 不得标记完成 | 落盘失败,文件状态需校正 | 回滚文件或重跑事务 |
+| reindex 失败 | 作者文件已生效 | 索引过期,查询/高亮降级 | 重新索引 |
+| rollback 快照缺失 | 已生效变更保留 | 无法自动撤销 | 人工处理并重新索引 |
+| 外部编辑冲突 | 外部文件事实优先 | 待审批内容失效 | 重新生成 proposal |
+
+## 与其他 spec 的握手
+
+| 对方 | Project Storage 给它什么 | Project Storage 从它要什么 |
+|---|---|---|
+| [04](./04-turn-orchestration.md) | 落盘结果、rollback 结果、冲突状态 | 已审批 ChangeSet 和事务意图 |
+| [06](./06-knowledge-graph.md) | 文件变更范围、版本、派生写入边界 | reindex 健康度和过期范围 |
+| [07](./07-context-and-query.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
+| [10](./10-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
+| [11](./11-settings-and-onboarding.md) | workspace/project 生命周期结果 | 导入、导出、删除等危险操作确认 |
+
+## FAQ
+
+**Q: 文件和数据库谁是真源?**
+
+A: 作者可读文件和审批后事实是真源。数据库里既有真源记录,也有派生索引;具体表的主权在 appendix 展开。
+
+**Q: reindex 失败为什么不回滚作品文件?**
+
+A: 因为作者文件已经是作品事实。索引失败影响查询和辅助能力,不应自动撤销作者刚审定的内容。
+
+**Q: 外部编辑是不是应该自动 merge?**
+
+A: 不应该默认自动 merge。小说正文的语义改动很难安全合并,命中待审批区域时应让 proposal 失效并重新审定。
+
+**Q: 过程历史能不能恢复项目?**
+
+A: 不能。过程历史只解释系统做过什么;项目恢复以作者文件、审批后事实和明确快照为准。
+
+**Q: 为什么要标记派生文件?**
+
+A: 防止摘要、报告、缓存或重建产物被误当成作者原创事实,从而污染后续生成。
 
 ## Appendix
 
-- [appendix/schema-tables](./appendix/schema-tables.md) 保存文件、frontmatter、项目事实库和迁移字段明细。
-- [appendix/migration-notes](./appendix/migration-notes.md) 保存 native binding、连接和迁移审计。
+- [appendix/schema-tables](./appendix/schema-tables.md) 保存文件、frontmatter、项目事实库、派生索引和迁移字段明细。
+- [appendix/migration-notes](./appendix/migration-notes.md) 保存 native binding、WAL、连接和迁移审计。
