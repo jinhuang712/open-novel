@@ -25,6 +25,22 @@
 - [M08 Approval Cascade](../M08-approval-cascade.md)
 - [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
+## 实现前字段覆盖矩阵
+
+实现某个能力前,至少要确认下列字段族是否存在;未实现能力可先不展开具体字段,但不能把字段藏回根层 spec。
+
+| 能力/平台 | 字段族 |
+|---|---|
+| Search / Query / Knowledge Surface | search history、recent object、preview cache、entity / relation / anchor health、query source jump |
+| Discuss / Planning / Writing | turn id、mode gate、proposal draft、context package reference、decision state |
+| Inline Review / Humanizer | selection anchor、suggestion id、diff range、accepted/rejected state、editor undo bridge metadata |
+| Approval / Cascade | ChangeSet、approval item、decision、low-confidence item、internal recovery snapshot、reindex status |
+| Trace / Recap / Activity | trace step、tool run reference、activity recap、author note、continuation action |
+| Memory / Reflector / Agent Controls | learning item、source decision、weight、mute/delete state、agent enablement and budget |
+| Settings / Onboarding / Project Library | workspace path、project metadata、danger action audit、recent project、library filter |
+| platform/Ixx | provider capability cache、editor adapter state、watcher cursor、import/export manifest、desktop permission |
+| platform/Rxx | lifecycle state、backup manifest、migration version、repair job、diagnostics export audit |
+
 ## Experience / Reflector 字段归口
 
 经验管理的实现明细归本篇维护,根层语义以 [S02](../S02-runtime-state.md)、[S11](../S11-settings-and-onboarding.md) 和 [M12](../M12-memory-learning-management.md) 为准。实施时至少需要记录下列字段族:

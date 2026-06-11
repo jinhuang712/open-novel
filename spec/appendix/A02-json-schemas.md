@@ -32,6 +32,20 @@
 - [M11 ReaderPanel](../M11-reader-panel.md)
 - [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
+## 实现前 schema 覆盖矩阵
+
+| 能力/平台 | schema 对象 |
+|---|---|
+| Router / Mode | router action、mode switch request、illegal action error |
+| Context / Query | context package、evidence item、fact query result、source jump |
+| Search / Command | search intent、result group、preview payload、command invocation |
+| Writing / Planning / Approval | proposal draft、ChangeSet、approval item、risk acknowledgement、decision payload |
+| Inline Review / Humanizer | inline suggestion、diff hunk、near-text action、style report |
+| Creative Engine / ReaderPanel | cardinal rule report、narrative report、reader persona report、aggregation summary |
+| Trace / Recap | trace step、developer detail envelope、recap payload、activity item、author note |
+| Settings / Onboarding / Project Library | settings patch、danger action request、workspace bootstrap result、project list item |
+| platform/Ixx/Rxx | provider capability, adapter event, import/export manifest, backup/restore result, migration result, diagnostic bundle manifest |
+
 ## 边界
 
 schema 可在 appendix 细化;但如果某个字段缺失会改变 retry、approval、blocking、内部恢复或用户可见风险,根层 spec 必须点名该字段的行为意义。

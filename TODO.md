@@ -4,11 +4,7 @@
 
 ## 1 · 当前文档待办
 
-| 类别 | 状态 | 说明 |
-|---|---|---|
-| appendix 明细抽取 | **1 open** | active [spec appendix](./spec/appendix/README.md) 已收敛为 `A/V` 分类归口,旧 29 篇原文已归档;后续实现前需按需从 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md) 抽取当前有效的表结构、schema、工具参数、prompt、golden cases 和测试矩阵,避免重新把历史噪音搬回 appendix。 |
-| M/platform 明细深化 | **1 open** | `M01-M17` 已作为根层能力 spec 建立,`I01-I05` / `R01-R05` 已迁入 `spec/platform/`;后续进入代码前,需要按实际实现顺序把对应字段、命令、事件、测试样例和 spike 结果补进 `Axx/Vxx`,不要把 appendix 细节倒灌回核心正文或 platform 契约。 |
-| 风险三档命名中英混用 | **1 open** | [plan/03](./plan/03-guardrails.md) 风险等级「提示级 / critical / blocking」中英混用,critical/blocking 为 spec 枚举值直接入 plan(G1 边界);改为全中文产品命名(如「确认级 / 阻断级」)需动 R10 文本与 [plan/08](./plan/08-approval-and-cascade.md) 引用,属红线级变更,待用户裁决后与 [spec/S04](./spec/S04-turn-orchestration.md) / [spec/S08](./spec/S08-creative-engine.md) 同步。 |
+当前无开放文档待办。已关闭的文档迁移、appendix 抽取规则、M/platform 明细覆盖和风险等级命名收敛见 [CHANGELOG.md](./CHANGELOG.md)。
 
 ## 2 · 实施前开放验证
 

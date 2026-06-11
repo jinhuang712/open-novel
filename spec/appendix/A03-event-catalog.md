@@ -27,6 +27,19 @@
 - [M11 ReaderPanel](../M11-reader-panel.md)
 - [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
+## 实现前事件覆盖矩阵
+
+| 能力/平台 | 事件族 |
+|---|---|
+| Turn / Stream | turn created、state changed、step started/finished、control emitted、stream recovered |
+| Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed |
+| Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed |
+| Inline Review / Editor | selection captured、suggestion rendered、near-text action selected、editor replace applied、undo bridge recorded |
+| Trace / Recap / Activity | trace step appended、developer detail attached、recap created、author note added、continuation selected |
+| Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent toggled、budget changed |
+| Settings / Onboarding / Library | settings saved、danger action confirmed、workspace initialized、project opened/closed |
+| platform/Ixx/Rxx | provider capability checked、watcher event received、import/export completed、backup/restore completed、migration/repair job updated、diagnostics exported |
+
 ## 边界
 
 事件字段可在 appendix 更新;但事件是否改变 turn 结果、审批状态、取消结果或用户可见状态,必须由根层 spec 定义。

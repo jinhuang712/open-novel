@@ -182,7 +182,7 @@ A: 可以,但它必须读取一致快照或标记当前状态,不能改变正在
 
 A: 不作为默认恢复。恢复以持久 turn 状态为准,避免重复执行危险动作。
 
-**Q: blocking 风险来自 Creative Engine 时,谁阻断?**
+**Q: 阻断级风险来自 Creative Engine 时,谁阻断?**
 
 A: Creative Engine 提供风险;Turn Orchestration 在审批和落盘路径上执行阻断语义。
 

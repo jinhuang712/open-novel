@@ -38,6 +38,21 @@
 - [M11 ReaderPanel](../M11-reader-panel.md)
 - [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
+## 实现前验证覆盖矩阵
+
+| 能力/平台 | 必测场景 |
+|---|---|
+| S01/S06 storage + graph | 原子写、外部编辑冲突、reindex 降级、anchor 失效、派生文件守卫 |
+| S03/S04 runtime + orchestration | JSON retry、tool failure、doom-loop、cancel plan、stopped recap、approval idempotency |
+| S05/S10 UI + editor | stream 恢复、事件乱序、IME/focus trap、inline review accept/reject、editor undo bridge |
+| S07/S08/S09 context + creative | context overflow、impact analysis 收敛、风险分级、Humanizer 越权升级 |
+| M01-M04 search/query/discuss | Shift+Shift、fact query 来源跳转、command routing、只读边界 |
+| M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、低置信项、部分接受和失败收场 |
+| M09-M13 trace/memory/agent controls | Trace 层级、经验可见/关闭/删除、agent 开关和预算限制 |
+| M14-M17 settings/onboarding/library/recap | danger action、workspace 初始化、项目切换隔离、Activity append-only |
+| platform/Ixx | provider probe、editor adapter、watcher、import/export、desktop permission |
+| platform/Rxx | project lifecycle、backup/restore、migration、repair、diagnostics export |
+
 ## Memory / Reflector 验证项
 
 经验管理和 Reflector 的测试归本篇维护。实施时至少覆盖:

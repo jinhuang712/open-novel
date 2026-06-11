@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs · 文档待办清理与 appendix 覆盖矩阵
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 风险等级产品命名统一为「提示级 / 确认级 / 阻断级」,plan 不再暴露 `critical` / `blocking` 实现枚举;S04 FAQ 同步使用中文风险名。 | `plan/03-guardrails.md` `plan/08-approval-and-cascade.md` `spec/S04-turn-orchestration.md` `TODO.md` | 关闭“风险三档命名中英混用”文档待办。 |
+| appendix 新增抽取完成口径:历史归档不再整体搬回 active appendix,实现某个 `S/M/platform` 前只按触发场景补必要 A/V 明细。 | `spec/appendix/README.md` `TODO.md` | 关闭“appendix 明细抽取”文档待办,避免 appendix 重新变成历史垃圾桶。 |
+| A/V 初始覆盖矩阵补齐到字段、schema、事件、工具、prompt、测试和 golden 七类明细,覆盖 `M01-M17` 与 `platform/I/R` 的实现前检查口径。 | `spec/appendix/A01-schema-tables.md` `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` `spec/appendix/A04-tool-catalog.md` `spec/appendix/A05-prompt-templates.md` `spec/appendix/V01-test-matrix.md` `spec/appendix/V02-golden-cases.md` `TODO.md` | 关闭“M/platform 明细深化”文档待办,后续具体字段随实现进入对应 A/V。 |
+
 ## 2026-06-11 · spec+design · M17 Turn Recap 与 forward-only 历史语义
 
 | 变更 | 影响文档 | 关联 |
