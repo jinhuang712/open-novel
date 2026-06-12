@@ -72,22 +72,49 @@ stateDiagram-v2
   Applying --> CancelPlan: cancel requested
   CancelPlan --> Cancelled: user confirms
   CancelPlan --> AwaitingApproval: keep pending
-  CancelPlan --> ManualRecovery: unsafe to auto-resolve
+  CancelPlan --> ManualRecoveryOpened: unsafe to auto-resolve
   Applying --> Reindexing
-  Reindexing --> Completed
+  Applying --> ApplyFailed: storage apply unresolved
+  Reindexing --> Applied
   StoppedNoChange --> Recap
   Cancelled --> Recap
   Rejected --> Recap
   Completed --> Recap
+  Applied --> Recap
+  ApplyFailed --> Recap
+  ManualRecoveryOpened --> RecoveryNote
+  Running --> Interrupted: host/run state unknown
+  GatheringImpact --> Interrupted: host/run state unknown
+  GeneratingProposal --> Interrupted: host/run state unknown
+  Interrupted --> RecoveryNote
   Running --> Failed
   GatheringImpact --> Failed
   GeneratingProposal --> Failed
   Applying --> Failed
   Failed --> Recoverable
-  Failed --> Terminal
+  Failed --> FailedTerminal
+  FailedTerminal --> Recap
 ```
 
 状态机不是 UI 动画。它是恢复和并发控制的业务事实。前端状态点只是它的投影。
+
+## Canonical turn terminal enum
+
+S03 是 turn 终态枚举的唯一权威。Runner run state、stream control event、storage write phase、reindex health、recap/activity 文案都只能投影下表,不能另起一套终态名。实现字段建议命名为 `CanonicalTurnTerminalResult`,取值使用下列 PascalCase 名称。
+
+| CanonicalTurnTerminalResult | 何时由 S03 产生 | 作品/项目事实是否生效 | 下游投影 |
+|---|---|---|---|
+| `Completed` | 只读 answer/report、查询解释、诊断或无需审批的任务完整结束 | 无新的作品写入;可有过程历史和用量记录 | M17 生成完成 recap;S04 回到 idle 并展示可用结果 |
+| `StoppedNoChange` | 用户停止运行中任务,且没有 pending ChangeSet、写入记录或 durable change | 无 durable change;可保留已完成只读结果 | M17 生成 stopped recap;S04 展示可续接/重跑入口 |
+| `Cancelled` | 用户确认 cancel plan,关闭 pending 或未完成流程 | 取消前已生效的事实不回滚;未生效 proposal 关闭 | M17 生成取消 recap;obligation/activity 按关闭结果投影 |
+| `Rejected` | 用户拒绝审批卡或 atomic group | proposal 不落盘;拒绝理由可进入 redo context | M17 生成拒绝 recap;M08 可排队 redo |
+| `Applied` | 已审批 ChangeSet 或 light apply 已完成项目事实提交 | 作者文件/project.db 事实已生效;reindex 可为 healthy、stale 或 degraded | S14 提供写入记录和 reindex 状态;M17 生成已生效 recap |
+| `ApplyFailed` | 用户已接受的写入未能完成到 committed 状态,但仍有明确重试、取消或恢复入口 | 以 S14 写入记录说明哪些阶段已发生;不得假装未接受或已完成 | S04 保留审批/恢复入口;M17 生成 failure recap |
+| `FailedTerminal` | 路由、上下文、模型、工具、schema、质量汇合或超时失败,且不能安全继续 | 通常无新作品事实;若有已生效事实必须在 recap 中点名 | M17 生成失败 recap;S09/S10 记录复现证据 |
+| `Interrupted` | 执行宿主、provider stream、tool 或 run heartbeat 中断,且 S03 不能判断最终业务结果 | 不断言成功、失败或停止;已知 step/checkpoint 保留 | S04 展示恢复入口和最后可信 step;M17 写 recovery note,不生成成功 recap |
+| `ManualRecoveryOpened` | S14/S09/S03 判定自动前滚、重试或取消都不安全,需要人工处理 | 以写入记录、tool cancelability 或恢复扫描说明已知事实 | S04 进入 NeedsDecision;M17 写 recovery note/failure recap |
+
+非终态包括 `Received`、`Routed`、`Running`、`GatheringImpact`、`GeneratingProposal`、`AwaitingApproval`、`Applying`、`Reindexing`、`CancelPlan`、`Recoverable`、`EditedAcceptedRecheck` 和 approval queue 内部状态。`AwaitingApproval` 只能生成 pending activity item,不能生成 terminal recap。`Accepted` 是审批决定,不是 turn 终态;`Reindexing` 是后台健康推进,不是 turn 终态;`Corrected` 是后续 forward-only turn 的结果,不是原 turn 的终态。
 
 ## Router 只产出动作
 
@@ -274,7 +301,7 @@ Open Novel 是单实例单窗口应用。用户从主界面返回项目选择或
 
 所有入口都走同一取消语义:输入条按钮、命令面板、状态点、Router action 和快捷键不允许各自发明一套取消。
 
-所有非终态都必须能响应 stop request,但响应不等于立刻安全结束。模型调用、工具调用、reindex、Applying 和恢复流程都必须给出 `stopping` 投影,直到 S03/S09/S14 返回明确 stopped、completed、failed 或 manual recovery。
+所有非终态都必须能响应 stop request,但响应不等于立刻安全结束。模型调用、工具调用、reindex、Applying 和恢复流程都必须给出 `stopping` 投影,直到 S03/S09/S14 返回 canonical turn terminal result:`Completed`、`StoppedNoChange`、`Cancelled`、`Rejected`、`Applied`、`ApplyFailed`、`FailedTerminal`、`Interrupted` 或 `ManualRecoveryOpened`。
 
 运行中且没有 durable change 时,取消不需要二次确认:系统停止剩余工作,保留已完成的只读结果,并生成 stopped recap。只要存在 pending ChangeSet、已开始落盘或内部恢复不安全,Orchestrator 必须生成 cancel plan 让用户确认影响范围。CancelPlan 必须说明哪些结果已产生、哪些 artifact 可保留、哪些审批/obligation 会关闭、是否需要反向修正;用户确认前,系统不能自行丢弃已审定或已进入写入记录的事实。
 
@@ -288,15 +315,19 @@ Turn Recap 是 turn 结束后的用户级 changelog,详见 [M17 · Turn Recap An
 
 ## Recap 触发
 
-Recap 只在 terminal turn result 后生成:Completed、StoppedNoChange、Cancelled、Rejected、Applied、ApplyFailed、FailedTerminal、ManualRecoveryOpened。`AwaitingApproval` 不是终态,只能生成 pending activity item;宿主崩溃恢复不是 recap,而是 recovery note。若用户稍后处理审批,最终 recap 必须引用同一个 turn 和写入记录,把 pending 等待和最终裁决连起来。
+Recap 只响应本篇 canonical turn terminal enum。`AwaitingApproval` 不是终态,只能生成 pending activity item;`Interrupted` 不生成成功/停止 recap,只生成 recovery note;`ManualRecoveryOpened` 生成 recovery note,并在需要时附 failure recap。若用户稍后处理审批,最终 recap 必须引用同一个 turn 和写入记录,把 pending 等待和最终裁决连起来。
 
-| 状态 | 生成什么 |
+| CanonicalTurnTerminalResult | 生成什么 |
 |---|---|
-| AwaitingApproval | pending activity item,显示待审和恢复入口。 |
-| StoppedNoChange | stopped recap,说明无 durable change。 |
-| Applied / Completed | terminal recap,引用写入记录和 reindex 状态。 |
-| ApplyFailed / ManualRecoveryOpened | failure recap + recovery note,说明哪些事实已生效、哪些需要处理。 |
-| 宿主崩溃恢复 | recovery note,不生成成功或停止 recap。 |
+| `Completed` | completed recap,说明可用结果和无作品写入。 |
+| `StoppedNoChange` | stopped recap,说明无 durable change。 |
+| `Cancelled` | cancelled recap,说明 cancel plan 裁决和关闭范围。 |
+| `Rejected` | rejected recap,记录拒绝理由和可重做入口。 |
+| `Applied` | applied recap,引用 S14 写入记录和 reindex 状态。 |
+| `ApplyFailed` | failure recap + recovery note,说明哪些事实已生效、哪些需要处理。 |
+| `FailedTerminal` | failed recap,说明失败点、可重试性和不可自动继续原因。 |
+| `Interrupted` | recovery note,不生成成功或停止 recap。 |
+| `ManualRecoveryOpened` | recovery note;若已有用户可见失败结果,附 failure recap。 |
 
 Recap、Trace 和 Activity 的来源是 S14 写入记录与 S04 turn state 投影;前端事件流不能临时拼出另一份历史。
 

@@ -99,7 +99,8 @@
 | post-apply reindex failure | 作者文件已保存,索引 degraded/repair,审批不倒退为未接受。 |
 | provider context overflow | I01 返回 context_overflow 时退回 S07 overflow,不进入 provider transient retry。 |
 | embedding model unknown | 语义召回 needs data,向量表和相关能力不上线。 |
-| host interrupted run | host crash/restart 后 run 标记 interrupted,展示最后可信 step 和可重试点,不自动重放危险动作。 |
+| canonical turn terminal enum | S02 run state、S04 control event、S05 reindex health、S14 write phase、M17 recap/activity 和 A03 event 字段都只引用 S03 的 `Completed`/`StoppedNoChange`/`Cancelled`/`Rejected`/`Applied`/`ApplyFailed`/`FailedTerminal`/`Interrupted`/`ManualRecoveryOpened`,不出现本地同义终态。 |
+| host interrupted run | host crash/restart 后 run 标记 interrupted,由 S03 映射为 `Interrupted` 或恢复相关 canonical result;展示最后可信 step 和可重试点,不自动重放危险动作。 |
 | heavy reindex stream heartbeat | 批量 SQLite/reindex/embedding 写入期间 stream heartbeat 延迟在 V03 实测阈值内;超阈值需隔离执行。 |
 
 ## 性能与延迟验证项
@@ -184,11 +185,13 @@ Turn Recap 的测试归本篇维护。实施时至少覆盖:
 |---|---|
 | 正常完成 | 生成 recap,说明已完成、已修改、可查看结果和下一步 |
 | 运行中停止且无 durable change | 不二次确认;生成 stopped recap,明确“没有修改正文或设定”、已完成结果和未完成步骤 |
+| awaiting approval 非终态 | 只生成 pending activity item 和审批恢复入口,不生成 terminal recap。 |
+| interrupted / manual recovery | 生成 recovery note,说明最后可信 step、已知事实和恢复选择;不得生成成功/停止 recap。 |
 | pending / applying 状态取消 | 不直接丢弃;先展示 cancel plan 和影响范围 |
 | append-only 历史 | 原 recap 不被删除或改写;作者备注和更正以追加记录保存 |
 | 撤销 / 恢复入口 | 生成反向修改或恢复 proposal,经审批后向前追加新 recap |
 | 事实边界 | recap 不能覆盖项目事实;与项目事实冲突时必须让位 |
-| 经验边界 | stopped / abandoned / rejected recap 不自动进入 Reflector 学习 |
+| 经验边界 | `StoppedNoChange` / `Cancelled` / `Rejected` / `Interrupted` / `ManualRecoveryOpened` 不自动进入 Reflector 学习 |
 | 来源跳转失效 | recap 保留,对应来源标记过期并提供重新定位路径 |
 
 ## 边界

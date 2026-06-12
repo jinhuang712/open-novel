@@ -18,6 +18,7 @@
 | Appendix 与诊断契约清理导入导出/备份恢复残留:platform/Rxx 字段改为 manual copy acknowledgement / diagnostics bundle audit,Settings 验证只保留“无项目管理”,R05 明确诊断包不是项目事实来源、迁移来源或备份。 | `A01` `V01` `R05` `TODO.md` | 关闭 TODO-P1-55。 |
 | plan 过满承诺收窄:连带修改从“全部连锁影响 / 后文零矛盾 / 拒绝不留痕”改为“确定性影响集合 + 低置信候选 + 拒绝不改作品但保留裁定历史”。 | `plan/04` `plan/08` `TODO.md` | 关闭 TODO-P1-49。 |
 | 索引、章程与历史提示收口:README 显式列当前 platform 编号并补 P010 导航,platform README 标注 I04/R02 已撤销跳号,AGENTS/CLAUDE/WORKFLOW 明确主会话/整合者提交而 subagent 不提交,P000/P008 顶部增加历史归档提示。TODO 移除 TODO-P1-54、TODO-P1-57、TODO-P1-58、TODO-P2-24、TODO-P2-27,继续保留真实实测项、用户裁决项和未完成文档/原型修复项。 | `README.md` `spec/platform/README.md` `progress/README.md` `AGENTS.md` `CLAUDE.md` `WORKFLOW.md` `progress/P000-init.md` `progress/P008-plan-rewrite.md` `TODO.md` | 本 worker 收口范围。 |
+| Turn canonical terminal enum 归口到 S03:S03 定义 `Completed`、`StoppedNoChange`、`Cancelled`、`Rejected`、`Applied`、`ApplyFailed`、`FailedTerminal`、`Interrupted`、`ManualRecoveryOpened` 唯一终态;S02/S04/S05/S14/M17/A03/V01 改为只引用该枚举并投影 run state、UI status、reindex health、write phase、recap/activity。 | `spec/S03` `S02` `S04` `S05` `S14` `M17` `A03` `V01` `TODO.md` | 关闭 TODO-P1-50。 |
 
 ## 2026-06-13 · docs · 存储分库 + 索引管线主线 + 实施计划 + lint 升级
 

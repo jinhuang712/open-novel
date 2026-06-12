@@ -48,6 +48,12 @@
 
 所有 Agent 相关事件的 `role_id` 必须取自 M13 canonical id:`router`、`writer`、`checker`、`validator`、`reader_panel`、`humanizer`、`reflector`。事件可以额外带中文展示名,但展示名不能作为去重键、用量归因键或 prompt 名称。
 
+## Turn terminal result 字段约束
+
+所有表示 turn 最终结果的事件字段必须引用 [S03 · Canonical turn terminal enum](../S03-turn-orchestration.md#canonical-turn-terminal-enum),字段建议命名为 `terminal_result` 或 `canonical_turn_terminal_result`。合法值只有:`Completed`、`StoppedNoChange`、`Cancelled`、`Rejected`、`Applied`、`ApplyFailed`、`FailedTerminal`、`Interrupted`、`ManualRecoveryOpened`。
+
+事件可以同时携带本层投影字段,例如 stream status、UI status、write phase、reindex health、runner run state 或 recovery note type;这些字段不能替代 canonical turn terminal result,也不能新增 `success`、`done`、`abandoned`、`errored`、`recovered` 等同义终态。`AwaitingApproval` 只能作为 pending activity/control state,不得写入 terminal result。
+
 ## 去重键
 
 stream 事件是有损通知,不是业务事实源。每条可渲染事件必须带稳定去重身份:
