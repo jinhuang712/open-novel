@@ -7,8 +7,10 @@
 <script>
 (function () {
   var saved = localStorage.getItem('onovel-theme');
+  var contrast = localStorage.getItem('onovel-contrast');
   var sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   document.documentElement.dataset.theme = saved || sys;
+  if (contrast === 'more') document.documentElement.dataset.contrast = 'more';
 })();
 </script>
 <link rel="stylesheet" href="tokens.css">
@@ -114,10 +116,13 @@
         <div class="nav-row" data-pane="p3">✦ AI 角色 <span class="scope">🔄</span></div>
         <div class="nav-row" data-pane="p4">👥 读者预演 <span class="scope">📂</span></div>
         <div class="nav-row" data-pane="p5">💬 助理语气 <span class="scope">📂</span></div>
-        <div class="nav-row" data-pane="p6">🛡 创作守则 <span class="scope">📂</span></div>
-        <div class="nav-row" data-pane="p7">🧠 记忆 <span class="dirty-dot"></span><span class="scope">📂</span></div>
-        <div class="nav-row" data-pane="p8">⌨️ 快捷键 <span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="p9">ℹ️ 关于 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p6">✍ 文风 <span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="p7">🛡 创作守则 <span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="p8">🧠 记忆 <span class="dirty-dot"></span><span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="p9">📊 用量 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p10">⌨️ 快捷键 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p11">？ 帮助 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p12">ℹ️ 关于 <span class="scope">🌐</span></div>
       </div>
 
       <div class="pane">
@@ -152,10 +157,10 @@
             <div class="desc">切换立即生效;命令面板亦可搜「切换深浅外观」。</div>
           </div>
           <div class="control-grid">
-            <div class="control-card" data-search="高对比 主题 token">
+            <div class="control-card" data-search="高对比 主题 token data-contrast">
               <b>提高对比度</b>
-              <div class="seg"><button>关闭</button><button class="on">开启</button></div>
-              <div class="desc">只覆盖颜色 token,不改变字号、间距和布局。</div>
+              <div class="seg" id="contrastToggle"><button data-contrast-value="normal">关闭</button><button data-contrast-value="more" class="on">开启</button></div>
+              <div class="desc">演示会在根节点切换 <code>data-contrast="more"</code>;只覆盖颜色 token,不改变字号、间距和布局。</div>
             </div>
             <div class="control-card" data-search="字号 密度 预览">
               <b>字号密度预览</b>
@@ -214,7 +219,7 @@
             <select><option>只学明确反馈</option><option>学审批选择</option></select>
             <select><option>Flash</option><option>Pro</option></select>
             <select><option>低频后台</option><option>每轮结束</option></select>
-            <span class="override" onclick="showPane('p7')">管理记忆</span>
+            <span class="override" onclick="showPane('p8')">管理记忆</span>
           </div>
         </div>
 
@@ -261,6 +266,21 @@
         </div>
 
         <div id="p6" class="pane-hidden">
+          <div class="scope-banner">📂 <b>当前作品</b> — 只影响表达层建议,不改变剧情事实或审批边界</div>
+          <div class="control-grid">
+            <div class="control-card" data-search="文风 范文 Humanizer 去 AI 味">
+              <b>风格偏好</b>
+              <div class="desc">偏好短句、强动作动词和少心理解释;Humanizer 只处理表达层,不改剧情因果。</div>
+            </div>
+            <div class="control-card" data-search="范文 样章 学习 表达">
+              <b>范文入口</b>
+              <div class="desc">可添加样章作为表达参考;引用和学习结果仍通过记忆条目可见。</div>
+              <button class="btn btn-sm" style="margin-top:8px">添加范文</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="p7" class="pane-hidden">
           <div class="scope-banner">📂 <b>当前作品</b> — 只读展示五大守则和必要说明</div>
           <div class="rule-row" style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em"><span>守则</span><span>风险等级</span><span>说明</span></div>
           <div class="rule-row" data-search="事实 一致性 阻断">
@@ -280,7 +300,7 @@
           </div>
         </div>
 
-        <div id="p7" class="pane-hidden">
+        <div id="p8" class="pane-hidden">
           <div class="scope-banner">📂 <b>当前作品</b> — 记忆默认注入;无逐条注入开关</div>
           <div class="info-card" data-search="权重 0 1 2 3 4 5 描述" style="margin-bottom:14px">权重 0=仅留档;1=低影响;2=轻度参考;3=常规参考;4=强参考;5=关键偏好。来源分为普通记录和证据摘要。</div>
           <div class="memory-row" style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em"><span>经验</span><span>权重</span><span>来源</span><span></span></div>
@@ -298,7 +318,21 @@
           </div>
         </div>
 
-        <div id="p8" class="pane-hidden">
+        <div id="p9" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 只读用量和最近失败摘要,不管理项目数据</div>
+          <div class="control-grid">
+            <div class="control-card" data-search="用量 token 缓存 上下文">
+              <b>本月用量</b>
+              <div class="desc" style="font-family:var(--font-mono)">24.6M token · 缓存命中 87% · 上下文峰值 92K</div>
+            </div>
+            <div class="control-card" data-search="失败 连接 provider 模型">
+              <b>最近失败摘要</b>
+              <div class="desc">最近 7 天没有凭据错误;模型不可用时会直达「连接凭据」。</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="p10" class="pane-hidden">
           <div class="scope-banner">🌐 <b>全局</b> — 重绑持久化到偏好设置,冲突即时校验</div>
           <table class="t" data-search="快捷键 tab cmd enter esc conflict">
             <tr><th>命令</th><th>默认键</th><th>当前键</th><th></th></tr>
@@ -308,8 +342,14 @@
           </table>
         </div>
 
-        <div id="p9" class="pane-hidden">
-          <div class="scope-banner">🌐 <b>全局</b> — 版本、隐私和文档入口</div>
+        <div id="p11" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 新手提示、离线说明和快捷入口</div>
+          <div class="placeholder">首次提示可回看 · 快捷键可在上一分区重绑 · 项目数据重置不在帮助里提供</div>
+          <div class="info-card" data-search="帮助 新手提示 文档 快捷入口">帮助只解释如何使用当前界面;项目创建、归档、删除回到项目选择页处理。</div>
+        </div>
+
+        <div id="p12" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 版本、隐私和构建标记</div>
           <div class="placeholder">Open Novel 0.3.0-poc · 数据只在本机 · 文档: design/04-settings.md</div>
           <div class="info-card">真实用户包不显示开发模式开关。若是 dev build,这里仅显示「开发构建:诊断信息可见」标记,不可在普通设置里开启。</div>
         </div>
@@ -496,6 +536,25 @@ document.querySelectorAll('#appearance button').forEach(function (b) {
     }
   });
 });
+function applyContrastButton(value) {
+  document.querySelectorAll('#contrastToggle button').forEach(function (x) {
+    x.classList.toggle('on', x.dataset.contrastValue === value);
+  });
+}
+function toggleContrast(value) {
+  if (value === 'more') {
+    document.documentElement.dataset.contrast = 'more';
+    localStorage.setItem('onovel-contrast', 'more');
+  } else {
+    delete document.documentElement.dataset.contrast;
+    localStorage.removeItem('onovel-contrast');
+  }
+  applyContrastButton(value);
+}
+document.querySelectorAll('#contrastToggle button').forEach(function (b) {
+  b.addEventListener('click', function () { toggleContrast(b.dataset.contrastValue); });
+});
+applyContrastButton(document.documentElement.dataset.contrast === 'more' ? 'more' : 'normal');
 </script>
 </body>
 </html>

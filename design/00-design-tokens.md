@@ -125,7 +125,7 @@ flowchart LR
 | 圆角 | `--radius-sm/md/lg/xl` | 4 / 6 / 8 / 12px(控件 / 按钮 / 卡片 / 弹窗) |
 | 阴影 | `--shadow-sm/md/lg` | 比常规体系更轻(浅色主题 α ≤ .14),只为分层;深色主题用黑色加深 |
 | 间距 | `--space-1..8` | 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40(组件内 padding 默认 12-16,卡片 16-20) |
-| 动效 | `--dur-fast/base/slow` | 120 / 200 / 320ms,`--ease` 标准缓动;主题切换用 `--dur-base` |
+| 动效 | `--dur-fast/med/base/slow` | 120 / 160 / 200 / 320ms,`--ease` 标准缓动;悬浮层短位移用 `--dur-med`,主题切换用 `--dur-base` |
 
 ## 焦点与可达性
 

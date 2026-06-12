@@ -288,8 +288,8 @@
       <button class="btn btn-ghost btn-sm" onclick="setAll(false)">全不选</button>
       <button class="btn btn-ghost btn-sm" onclick="toggleFailure()">失败态</button>
       <div class="grow"></div>
-      <button class="btn btn-danger" onclick="document.getElementById('approval').classList.toggle('rejecting')">拒绝全部 <kbd style="border-color:currentColor;color:inherit;background:transparent">N</kbd></button>
-      <button class="btn btn-primary" id="approveBtn" disabled title="存在阻断级风险,不能同意">同意勾选项 <span id="count">7/9</span> <kbd style="background:transparent;border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.95)">Y</kbd></button>
+      <button class="btn btn-danger" onclick="document.getElementById('approval').classList.toggle('rejecting')">拒绝全部 <kbd class="kbd-on-danger">N</kbd></button>
+      <button class="btn btn-primary" id="approveBtn" disabled title="存在阻断级风险,不能同意">同意勾选项 <span id="count">7/9</span> <kbd class="kbd-on-primary">Y</kbd></button>
     </div>
 
     <div class="reject-pane">

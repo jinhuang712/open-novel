@@ -15,6 +15,17 @@
 <style>
   .stage { max-width: 620px; margin: 24px auto 80px; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
   .stage-label { font-size: 11px; font-weight: 600; letter-spacing: .1em; color: var(--text-tertiary); margin-top: 16px; }
+  .reader-demo { display: grid; grid-template-columns: 1fr 220px; gap: 12px; align-items: start; }
+  .reader-paper { background: var(--bg-surface); border: 1px solid var(--paper-edge); border-radius: var(--radius-lg); padding: 18px 20px; font-size: 13px; line-height: 1.8; color: var(--text-secondary); }
+  .reader-paper p { margin: 0 0 .8em; }
+  .paragraph-target { border-radius: var(--radius-sm); transition: background var(--dur-med) var(--ease), box-shadow var(--dur-med) var(--ease); }
+  .paragraph-target.active { background: var(--accent-subtle); box-shadow: 0 0 0 2px var(--focus-ring); }
+  .jump-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); padding: 12px; font-size: 12px; color: var(--text-secondary); }
+  .jump-panel b { display: block; color: var(--text-primary); margin-bottom: 6px; }
+  .jump-panel button { margin-top: 8px; }
+  .empty-card { padding: 14px 18px; display: grid; gap: 8px; }
+  .empty-card h3 { margin: 0; font-size: 14px; font-family: var(--font-serif); font-weight: 600; }
+  .empty-card p { margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; }
 
   .rp-head { display: flex; gap: 16px; align-items: center; padding: 16px 18px; border-bottom: 1px solid var(--border); }
   .risk-summary { min-width: 86px; padding: 8px 10px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-sunken); flex: none; }
@@ -110,6 +121,7 @@
   .prog-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); }
 
   @media (max-width: 560px) {
+    .reader-demo { grid-template-columns: 1fr; }
     .diag-head { flex-direction: column; }
     .diag-actions { justify-content: flex-start; }
     .diag-grid { grid-template-columns: 1fr; }
@@ -151,15 +163,15 @@
 
     <div class="sec">
       <div class="sec-title">多人标记的风险</div>
-      <div class="mark-row sev-mid"><input type="checkbox" checked data-risk><span class="badge badge-danger">节奏拖 · 3/5 标</span><span>第 5-7 段铺垫过长,追更党几乎划走</span><span class="where">→ 第 5-7 段</span></div>
-      <div class="mark-row sev-high"><input type="checkbox" checked data-risk><span class="badge badge-danger">AI 味 · 2/5 标</span><span>第 3 段长句过密,"在某种程度上"出现 2 次</span><span class="where">→ 第 3 段</span></div>
-      <div class="mark-row sev-mid"><input type="checkbox" data-risk><span class="badge badge-danger">突兀 · 2/5 标</span><span>守夜人会直接登门,缺一环铺垫</span><span class="where">→ 第 4 段</span></div>
+      <div class="mark-row sev-mid"><input type="checkbox" checked data-risk><span class="badge badge-danger">节奏拖 · 3/5 标</span><span>第 5-7 段铺垫过长,追更党几乎划走</span><span class="where" onclick="jumpParagraph('p5')">→ 第 5-7 段</span></div>
+      <div class="mark-row sev-high"><input type="checkbox" checked data-risk><span class="badge badge-danger">AI 味 · 2/5 标</span><span>第 3 段长句过密,"在某种程度上"出现 2 次</span><span class="where" onclick="jumpParagraph('p3')">→ 第 3 段</span></div>
+      <div class="mark-row sev-mid"><input type="checkbox" data-risk><span class="badge badge-danger">突兀 · 2/5 标</span><span>守夜人会直接登门,缺一环铺垫</span><span class="where" onclick="jumpParagraph('p4')">→ 第 4 段</span></div>
     </div>
 
     <div class="sec">
       <div class="sec-title">多人标记的亮点</div>
-      <div class="mark-row win"><span class="badge badge-success">钩子强 · 5/5 标</span><span>章末罗盘推过来,悬念到位</span><span class="where">→ 章末</span></div>
-      <div class="mark-row win"><span class="badge badge-success">细节真 · 3/5 标</span><span>敲桌沿的旧习惯,人物厚度 +1</span><span class="where">→ 第 4 段</span></div>
+      <div class="mark-row win"><span class="badge badge-success">钩子强 · 5/5 标</span><span>章末罗盘推过来,悬念到位</span><span class="where" onclick="jumpParagraph('p7')">→ 章末</span></div>
+      <div class="mark-row win"><span class="badge badge-success">细节真 · 3/5 标</span><span>敲桌沿的旧习惯,人物厚度 +1</span><span class="where" onclick="jumpParagraph('p4')">→ 第 4 段</span></div>
     </div>
 
     <div class="sec">
@@ -299,6 +311,24 @@
     </div>
   </div>
 
+  <div class="stage-label">段落定位演示 — 报告不关闭,只高亮编辑器目标段</div>
+  <div class="reader-demo">
+    <div class="reader-paper" id="readerPaper">
+      <p id="p1" class="paragraph-target">雨下到第三天,知微书馆的霓虹灯牌短路了半边。</p>
+      <p id="p2" class="paragraph-target">门铃响的时候是凌晨一点十四分。</p>
+      <p id="p3" class="paragraph-target">来人收了伞,雨水顺着伞尖在地板上积出一小滩,第 3 段长句密度用于演示 AI 味定位。</p>
+      <p id="p4" class="paragraph-target">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。</p>
+      <p id="p5" class="paragraph-target">服务器报价单、现金流和融资条款连续铺开,中段爽点空窗变长。</p>
+      <p id="p6" class="paragraph-target">守夜人会的传闻从酒桌被带到书馆门口,缺少一环可见动机。</p>
+      <p id="p7" class="paragraph-target">陆沉把青铜罗盘放在吧台上,推过来。</p>
+    </div>
+    <div class="jump-panel">
+      <b>定位状态</b>
+      <span id="jumpStatus">点击风险行里的段落位置,这里会显示高亮目标。报告面板保持当前勾选和展开状态。</span>
+      <button class="btn btn-sm" onclick="jumpParagraph('p5')">演示跳到第 5-7 段</button>
+    </div>
+  </div>
+
   <div class="stage-label">进行态 — CHATBOX 进度条 + 骨架报告,完成一个点亮一个</div>
 
   <div class="card prog-card">
@@ -325,6 +355,23 @@
     <span style="font-size:12.5px; color:var(--text-secondary)">仅 2/5 个读者完成,样本不足,不给分类建议。</span>
     <button class="btn btn-sm" style="margin-left:auto">补跑失败的 3 个</button>
   </div>
+
+  <div class="stage-label">空态 — 不伪造报告</div>
+  <div class="card empty-card">
+    <h3>还没有可预演的章节</h3>
+    <p>当前只打开了设定或空纸面。ReaderPanel 需要一段可读正文,不会用样例报告填补空白。</p>
+    <div><button class="btn btn-primary btn-sm">打开章节</button> <button class="btn btn-sm">让 AI 起草一章</button></div>
+  </div>
+  <div class="card empty-card">
+    <h3>章节太短,读者还没进入状态</h3>
+    <p>当前正文不足默认可读长度。继续写到一个完整冲突片段后再运行,或只把选区交给讨论模式分析。</p>
+    <div><button class="btn btn-sm">继续写作</button></div>
+  </div>
+  <div class="card empty-card">
+    <h3>没有最近 ReaderPanel 报告</h3>
+    <p>「打开最近报告」只打开真实保存过的报告;没有报告时提供运行入口,不展示过期样例。</p>
+    <div><button class="btn btn-primary btn-sm">运行 ReaderPanel</button></div>
+  </div>
 </div>
 
 <script>
@@ -341,6 +388,19 @@ function refreshRiskAction() {
 }
 document.querySelectorAll('[data-risk]').forEach(function (c) { c.addEventListener('change', refreshRiskAction); });
 refreshRiskAction();
+function jumpParagraph(id) {
+  document.querySelectorAll('.paragraph-target').forEach(function (p) { p.classList.remove('active'); });
+  var target = document.getElementById(id);
+  var status = document.getElementById('jumpStatus');
+  if (!target) {
+    status.textContent = '段落锚点已变化,需要重跑报告。';
+    return;
+  }
+  target.classList.add('active');
+  target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  status.textContent = '已定位到 ' + id.replace('p', '第 ') + ' 段;ReaderPanel 面板不关闭,勾选状态保留。';
+  setTimeout(function () { target.classList.remove('active'); }, 2000);
+}
 </script>
 </body>
 </html>

@@ -27,7 +27,7 @@
 | [01-main-layout](./01-main-layout.md) | 主界面:章节轨 · 纸面 · 状态点(库 / Trace / 输入条 / 审批聚焦卡召唤式) | `prototypes/01-main-layout.html` |
 | [02-approval-cascade](./02-approval-cascade.md) | ApprovalCard 整批审:diff、cascade 分级勾选、守则风险、拒绝反馈 | `prototypes/02-approval-cascade.html` |
 | [03-reader-panel](./03-reader-panel.md) | ReaderPanel 章节风险报告:分类风险、多人共识、5 persona 反馈 | `prototypes/03-reader-panel.html` |
-| [04-settings](./04-settings.md) | 设置面板:凭据、外观、AI 角色、读者预演、助理语气、守则、记忆、快捷键、关于 | `prototypes/04-settings.html` |
+| [04-settings](./04-settings.md) | 设置面板:12 个分区,覆盖凭据、外观、AI 角色、读者预演、助理语气、文风、创作守则、记忆、用量、快捷键、帮助、关于 | `prototypes/04-settings.html` |
 | [05-onboarding](./05-onboarding.md) | 每次启动先选项目 / 创建项目 + 首次配置向导 + 渐进式提示 | `prototypes/05-onboarding.html` |
 | [06-command-palette](./06-command-palette.md) | 统一搜索、命令面板、Cmd+P、@文件引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
 

@@ -30,7 +30,6 @@
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
 |---|---|---|---|---|
 | TODO-P2-25 | S05/S07 需要补交叉映射说明:S05 pipeline phase、R04 health、S03/S04 用户投影术语未成表;S05 的事实优先级图容易把共同真源读成简单上下级;S07 prompt 层级图需说明它不推翻 S01/S06 的上下文取舍优先级。 | [S05](./spec/S05-knowledge-graph.md) · [S07](./spec/S07-prompt-system.md) · [S01](./spec/S01-runtime-state.md) · [S06](./spec/S06-context-management.md) · [R04](./spec/platform/R04-index-health-and-repair.md) | 术语可理解但实现容易分叉,属于解释性补强。 | S05 增加 phase→health→UI 投影表和事实来源/冲突处理表;S07 补安全结构层级 vs context 取舍优先级说明。 |
-| TODO-P2-26 | 设计文档和原型存在若干一致性/可访问性优化:Settings 导航仍写 9 section 而实际 12;`--dur-med` 未定义;按钮 kbd 硬编码 rgba;高对比度 token 无 Settings UI;ReaderPanel 空态和段落定位演示不足;主界面审批卡关闭缺焦点恢复演示。 | [design/README](./design/README.md) · [design/00](./design/00-design-tokens.md) · [design/01](./design/01-main-layout.md) · [design/03](./design/03-reader-panel.md) · [design/04](./design/04-settings.md) · `design/prototypes/index.html` | 不阻塞架构,但会影响原型作为交互验收样例的可靠性。 | 统一 12 section,修 token/硬编码颜色,补高对比开关、ReaderPanel 空态和段落定位演示、主界面审批卡焦点恢复。 |
 
 ## 验证入口
 

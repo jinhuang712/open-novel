@@ -180,6 +180,8 @@
   .ap-cas a:hover { text-decoration: underline; }
   .ap-act { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border); padding-top: 14px; }
   .ap-act .hint { margin-left: auto; font-size: 10.5px; font-family: var(--font-mono); color: var(--text-tertiary); }
+  .focus-restore-note { display: none; margin-top: 10px; padding: 7px 9px; border-radius: var(--radius-sm); background: var(--accent-subtle); color: var(--accent-text); font-size: 12px; }
+  .focus-restore-note.show { display: block; }
   .reject-pane { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
   .ap-card.rejecting .reject-pane { display: block; }
   .reject-pane label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
@@ -287,7 +289,7 @@
 
 <div class="dotzone" id="dotzone">
   <span class="label" id="dotLabel"></span>
-  <span class="dot" id="dot"></span>
+  <span class="dot" id="dot" tabindex="0" role="button" aria-label="状态点"></span>
 </div>
 
 <div class="composer" id="composer">
@@ -343,6 +345,7 @@
       <button class="btn btn-danger btn-sm" onclick="showReject()">拒绝</button>
       <span class="hint">Y · E · N</span>
     </div>
+    <div class="focus-restore-note" id="focusRestoreNote">关闭后焦点会回到打开前的位置;若原位置不可用,回到右下状态点。</div>
     <div class="reject-pane">
       <label>为什么拒绝?(必填 — 会作为反馈让写手重做)</label>
       <textarea id="focusRejectText" placeholder="例:改性别后称谓和语气没有一起调整"></textarea>
@@ -367,9 +370,31 @@ function toggleComposer() {
   if (c.classList.contains('open')) c.querySelector('textarea').focus();
 }
 function closeComposer() { document.getElementById('composer').classList.remove('open'); }
-function openApproval() { document.getElementById('apLayer').classList.add('open'); }
-function closeApproval() { document.getElementById('apLayer').classList.remove('open'); }
-function approve() { closeApproval(); setState('run'); toast('已同意 · cascade 整批审排队中'); }
+var lastFocusBeforeApproval = null;
+function rememberApprovalFocus() {
+  var active = document.activeElement;
+  var card = document.getElementById('focusApproval');
+  if (active && active !== document.body && !card.contains(active)) lastFocusBeforeApproval = active;
+}
+function openApproval() {
+  rememberApprovalFocus();
+  document.getElementById('apLayer').classList.add('open');
+  document.getElementById('focusRestoreNote').classList.add('show');
+}
+function restoreApprovalFocus() {
+  var fallback = document.getElementById('dot');
+  var target = lastFocusBeforeApproval;
+  if (!target || !document.contains(target) || target.offsetParent === null) target = fallback;
+  if (target && target.focus) target.focus();
+  toast('审批暂不处理,仍待审批 · 焦点已恢复');
+}
+function closeApproval(options) {
+  options = options || {};
+  document.getElementById('apLayer').classList.remove('open');
+  document.getElementById('focusRestoreNote').classList.remove('show');
+  if (options.restore !== false) restoreApprovalFocus();
+}
+function approve() { closeApproval({ restore: false }); setState('run'); toast('已同意 · cascade 整批审排队中'); }
 function openUSearch() {
   var u = document.getElementById('usearch');
   u.classList.add('open');
@@ -595,7 +620,7 @@ function hideReject() { document.getElementById('focusApproval').classList.remov
 function submitReject() {
   var text = document.getElementById('focusRejectText').value.trim();
   if (!text) { toast('请先填写拒绝原因'); document.getElementById('focusRejectText').focus(); return; }
-  closeApproval(); setState('run'); toast('已提交反馈,写手正在重做');
+  closeApproval({ restore: false }); setState('run'); toast('已提交反馈,写手正在重做');
 }
 var oldOpenApproval = openApproval;
 openApproval = function () {

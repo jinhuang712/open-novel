@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/design · TODO-P2-26 设计原型一致性补齐
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 设计文档与原型同步 Settings 12 分区口径,补 `--dur-med` token,移除审批按钮 kbd 的硬编码 rgba,Settings 高对比开关改为可切换 `data-contrast`,ReaderPanel 补空态与段落定位演示,主界面审批卡补关闭后的焦点恢复说明和原型提示。 | `design/README` `design/00` `design/01` `design/03` `design/04` `design/prototypes/index.html` `design/prototypes/*.html` `design/prototypes/tokens.css` `TODO.md` | 关闭 TODO-P2-26。 |
+
 ## 2026-06-13 · docs · Recap / Activity 触发矩阵
 
 | 变更 | 影响文档 | 关联 |

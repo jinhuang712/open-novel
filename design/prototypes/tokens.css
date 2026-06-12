@@ -186,6 +186,7 @@ html[data-contrast="more"][data-theme="dark"] {
   --space-8: 40px;
 
   --dur-fast: 120ms;
+  --dur-med: 160ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
   --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -251,6 +252,18 @@ kbd {
   border-bottom-width: 2px;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+kbd.kbd-on-primary,
+.btn-primary kbd {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--text-on-accent) 45%, transparent);
+  color: var(--text-on-accent);
+}
+kbd.kbd-on-danger,
+.btn-danger kbd {
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
 }
 
 /* —— 徽标 —— */
