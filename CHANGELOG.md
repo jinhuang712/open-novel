@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · 经验冲突仲裁裁决
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决经验冲突为“显式询问”:Reflector 发现新旧经验互相否定时不自动覆盖旧经验,也不静默丢弃新经验;候选进入待确认状态,由用户选择采用新经验、保留旧经验或两条都不用。 | `plan/10-memory-and-learning.md` `spec/S02-runtime-state.md` `spec/M12-memory-learning-management.md` | 关闭 TODO-P1-24。 |
+| Experience / Reflector 字段归口补 `pending_confirmation`、冲突对象 id 和冲突确认审计;待确认经验不得注入 context。 | `spec/appendix/A01-schema-tables.md` | 用户选择方案 C。 |
+| TODO 移除已裁决的 TODO-P1-24,剩余【裁决】项为 TODO-P1-31。 | `TODO.md` | 继续逐项裁决。 |
+
 ## 2026-06-12 · docs/decision · 待审期间输入策略裁决
 
 | 变更 | 影响文档 | 关联 |

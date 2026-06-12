@@ -49,8 +49,11 @@ Recap 是作者级 changelog,不是作品。过程历史再完整也只是证据
 stateDiagram-v2
   [*] --> Observing
   Observing --> Candidate: 用户采纳/修改/否决后
-  Candidate --> Stored: 通过去重和冲突检查
-  Candidate --> Dropped: 噪音或冲突
+  Candidate --> Stored: 通过去重检查且无冲突
+  Candidate --> PendingConfirmation: 与已有经验冲突
+  PendingConfirmation --> Stored: 用户确认采用
+  PendingConfirmation --> Dropped: 用户拒绝或两条都不用
+  Candidate --> Dropped: 噪音
   Stored --> Injected: Context Builder 选用
   Stored --> Muted: 用户调低/关闭
   Stored --> Deleted: 用户删除
@@ -59,6 +62,8 @@ stateDiagram-v2
 ```
 
 Reflector 关闭的含义很具体:不再学习新经验。它不等于清空已有经验,也不等于本次生成忽略所有风格偏好。已有经验是否注入,由 Settings 中的权重、关闭和删除动作决定。
+
+经验冲突不自动仲裁。Reflector 发现新候选与既有经验在同一任务、同一作用域下互相否定时,必须进入 PendingConfirmation,在 Settings / Memory 中展示新旧两条、来源 turn 和影响范围,由用户选择采用新经验、保留旧经验或两条都不用。PendingConfirmation 不进入 context 注入,也不能被普通 Agent 当作偏好使用。
 
 ## 什么会进入上下文
 
@@ -93,7 +98,7 @@ flowchart LR
 | 事故 | 不能做 | 应该做 |
 |---|---|---|
 | 压缩摘要失败 | 删除原始消息只留空摘要 | 保留原始消息,延后压缩 |
-| 经验写入冲突 | 重复追加几条相似经验 | 合并、排队或提示失败 |
+| 经验写入冲突 | 自动覆盖旧经验或重复追加几条相似经验 | 进入待确认,展示新旧经验和来源,等用户选择 |
 | recap 写入失败 | 假装已进入用户 changelog | 保留 turn 结果并标记活动记录缺失 |
 | 过程日志写失败 | 阻断已审批的文件落盘 | 标记 Trace 不完整 |
 | runtime.db 读取失败 | 假装拥有历史上下文 | 以少历史模式运行并提示 |

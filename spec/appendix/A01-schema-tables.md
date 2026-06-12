@@ -65,10 +65,10 @@
 | 字段族 | 目的 | 行为约束 |
 |---|---|---|
 | identity | 经验 id、项目 id、来源 turn / decision / agent | 每条经验必须能反查来源,不能生成无来源偏好 |
-| content | 明白话经验文本、适用任务、适用范围、冲突标签 | 内容用于展示和 context 选择,不能覆盖项目事实 |
-| state | active / muted / deleted、权重、更新时间 | muted 和 deleted 都不得继续注入 context |
+| content | 明白话经验文本、适用任务、适用范围、冲突标签、冲突对象 id | 内容用于展示和 context 选择,不能覆盖项目事实 |
+| state | active / pending_confirmation / muted / deleted、权重、更新时间 | pending_confirmation、muted 和 deleted 都不得继续注入 context |
 | reflector | 是否允许学习新经验、最近学习时间、失败原因 | Reflector off 只停止学习新经验,不自动删除旧经验 |
-| audit | 创建 / 调权 / 关闭 / 删除操作者与时间 | Settings 展示失败时不能伪装为已生效 |
+| audit | 创建 / 冲突确认 / 调权 / 关闭 / 删除操作者与时间 | Settings 展示失败时不能伪装为已生效 |
 
 Reflector 关闭语义对应两个独立开关:
 
