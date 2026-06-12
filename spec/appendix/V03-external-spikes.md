@@ -10,6 +10,16 @@ External Spikes 是外部能力原始实查证据的唯一归口:模型 provider
 - 对路线的影响。
 - 需要回写的根层 spec 或 platform 文档。
 
+## 实施期 spike 门禁
+
+下列 spike 是实现期门禁,不是活跃 TODO。只要实现进入对应能力,就必须补最小 harness、记录真实命令和结果,并把失败后的产品或技术让步回写到影响文档。
+
+| 门禁 | 触发点 | 证据格式 | 不达标回写 |
+|---|---|---|---|
+| 长篇能力成立性 | 开始实现全书影响分析、分段 delta 或 cascade 前 | fixture 描述、注入变更集、运行命令、召回/精确/稳定性/耗时/token/心跳指标、失败样例 | S06/S05/S11/V02,必要时收窄产品承诺 |
+| 重 reindex 心跳隔离 | sidecar、SQLite/native binding、reindex 或 embedding workload 可运行后 | 宿主形态、并发 workload、stream heartbeat/UI event 延迟、CPU、是否隔离执行 | S04/S05/S14/I05,必要时改 worker thread/独立进程/分片 |
+| 外部依赖能力 | provider、AI SDK、watcher、desktop shell 或设计 token 首次接入前 | 最小复现命令、版本、通过/失败证据、替代路线 | 对应 S/M/platform/design 文档 |
+
 ## 实施前 spike 清单
 
 能力成立性 gate 优先于基础设施 spike。若下面三项在真实或等价规模长篇语料上不达标,实现不能继续默认“改完连带改”和“百万字一致性”承诺成立;必须先回写 S07/S06/S12/V02,选择裁判链重设计、承诺收窄或 cascade 分批形态。

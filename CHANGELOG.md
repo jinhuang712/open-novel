@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/verification · TODO-P1-22/P1-43 迁入实施期门禁
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将 heavy SQLite/reindex stream heartbeat 与 long-form impact/cascade 能力验证从活跃 TODO 迁入 V03/V01:V03 记录实施期触发点、证据格式和不达标回写位置,V01 记录验收矩阵;真实工程验证在应用工程与 harness 存在后执行,不再作为游离 TODO 占位。 | `TODO.md` `V01` `V03` | 关闭 TODO-P1-22、TODO-P1-43。 |
+
 ## 2026-06-13 · docs/workflow · multi subagents + git worktree 工作法
 
 | 变更 | 影响文档 | 关联 |

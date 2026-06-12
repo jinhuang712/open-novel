@@ -136,7 +136,7 @@
 | 精确查询应答 | 查询提交到结果 P95 | 待实测 |
 | 流式首 token | 发送到首个可见输出 P95 | 待实测 |
 | 落盘到可搜 | light apply 后新内容进入索引可查的延迟 | 待实测 |
-| 重 reindex 期间心跳 | stream 心跳延迟(对应 TODO-P1-22 spike) | 待实测 |
+| 重 reindex 期间心跳 | stream 心跳延迟(见 V03 `stream during heavy SQLite/reindex`) | 待实测 |
 
 目标填入后,任何超出目标的劣化按 [S10](../S10-evaluation-and-golden-regression.md) 的 warn/fail 处理。
 
@@ -149,7 +149,11 @@
 | DeepSeek `cache_control` / stable prompt header | prompt packet 记录 cache/stable header 降级,不影响 S08 layer manifest | provider response 与用量证据 |
 | 1M context 体量 | Writer/Validator/ReaderPanel 典型 context package 的 token 体量、overflow 和用户可见说明 | tokenizer 或真实请求记录 |
 | AI SDK loop | stopWhen/tool marker/onStepFinish 或手写 loop 的等价测试,覆盖 cancel、tool result、step finish | 最小 runner spike |
+| 长篇影响分析召回 / 精确 | 50-100 万字或等价 fixture 上的设定/角色/伏笔变更注入,记录召回率、精确率、漏召回样例和低置信候选 | V03 `long-form impact recall / precision` |
+| 分段 delta 稳定性 | 同一批长篇变更重复运行,记录语义 delta、锚点归属、依赖分类和冲突解释的波动 | V03 `segmented delta stability` |
+| 全书 cascade 成本 / 延迟 | 中等规模和全书级 cascade fixture 的 context 装配、模型调用、reindex、审批批次、stream 心跳、token 用量和总耗时 | V03 `cascade cost / latency at book scale` |
 | SQLite/native binding | `sqlite-vec` CRUD/JOIN、WAL 并发、Route Handler 连接泄漏测试 | macOS arm64 / Linux x64 原始输出 |
+| 重 reindex 期间心跳 | sidecar/等价宿主内重 reindex、批量 embedding、WAL checkpoint 和普通读写并发时的 stream 心跳延迟、UI 事件投递、CPU 与隔离需求 | V03 `stream during heavy SQLite/reindex` |
 | watcher / repair | cursor、水位、reconcile scan、repair job lifecycle、健康级别降级测试 | 文件系统平台行为实查 |
 | desktop shell | 权限、窗口恢复、系统菜单、单实例锁、单窗口和二次启动聚焦测试 | 打包/权限/系统行为实查 |
 | design token mapping | Tailwind/shadcn dark variant、Button variant、深色主题前景色测试 | 首个真实组件验证结果 |

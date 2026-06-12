@@ -1,18 +1,6 @@
 # TODO · 活跃验证、裁决与文档修复项
 
-截至 2026-06-13,本文件保留仍需真实运行数据、用户裁决或跨文档修复才能关闭的活跃项。P009 全量审计的完整证据与改法见 [P009](./progress/P009-pre-implementation-audit.md);2026-06-13 并行复审新增项已按主权归口写入本表。已关闭条目从本表移除并记入 [CHANGELOG](./CHANGELOG.md)。仍保留的每项都写明主权文档、为什么不能直接关闭、以及关闭条件。若出现需要用户先选方向的条目,会标【裁决】。
-
-## P1 · 运行时门禁与生命周期
-
-| ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
-|---|---|---|---|---|
-| TODO-P1-22 | Tauri 壳内 sidecar 执行宿主中的同步 SQLite/native binding 与 stream channel 调度隔离仍缺可运行 spike harness:当前仓库尚无应用工程、sidecar、SQLite/native binding、重 reindex workload 或 stream heartbeat 测量命令,无法实测重 reindex/向量批量写是否冻结事件投递(P009·PL-04)。 | [V03](./spec/appendix/V03-external-spikes.md) · [S14](./spec/S14-project-storage.md) · [S05](./spec/S05-knowledge-graph.md) · [S04](./spec/S04-streaming-ui-protocol.md) | P1-42 已裁决为桌面壳常驻执行宿主(壳=Tauri 已裁决,宿主以 Tauri 管理的 sidecar 进程承载),但真实测量需要工程代码、workload 和指标采集;不能靠文档关闭。 | 先建立 V03「stream during heavy SQLite/reindex」最小 harness:sidecar/等价宿主、SQLite WAL/native binding、重 reindex/embedding/checkpoint workload、stream heartbeat/UI event 延迟采集和结果记录格式;随后运行 spike,记录 stream 心跳延迟、UI 事件投递、host CPU 和隔离需求;若超阈值,回写 S06/S05 的 worker thread/独立进程/分片让步约束后关闭。 |
-| TODO-P1-43 | 核心能力成立性 gate 已落文档,但仍缺 long-form fixture/harness 和真实 spike 结果:当前仓库尚无 50–100 万字语料或等价 fixture、注入变更集、召回/精确率/稳定性/耗时测量命令,无法证明全书级影响分析、分段 delta 和 cascade 成立性。 | [S06](./spec/S06-context-management.md) · [S05](./spec/S05-knowledge-graph.md) · [S11](./spec/S11-creative-engine.md) · [V03](./spec/appendix/V03-external-spikes.md) · [V02](./spec/appendix/V02-golden-cases.md) | V03/S07/S06/S12/V02 已把 gate、fixture 和不达标降级写清;剩余是外部事实证据和可运行 harness,不能靠文档关闭。 | 建立 long-form fixture/harness 后分步关闭:1) 准备跨卷/跨章节/伏笔/别名/关系/世界规则 fixture 与注入变更集;2) 跑 impact recall/precision 并记录 V03;3) 跑 segmented delta stability 并记录 V03;4) 跑 cascade cost/latency spike 并回写 V02/S05/S06/S11。 |
-
-## P1 · 待用户裁决
-
-| ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
-|---|---|---|---|---|
+截至 2026-06-13,本文件只保留仍需用户裁决、跨文档修复或设计补齐才能关闭的活跃项。P009 全量审计的完整证据与改法见 [P009](./progress/P009-pre-implementation-audit.md);已关闭条目从本表移除并记入 [CHANGELOG](./CHANGELOG.md)。真实工程验证已归入 [V01](./spec/appendix/V01-test-matrix.md) 与 [V03](./spec/appendix/V03-external-spikes.md),不再作为游离 TODO 漂浮。
 
 ## P0 · 设计原型覆盖
 
