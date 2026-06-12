@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · Cascade 成本与延迟预算归口
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 新增 cascade preflight 契约:S07 负责 context 体量、批次建议和预算来源,S04 负责用户可见 preflight、分批、checkpoint、needs-data/blocked 收场。 | `spec/S07-context-management.md` `spec/S04-turn-orchestration.md` | 关闭 TODO-P1-44。 |
+| I01 明确 provider 成本、上下文上限、限流、fallback 差异和失败分类是模型侧事实来源;未知时全书级 cascade 只能进入 `needs data` 或 `blocked`。 | `spec/platform/I01-llm-provider-contract.md` | P1-43 的 spike 结果仍是估算输入。 |
+| plan/08 增加产品级执行预览:全书级连带修改开始前说明范围、批次、确认点、证据状态和取消后的收场。 | `plan/08-approval-and-cascade.md` | 不写技术参数,只承接用户体验。 |
+| TODO 移除已关闭的 TODO-P1-44。 | `TODO.md` | P1-23/P2-22 后续按该预算归口分别收口。 |
+
 ## 2026-06-12 · docs/gate · 长篇能力成立性门禁
 
 | 变更 | 影响文档 | 关联 |
