@@ -207,6 +207,7 @@ pnpm dev
 - [P006-memory-and-context](./progress/P006-memory-and-context.md) — 记忆 / 上下文 / JSON / 守则一致性优先重设计
 - [P007-opencode-borrowings](./progress/P007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
 - [P008-plan-rewrite](./progress/P008-plan-rewrite.md) — plan/ 纯产品 PRD 重写实施计划
+- [P009-pre-implementation-audit](./progress/P009-pre-implementation-audit.md) — 落地前全量架构与设计审计(79 文档通读 + 逐条验证)
 
 ### 项目档案
 

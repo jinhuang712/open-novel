@@ -23,6 +23,7 @@
 | P006 | 记忆 / 上下文 / JSON 输出 / 五大守则 一致性优先重设计 (5 反馈点 → 6 commit tree: T1-T6;1 plan + 5 新 spec + 14 同步) | 2026-05-06 | 跨期 (W2 末尾,W3-W11 落地前) | `5c6f8a7` (T1) → 本批末 (T6) | (W11 收尾) |
 | P007 | opencode 借鉴落地 + TODO closure (T1-T9: spec/S00 audit / 混合分档 / 卷级摘要 / tool truncate / middleware / doom-loop / SQLite + 反馈表 / TODO 关闭 / 进度) | 2026-05-07 | 跨期 (W2 末尾,W3-W11 落地前) | `5da548b` (T1) → 本批末 (T9) | (W11 收尾) |
 | P008 | plan/ 重写实施计划 | 2026-06-11 | 文档重组 | (计划存档) | (已落地到 plan/spec/design/README) |
+| P009 | 落地前全量架构与设计审计 (110 原始发现 → P0×1 / P1×41 / P2×26 确认,TODO 回填 44 条) | 2026-06-12 | 实现启动前 | (本期 docs commit) | (按批次修复后追加) |
 
 (后续每条 entry 自动追加到此表)
 
