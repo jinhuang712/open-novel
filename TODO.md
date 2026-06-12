@@ -25,8 +25,6 @@
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
 |---|---|---|---|---|
 | TODO-P1-51 | light apply、Humanizer/inline accept 与 editor undo 的边界不够闭合:S14 要写入记录和 forward-only 反向 apply,S13/S14 容易被读成已入账 AI 替换可普通 editor undo。 | [S14](./spec/S14-project-storage.md) · [S12](./spec/S12-style-and-humanizer.md) · [S13](./spec/S13-editor-and-interaction.md) · [V01](./spec/appendix/V01-test-matrix.md) | S14 已有主权方向,无需裁决;需要把编辑器本地 undo 与 committed 后反向 light apply 区分写清。 | S13/S14 增加"提交前 undo bridge / 提交后 forward-only reverse apply"规则,并补 V01 场景。 |
-| TODO-P1-53 | M16 对多项目隔离缺少验收:README 承诺多项目并行且数据互不污染,但切换项目时 active turn、pending approval、recent/runtime history、样例项目隔离规则不足。 | [README](./README.md) · [M16](./spec/M16-project-library-and-navigation.md) · [M01](./spec/M01-universal-search.md) · [M15](./spec/M15-onboarding-and-new-book.md) · [V01](./spec/appendix/V01-test-matrix.md) | 跨项目隔离是既定承诺,无需裁决;缺的是切换/恢复/失败收场和测试矩阵。 | M16 增补项目切换契约、recent/history project 分桶、sample/真实项目隔离、pending/active turn 收场;V01 加验收。 |
-
 ## P2 · 同步与体验优化
 
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |

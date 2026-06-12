@@ -10,7 +10,7 @@
 - **章节创作**: 一键章节概要 → 一键章节正文 → 一键去 AI 化
 - **改完连带改**: 改了角色性别,系统列出确定性影响集合,把疑似受影响段落作为低置信候选补充给你,整批审批 + 落盘
 - **边写边查**: 设定中的角色名 / 地点名自动高亮 + 跳转引用;`Shift+Shift` 打开统一搜索,角色、阵营、概念、章节片段与事实答案都从同一入口进入
-- **多项目并行**: 数据互不污染
+- **多项目并行**: 单窗口内切换项目,active turn、待审卡、未保存编辑、最近记录和样例项目数据互不污染
 
 它不是一键生成器,而是 Agent 提议 + 用户审定 + 系统持久的合伙人。
 
@@ -56,7 +56,7 @@
 - **能力闭环**: `M01-M18` 写用户可触发、可感知、可验收的完整能力
 - **平台支撑契约**: 当前 `spec/platform/` 包含 I01/I02/I03/I05 四篇跨边界接入契约,以及 R01/R03/R04/R05 四篇生命周期、迁移、修复和诊断契约;I04/R02 已按用户裁决撤销并保留跳号
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文已清理,不再保留
-- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S01](./spec/S01-runtime-state.md)
+- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`;recent projects 可跨项目显示,项目内 recent/search/history 按 project id 分桶,详见 [spec/S01](./spec/S01-runtime-state.md) 与 [M16](./spec/M16-project-library-and-navigation.md)
 - **项目存储主权**: 项目文件、真源账本(`project.db`)与派生索引(`index.db`,可整库重建)物理分库,由 [spec/S14](./spec/S14-project-storage.md) 定义
 - **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S03](./spec/S03-turn-orchestration.md) 定义
 - **开发者诊断入口**: 真实作者包不显示、不可开启;是否编入或暴露由构建/打包配置决定
@@ -86,6 +86,8 @@ pnpm dev
 1. 选择或创建项目,首次可指定本机项目库位置(默认 `~/.open-novel/workspaces/`)
 2. 填入模型服务凭据
 3. 进入主界面;左上角可随时返回项目选择
+
+项目切换发生在同一个窗口内。切换前若当前项目还有运行中的 turn、待审卡、未保存编辑或外部冲突,系统必须先让作者处理;recent objects、Search/query history、preview cache、session history 和样例项目数据都按 project id 隔离。
 
 ## 目录结构
 
@@ -163,7 +165,7 @@ pnpm dev
 - [M13-agent-team-controls](./spec/M13-agent-team-controls.md) — 七个 AI 角色的档位、调配和能力边界
 - [M14-settings-and-developer-mode](./spec/M14-settings.md) — 设置面板:分区、助手语气边界、凭据用户语义和危险操作
 - [M15-onboarding-and-new-book](./spec/M15-onboarding-and-new-book.md) — 首启、开书向导、样例项目和工作区初始化
-- [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开和跨项目隔离
+- [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开、单窗口项目切换和跨项目隔离
 - [M17-turn-recap-and-continuation](./spec/M17-turn-recap-and-continuation.md) — Turn Recap、项目活动时间线、停止回执和续接入口
 - [M18-developer-mode](./spec/M18-developer-mode.md) — 开发者诊断模式:可见内容分层、不绕审批和修复入口分工
 
