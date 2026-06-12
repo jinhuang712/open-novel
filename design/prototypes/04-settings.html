@@ -133,7 +133,7 @@
     <div class="dlg-body">
       <div class="nav" id="nav">
         <div class="nav-row active" data-pane="p1">📁 Workspace + 项目 <span class="dirty-dot"></span><span class="scope">🌐+📂</span></div>
-        <div class="nav-row" data-pane="p2">🔑 API Keys + 预算 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p2">🔑 API Keys + 用量 <span class="scope">🌐</span></div>
         <div class="nav-row" data-pane="p3">🤖 Agents <span class="scope">🔄</span></div>
         <div class="nav-row" data-pane="p4">👥 ReaderPanel + Persona <span class="scope">📂</span></div>
         <div class="nav-row" data-pane="p5">🛡 Rules <span class="scope">📂</span></div>
@@ -179,11 +179,10 @@
             </div>
             <div class="desc">仅存本地;V4 Pro = max effort,Flash = default。怎么拿 key:platform.deepseek.com/api_keys</div>
           </div>
-          <div class="field" data-search="budget usage cost monthly llm">
-            <label>月度成本天花板</label>
-            <div class="input"><input type="number" value="50" style="width:110px"> <span style="font-size:12.5px;color:var(--text-secondary)">USD / 月</span></div>
-            <div class="usage"><i></i></div>
-            <div class="desc">本月已用 $12.4 / $50 · 超 80% 警告,触顶后暂停 LLM 调用</div>
+          <div class="field" data-search="usage tokens cache context metrics">
+            <label>本月用量指标</label>
+            <div class="input"><span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-secondary)">24.6M tokens · cache 命中 87% · context 峰值 92K</span></div>
+            <div class="desc">只读技术指标:token 消耗、prompt cache 命中率、context 用量,随每轮更新</div>
           </div>
           <div class="field" style="opacity:.55">
             <label>外部研究与素材搜索</label>
@@ -220,7 +219,7 @@
             <div><span class="row-title">审稿人</span><span class="row-sub">节奏、爽点、守则和表达风险</span></div>
             <select><option>敏感</option><option>标准</option><option>安静</option></select>
             <select><option>Flash</option><option>Pro</option></select>
-            <span class="inline-note">12% 成本</span>
+            <span class="inline-note">12% 用量</span>
           </div>
           <div class="role-row" data-search="reader_panel 读者评审团 persona depth">
             <label class="switch"><input type="checkbox" checked><i></i></label>

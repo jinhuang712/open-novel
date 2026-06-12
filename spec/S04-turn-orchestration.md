@@ -149,26 +149,26 @@ Discuss Mode 是 Router action 中最严格的只读分支,详见 [M04 · Discus
 
 ## Cascade preflight
 
-跨章节或全书级 cascade 在进入 Agent 生成前必须先过 preflight。Preflight 不是技术日志,而是一次面向作者的执行承诺:预计会处理多大范围、是否分批、哪些地方需要 checkpoint、成本/等待是否可解释、取消后会停在哪里。
+跨章节或全书级 cascade 在进入 Agent 生成前必须先过 preflight。Preflight 不是技术日志,而是一次面向作者的执行承诺:预计会处理多大范围、是否分批、哪些地方需要 checkpoint、等待是否可解释、取消后会停在哪里。
 
 | 输入 | 来源 | S04 决策 |
 |---|---|---|
 | 影响范围和 dependency group | S07/S06 | 能否组成同一审批批次,哪些必须一起生效 |
 | context 体量和 overflow 风险 | S07/S08 | 是否缩小范围、摘要替代、分阶段执行或显式失败 |
-| provider 上限、价格和限流 | I01 | 是否需要用户确认成本、降级模型、排队或取消 |
+| provider 上限和限流 | I01 | 是否需要降级模型、排队或分批 |
 | 能力 gate 状态 | V03/V02 经 S07 投影 | 是否标记 `needs data`、低置信或阻断全书承诺 |
 
-S04 拥有用户可见 preflight 结果。它可以让用户确认一次性执行,也可以把 cascade 切成多个可审定批次;但不能在成本、延迟或覆盖范围不可解释时直接启动全书级长任务。
+S04 拥有用户可见 preflight 结果。它可以让用户确认一次性执行,也可以把 cascade 切成多个可审定批次;但不能在等待、批次或覆盖范围不可解释时直接启动全书级长任务。
 
-Turn 成本预算和 cascade preflight 是用户可见的一等状态,不是 Trace 里事后解释的统计项。Preflight 展示必须至少说明预计范围、批次数、等待区间、预算区间、主要不确定来源、是否会触发降级模型/排队、取消后的静止点和需要用户确认的阈值。预算状态跟随 turn 更新:未估算、估算中、可执行、需确认、已超预算、证据不足、已取消。S04 只拥有这些状态的编排和展示;provider 价格、限流和模型能力仍由 I01 提供,context 体量和 overflow 风险仍由 S07/S08 提供。
+Turn 用量指标(token 消耗、prompt cache 命中、context 体量)是用户可见的技术指标,不是 Trace 里事后解释的统计项;preflight 只解释范围、批次、等待与取消点,不做任何预算或成本审批。Preflight 展示必须至少说明预计范围、批次数、等待区间、主要不确定来源、是否会触发降级模型/排队、取消后的静止点。S04 只拥有 preflight 结果的编排和展示;provider 上限、限流和模型能力仍由 I01 提供,context 体量和 overflow 风险仍由 S07/S08 提供。
 
 | preflight 结果 | 后续 |
 |---|---|
 | ready | 启动 cascade,保留取消点和最终审批 |
-| needs confirmation | 用户确认范围、成本或等待后再启动 |
+| needs confirmation | 用户确认范围或等待后再启动 |
 | split required | 生成分批队列,每批有独立 checkpoint 和审批解释 |
-| needs data | 能力 gate 或成本模型缺证据,不能承诺全书级处理 |
-| blocked | 范围、预算或 provider 上限不满足,要求缩小任务或改路线 |
+| needs data | 能力 gate 或体量估算缺证据,不能承诺全书级处理 |
+| blocked | 范围或 provider 上限不满足,要求缩小任务或改路线 |
 
 单条 stale freshness marker 应在涉及陈旧证据的卡片、Trace 行或审批说明旁以轻量状态提示出现:说明哪类证据已过期、最后新鲜水位、可继续只读查看还是必须刷新后才能写入。它不能替代 S07/S06/R04 的健康判定,也不能把 stale 包装成成功;它只是把已存在的新鲜度状态放到用户看得见的位置。
 

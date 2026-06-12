@@ -27,7 +27,7 @@ flowchart LR
 | Section | 徽标 |
 |---|---|
 | 1 Workspace + 项目 | 🌐+📂 |
-| 2 API Keys + 预算 | 🌐 |
+| 2 API Keys + 用量 | 🌐 |
 | 3 Agents | 🔄 |
 | 4 ReaderPanel + Persona | 📂 |
 | 5 Rules | 📂 |
@@ -46,8 +46,8 @@ flowchart LR
 ## 关键 section 交互样例
 
 - **Workspace + 项目**:workspace 路径只在通过写权限检查后保存;提供「更换 workspace」「新建项目」入口。更换路径会先列出受影响项目数量和当前 pending approval。
-- **API Keys**:masked 输入 + 显隐 toggle +「测试连接」(loading → ✓ 已验证 success / ✗ 失败 danger + 原因);月度预算数字输入 + 当月用量进度条(超 80% warning,超 100% danger + 「已触顶,LLM 调用暂停」说明)
-- **Agents**:按 canonical role id 展示 7 个角色。每行包含启用开关、干预强度、模型档位、成本占比和「下轮生效」说明;`router` 不可关闭,`validator` 的阻断级一致性不可关闭,`reflector` 关闭只停止新学习并链接到 Memory。项目覆盖开启时该行右侧出现「覆盖中 · 还原」。
+- **API Keys**:masked 输入 + 显隐 toggle +「测试连接」(loading → ✓ 已验证 success / ✗ 失败 danger + 原因);用量指标展示(本月 token 消耗、prompt cache 命中率等只读指标,等宽数字)
+- **Agents**:按 canonical role id 展示 7 个角色。每行包含启用开关、干预强度、模型档位、用量占比和「下轮生效」说明;`router` 不可关闭,`validator` 的阻断级一致性不可关闭,`reflector` 关闭只停止新学习并链接到 Memory。项目覆盖开启时该行右侧出现「覆盖中 · 还原」。
 - **ReaderPanel + Persona**:ReaderPanel 提供 persona 勾选(爽文读者 / 老书虫 / 平台编辑 / 逻辑洁癖 / 付费追更)、评审深度、报告长度、章末自动评审开关;Assistant Persona 提供语气、详略、主动列选项、提醒强度和称呼输入。该区明确只改变协作表达和读者评审视角,不改变写盘权限、守则阈值或项目事实。
 - **Rules**:五大守则按「提示级 / 确认级 / 阻断级」展示阈值与提示方式;用户可降低提示频率、调解释口径、关闭非阻断提示,但阻断级风险仍必须进入审批或拦截。每个规则显示最近一次触发样例和「恢复默认」。
 - **Memory**:顶部 Reflector 总开关;经验列表展示文本、来源 turn、作用范围、注入状态、权重 slider、关闭和删除。冲突候选以对照卡展示旧经验 / 新经验 / 来源,用户可选「采用新」「保留旧」「两条都不用」;未确认候选不注入 context。清空经验是危险操作,需选择范围并二次确认。
@@ -68,7 +68,6 @@ flowchart LR
 | 首启无 key 被引导打开 | 直接定位 Section 2,顶部 info 条「填入 DeepSeek API Key 后开始」 |
 | 搜索命中 ReaderPanel persona | 结果菜单显示「ReaderPanel + Persona / 付费追更 persona」,回车后跳转并高亮 persona 勾选组 |
 | 测试连接中 | 按钮 loading,输入锁定 |
-| 预算触顶 | Section 1 顶部 danger 条;状态点同步错误态(见 [design/01 §状态点](./01-main-layout.md#状态点常驻与-trace-面板召唤)) |
 | 运行中 turn 修改 Agents | dirty 可保存,右侧说明「下轮生效」;当前 turn 不被静默替换 |
 | Memory 冲突候选 | 候选卡进入待确认区,未确认前不注入 context |
 | Rules 阻断级被尝试关闭 | switch 复位 + danger inline「阻断级风险不能静默落盘」 |

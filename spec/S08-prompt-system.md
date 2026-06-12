@@ -57,7 +57,7 @@ prompt injection 的处理不只靠文字提醒。S08 定义围栏,S09 限制工
 
 | 字段族 | 用途 |
 |---|---|
-| `prompt_version` | prompt 行为版本,用于 replay、回归和成本对比。 |
+| `prompt_version` | prompt 行为版本,用于 replay、回归和用量对比。 |
 | `template_ids` | 说明本次用了哪些 A05 模板和片段。 |
 | `layer_manifest` | 记录 system/role/mode/output/task/context/experience/user/fenced 的排序。 |
 | `context_package_id` | 指向 S07 产出的事实包。 |
@@ -66,9 +66,9 @@ prompt injection 的处理不只靠文字提醒。S08 定义围栏,S09 限制工
 
 完整字段定义归 [A02 · JSON Schemas](./appendix/A02-json-schemas.md)。本篇只定义 packet 必须存在和它在链路中的意义。
 
-## 终局预算校验
+## 终局体量校验
 
-S07 负责估算 context package,S08 负责在 prompt packet 完整拼装后做最终预算校验。模板正文、role/mode 层、output contract、tool result marker、不可信内容围栏和 experience 片段都会增加实际体量;这些不能只靠 S07 的 context 估算替代。
+S07 负责估算 context package,S08 负责在 prompt packet 完整拼装后做最终体量校验。模板正文、role/mode 层、output contract、tool result marker、不可信内容围栏和 experience 片段都会增加实际体量;这些不能只靠 S07 的 context 估算替代。
 
 | 校验项 | 失败收场 |
 |---|---|

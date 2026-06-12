@@ -40,13 +40,13 @@
 | Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed |
 | Inline Review / Editor | selection captured、suggestion rendered、near-text action selected、editor replace applied、undo bridge recorded |
 | Trace / Recap / Activity | trace step appended、developer detail attached、recap created、author note added、continuation selected |
-| Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent toggled、budget changed |
+| Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent toggled、tier changed |
 | Settings / Onboarding / Library | settings saved、danger action confirmed、workspace initialized、project opened/closed |
 | platform/Ixx/Rxx | provider capability checked、watcher event received、import/export completed、backup/restore completed、migration/repair job updated、diagnostics exported |
 
 ## Agent role id 事件约束
 
-所有 Agent 相关事件的 `role_id` 必须取自 M13 canonical id:`router`、`writer`、`checker`、`validator`、`reader_panel`、`humanizer`、`reflector`。事件可以额外带中文展示名,但展示名不能作为去重键、成本归因键或 prompt 名称。
+所有 Agent 相关事件的 `role_id` 必须取自 M13 canonical id:`router`、`writer`、`checker`、`validator`、`reader_panel`、`humanizer`、`reflector`。事件可以额外带中文展示名,但展示名不能作为去重键、用量归因键或 prompt 名称。
 
 ## 去重键
 

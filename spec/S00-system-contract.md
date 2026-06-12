@@ -98,7 +98,7 @@ flowchart TB
 
   subgraph Runtime[运行层]
     Threads[会话和摘要]
-    Trace[工具调用 / 模型调用 / 成本]
+    Trace[工具调用 / 模型调用 / 用量]
     UIEvents[流式事件]
   end
 

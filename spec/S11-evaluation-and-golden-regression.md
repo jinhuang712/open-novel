@@ -82,7 +82,7 @@ Golden re-baseline 只允许在三种情况下发生:产品契约明确改变、
 | 结果 | 含义 | 后续动作 |
 |---|---|---|
 | pass | 必跑场景通过,无新增阻断风险 | 可合入,记录版本。 |
-| warn | 用户解释、成本或轻微质量指标退化,不影响主权边界 | 需要人工记录接受理由。 |
+| warn | 用户解释、用量或轻微质量指标退化,不影响主权边界 | 需要人工记录接受理由。 |
 | fail | schema、来源、边界、审批、安全或关键质量退化 | 阻断合入。 |
 | needs data | 没有足够 fixture/golden 判断 | 先补 V02/V03,不能凭主观判断通过。 |
 
@@ -95,7 +95,7 @@ Golden re-baseline 只允许在三种情况下发生:产品契约明确改变、
 | 风险 | 归口 |
 |---|---|
 | DeepSeek cache control / provider 行为 | V03 原始 spike + I01/S08/S10/S11。 |
-| 1M context token 成本 | V03/V01 + S07/S10/S11。 |
+| 1M context token 用量 | V03/V01 + S07/S10/S11。 |
 | AI SDK stopWhen/tool marker/onStepFinish | V03/V01 + S03/S10/S11。 |
 | watcher/native binding/desktop shell 事实 | V03 + platform/I/R。 |
 | LLM golden/test strategy | S10/S11 + V01/V02。 |
@@ -111,7 +111,7 @@ TODO 只保留没有主权文档、没有验证入口、或需要用户重新裁
 | M08 Approval Cascade | dependency group、residual obligation、阻断级一致性。 |
 | M09 Trace Observability | 过程证据足以解释失败和降级。 |
 | M11 ReaderPanel | 不打总分,风险和证据一致。 |
-| M13 Agent Team Controls | role id、开关、prompt 名称和成本归因一致。 |
+| M13 Agent Team Controls | role id、开关、prompt 名称和用量归因一致。 |
 
 ## FAQ
 

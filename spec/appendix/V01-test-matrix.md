@@ -59,7 +59,7 @@
 | M01-M04 search/query/discuss | Shift+Shift、fact query 来源跳转、command routing、只读边界 |
 | M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、dependency group、低置信项、residual obligation、writing-blocked、部分接受和失败收场 |
 | M03/M10/S06 knowledge governance | as-of chapter 查询、同名歧义、别名确认、实体合并/拆分、obligation 全局清单 |
-| M09-M13 trace/memory/agent controls | Trace 层级、经验可见/关闭/删除、agent 开关和预算限制 |
+| M09-M13 trace/memory/agent controls | Trace 层级、经验可见/关闭/删除、agent 开关和档位调整 |
 | M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、danger action、workspace 初始化、项目切换隔离、Activity append-only |
 | platform/Ixx | provider probe、editor adapter、watcher、desktop permission、keychain、shortcut registration |
 | platform/Rxx | project lifecycle、migration、repair、diagnostics export preview/redaction |
@@ -105,8 +105,8 @@
 
 | 验证项 | V01 门禁 | V03 证据 |
 |---|---|---|
-| DeepSeek `cache_control` / stable prompt header | prompt packet 记录 cache/stable header 降级,不影响 S08 layer manifest | provider response 与成本证据 |
-| 1M context 成本 | Writer/Validator/ReaderPanel 典型 context package 的 token 预算、overflow 和用户可见说明 | tokenizer 或真实请求记录 |
+| DeepSeek `cache_control` / stable prompt header | prompt packet 记录 cache/stable header 降级,不影响 S08 layer manifest | provider response 与用量证据 |
+| 1M context 体量 | Writer/Validator/ReaderPanel 典型 context package 的 token 体量、overflow 和用户可见说明 | tokenizer 或真实请求记录 |
 | AI SDK loop | stopWhen/tool marker/onStepFinish 或手写 loop 的等价测试,覆盖 cancel、tool result、step finish | 最小 runner spike |
 | SQLite/native binding | `sqlite-vec` CRUD/JOIN、WAL 并发、Route Handler 连接泄漏测试 | macOS arm64 / Linux x64 原始输出 |
 | watcher / repair | cursor、水位、reconcile scan、repair job lifecycle、健康级别降级测试 | 文件系统平台行为实查 |

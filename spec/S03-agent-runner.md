@@ -92,7 +92,7 @@ Runner 可以在同一 run 内复用工具结果,但缓存只是执行优化,不
 | 哪些事实必须装入、哪些事实可裁 | [S07 · Context Management](./S07-context-management.md) |
 | prompt 分层、优先级、不可信内容围栏 | [S08 · Prompt System](./S08-prompt-system.md) |
 | 工具白名单、工具权限、二次 LLM 调用边界 | [S09 · Agent Tooling Boundary](./S09-agent-tooling-boundary.md) |
-| canonical AI 角色 id、角色开关和成本归因 | [M13 · Agent Team Controls](./M13-agent-team-controls.md) |
+| canonical AI 角色 id、角色开关和用量归因 | [M13 · Agent Team Controls](./M13-agent-team-controls.md) |
 | 真实任务回放、输入输出记录、失败复现 | [S10 · LLM Quality Harness](./S10-llm-quality-harness.md) |
 | golden regression、质量指标、阻断门禁 | [S11 · Evaluation And Golden Regression](./S11-evaluation-and-golden-regression.md) |
 | 审批、落盘、取消计划、recap | [S04 · Turn Orchestration](./S04-turn-orchestration.md) |

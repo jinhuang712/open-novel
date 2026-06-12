@@ -43,7 +43,7 @@ sequenceDiagram
 | progress | routing、querying、generating、reindexing | 状态点和短句 |
 | output | 草稿文本片段、报告摘要、查询结果 | 正文/面板可见内容 |
 | control | awaiting approval、completed、cancel requested、recap ready、retry available | 审批卡、按钮、状态切换、recap 提示 |
-| diagnostic | tool run、LLM call、JSON retry、成本、错误 | Trace / Developer Mode |
+| diagnostic | tool run、LLM call、JSON retry、用量、错误 | Trace / Developer Mode |
 
 完整字段进 appendix。根层要求每个事件都能关联 project、turn、step 或 trace 身份,否则无法去重和恢复。
 

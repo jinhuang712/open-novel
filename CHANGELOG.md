@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · 用量指标替代预算控制
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| plan:原则七由“成本透明可控”改为“用量透明”——每一轮消耗了什么、各角色用了多少随时可查,高消耗能力可单独关闭;全篇“省钱/高成本”措辞改为“节省消耗/高消耗”;用量随时可见段改为用量指标表述。 | `plan/01-overview.md` `plan/02-principles.md` `plan/06-agent-team.md` | 用户裁决 POC 不做预算与成本控制,只保留 token/cache/context 技术指标透明。 |
+| spec:S04 preflight 删除成本/预算维度(价格输入行、成本确认、预算状态机),改为用量指标可见 + preflight 只解释范围/批次/等待/取消点;S07 “成本与延迟预算”改写为“context 体量与批次”;I01 “成本和上限主权”改写为“上限和限流主权”,删计费单位/价格行,needs data 仅对上限未知成立;S08 终局预算校验改名终局体量校验;S15/M14 Usage 分区改为 token 消耗、cache 命中、context 用量等技术指标;M09/S00/S01/S02/S03/S05/S10/S11/S12/M13/A01/A03/V01/V02/V03 面向用户的“成本”字眼统一为“用量/体量”,事件与字段级 cost 记录保留。 | `spec/S00-system-contract.md` `spec/S01-project-storage.md` `spec/S02-runtime-state.md` `spec/S03-agent-runner.md` `spec/S04-turn-orchestration.md` `spec/S05-streaming-ui-protocol.md` `spec/S07-context-management.md` `spec/S08-prompt-system.md` `spec/S10-llm-quality-harness.md` `spec/S11-evaluation-and-golden-regression.md` `spec/S12-creative-engine.md` `spec/S15-settings-and-onboarding.md` `spec/M09-trace-observability.md` `spec/M13-agent-team-controls.md` `spec/M14-settings-and-developer-mode.md` `spec/platform/I01-llm-provider-contract.md` `spec/appendix/A01-schema-tables.md` `spec/appendix/A03-event-catalog.md` `spec/appendix/V01-test-matrix.md` `spec/appendix/V02-golden-cases.md` `spec/appendix/V03-external-spikes.md` | — |
+| design:设置页删除月度预算输入、用量进度条与“预算触顶暂停”状态,改为只读用量指标(本月 token 消耗、cache 命中率等);Trace 面板头部“本 turn 成本”改“本 turn 用量”;onboarding 删成本预估承诺;对应原型同步最小修改。 | `design/01-main-layout.md` `design/04-settings.md` `design/05-onboarding.md` `design/prototypes/01-main-layout.html` `design/prototypes/04-settings.html` `design/prototypes/05-onboarding.html` | 角色档位与开关保留不动。 |
+
 ## 2026-06-12 · docs/decision · 移除导入导出与备份恢复
 
 | 变更 | 影响文档 | 关联 |

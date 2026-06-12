@@ -39,7 +39,7 @@ flowchart TB
 |---|---|---|---|
 | runtime.db | thread、message、压缩摘要、turn recap、跨项目会话恢复状态 | 可以影响对话连续性和续接提示 | 不能 |
 | project index/fact store | 项目经验、实体、关系、审批后事实、派生索引 | 可以影响写作和查询 | 只能恢复它拥有主权的项目事实部分 |
-| session_history.db | 模型调用、工具调用、trace、成本、错误 | 默认不影响 | 不能 |
+| session_history.db | 模型调用、工具调用、trace、用量、错误 | 默认不影响 | 不能 |
 
 Recap 是作者级 changelog,不是作品。过程历史再完整也只是证据,不是作品。会话消息再像“设定”,也不能绕过项目事实层。
 

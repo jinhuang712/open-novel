@@ -8,7 +8,7 @@
 - project storage 相关表结构和索引。
 - knowledge graph 的 entity、concept、relation、timeline、dependency、anchor、embedding 表。
 - runtime、activity recap、experience、session history 表。
-- canonical agent role id、agent 设置、成本归因和 prompt 名称映射。
+- canonical agent role id、agent 设置、用量归因和 prompt 名称映射。
 - approval、ChangeSet、internal recovery、trace 的持久化字段。
 - Universal Search 最近对象、查询历史、preview cache 和索引健康状态字段。
 - settings、onboarding、project lifecycle 的存储字段。
@@ -37,7 +37,7 @@
 | Inline Review / Humanizer | selection anchor、suggestion id、diff range、accepted/rejected state、editor undo bridge metadata |
 | Approval / Cascade | ChangeSet、approval item、decision、low-confidence item、internal recovery snapshot、reindex status |
 | Trace / Recap / Activity | trace step、tool run reference、activity recap、author note、continuation action |
-| Memory / Reflector / Agent Controls | learning item、source decision、weight、mute/delete state、agent enablement and budget |
+| Memory / Reflector / Agent Controls | learning item、source decision、weight、mute/delete state、agent enablement and tier |
 | Settings / Onboarding / Project Library | workspace path、project metadata、danger action audit、recent project、library filter |
 | Settings / Credentials | provider config reference、credential reference、verification status、migration status、redaction audit |
 | platform/Ixx | provider capability cache、editor adapter state、watcher cursor、desktop permission、shortcut registration |

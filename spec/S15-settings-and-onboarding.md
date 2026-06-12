@@ -29,7 +29,7 @@ flowchart TD
 | Style | 文字像不像我 | 风格偏好、范文、Humanizer 相关经验 |
 | Rules | 风险提示多严格 | 五大守则阈值、提示偏好 |
 | Memory | 系统学到了什么 | 经验查看、权重、关闭、删除 |
-| Usage | 花了多少 | 用量、预算、成本提示 |
+| Usage | 用了多少 | token 消耗、prompt cache 命中、context 用量等技术指标 |
 | Developer | 出问题怎么查 | Trace、过程日志、索引健康度、审计结果 |
 
 内部 retry 常数、SQL 字段、prompt 片段、包版本和 native binding 细节不作为普通设置暴露。

@@ -120,7 +120,7 @@ queryFacts 是动词不是文件,独立成一键浮层:
 | 已停止 | `--text-tertiary`,静止 | 「已停止 · 没有修改 · 查看 recap」 | 展开 Trace 面板 |
 | 错误 | `--danger` | 「连接失败 · 去 Settings 检查 key」 | 直达 Settings §API Keys |
 
-Trace 面板(`Cmd+J` / 点状态点,380px 推开式):头部 = 最近 turn recap 摘要、本 turn 成本(等宽 11px)+「全部活动」「复制 trace」「折叠全部」;主体按 agent 分块——agent 名 + 耗时一行,工具调用行等宽可展开 JSON,reasoning 默认一句摘要(Developer Mode 展开全文);块间发丝线分隔,不做卡片底色。
+Trace 面板(`Cmd+J` / 点状态点,380px 推开式):头部 = 最近 turn recap 摘要、本 turn 用量(等宽 11px)+「全部活动」「复制 trace」「折叠全部」;主体按 agent 分块——agent 名 + 耗时一行,工具调用行等宽可展开 JSON,reasoning 默认一句摘要(Developer Mode 展开全文);块间发丝线分隔,不做卡片底色。
 
 Activity 时间线由 Trace 顶部的「全部活动」进入,仍是召唤式面板而非常驻侧栏。它按时间列出 recap、作者备注、已审定修改、停止和失败记录;点击条目跳到对应章节、审批卡或 Trace step。
 
