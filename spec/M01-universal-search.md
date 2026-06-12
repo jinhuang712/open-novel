@@ -46,6 +46,12 @@ flowchart TB
 
 Universal Search 不直接写作品。它读取项目事实和派生索引,输出可点击结果和可追溯来源。任何会触发写入的后续动作必须转入对应 turn/approval 语义。
 
+## Recap 与 activity 边界
+
+Search 的本地路径不生成 recap。打开浮层、输入关键词、hover preview、展开分组、打开结果、跳转段落和对照打开,都只改变当前视图或最近访问排序;它们不能写入项目 Activity 时间线,也不能被包装成“本轮完成了搜索”。
+
+Search 内的事实答案由 [M03 Fact Query](./M03-fact-query.md) 定义:默认只写轻量 activity,不生成 recap。只有当用户从 Search 选择“转 Discuss”、请求 Agent 解释、运行 ReaderPanel、生成 proposal 或触发任何写入/审批动作时,该动作才离开 Search,进入 [M17](./M17-turn-recap-and-continuation.md) 的 turn recap 触发矩阵。
+
 ## 查询理解
 
 | 输入 | 识别 | 首选结果 |

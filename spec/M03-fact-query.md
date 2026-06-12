@@ -39,6 +39,21 @@ Fact Query 找不到答案时可以提供“转 Discuss”入口,但不能把 Di
 
 Fact Query 不拥有 `Cmd+E` 独立入口。任何快捷键、选区浮动条或对象详情中的“查询来源”动作都必须路由到 Universal Search 的当前浮层或嵌入详情,再由本能力生成答案。
 
+## 轻量 activity
+
+Fact Query 默认不进入 turn,也不生成 recap。一次事实答案只写轻量 activity,记录查询文本、查询时点、答案状态、来源数量和可跳转来源;它用于作者之后找回“我查过什么”,不能写成项目变更、Agent 结论或可续接任务。
+
+以下情况仍然只写轻量 activity,不生成 recap:
+
+| 情况 | activity 记录 | Recap |
+|---|---|---|
+| 找到有来源答案 | 问题、时点、答案摘要、来源跳转 | 不生成 |
+| 未找到来源 | 问题、时点、无来源状态 | 不生成 |
+| 索引 stale / 低置信 | 问题、时点、降级状态、可用来源 | 不生成 |
+| 普通查询失败或超时 | 问题、失败原因、可重试提示 | 不生成 |
+
+如果用户把查询转成 Discuss、要求 Agent 解释取舍、运行 ReaderPanel 或生成 proposal,后续动作不再属于 Fact Query 本身,而是新的 turn,必须按 [M17](./M17-turn-recap-and-continuation.md) 生成 recap。只有这类显式升级后的失败、停止或部分完成,才留下 stopped / failed recap。
+
 ## 失败收场
 
 | 失败 | 用户看到 | 系统不能做 |

@@ -27,6 +27,8 @@ flowchart LR
 
 命令必须声明上下文、危险等级和是否进入 turn。Quick Open 只能打开或预览,不能偷偷触发写入,也不能把模糊搜索结果包装成对象搜索。
 
+Quick Open 的打开、预览、最近项定位和路径跳转不生成 recap,也不写项目 Activity;最多更新最近访问。Command Palette 执行本地 UI 命令时同样不生成 recap。只有命令声明为 Agent 执行、ReaderPanel 运行、proposal 生成、写入、审批或 cancel plan 时,才进入 turn,并按 [M17](./M17-turn-recap-and-continuation.md) 生成 recap。
+
 审批命令只能打开待审审批卡、跳到指定 cascade 项,或展示不可执行原因。Command Palette 不提供直接「全部同意」写入入口;任何批量接受都必须先让作者看到完整审批卡,并按 [M08 Approval Cascade](./M08-approval-cascade.md) 的风险语义完成确认。
 
 ReaderPanel 有两个全局命令:「运行 ReaderPanel」在当前章节、选区或命令参数满足时进入 turn;「打开最近 ReaderPanel 报告」只打开已有报告。运行失败、无当前章节或最近报告不存在时,命令只展示可恢复提示,不能生成空报告或静默写盘。
@@ -78,8 +80,8 @@ Command Palette 和 Quick Open 可以有全局入口,但不是全局抢键。快
 | 上下文 | pending approval、输入框聚焦、IME composition |
 | 命令 | 危险命令必须确认或审批 |
 | 审批 | 从命令面板打开待审审批卡(无快捷键),不直接同意 |
-| ReaderPanel | 可运行当前章节,也可打开最近报告;无报告时空态 |
-| 打开 | 最近项、路径、章节、设定、角色卡可预览和打开;模糊事实搜索不会出现在 Quick Open |
+| ReaderPanel | 运行当前章节进入 turn 并生成 recap;打开最近报告只读打开,无报告时空态 |
+| 打开 | 最近项、路径、章节、设定、角色卡可预览和打开,不生成 recap;模糊事实搜索不会出现在 Quick Open |
 
 ## FAQ
 

@@ -37,12 +37,25 @@
 | Turn / Write Record / Recovery | write prepared/file-applied/committed、light apply accepted、mode changed/blocked、run interrupted、manual recovery opened |
 | Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed、apply failed/degraded |
 | Approval Queue / Obligation | approval enqueued、approval focused、approval invalidated、obligation opened/snoozed/resolved/dismissed/invalidated、redo requested |
-| Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed |
+| Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed、light activity recorded |
 | Inline Review / Editor | selection captured、suggestion rendered、near-text action selected、editor replace applied、undo bridge recorded |
 | Trace / Recap / Activity | trace step appended、developer detail attached、recap created、author note added、continuation selected |
 | Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent tier/frequency/weight changed |
 | Settings / Onboarding / Library | settings saved、danger action confirmed、workspace initialized、project opened/closed |
 | platform/Ixx/Rxx | provider capability checked、watcher event received、migration/repair job updated、diagnostics exported |
+
+## Recap / Activity 触发边界
+
+事件流必须区分 UI 事件、轻量 activity 和 turn recap。Search、Quick Open、Command Palette 的本地打开/预览/跳转事件只是 UI 或 recent-state 事件;它们不能写项目 Activity 时间线,也不能触发 `recap created`。Fact Query 是例外:答案展示后写 `light activity recorded`,但不创建 turn recap。
+
+| 触发 | 事件 | 项目 Activity | Recap |
+|---|---|---|---|
+| Universal Search 打开、输入、preview、结果打开/跳转 | `search opened`、`query submitted`、`preview requested`、`result action selected` | 不写 | 不创建 |
+| Quick Open 预览、打开对象或路径 | `result action selected` | 不写 | 不创建 |
+| Command Palette 本地 UI 命令 | `command executed` | 不写 | 不创建 |
+| Fact Query 展示答案、无来源、stale 或普通失败 | `query submitted`、`light activity recorded` | 写轻量 activity | 不创建 |
+| 命令或查询升级为 Agent / ReaderPanel / proposal / 写入 / 审批 | `turn created` 起始的 turn 事件族 | 按 turn 记录 | `recap created` |
+| 已进入 turn 的长任务失败、停止、超时或 cancel plan 收口 | `state changed`、必要的 control / diagnostic 事件 | 按 turn 记录 | `recap created` |
 
 ## Agent role id 事件约束
 

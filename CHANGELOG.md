@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs · Recap / Activity 触发矩阵
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 定义 recap/activity 触发矩阵:纯本地 Search、Quick Open、Command Palette 打开/预览/跳转不生成 recap 且不写项目 Activity;Fact Query 默认只写轻量 activity;Agent 执行、ReaderPanel、proposal、已进入 turn 的失败/停止/超时生成 recap。 | `spec/M17` `spec/M01` `spec/M02` `spec/M03` `A03` `TODO.md` | 关闭 TODO-P1-52,避免本地查询制造活动噪音,同时保留长任务回执。 |
+
 ## 2026-06-13 · docs/sync · 本轮裁决、导航与 TODO 收口
 
 | 变更 | 影响文档 | 关联 |

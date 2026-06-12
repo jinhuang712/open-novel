@@ -64,7 +64,22 @@ stateDiagram-v2
 
 M17 不定义 turn 终态,只消费 [S03 · Canonical turn terminal enum](./S03-turn-orchestration.md#canonical-turn-terminal-enum)。Recap 不只出现在失败或取消后:凡是已经进入 S03 turn 的动作,只要达到 `Completed`、`StoppedNoChange`、`Cancelled`、`Rejected`、`Applied`、`ApplyFailed` 或 `FailedTerminal`,都生成一条项目级记录。`Interrupted` 与 `ManualRecoveryOpened` 先生成 recovery note,待用户恢复、取消或人工处理后再由新的 canonical terminal result 生成 recap。
 
-`AwaitingApproval` 不是终态。它可以生成 pending activity item,显示待审范围和恢复入口,但不能生成“已完成/已放弃”的 recap。本地打开、搜索、预览和跳转是否进入 activity/recap,由 TODO-P1-52 的触发矩阵收口。
+`AwaitingApproval` 不是终态。它可以生成 pending activity item,显示待审范围和恢复入口,但不能生成“已完成/已放弃”的 recap。纯本地打开、搜索、预览和跳转不是 turn。它们可以更新 session 内的最近项、查询缓存或 UI 事件,但不能生成 recap,也不能把项目 Activity 时间线刷成操作日志。
+
+## Recap / Activity 触发矩阵
+
+| 触发 | 是否进入 turn | Activity | Recap | 说明 |
+|---|---:|---|---|---|
+| 打开 Universal Search、输入关键词、hover preview、展开本地结果 | 否 | 不写项目 Activity;只更新会话态或搜索缓存 | 否 | 搜索过程不是项目变更,也不是作者需要追溯的工作回执。 |
+| Universal Search 打开、跳转、对照打开既有对象或章节 | 否 | 不写项目 Activity;可更新最近访问 | 否 | 最近访问服务排序和导航,不进入作者 changelog。 |
+| Quick Open 预览或打开明确对象、最近项、路径、章节 | 否 | 不写项目 Activity;可更新最近访问 | 否 | 高级打开只改变当前视图。 |
+| Command Palette 执行本地 UI 命令,如打开面板、定位审批卡、打开最近报告 | 否 | 不写项目 Activity,除非对应能力另有轻量记录 | 否 | 命令事件可进 Trace/diagnostic,但不是 turn 回执。 |
+| Fact Query 返回有来源答案、无来源答案、stale / low-confidence 结果 | 否 | 写轻量 activity | 否 | 轻量 activity 只记录查询题目、时点、来源状态和跳转,不声称项目被修改。 |
+| Fact Query 转 Discuss、请求 Agent 解释、发起报告或提议 | 是 | 按对应 turn 记录 | 是 | 一旦进入 Agent 执行,由 turn 负责回执。 |
+| Discuss / Planning / Writing / Humanizer / Memory 等 Agent 执行 | 是 | 按 turn 记录 | 是 | 即使只输出回答或建议,用户也需要知道这轮完成了什么。 |
+| ReaderPanel 运行当前章节、选区或指定章节 | 是 | 按 turn 记录 | 是 | ReaderPanel 报告是长任务结果,失败、停止和部分完成都要有回执。 |
+| proposal / ChangeSet / approval card 生成 | 是 | pending activity item | 否 | 等待审批是可追溯状态,但不是 S03 terminal result;最终 recap 等用户裁决后生成。 |
+| 长任务失败、用户停止、超时或被 cancel plan 收口 | 是 | 按 turn 记录 | 是 | 达到 S03 terminal result 后不能只留 Trace,必须告诉作者哪些结果可用、哪些没做完。 |
 
 ## Recap 的内容
 
