@@ -57,7 +57,7 @@
 | Settings / Onboarding / Project Library | project metadata、recent project、library filter、project choice state |
 | Settings / Credentials | provider config reference、credential reference、verification status、migration status、redaction audit |
 | platform/Ixx | provider capability cache、editor adapter state、watcher cursor、desktop permission、shortcut registration |
-| platform/Rxx | lifecycle state、backup manifest、migration version、repair job、diagnostics export audit、redaction preview |
+| platform/Rxx | lifecycle state、manual copy acknowledgement、migration version、repair job、diagnostics bundle audit、redaction preview |
 
 ## Storage / Platform 可靠性字段族
 
@@ -132,7 +132,7 @@ S14/S03/S05/S06 新增的主权对象按字段族归口如下:
 | 0 | 仅留档,默认不主动选用 | 不删除历史记录 |
 | 1-5 | 从弱到强参与 context builder 选择 | 不覆盖项目事实和当前显式指令 |
 
-实现不得新增逐条注入开关、agent enablement 字段或角色关闭字段。受限操作如删除全部经验需要记录影响范围与二次确认结果;项目删除、导入导出、缓存清理等数据管理功能不属于 Settings 字段族。
+实现不得新增逐条注入开关、agent enablement 字段或角色关闭字段。受限操作如删除全部经验需要记录影响范围与二次确认结果;项目删除、项目列表、清理缓存或其他数据管理功能不属于 Settings 字段族。
 
 ## 边界
 

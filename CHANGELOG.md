@@ -15,6 +15,7 @@
 | 设计原型交互闭环补齐:Settings 原型增加遮罩/关闭按钮/Esc dirty protect 和 Focus Trap 演示;命令面板原型补 Enter 执行、Esc 关闭;快速打开移除“新 tab”文案并改为对照打开,原型索引同步统一搜索口径。 | `design/prototypes/04-settings.html` `design/prototypes/06-command-palette.html` `design/prototypes/index.html` `TODO.md` | 关闭 TODO-P1-56。 |
 | Append-only apply journal 不在本轮关闭:新增 TODO-P1-59【裁决/待讨论】,要求先给出用户能理解的落盘崩溃恢复方案并经用户确认,再同步 S14/S03/S04/M17/A01/V01。 | `TODO.md` | 用户追加要求“不要把它当作本轮可直接关闭项”。 |
 | `facts-degraded` 不在本轮关闭:新增 TODO-P1-60【裁决/待讨论】,S14/A01/V01 改为“项目事实库损坏恢复方案待讨论”,不再把该模式写成已裁决产品路径。 | `TODO.md` `spec/S14` `A01` `V01` | 用户追加要求“facts-degraded 模式记入 TODO 作为待讨论”。 |
+| Appendix 与诊断契约清理导入导出/备份恢复残留:platform/Rxx 字段改为 manual copy acknowledgement / diagnostics bundle audit,Settings 验证只保留“无项目管理”,R05 明确诊断包不是项目事实来源、迁移来源或备份。 | `A01` `V01` `R05` `TODO.md` | 关闭 TODO-P1-55。 |
 | plan 过满承诺收窄:连带修改从“全部连锁影响 / 后文零矛盾 / 拒绝不留痕”改为“确定性影响集合 + 低置信候选 + 拒绝不改作品但保留裁定历史”。 | `plan/04` `plan/08` `TODO.md` | 关闭 TODO-P1-49。 |
 | 索引、章程与历史提示收口:README 显式列当前 platform 编号并补 P010 导航,platform README 标注 I04/R02 已撤销跳号,AGENTS/CLAUDE/WORKFLOW 明确主会话/整合者提交而 subagent 不提交,P000/P008 顶部增加历史归档提示。TODO 移除 TODO-P1-54、TODO-P1-57、TODO-P1-58、TODO-P2-24、TODO-P2-27,继续保留真实实测项、用户裁决项和未完成文档/原型修复项。 | `README.md` `spec/platform/README.md` `progress/README.md` `AGENTS.md` `CLAUDE.md` `WORKFLOW.md` `progress/P000-init.md` `progress/P008-plan-rewrite.md` `TODO.md` | 本 worker 收口范围。 |
 
