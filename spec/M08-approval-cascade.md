@@ -51,7 +51,7 @@ stateDiagram-v2
 关闭审批卡不是拒绝。Pending 状态保留,直到用户明确接受、修改后接受、拒绝或取消 turn。
 内部事务可以做恢复处理,但用户侧只看到“未生效”“已生效但需要修正”或“需要人工处理”。
 
-用户侧状态只做投影,不重新发明 S04 的 turn 终态词汇。`ApplyFailed` 对作者意味着“本批没有形成完整可靠结果,需要恢复或人工处理”,不能被 UI 简化成普通 `Closed`;`Invalidated` 表示审批依据已经过期,例如来源段落、文件版本、dependency group 或阻断级风险证据在待审期间被改变。Invalidated 卡片只能查看、复制理由、重新分析或放弃,不能继续接受。
+用户侧状态只做投影,不重新发明 S04 的 turn 终态词汇。`ApplyFailed` 对作者意味着“本批没有形成完整可靠结果,需要恢复或人工处理”,不能被 UI 简化成普通 `Closed`;`Invalidated` 表示审批依据已经过期,例如来源段落、文件版本、dependency group 或阻断级风险证据在待审期间被改变。文件版本校验、重新校验和重基准以 [S16](./S16-file-version-and-edit-safety.md) 为准。Invalidated 卡片只能查看、复制理由、重新分析或放弃,不能继续接受。
 
 `EditedAccepted` 不是绕过质检的快捷键。用户在卡内修改后接受时,系统必须对被改 item 和受影响 group 执行轻量重检:检查锚点仍指向同一语义位置、dependency group 没有被拆散、阻断级风险是否仍存在、用户修改是否引入新的事实/剧情/设定变化。轻量重检通过后才能进入 Applying;若阻断级风险已经被用户修改解决,审批卡必须把风险标记为“已解决并附证据”,而不是仅记录“用户确认”。轻量重检失败时,卡片回到 PendingApproval 或 Invalidated,并说明需要重新生成 proposal。
 
@@ -131,6 +131,7 @@ pending approval 期间,Approval Cascade 是项目唯一可写焦点。Search、
 | 锚点失效 | 标记为需要人工处理 | 对错位置强行改写 |
 | 部分 apply 失败 | 展示未生效项;已生效项进入修正提案或人工处理 | 留下半批修改且不解释 |
 | reindex 失败 | 写入状态与索引状态分开说明 | 假装索引已更新 |
+| 文件已外部修改 | 审批卡失效或进入重新校验 | 按旧文件版本继续接受 |
 | 用户关闭卡片 | pending 保留 | 当作拒绝或通过 |
 | 用户取消 turn | 按 cancel plan 展示停止、放弃或修正影响 | 只取消 UI 不撤状态 |
 
@@ -148,6 +149,7 @@ pending approval 期间,Approval Cascade 是项目唯一可写焦点。Search、
 | 待处理项 | 低置信搁置进入 Recap/Trace/Validator,R4 项进入 writing-blocked |
 | EditedAccepted | 卡内修改后执行轻量重检,阻断级风险必须有“已解决”证据 |
 | 失效 | 来源版本变化后卡片进入 Invalidated,不可继续接受 |
+| 重新校验 | 文件版本可重定位时生成新 baseline,用户重新审定后才能 apply |
 | 队列 | 多张 pending 卡可排队、点名查看、单卡取消,互不串状态 |
 | pending 锁 | 待审期间 Search/Trace/Discuss/打开文档只读可用,新 proposal 和新 ChangeSet 被阻断 |
 | 机械一致性 | Planning cascade 只允许称谓、旧名、直接引用、事实性短替换随批审定 |

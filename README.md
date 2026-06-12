@@ -52,13 +52,14 @@
 - **AI 运行编排**: 单一受控 Runner 契约 + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;运行信封使用 [M13](./spec/M13-agent-team-controls.md) 的七个 canonical role id,prompt、证据包、tool、harness 和 golden gate 各有系统主权层
 - **桌面壳与执行宿主**: 桌面壳采用 Tauri(多端 macOS / Windows / Linux),应用单实例单窗口运行;二次启动只聚焦既有窗口,不创建第二窗口;常驻执行宿主以 Tauri 管理的 sidecar 进程承载,进程形态与 native binding 兼容性经 [V03](./spec/appendix/V03-external-spikes.md) 实查后落定,边界见 [I05](./spec/platform/I05-desktop-shell-contract.md)
 - **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
-- **系统设计**: `S00-S15` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
+- **系统设计**: `S00-S16` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
 - **能力闭环**: `M01-M18` 写用户可触发、可感知、可验收的完整能力
 - **平台支撑契约**: 当前 `spec/platform/` 包含 I01/I02/I03/I05 四篇跨边界接入契约,以及 R01/R03/R04/R05 四篇生命周期、迁移、修复和诊断契约;I04/R02 已按用户裁决撤销并保留跳号
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文已清理,不再保留
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`;recent projects 可跨项目显示,项目内 recent/search/history 按 project id 分桶,详见 [spec/S01](./spec/S01-runtime-state.md) 与 [M16](./spec/M16-project-library-and-navigation.md)
 - **项目存储主权**: 项目文件、真源库(`project.db`)与派生索引(`index.db`,可整库重建)的物理分库和落盘协议由 [spec/S14](./spec/S14-project-storage.md) 定义
 - **决策与写入账本主权**: 审批裁定、写入账本、light apply、恢复记录、反向修正、危险操作审计和 Recap/Activity 投影由 [spec/S15](./spec/S15-journal-and-ledger.md) 定义
+- **文件版本与编辑安全主权**: 外部编辑、待审失效、选区建议失效、重新校验和项目记录保护由 [spec/S16](./spec/S16-file-version-and-edit-safety.md) 定义
 - **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S03](./spec/S03-turn-orchestration.md) 定义
 - **开发者诊断入口**: 真实作者包不显示、不可开启;是否编入或暴露由构建/打包配置决定
 - **外部事实审计闸门**: 代码前的外部依赖和运行事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
@@ -149,6 +150,7 @@ pnpm dev
 - [S13-editor-and-interaction](./spec/S13-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
 - [S14-project-storage](./spec/S14-project-storage.md) — 项目物理存储与落盘协议、分库、fencing 和 reindex 请求
 - [S15-journal-and-ledger](./spec/S15-journal-and-ledger.md) — 决策与写入账本、恢复记录、反向修正和 Recap/Activity 投影
+- [S16-file-version-and-edit-safety](./spec/S16-file-version-and-edit-safety.md) — 文件版本、外部编辑、待审失效、重新校验和项目记录保护
 
 #### M · User-Facing Capability
 

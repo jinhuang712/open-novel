@@ -14,7 +14,6 @@
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
 |---|---|---|---|---|
 | TODO-P1-48【裁决】 | P010 实施计划的归属需要定方向:progress 规则说 progress 只做历史档案,但 P010 写明会随实现进度勾选,承担 active checklist。 | [progress/README](./progress/README.md) · [P010](./progress/P010-implementation-plan.md) · [WORKFLOW](./WORKFLOW.md) | 这会影响 TODO、CHANGELOG、progress 的职责边界。可选方向是把 P010 改成一次性实施计划快照,或把 active checklist 迁出 progress 成为独立实施跟踪文档。 | 用户裁决后,修订 P010/progress README/README 导航和后续阶段更新规则。 |
-| TODO-P1-60【裁决/待讨论】 | `facts-degraded` 模式的产品/技术语义需要解释并裁决:它是否应该作为独立模式存在、何时进入、用户看到什么、哪些写入要阻断、与 index degraded / R04 重建 / 作者文件优先的关系是什么。 | [S14](./spec/S14-project-storage.md) · [R04](./spec/platform/R04-index-health-and-repair.md) · [R01](./spec/platform/R01-project-lifecycle.md) · [A01](./spec/appendix/A01-schema-tables.md) · [V01](./spec/appendix/V01-test-matrix.md) | 用户已明确表示“不明白在干嘛,记入 TODO 作为待讨论”。如果继续把它写成已定模式,会让实现直接固化未确认恢复体验。 | 给出更容易理解的项目事实库损坏恢复方案,说明与索引损坏的区别、作者文件如何取用、是否允许继续写、恢复后哪些历史会丢失;经用户确认后同步 S14/R04/R01/A01/V01 并关闭。 |
 
 ## P0 · 设计原型覆盖
 

@@ -38,6 +38,7 @@
 - [S11 Creative Engine](../S11-creative-engine.md)
 - [S12 Style And Humanizer](../S12-style-and-humanizer.md)
 - [S13 Editor And Interaction](../S13-editor-and-interaction.md)
+- [S16 File Version And Edit Safety](../S16-file-version-and-edit-safety.md)
 - [M14 Settings](../M14-settings.md)
 - [M15 Onboarding And New Book](../M15-onboarding-and-new-book.md)
 - [M18 Developer Mode](../M18-developer-mode.md)
@@ -52,7 +53,7 @@
 
 | 能力/平台 | 必测场景 |
 |---|---|
-| S14/S05 storage + graph | 原子写、外部编辑冲突、reindex 降级、anchor 失效、派生文件守卫 |
+| S14/S05/S16 storage + graph + edit safety | 原子写、外部编辑冲突、文件版本重校验、reindex 降级、anchor 失效、派生文件守卫、项目记录保护 |
 | S02/S03 runner + orchestration | JSON retry、doom-loop、cancel plan、stopped recap、approval idempotency |
 | S04/S13 UI + editor | stream 恢复、事件乱序、IME/focus trap、shortcut conflict、inline review accept/reject、editor undo bridge |
 | S06/S07/S08 context + prompt + tools | context overflow、long-form partition、as-of chapter、prompt final budget、impact analysis 收敛、prompt injection、tool permission、二次 LLM 失败、tool cancelability |
@@ -65,6 +66,7 @@
 | M09-M13 trace/memory/agent controls | Trace 层级、经验可见/0-5 权重/删除、agent 调档/频率/权重且不可关闭 |
 | M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、受限操作、启动项目选择、Settings 不含项目/数据管理、项目切换隔离、Activity append-only |
 | S15 journal/ledger | 审批裁定、写入账本、light apply、恢复记录、反向修正、危险操作审计、Recap/Activity 投影 |
+| S16 file version/edit safety | pending approval 失效、inline suggestion 失效、重新校验/重基准、自写 watcher 回声、项目记录保护 |
 | platform/Ixx | provider probe、editor adapter、watcher、desktop permission、keychain、shortcut registration |
 | platform/Rxx | project lifecycle、migration、repair、diagnostics export preview/redaction |
 
@@ -83,7 +85,9 @@
 | projection 写入失败 | 作品事实已提交时不回滚落盘;S15 标记 projection 缺失或待补写,UI 不伪造 Activity。 |
 | recovery record manual path | file_applied 但 facts 状态未知、快照缺失或指纹冲突时打开 manual recovery,列出已知事实和禁止自动重放原因。 |
 | danger action audit | 删除、清理、凭据移除、迁移、诊断导出等危险操作先记录确认范围和 preflight,失败时不得静默执行。 |
-| 项目事实库真源损坏 | 作者文件仍可取用;不得把派生索引重建伪装成丢失审批历史;恢复/保护路径待 TODO-P1-60 裁决后补齐。 |
+| pending approval 外部修改重校验 | 作者接受前重新比对 file version baseline;同 anchor 或 dependency group 被覆盖时卡片失效,同文件可定位变化进入重新校验,不能继续直接应用旧建议。 |
+| inline suggestion 外部覆盖 | 原选区仍匹配才可接受;选区被外部编辑覆盖时建议失效,不能把旧 diff 强套到新文本。 |
+| 项目记录保护 | 作者文件仍可取用;高风险 Agent 写入、审批 apply、跨文件 cascade 和自动治理裁决阻断;不得把派生索引重建伪装成丢失审批历史。 |
 | 文件与事实账本冲突 | 作者文件优先;审批历史或 obligation 标记 lost/invalidated,不能覆盖文件来匹配旧账本。 |
 | 系统自写 watcher 回声 | write token、owner、指纹和水位匹配时只推进 ledger,不触发外部编辑失效。 |
 | 离线外部编辑 | 下次打开对账 fingerprint ledger,命中 pending approval 的审批失效,索引进入 stale/reindex。 |

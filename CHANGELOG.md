@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/spec · TODO-P1-60 文件版本与编辑安全
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将原 `facts-degraded` 待讨论口径改为 S16「文件版本与编辑安全」系统:统一外部编辑、文件版本基线、自写 watcher 回声、pending approval / inline suggestion 失效、重新校验 / 重基准和项目记录保护;S01/S05/S06/S14/M07/M08/M16/I03/R01/R04/R05/A01/A02/A03/V01 改为引用 S16,不再把派生索引重建误当项目事实恢复。 | `README.md` `spec/S00` `spec/S01` `spec/S05` `spec/S06` `spec/S14` `spec/S16` `spec/M07` `spec/M08` `spec/M16` `I03` `R01` `R04` `R05` `A01` `A02` `A03` `V01` `TODO.md` | 关闭 TODO-P1-60。 |
+
 ## 2026-06-13 · docs/spec · TODO-P1-59 决策与写入账本
 
 | 变更 | 影响文档 | 关联 |

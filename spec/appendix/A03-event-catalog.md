@@ -8,6 +8,7 @@
 - turn lifecycle 事件。
 - approval、cancel、internal recovery 事件。
 - ledger entry、decision record、write/apply record、light apply、recovery record、correction record、projection record、mode gate、interrupted run、manual recovery 事件。
+- file version baseline、watcher reconcile、external edit conflict、edit safety changed、approval/suggestion invalidated、revalidation 事件。
 - approval queue、approval invalidated、obligation opened/resolved/invalidated、rejection redo 事件。
 - recap created、author note added、correction requested、continuation selected 事件。
 - trace、tool run、LLM call、cost、canonical agent role 事件。
@@ -23,6 +24,7 @@
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
 - [S01 Runtime State](../S01-runtime-state.md)
 - [S15 Journal And Ledger](../S15-journal-and-ledger.md)
+- [S16 File Version And Edit Safety](../S16-file-version-and-edit-safety.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
@@ -36,6 +38,7 @@
 |---|---|
 | Turn / Stream | turn created、state changed、step started/finished、control emitted、stream recovered |
 | Turn / Ledger / Recovery | ledger entry created、decision recorded、write prepared/file_applied/facts_committed/projection_committed、light apply accepted、recovery record created、correction recorded、mode changed/blocked、run interrupted、manual recovery opened |
+| File Version / Edit Safety | baseline created、watcher reconciled、external edit detected、edit safety changed、approval invalidated、suggestion invalidated、revalidation started/finished、protected ledger opened/resolved |
 | Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed、apply failed/degraded |
 | Approval Queue / Obligation | approval enqueued、approval focused、approval invalidated、obligation opened/snoozed/resolved/dismissed/invalidated、redo requested |
 | Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed、light activity recorded |

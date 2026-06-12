@@ -8,6 +8,7 @@
 - ChangeSet、dependency group、approval item、residual obligation、internal recovery result。
 - approval queue item、approval invalidation、rejection redo request、no-change-evidence。
 - ledger entry、decision record、write/apply record、light apply transaction、recovery record、correction record、projection record、mode gate、cancel plan、interrupted run、obligation state。
+- file version baseline、edit safety state、revalidation result、protected ledger envelope。
 - context package、impact analysis result、fact query result。
 - prompt budget envelope、provider failure envelope、embedding capability envelope。
 - tool result envelope。
@@ -34,6 +35,7 @@
 - [S12 Style And Humanizer](../S12-style-and-humanizer.md)
 - [S13 Editor And Interaction](../S13-editor-and-interaction.md)
 - [S15 Journal And Ledger](../S15-journal-and-ledger.md)
+- [S16 File Version And Edit Safety](../S16-file-version-and-edit-safety.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
@@ -51,6 +53,7 @@
 | Writing / Planning / Approval | proposal draft、ChangeSet、dependency group、approval item、residual obligation、risk acknowledgement、decision payload |
 | Approval Queue / Evidence | pending approval queue item、Invalidated reason、EditedAccepted recheck result、rejection redo payload、no-change-evidence |
 | Turn / Ledger / Recovery | ledger entry、decision record、write/apply record、light apply transaction、recovery record、correction record、projection record、turn state、mode gate、cancel plan、manual recovery、interrupted run |
+| File Version / Edit Safety | file version baseline、external edit conflict、edit safety state、approval invalidation、suggestion invalidation、revalidation result、protected ledger envelope |
 | Inline Review / Humanizer | inline suggestion、diff hunk、near-text action、style report |
 | Creative Engine / ReaderPanel | cardinal rule report、narrative report、reader persona report、aggregation summary |
 | Knowledge / Identity | entity governance proposal、alias status、merge/split preview、obligation list item |

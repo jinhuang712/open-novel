@@ -1,6 +1,6 @@
 # R04 · Index Health And Repair
 
-Index Health And Repair 定义派生索引的健康检查、重建和修复。R04 只修每项目派生索引库 `index.db`(可整库删除后全量重建);真源账本 `project.db` 损坏不归 R04,其恢复/保护路径待 [TODO-P1-60](../../TODO.md) 裁决。索引坏了不等于作品坏了,但必须可见。
+Index Health And Repair 定义派生索引的健康检查、重建和修复。R04 只修每项目派生索引库 `index.db`(可整库删除后全量重建);真源账本 `project.db` 损坏不归 R04,其保护状态由 [S16](../S16-file-version-and-edit-safety.md) 定义。索引坏了不等于作品坏了,但必须可见。
 
 ## 健康信号
 
@@ -53,7 +53,7 @@ stateDiagram-v2
 
 Repair job 必须按范围和输入 watermark 幂等。相同范围、相同输入 watermark、相同 index version 的重复 job 只能复用或重试同一修复意图,不能重复写入派生事实或制造多份冲突记录。job 重入时先读取当前输出 watermark:已成功则直接返回 succeeded,部分完成则从最后确认的输出 watermark 继续,输入文件指纹已变化则关闭旧 job 并排入新 job。
 
-R04 只修派生索引。项目事实库真源损坏时,它只能报告“项目事实库损坏”并指向 TODO-P1-60 待裁决恢复方案;不能用 reindex 伪造审批历史、版本指纹或 obligation 解决状态。
+R04 只修派生索引。项目事实库真源损坏时,它只能报告“项目记录需要重新校验”,并交给 S16 的 protected facts ledger 保护路径;不能用 reindex 伪造审批历史、版本指纹或 obligation 解决状态。
 
 ## 修复流
 
@@ -76,7 +76,7 @@ flowchart LR
 | embedding 失败 | 语义召回降级 | 影响精确查询 |
 | KG 冲突 | 展示冲突来源 | 自动裁决 |
 | repair job 失败 | 失败范围和重试/人工入口 | 继续开放高风险写入 |
-| 项目事实库损坏 | 明确说明 R04 只能重建派生索引,事实库恢复方案待裁决 | 把派生重建冒充事实恢复 |
+| 项目事实库损坏 | 说明项目记录需要重新校验,R04 只能重建派生索引 | 把派生重建冒充事实恢复 |
 
 ## FAQ
 
