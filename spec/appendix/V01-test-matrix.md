@@ -102,6 +102,22 @@
 | host interrupted run | host crash/restart 后 run 标记 interrupted,展示最后可信 step 和可重试点,不自动重放危险动作。 |
 | heavy reindex stream heartbeat | 批量 SQLite/reindex/embedding 写入期间 stream heartbeat 延迟在 V03 实测阈值内;超阈值需隔离执行。 |
 
+## 性能与延迟验证项
+
+心流保护(plan/02 原则四)依赖的交互延迟必须可验收。目标数值不拍脑袋:实施计划阶段 0/2 在真实壳与真实语料上实测后填入,此前一律标 `待实测`。
+
+| 交互 | 测量口径 | 目标 |
+|---|---|---|
+| 按键到回显 | 纸面输入 P95 | 待实测 |
+| 实体高亮就绪 | 章节打开/编辑后高亮渲染 P95 | 待实测 |
+| Universal Search 打开 | 唤出到可输入 P95 | 待实测 |
+| 精确查询应答 | 查询提交到结果 P95 | 待实测 |
+| 流式首 token | 发送到首个可见输出 P95 | 待实测 |
+| 落盘到可搜 | light apply 后新内容进入索引可查的延迟 | 待实测 |
+| 重 reindex 期间心跳 | stream 心跳延迟(对应 TODO-P1-22 spike) | 待实测 |
+
+目标填入后,任何超出目标的劣化按 [S11](../S11-evaluation-and-golden-regression.md) 的 warn/fail 处理。
+
 ## 外部 spike 对应验证
 
 原始实查证据归 [V03](./V03-external-spikes.md),本篇只记录进入实现前必须有测试或复现脚本覆盖的门禁。

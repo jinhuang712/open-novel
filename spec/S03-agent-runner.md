@@ -44,6 +44,17 @@ Runner 在桌面壳的常驻执行宿主/sidecar 中运行,不绑定 renderer、
 
 桌面壳开发模式可以替换 provider、打开 DevTools、加速 renderer 热更新,但不能把 Runner 移出桌面壳边界。开发时的进程重启或调试中断必须标记为开发事故,不能反向定义生产失败语义。
 
+## 同一 turn 内的并行 run
+
+一个 turn 可以同时持有多个 run:写作流水线的三路审查、ReaderPanel 的多 persona 评审都以并行 run 执行。并行不改变任何主权边界:
+
+| 规则 | 含义 |
+|---|---|
+| 每个 run 有独立 run envelope | role、output contract、retry budget、cancellation 互不共享;一个 run 失败不自动取消同 turn 的其他 run。 |
+| 并发由执行宿主统一调度 | 同时在飞的模型/工具调用数受宿主并发上限与 [I01](./platform/I01-llm-provider-contract.md) 限流约束;排队等待以 step heartbeat 表达,不伪装成生成中。 |
+| run 之间不共享可变状态 | 证据只能经各自 runner result 交回 S04;汇合语义由 [S04](./S04-turn-orchestration.md) 的质量汇合点定义,Runner 不做跨 run 合并。 |
+| 取消按 turn 扇出 | S04 的 stop 信号扇出到该 turn 全部 in-flight run,每个 run 按自身 cancelability 收场。 |
+
 ## Runner 拥有什么
 
 | Runner 主权 | 说明 |
