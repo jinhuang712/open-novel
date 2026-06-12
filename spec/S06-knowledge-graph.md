@@ -1,6 +1,125 @@
 # S06 · Knowledge Graph
 
-这篇解释系统如何把小说正文和设定变成可查询、可引用、可用于一致性判断的知识图谱。它不是第二份小说,也不是模型总结出的“真相库”。它是从作者事实派生出来的一组索引。
+这篇解释系统如何把小说正文和设定变成可查询、可引用、可用于一致性判断的知识图谱。它不是第二份小说,也不是模型总结出的“真相库”。它是从作者事实派生出来的一组索引,全部物化在每项目派生索引库 `index.db` 中——整库可删,可由 [R04](./platform/R04-index-health-and-repair.md) 从作者文件和 `project.db` 全量重建,损坏不触发 facts-degraded(见 [S01](./S01-project-storage.md))。
+
+本篇的主线骨架是一条管线叙事:**从一次保存到可查询**。读完主线,实现者应该能回答“作者按下保存之后,系统在什么时机、以什么顺序、在哪个事务边界内,把这次变更变成可查询的图谱事实”。对象职责、时点语义、实体治理和事故收场在主线之后展开。
+
+## 从一次保存到可查询
+
+### 端到端管线
+
+```mermaid
+flowchart TB
+  subgraph Triggers[触发源]
+    LA[作者保存 light apply]
+    AJ[审批落盘 journal committed]
+    EXT[外部编辑 watcher/启动对账]
+    RB[手动重建 R04 repair job]
+  end
+
+  subgraph Sync[同步段 · 写入事务内]
+    FP[指纹比对判定变更类型]
+    SPLIT[段落切分]
+    DIFF[锚点 diff: unchanged/modified/rewritten/deleted/added]
+    REQ[reindex request 入账 + 健康度标 stale]
+  end
+
+  subgraph Async[异步段 · 后台 job]
+    DICT[确定性层: 词典命中 mention]
+    LLM[LLM 抽取层: 实体/关系/概念候选]
+    KG[图谱增量更新: entity/relation/timeline/dependency]
+    EMB[embedding 批次计算]
+  end
+
+  LA --> FP
+  AJ --> FP
+  EXT --> FP
+  RB --> FP
+  FP --> SPLIT --> DIFF --> REQ
+  REQ --> DICT --> KG
+  REQ --> LLM
+  LLM -.候选,经确认才入图谱.-> KG
+  DIFF --> EMB
+  KG --> WM[推进 reindex 水位]
+  EMB --> WM
+  WM --> Healthy[健康度 healthy · 可查询]
+```
+
+### 第一步:触发源
+
+四种事件能启动索引管线,每种必须携带足够信息让管线只处理变化部分:
+
+| 触发源 | 携带什么 | 范围 |
+|---|---|---|
+| 作者直接保存(light apply) | editor action id、文件 id、保存后内容指纹、editor 已知的变更区间 | 单文件局部 |
+| 审批落盘(apply journal committed) | apply id、影响文件列表、每文件输入/输出指纹、reindex 水位 | ChangeSet 覆盖的全部文件 |
+| 外部编辑(watcher 事件 / 启动对账) | 文件路径、事件类型、watcher cursor 位置;启动对账时是全 ledger 指纹重扫 | 单文件或全项目对账 |
+| 手动重建(R04 repair job) | scope、触发原因、输入水位、index version | 局部或整库 |
+
+前两种来自系统自己的写入路径,变更范围是已知的;外部编辑只知道“文件可能变了”,必须先走指纹比对;手动重建跳过比对,按 scope 强制重算。watcher 事件如何与自写回声区分、cursor 如何推进,定义在 [S01](./S01-project-storage.md) 与 [I03](./platform/I03-filesystem-and-watcher.md),本篇只消费判定结果。
+
+### 第二步:变更检测
+
+文件级先比内容指纹(来自 `project.db` 的 fingerprint ledger):指纹相同直接结束,不进入切分。指纹不同则进入段级 diff,把变更分为五类:
+
+| 判定 | 依据 | 处理 |
+|---|---|---|
+| unchanged | 标题路径 + 内容签名都匹配 | 锚点不动,下游不重算 |
+| modified | 内容签名相同但完整 hash 不同(小改:标点、错别字、空白) | 保留锚点 id,更新 hash 和 offset,该段重扫 + 重算 embedding |
+| rewritten | 旧锚点失配,但邻接段对照命中且文本相似度达阈值 | 旧锚点软删,新锚点建立,依赖引用迁移到新锚点 |
+| deleted | 旧锚点失配且无相似新段 | 锚点软删,引用它的 dependency/evidence 标失效 |
+| added | 新段无对应旧锚点 | 新建锚点,全套下游抽取 |
+
+### 第三步:段落切分与锚点身份
+
+段落切分按 Markdown 结构:剥 frontmatter,按空行切块,标题单独成段并为后续段提供标题路径,代码块和表格整体为一段。
+
+锚点身份是三段组合:**文件 id + 所属标题路径 hash + 段落内容签名**。内容签名不是原文 hash,而是归一化指纹——剔除空白、标点和数字后再 hash,因此:
+
+- 改错别字、加删标点:签名不变,锚点稳定(判 modified)。
+- 删一句话、同义改写:签名变,锚点失配——由**邻接段对照**兜底:若旧锚点的前后邻接段仍在,且对应位置的新段文本相似度达阈值,判为 rewritten,锚点迁移、依赖引用跟随迁移。
+- 大段重写或整章重排:邻接对照也失配,退化为 deleted + added,相关 dependency/evidence 引用失效,UI 必须提示“锚点大变,请检查相关伏笔”,不能静默假装迁移成功。
+
+只用段序号(插入一段全体偏移)、只用内容 hash(改一字即断)、只用标题+序号(改标题即断)都被否决过;三段组合 + 归一化签名 + 邻接兜底是经过权衡的折中。差量 reindex 只处理 modified/rewritten/deleted/added 四类段,unchanged 段的 mention、refs、embedding 全部保留。
+
+### 第四步:抽取分层
+
+抽取分两层,触发时机和产出可信度不同:
+
+| 层 | 机制 | 触发 | 产出 |
+|---|---|---|---|
+| 确定性层 | Aho-Corasick 词典对变化段做 surface form 命中,产出 entity/alias/concept mention | 同 reindex job,每个变化段必跑 | 高置信 mention(指向已确认实体/概念) |
+| LLM 抽取层 | 模型从变化段提取新实体、新关系、新概念候选 | 异步、可批量、可被预算外条件延后 | 只产生待确认或低置信对象 |
+
+词典本身是派生索引之一:它由 `index.db` 中已确认的 entity canonical name、已确认 alias 和 concept surface form 物化而成。实体治理动作(确认别名、合并、拆分、改名)和概念审定通过后,词典必须重建并对受影响范围重扫 mention;整库重建时词典先于 mention 扫描重建。
+
+LLM 抽取的候选不直接成为图谱事实。新实体、新关系、新概念、时间线推断都以候选状态落库,带来源锚点和置信度;只有经用户确认或审批通过,才升级为高置信图谱事实并进入词典。这保证图谱里每条高置信事实都有人类裁决链,而 LLM 只负责“发现”。
+
+### 第五步:图谱增量更新
+
+变化段的 mention 确定后,按固定顺序增量更新:mention → entity 引用计数与状态 → relation → timeline → dependency。顺序固定是为了让后一层永远引用前一层已落库的对象。更新规则:
+
+- 只增改与变化段相关的行,unchanged 段的派生行不动。
+- 锚点迁移(rewritten)时,relation/timeline 的 evidence 锚点和 dependency 的 source/target 锚点同步迁移。
+- 锚点删除(deleted)时,dependency 标失效,relation/timeline 行保留但 evidence 失效——事实裁决记录不因索引段消失而消失。
+- 发现冲突(同一对象同一时点互斥事实)只记录冲突来源和锚点,交给一致性报告或审批,绝不自动改图谱裁决,更不改正文(见「冲突不是自动修复信号」)。
+
+### 第六步:embedding 批次
+
+变化段(modified/rewritten/added)进入 embedding 队列,批量计算后写回 `index.db`,每行带模型 id、维度、内容 hash 和预计算范数;内容 hash 用于跳过重复计算。embedding 模型、维度和索引版本必须来自 I01/V03 实查;模型未落定时整层处于 `needs data`:队列可以入队但不计算,语义召回降级为不可用,其余管线(锚点、mention、图谱)不受影响。模型切换是整层全量重算事件,新旧向量不混查。
+
+### 第七步:同步/异步边界
+
+| 边界 | 完成什么 | 失败收场 |
+|---|---|---|
+| 同步:写入事务内(随 light apply / journal committed) | 指纹 ledger 更新(`project.db`)、段落切分与锚点 diff、锚点表更新、reindex request 入账、受影响范围健康度标 stale | 写入事务失败按 S01 journal 收场;锚点 diff 失败则整段标 stale,不阻断落盘 |
+| 异步:后台 job | 确定性词典命中、LLM 抽取、图谱增量更新、embedding 批次、词典重建 | 失败进入 R04 repair 路径,健康度停在 stale/degraded/partial,不静默假装完成 |
+
+同步段保证“作品事实已保存且系统知道哪里旧了”;异步段保证“查询逐步追上事实”。落盘成功和索引追上是两件事,UI 必须能区分(见 S01「落盘剧本」)。异步期间相关范围健康度为 stale;每个 job 完成后推进 reindex 水位,全部追平后才回到 healthy。
+
+### 第八步:水位与健康度
+
+reindex 水位记录“索引已追到哪次落盘”。水位、五级健康度(healthy/stale/degraded/partial/blocked)及其能力降级矩阵的权威定义在 [R04](./platform/R04-index-health-and-repair.md);watcher cursor 与外部编辑事件的可靠性边界在 [I03](./platform/I03-filesystem-and-watcher.md)。本篇管线只承诺两件事:同步段结束时受影响范围必然不再谎称 healthy;异步段每个 job 幂等推进水位,重复 job 不重复制造派生事实。
 
 ## 从一段正文到可用事实
 
@@ -97,7 +216,7 @@ stateDiagram-v2
   Partial --> Healthy: repaired
 ```
 
-局部 reindex 优先。能保留的锚点保留,小幅编辑迁移,大幅重写或删除导致相关引用失效。
+局部 reindex 优先。能保留的锚点保留,小幅编辑迁移,大幅重写或删除导致相关引用失效。各阶段的触发、判定算法和同步/异步边界以「从一次保存到可查询」主线为准;本状态机只描述健康度视角的阶段推进与 Partial 回退。
 
 ## 锚点失稳的连锁反应
 

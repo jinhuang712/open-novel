@@ -33,17 +33,20 @@ flowchart TB
 
 优先级从高到低是:当前显式指令、项目事实、当前任务上下文、用户经验、会话历史。过程历史默认不进入生成上下文,除非某个调试或解释任务明确读取它。
 
-## 三种数据库,三种用途
+## 四种数据库,四种用途
+
+每个项目物理上有两个库:`project.db` 是真源账本,损坏触发 S01 的 facts-degraded;`index.db` 是派生索引,可以整库删除后由 R04 全量重建,损坏不进入 facts-degraded。把两者混在同一个文件里,会让“可随便重建的索引”和“不可重建的审批历史”共享同一种损坏命运,这是数据事故隐患,因此契约层面禁止合库。
 
 | 位置 | 保存什么 | 影响生成吗 | 能恢复作品事实吗 |
 |---|---|---|---|
-| runtime.db | thread、message、压缩摘要、turn recap、跨项目会话恢复状态 | 可以影响对话连续性和续接提示 | 不能 |
-| project index/fact store | 项目经验、实体、关系、审批后事实、派生索引 | 可以影响写作和查询 | 只能恢复它拥有主权的项目事实部分 |
-| session_history.db | 模型调用、工具调用、trace、用量、错误 | 默认不影响 | 不能 |
+| runtime.db(全局) | thread、message、压缩摘要、turn recap 指针、跨项目会话恢复状态 | 可以影响对话连续性和续接提示 | 不能 |
+| project.db(每项目真源) | apply journal、审批终态、obligation、recap/activity 投影、host fencing、文件指纹 ledger、持久 turn 状态、项目级经验 | 可以影响写作裁定和恢复 | 是;它与作者文件共同构成作品账本,损坏触发 facts-degraded |
+| index.db(每项目派生索引) | 实体、别名、概念、关系、时间线、依赖、锚点、embedding、卷摘要、搜索缓存 | 可以影响查询和召回 | 不能;整库可删,由 R04 从作者文件 + project.db 全量重建 |
+| session_history.db(每项目) | 模型调用、工具调用、trace、用量、错误 | 默认不影响 | 不能 |
 
 Recap 是作者级 changelog,不是作品。过程历史再完整也只是证据,不是作品。会话消息再像“设定”,也不能绕过项目事实层。
 
-持久 turn 状态属于 project fact store。pending approval、approval queue、obligation、mode gate、apply journal 投影和 recovery pointer 都随项目走;runtime.db 只保存跨项目打开、最近项目和 UI 恢复指针,不能成为 pending approval 的唯一来源。pending 状态恢复时必须从项目事实库重校验,不能靠 runtime.db 复活。
+持久 turn 状态属于 project.db。pending approval、approval queue、obligation、mode gate、apply journal 投影和 recovery pointer 都随项目走;runtime.db 只保存跨项目打开、最近项目和 UI 恢复指针,不能成为 pending approval 的唯一来源。pending 状态恢复时必须从 project.db 重校验,不能靠 runtime.db 复活。
 
 runtime.db 里的 recent objects 和 query history 必须按 project id 分区。全局最近项目列表可以跨项目,但任何项目内 search、context、preview cache 都只能读取当前 project id;找不到项目分区时,宁可显示少历史模式,不能把别的书的最近对象注入当前项目。
 

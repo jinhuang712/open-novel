@@ -38,7 +38,7 @@
 | 状态机 | XState v5 | 三模式闸门 |
 | 数据库 | better-sqlite3 + Drizzle ORM | 同步 API,WAL mode |
 | 向量 | sqlite-vec(loadExtension) | 与 SQLite 同库可 JOIN |
-| 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
+| 存储 | Markdown(产物) + SQLite 四库 | `runtime.db` 跨项目会话 / `project.db` 每项目真源账本 / `index.db` 每项目派生索引(可重建) / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
 技术路线入口见 [spec/S00-system-contract](./spec/S00-system-contract.md)。表结构、schema、工具、prompt、测试和审计明细的归口见 [spec appendix](./spec/appendix/README.md)。
@@ -57,7 +57,7 @@
 - **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文已清理,不再保留
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
-- **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/S01](./spec/S01-project-storage.md) 定义
+- **项目存储主权**: 项目文件、真源账本(`project.db`)与派生索引(`index.db`,可整库重建)物理分库,由 [spec/S01](./spec/S01-project-storage.md) 定义
 - **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
 - **外部事实审计闸门**: 代码前的外部依赖和运行事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
 

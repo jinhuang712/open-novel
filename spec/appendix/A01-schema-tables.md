@@ -26,6 +26,22 @@
 - [M08 Approval Cascade](../M08-approval-cascade.md)
 - [M17 Turn Recap And Continuation](../M17-turn-recap-and-continuation.md)
 
+## 库归属
+
+每项目数据库物理拆分为真源账本 `project.db` 和派生索引 `index.db`(见 [S01](../S01-project-storage.md)、[S02](../S02-runtime-state.md))。本节是字段族 → 数据库文件的唯一归属表;实现新表时必须先在这里落位,不得把真源字段写进 `index.db`,也不得让 `project.db` 出现可整体重建的派生对象。
+
+| 数据库 | 归属字段族 | 损坏命运 |
+|---|---|---|
+| runtime.db(全局,跨项目) | thread、message、压缩摘要、turn recap 指针、跨项目打开/最近项目、UI 恢复指针、search history / recent object / preview cache(按 project id 分区) | 少历史模式运行,不影响项目事实 |
+| project.db(每项目真源) | apply journal、light apply transaction、persistent turn state、mode gate、approval queue、ChangeSet / approval item / decision、residual obligation、internal recovery snapshot、recap/activity 投影、author note / continuation action、host fencing、file fingerprint ledger、project facts health、migration version、项目级经验(identity / content / state / reflector / audit)、danger action audit | 触发 [S01](../S01-project-storage.md) facts-degraded;写入和审批阻断 |
+| index.db(每项目派生索引) | entity / alias / entity governance 状态缓存、concept、relation、timeline / as-of、dependency window 索引行、anchor、embedding 与 embedding index contract、volume summary、确定性抽取词典(Aho-Corasick trie 物化)、索引健康状态、repair job、reindex 水位/失败记录、搜索派生缓存 | 整库可删,由 [R04](../platform/R04-index-health-and-repair.md) 全量重建;不进入 facts-degraded |
+| session_history.db(每项目,诊断) | trace step、tool run、模型调用、用量归因、错误记录、diagnostics export audit | Trace 不完整提示,不影响写作与事实 |
+
+两条裁决性边界:
+
+- 实体身份治理的**用户裁决记录**(确认别名、合并/拆分审批、改名审定)是审批事实,随 ChangeSet/approval 留在 `project.db`;`index.db` 里的 entity/alias 行只是这些裁决 + 正文抽取的派生物化,重建时从 `project.db` 的治理记录重放。
+- dependency 的**已审定兑现窗口与用户裁定**(expected window、dismiss、resolved 审批来源)同样以 `project.db` 的审批/obligation 记录为真源;`index.db` 中的 dependency 行重建后必须恢复这些裁定,不能凭抽取重新猜。
+
 ## 实现前字段覆盖矩阵
 
 实现某个能力前,至少要确认下列字段族是否存在;未实现能力可先不展开具体字段,但不能把字段藏回根层 spec。
@@ -74,6 +90,10 @@ S01/S04/S06/S07 新增的主权对象按字段族归口如下:
 | timeline / as-of | subject id、fact id、source chapter/order、effective from/to、future-only flag、source anchor | 前文改写默认按目标章节时点取事实。 |
 | volume summary | volume id、source file/chapter range、summary version、input fingerprint、generated at、health | summary 是派生对象,不能覆盖原文事实。 |
 | dependency window | dependency id、opened at、expected window、latest safe point、resolved at、status、dismiss reason | 无窗口不能触发超期阻断;有窗口才进入 due/overdue。 |
+| paragraph anchor | anchor id(文件 id + 标题路径 hash + 内容签名三段组合)、heading path、完整 content hash、归一化 content signature、段内 offset、prev/next 邻接链、软删标记 | 锚点 diff 与邻接迁移算法以 S06 主线为准;签名归一化规则变更等同全量重建事件。 |
+| extraction candidate | 候选对象类型、来源锚点、置信度、candidate/confirmed/dismissed 状态、确认审批 id | LLM 抽取只产生候选;未经用户确认或审批不得进入高置信图谱事实或抽取词典。 |
+| extraction dictionary | 词典版本、来源 entity/alias/concept 水位、重建时间 | 词典是派生索引,治理动作或概念审定后必须重建并重扫受影响 mention。 |
+| reindex watermark | scope、已追平的落盘水位、job id、健康度 | 同步段标 stale,异步 job 幂等推进水位;重复 job 不重复制造派生事实。 |
 | embedding index contract | provider/model id、dimension、index version、batch limit、drift policy、needs-data flag | 模型/维度未知时语义召回不上线。 |
 
 ## Canonical Agent Role 字段

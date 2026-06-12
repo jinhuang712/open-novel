@@ -34,14 +34,14 @@ Storage 不用“最后写入者获胜”解决冲突。任何绕过写入权的
 
 ## 事实账本
 
-| 对象 | 例子 | 是否作品真源 | 读者需要知道什么 |
-|---|---|---|---|
-| 作者文件 | 章节、设定、角色、大纲、项目元信息 | 是 | 可以被人直接打开、迁移、审查 |
-| 审批后项目事实 | 已接受的 ChangeSet、文件版本、落盘记录 | 是 | 解释“这次变更何时生效” |
-| 项目索引 | 实体、关系、锚点、引用、embedding | 否 | 只帮助查询和生成,不能覆盖文件 |
-| 运行时历史 | thread、trace、tool run、用量 | 否 | 不属于项目存储主权 |
+| 对象 | 落在哪个库 | 例子 | 是否作品真源 | 读者需要知道什么 |
+|---|---|---|---|---|
+| 作者文件 | 文件系统(Markdown) | 章节、设定、角色、大纲、项目元信息 | 是 | 可以被人直接打开、迁移、审查 |
+| 审批后项目事实 | `project.db` | 已接受的 ChangeSet、apply journal、审批终态、obligation、文件指纹 ledger、fencing 记录、持久 turn 状态 | 是 | 解释“这次变更何时生效”;损坏触发 facts-degraded |
+| 项目索引 | `index.db` | 实体、别名、概念、关系、时间线、依赖、锚点、embedding、卷摘要、搜索缓存 | 否 | 只帮助查询和生成,不能覆盖文件;整库可删,由 R04 全量重建 |
+| 运行时历史 | runtime.db / session_history.db | thread、trace、tool run、用量 | 否 | 不属于项目存储主权 |
 
-作者文件和审批后事实共同构成作品账本。派生索引是账本的目录和检索卡片,不是第二本账。
+作者文件和审批后事实共同构成作品账本。派生索引是账本的目录和检索卡片,不是第二本账。每项目把真源账本和派生索引物理拆成两个数据库文件,正是为了让“账本损坏”和“索引损坏”有不同的命运:前者是事故,后者只是一次重建。
 
 ## Append-only apply journal
 
@@ -91,7 +91,7 @@ Editor undo 不是历史回滚。用户撤销一个已 journal committed 的 lig
 
 ## facts-degraded 模式
 
-项目事实库里的审批历史、版本指纹、obligation、fencing 记录和恢复账本不可完全从 Markdown 文件重建。只要这些真源记录损坏、丢失或校验失败,项目进入 `facts-degraded` 模式。
+`facts-degraded` 只由 `project.db` 触发。项目事实库 `project.db` 里的审批历史、版本指纹、obligation、fencing 记录和恢复账本不可完全从 Markdown 文件重建;只要这些真源记录损坏、丢失或校验失败,项目进入 `facts-degraded` 模式。派生索引库 `index.db` 损坏、丢失或版本不兼容不进入 facts-degraded:它走 [R04](./platform/R04-index-health-and-repair.md) 的健康度降级和全量重建,期间项目仍可正常写作,只是依赖索引的能力降级。
 
 `facts-degraded` 下,作者文件仍可只读打开,用户可以直接取用正文文件、查看可解析 frontmatter,并选择恢复路线;系统必须阻断新的可写 Agent turn、审批应用、自动 cascade 和会改写项目事实的 repair。派生索引可以重建,但重建结果不得伪装成丢失的审批历史或 obligation。
 
@@ -110,14 +110,18 @@ flowchart TB
   Workspace[workspace]
   Workspace --> ProjectA[project]
   ProjectA --> Files[human-readable files]
-  ProjectA --> ProjectDB[project fact/index db]
+  ProjectA --> FactDB[project.db truth ledger]
+  ProjectA --> IndexDB[index.db derived index]
   ProjectA --> Derived[derived caches]
-  Runtime[global runtime db] -.separate.-> Workspace
-  Session[session history db] -.per project but diagnostic.-> ProjectA
+  Runtime[global runtime.db] -.separate.-> Workspace
+  Session[session_history.db per project, diagnostic] -.-> ProjectA
 
-  Files --> ProjectDB
-  ProjectDB --> Derived
+  Files --> FactDB
+  Files --> IndexDB
+  FactDB --> IndexDB
+  IndexDB --> Derived
   Files -.external editor may change.-> Files
+  IndexDB -.deletable, rebuilt via R04.-> IndexDB
 ```
 
 运行时会话可以引用项目,但不能成为项目事实。过程历史可以解释一次操作,但不能恢复章节正文。这个隔离让“带走项目文件”和“调试系统过程”不混在一起。
@@ -131,7 +135,7 @@ sequenceDiagram
   participant O as Turn Orchestration
   participant S as Project Storage
   participant F as Files
-  participant D as Project DB
+  participant D as project.db
   participant K as Knowledge Graph
   participant UI as Streaming UI
 
@@ -213,7 +217,7 @@ stateDiagram-v2
 
 **Q: 文件和数据库谁是真源?**
 
-A: 作者可读文件和审批后事实是真源。数据库里既有真源记录,也有派生索引;具体表的主权在 appendix 展开。
+A: 作者可读文件和审批后事实是真源。真源记录在 `project.db`,派生索引在 `index.db`,两者物理分库;具体表的库归属在 appendix 展开。
 
 **Q: reindex 失败为什么不回滚作品文件?**
 

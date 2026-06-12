@@ -1,6 +1,6 @@
 # R04 · Index Health And Repair
 
-Index Health And Repair 定义派生索引的健康检查、重建和修复。索引坏了不等于作品坏了,但必须可见。
+Index Health And Repair 定义派生索引的健康检查、重建和修复。R04 只修每项目派生索引库 `index.db`(可整库删除后全量重建);真源账本 `project.db` 损坏不归 R04,走 [S01](../S01-project-storage.md) 的 facts-degraded 收场。索引坏了不等于作品坏了,但必须可见。
 
 ## 健康信号
 
