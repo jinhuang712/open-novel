@@ -29,6 +29,20 @@ flowchart LR
 
 守则信号不是替作者打总分。它影响 Writer 上下文、Validator 检查、审批风险和 Settings 阈值。
 
+## 兑现窗口判定
+
+“期待感兑现”只在 S06 dependency 带有兑现窗口时触发 due/overdue 风险。没有窗口的伏笔可以提示“未声明回收计划”,但不能直接判超期阻断。
+
+| dependency 状态 | Creative Engine 行为 |
+|---|---|
+| open,无窗口 | 提示级:建议补回收计划。 |
+| due | 确认级:审批或报告中提醒接近兑现点。 |
+| overdue | 默认阻断级:继续写作前必须回收、改窗口、拆分承诺或明确 dismiss。 |
+| resolved | 不再报超期,但可检查回收是否和原承诺一致。 |
+| dismissed | 记录用户裁决,后续只在相关上下文中弱提示。 |
+
+窗口可以由作者在资料卡中声明,也可以由已审定的规划 proposal 建立。模型推测的窗口只能作为建议,不能直接变成阻断依据。
+
 ## 风险级别如何落地
 
 | 风险 | 系统行为 | 用户动作 |
@@ -93,6 +107,20 @@ flowchart TD
 ```
 
 用户反馈不会暗中改守则。它可以变成写作偏好、风格经验或诊断提示,但守则阈值和开关必须通过 Settings 或明确配置改变。
+
+## 误报回流与增量检测
+
+用户在审批、ReaderPanel 或报告里把某个风险标记为误报时,系统记录的是 calibration sample,不是立刻降低守则。Calibration sample 至少包含风险类型、来源锚点、用户理由、当时上下文和后续是否再次出现;S11 golden/re-baseline 可以使用这些样例判断阈值是否需要调整。
+
+质检支持三档增量范围:
+
+| 档位 | 用途 | 边界 |
+|---|---|---|
+| touched range | 小选区、单段 inline accept 和 Humanizer | 只检查被改范围及直接依赖。 |
+| chapter window | 章节草稿、局部重写 | 当前章、相邻章、必装事实和未关闭 obligation。 |
+| cascade scope | 设定/关系/伏笔变更 | S07/S06 给出的 dependency group、as-of 命中和低置信候选。 |
+
+增量范围必须进入 no-change-evidence 和风险报告。系统不能只说“已检查”,必须说检查了哪个范围、没检查哪个范围、为什么足够。
 
 ## 质量信号与主路径的关系
 

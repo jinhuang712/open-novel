@@ -1,5 +1,17 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/todo · 主权链路与剩余 TODO 大收口
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| S01/S04/S05/S03/S09/A01/A02/A03/V01 补 append-only apply journal、轻量写入事务、崩溃前滚/恢复、持久 turn 状态、recap 触发、obligation/action queue、EditedAccepted 重检、取消/超时/interrupted run 与工具 cancelability。 | `spec/S01-project-storage.md` `spec/S04-turn-orchestration.md` `spec/S05-streaming-ui-protocol.md` `spec/S03-agent-runner.md` `spec/S09-agent-tooling-boundary.md` `spec/appendix/A01-schema-tables.md` `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` `spec/appendix/V01-test-matrix.md` | 关闭 TODO-P0-01、TODO-P0-04、TODO-P0-05、TODO-P1-03、TODO-P1-07、TODO-P1-08、TODO-P1-10、TODO-P1-11、TODO-P1-12、TODO-P1-13。 |
+| plan/07/S04/M07/S00 补三模式主权、重启恢复、模式切换阻断、写作模式 planning prerequisite 和 XState 实现边界;写作发现必须改设定时不越权,先生成规划前置。 | `plan/07-collaboration-and-modes.md` `spec/S04-turn-orchestration.md` `spec/M07-inline-rewrite-and-humanizer.md` `spec/S00-system-contract.md` | 关闭 TODO-P0-02、TODO-P1-15。 |
+| S07/S08/I01/S06/S12/S11/V03 补 prompt packet 终局预算、provider runtime failure taxonomy、embedding 能力契约、volume/as-of chapter、dependency 兑现窗口、误报回流、增量质检、quality gate 判定与 re-baseline。 | `spec/S07-context-management.md` `spec/S08-prompt-system.md` `spec/platform/I01-llm-provider-contract.md` `spec/S06-knowledge-graph.md` `spec/S12-creative-engine.md` `spec/S11-evaluation-and-golden-regression.md` `spec/appendix/V03-external-spikes.md` | 关闭 TODO-P1-09、TODO-P1-21、TODO-P1-23、TODO-P1-25、TODO-P1-26、TODO-P1-28、TODO-P2-15;收窄 TODO-P1-22 为待真实 spike 结果。 |
+| R04/M01/M10/S02/plan/02/plan/05 拆清 pre-apply blocked 与 post-apply reindex failure,补 pending 事实不进派生展示、Search stale/freshness、recent object 项目隔离、纯文本源文件与派生资料边界、伏笔卡兑现窗口。 | `spec/platform/R04-index-health-and-repair.md` `spec/M01-universal-search.md` `spec/M10-knowledge-surface.md` `spec/S02-runtime-state.md` `plan/02-principles.md` `plan/05-story-world.md` | 关闭 TODO-P1-04、TODO-P2-09、TODO-P2-19。 |
+| S15/I05/I04/R05/M08/M17/S14/M02/A01/V01 和 Settings/Onboarding 原型补安全凭据库、凭据导出剔除、诊断包分类/预览/脱敏阻断、项目包经验/审批/recap 导出、桌面快捷键/IME 冲突、workspace-first onboarding、Settings Memory/Rules/Agents/ReaderPanel 控制面与搜索。 | `spec/S15-settings-and-onboarding.md` `spec/platform/I05-desktop-shell-contract.md` `spec/platform/I04-import-export-contract.md` `spec/platform/R05-diagnostics-and-debug-mode.md` `spec/M08-approval-cascade.md` `spec/M17-turn-recap-and-continuation.md` `spec/S14-editor-and-interaction.md` `spec/M02-command-palette-and-quick-open.md` `design/04-settings.md` `design/05-onboarding.md` `design/prototypes/04-settings.html` `design/prototypes/05-onboarding.html` | 关闭 TODO-P1-20、TODO-P1-32、TODO-P2-01、TODO-P2-02、TODO-P2-20;收窄 TODO-P2-18 为 Approval Cascade 原型 02 剩余。 |
+| README/S03/M13/A04 新增 docs lint 并修正 runner/目录真实性:README 不再宣称未落主权清单的“13 个 runner”,当前目录树只列实际文档/脚本结构,未来应用工程目录另行说明。 | `README.md` `spec/S03-agent-runner.md` `spec/M13-agent-team-controls.md` `spec/appendix/A04-tool-catalog.md` `scripts/docs-lint.js` | 关闭 TODO-P2-23。 |
+| TODO 移除已关闭条目,仅保留 6 个活跃项:Approval Cascade 原子组原型(P0-03/P2-18)、SQLite/reindex stream 实测(P1-22)、ReaderPanel 叙事诊断设计(P1-29)、长篇能力真实 spike(P1-43)、体验提升簇(P2-22)。 | `TODO.md` | 后续无需用户裁决的剩余项继续按设计原型和 spike 批次推进。 |
+
 ## 2026-06-12 · docs/platform · 存储与可靠性 TODO 收口
 
 | 变更 | 影响文档 | 关联 |

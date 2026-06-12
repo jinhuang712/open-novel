@@ -46,6 +46,23 @@ S10 负责跑和记录,S11 负责判断和处置。
 
 质量门禁不是“模型输出更好看”。只要系统边界、安全、来源或失败语义退化,即使文字更流畅也不能通过。
 
+## 判定机制与 re-baseline
+
+每个 gate 指标必须声明判定方式:
+
+| 指标 | 判定方式 |
+|---|---|
+| structure | schema 校验、必填字段、failure envelope 和反序列化测试。 |
+| source fidelity | 来源锚点覆盖率、无来源事实计数、推测标记是否存在。 |
+| boundary safety | 模式/工具/审批越权样例的红线断言。 |
+| context discipline | 必装事实是否保留、overflow envelope 是否解释裁剪。 |
+| creative risk signal | fixture 中已知风险是否命中、误报样例是否被标为低置信或可忽略。 |
+| user-visible explanation | 失败/降级文案是否说明可采取动作和责任边界。 |
+
+Golden re-baseline 只允许在三种情况下发生:产品契约明确改变、provider/model 行为升级后旧输出不可比、用户误报/漏报 calibration 样例证明旧期望不合理。Re-baseline 必须记录旧期望、新期望、接受理由、关联 spec 和人工审查人;不能因为当前输出“看起来也行”就更新 golden。
+
+阻断合入需要执行载体。实现阶段必须提供一个本地 gate 命令或等价 CI step,输出 pass/warn/fail/needs data 和失败清单;没有命令前,对应能力只能标为 `needs data`,不能宣称质量门禁已自动运转。
+
 ## Golden case 分组
 
 | 分组 | 覆盖 |

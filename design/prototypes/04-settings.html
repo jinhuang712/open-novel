@@ -18,8 +18,15 @@
 
   .dlg-top { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
   .dlg-title { font-size: 15px; font-weight: 600; }
-  .dlg-search { flex: 1; max-width: 320px; display: flex; align-items: center; gap: 7px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 5px 10px; font-size: 12.5px; color: var(--text-tertiary); }
+  .search-wrap { position: relative; flex: 1; max-width: 350px; }
+  .dlg-search { display: flex; align-items: center; gap: 7px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 5px 10px; font-size: 12.5px; color: var(--text-tertiary); }
   .dlg-search input { border: none; background: none; outline: none; font: inherit; color: var(--text-primary); width: 100%; }
+  .search-results { display: none; position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 6px); background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 5px; }
+  .search-results.open { display: block; }
+  .search-result { display: flex; flex-direction: column; gap: 2px; padding: 7px 9px; border-radius: var(--radius-sm); cursor: pointer; }
+  .search-result:hover, .search-result.sel { background: var(--bg-hover); }
+  .search-result b { font-size: 12.5px; }
+  .search-result span { font-size: 11.5px; color: var(--text-tertiary); }
   .dlg-close { margin-left: auto; font-size: 17px; color: var(--text-tertiary); cursor: pointer; border: none; background: none; padding: 4px 8px; border-radius: var(--radius-sm); }
   .dlg-close:hover { background: var(--bg-hover); color: var(--text-primary); }
 
@@ -52,6 +59,28 @@
   table.t td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
   select { font: inherit; font-size: 12.5px; color: var(--text-primary); background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 4px 8px; }
   .override { color: var(--accent-text); font-size: 11.5px; cursor: pointer; }
+  .section-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 12px; }
+  .section-title h3 { margin: 0; font-size: 15px; }
+  .section-title p { margin: 3px 0 0; font-size: 12px; color: var(--text-tertiary); }
+  .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .control-card { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); padding: 12px 14px; }
+  .control-card b { display: block; font-size: 13px; margin-bottom: 4px; }
+  .control-card .desc { font-size: 12px; color: var(--text-secondary); line-height: 1.55; }
+  .info-card { background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.6; }
+  .role-row, .rule-row, .memory-row { display: grid; align-items: center; gap: 10px; border-bottom: 1px solid var(--border); padding: 10px 0; font-size: 12.5px; }
+  .role-row { grid-template-columns: 36px 1.4fr 1fr 1fr 86px; }
+  .rule-row { grid-template-columns: 1.2fr 148px 1fr 86px; }
+  .memory-row { grid-template-columns: 1.5fr 112px 118px 110px; }
+  .role-row:last-child, .rule-row:last-child, .memory-row:last-child { border-bottom: none; }
+  .row-title { font-weight: 600; color: var(--text-primary); }
+  .row-sub { display: block; margin-top: 3px; font-size: 11.5px; color: var(--text-tertiary); }
+  .range { accent-color: var(--accent); width: 100%; }
+  .check-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px; }
+  .check-list label { display: flex; align-items: center; gap: 6px; }
+  .inline-note { font-size: 12px; color: var(--text-tertiary); }
+  .inline-danger { color: var(--danger); font-size: 12px; }
+  .inline-warning { color: var(--warning); font-size: 12px; }
+  .highlight { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-md); transition: outline-color var(--dur-med); }
 
   .seg { display: inline-flex; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 2px; }
   .seg button { font: inherit; font-size: 12.5px; border: none; background: none; padding: 5px 16px; border-radius: 8px; color: var(--text-secondary); cursor: pointer; }
@@ -93,28 +122,64 @@
   <div class="dialog" role="dialog" aria-label="设置">
     <div class="dlg-top">
       <span class="dlg-title">设置</span>
-      <label class="dlg-search">⌕ <input placeholder="搜索设置…(匹配 section 与字段)" oninput="filterNav(this.value)"></label>
+      <div class="search-wrap">
+        <label class="dlg-search">⌕ <input id="settingsSearch" placeholder="搜索 Memory / ReaderPanel / 快捷键…" oninput="filterNav(this.value)" onkeydown="searchKey(event)"></label>
+        <div class="search-results" id="searchResults"></div>
+      </div>
       <span style="font-size:11.5px;color:var(--text-tertiary)"><kbd>Cmd+,</kbd> 打开 · <kbd>Esc</kbd> 关闭</span>
       <button class="dlg-close" title="关闭">×</button>
     </div>
 
     <div class="dlg-body">
       <div class="nav" id="nav">
-        <div class="nav-row active" data-pane="p1">🔑 API Keys + 预算 <span class="dirty-dot"></span><span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="p2">🤖 模型分配 <span class="scope">🔄</span></div>
-        <div class="nav-row" data-pane="p3">⌨️ 快捷键 <span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="p4">🎨 风格定制 <span class="dirty-dot"></span><span class="scope">📂</span></div>
-        <div class="nav-row" data-pane="px5">👥 读者仿真器 <span class="scope">📂</span></div>
+        <div class="nav-row active" data-pane="p1">📁 Workspace + 项目 <span class="dirty-dot"></span><span class="scope">🌐+📂</span></div>
+        <div class="nav-row" data-pane="p2">🔑 API Keys + 预算 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p3">🤖 Agents <span class="scope">🔄</span></div>
+        <div class="nav-row" data-pane="p4">👥 ReaderPanel + Persona <span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="p5">🛡 Rules <span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="p6">🧠 Memory <span class="dirty-dot"></span><span class="scope">📂</span></div>
+        <div class="nav-row" data-pane="p7">⌨️ 快捷键 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p8">🎨 风格定制 <span class="scope">📂</span></div>
         <div class="nav-row disabled" title="不提供内置联网研究">🌐 外部研究 <span class="badge badge-neutral" style="margin-left:6px">不提供</span><span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="p7">💾 数据管理 <span class="scope">🌐+📂</span></div>
-        <div class="nav-row" data-pane="p8">🛠 Developer Mode <span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="px9">ℹ️ 关于 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p10">💾 数据管理 <span class="scope">🌐+📂</span></div>
+        <div class="nav-row" data-pane="p11">🛠 Developer Mode <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p12">ℹ️ 关于 <span class="scope">🌐</span></div>
       </div>
 
       <div class="pane">
         <div id="p1">
-          <div class="scope-banner">🌐 <b>全局</b> — 所有项目共享 · 存 ~/.open-novel/settings.json</div>
-          <div class="field">
+          <div class="scope-banner">🌐+📂 <b>全局 + 当前项目</b> — workspace 是项目事实、导入恢复和权限检查的入口</div>
+          <div class="section-title" data-search="workspace path writable import project package 新建项目 导入项目包 恢复预览">
+            <div><h3>Workspace 与项目入口</h3><p>路径检查通过后才保存;导入默认另存副本,覆盖必须先看恢复预览。</p></div>
+            <span class="badge badge-success">可写 · 2 个项目</span>
+          </div>
+          <div class="field" data-search="workspace path finder migrate writable permission">
+            <label>Workspace 路径</label>
+            <div class="input"><input type="text" value="~/.open-novel/workspaces/" readonly><button class="btn btn-sm">选择文件夹…</button><button class="btn btn-sm">检查权限</button></div>
+            <div class="desc">最近检查:可写 · 剩余 212 GB · 已发现 2 个项目。更换路径前会列出 pending approval 和受影响项目。</div>
+          </div>
+          <div class="control-grid">
+            <div class="control-card" data-search="new book create project story seed">
+              <b>新建项目</b>
+              <div class="desc">进入开书向导,生成世界/角色/大纲 proposal,不直接落盘。</div>
+              <button class="btn btn-sm" style="margin-top:9px">新建项目</button>
+            </div>
+            <div class="control-card" data-search="import project package manifest conflict duplicate">
+              <b>导入项目包</b>
+              <div class="desc">先读 manifest 与版本,同 project id 默认另存副本。</div>
+              <button class="btn btn-sm" style="margin-top:9px" onclick="showImportPreview()">选择 .onovelpkg…</button>
+            </div>
+          </div>
+          <div class="danger-zone" id="importPreview" style="display:none;margin-bottom:18px" data-search="导入冲突 manifest 恢复预览 覆盖 另存副本">
+            <h4>导入预览</h4>
+            <div class="danger-row"><span>检测到同 project id:重生互联网 · 导出于 2026-06-10 21:40</span><span class="badge badge-warning">默认另存副本</span></div>
+            <div class="danger-row"><button class="btn btn-sm">另存副本</button><button class="btn btn-sm">进入覆盖恢复预览</button><button class="btn btn-ghost btn-sm">取消</button></div>
+          </div>
+        </div>
+
+        <div id="p2" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 所有项目共享 · 偏好写入 settings,Key 只进系统安全凭据库</div>
+          <div class="field" data-search="deepseek api key model credential test connection">
             <label>DeepSeek API Key</label>
             <div class="input">
               <input type="password" value="sk-9f31xxxxxxxxxxxx">
@@ -124,7 +189,7 @@
             </div>
             <div class="desc">仅存本地;V4 Pro = max effort,Flash = default。怎么拿 key:platform.deepseek.com/api_keys</div>
           </div>
-          <div class="field">
+          <div class="field" data-search="budget usage cost monthly llm">
             <label>月度成本天花板</label>
             <div class="input"><input type="number" value="50" style="width:110px"> <span style="font-size:12.5px;color:var(--text-secondary)">USD / 月</span></div>
             <div class="usage"><i></i></div>
@@ -136,23 +201,143 @@
           </div>
         </div>
 
-        <div id="p2" class="pane-hidden">
-          <div class="scope-banner">🔄 <b>混合</b> — 全局默认,当前项目〈重生互联网〉可逐 Agent 覆盖</div>
-          <table class="t">
-            <tr><th>Agent</th><th>全局默认</th><th>项目覆盖</th></tr>
-            <tr><td>调度员</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
-            <tr><td>写手</td><td><select><option>Pro</option><option>Flash</option></select></td><td><span class="badge badge-accent">覆盖中: Pro</span> <span class="override">还原</span></td></tr>
-            <tr><td>一致性守护者</td><td><select><option>Pro</option><option>Flash</option></select></td><td>—</td></tr>
-            <tr><td>审稿人</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
-            <tr><td>反思学习者</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
-            <tr><td>润色师</td><td><select><option>Pro</option><option>Flash</option></select></td><td>—</td></tr>
-            <tr><td>读者评审团</td><td><select><option>Flash</option><option>Pro</option></select></td><td>—</td></tr>
-          </table>
+        <div id="p3" class="pane-hidden">
+          <div class="scope-banner">🔄 <b>混合</b> — 全局默认,当前项目〈重生互联网〉可逐 Agent 覆盖 · 变更下轮生效</div>
+          <div class="role-row" style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em"><span></span><span>角色</span><span>强度</span><span>模型</span><span>状态</span></div>
+          <div class="role-row" data-search="router 调度员 不可关闭 intent route">
+            <label class="switch"><input type="checkbox" checked disabled><i></i></label>
+            <div><span class="row-title">调度员</span><span class="row-sub">理解意图、选择模式和动作入口</span></div>
+            <select><option>标准</option><option>低干预</option></select>
+            <select><option>Flash</option><option>Pro</option></select>
+            <span class="inline-note">不可关闭</span>
+          </div>
+          <div class="role-row" data-search="writer 写手 project override pro drafting">
+            <label class="switch"><input type="checkbox" checked><i></i></label>
+            <div><span class="row-title">写手</span><span class="row-sub">章节草稿、段落扩写和 proposal</span></div>
+            <select><option>高强度</option><option>标准</option></select>
+            <select><option>Pro</option><option>Flash</option></select>
+            <span class="badge badge-accent">覆盖中</span>
+          </div>
+          <div class="role-row" data-search="validator 一致性守护者 阻断级 consistency">
+            <label class="switch"><input type="checkbox" checked disabled><i></i></label>
+            <div><span class="row-title">一致性守护者</span><span class="row-sub">事实、依赖、连带影响和阻断级一致性</span></div>
+            <select><option>严格</option><option>标准</option></select>
+            <select><option>Pro</option><option>Flash</option></select>
+            <span class="inline-note">阻断级不可关</span>
+          </div>
+          <div class="role-row" data-search="checker 审稿人 beat analyzer rules">
+            <label class="switch"><input type="checkbox" checked><i></i></label>
+            <div><span class="row-title">审稿人</span><span class="row-sub">节奏、爽点、守则和表达风险</span></div>
+            <select><option>敏感</option><option>标准</option><option>安静</option></select>
+            <select><option>Flash</option><option>Pro</option></select>
+            <span class="inline-note">12% 成本</span>
+          </div>
+          <div class="role-row" data-search="reader_panel 读者评审团 persona depth">
+            <label class="switch"><input type="checkbox" checked><i></i></label>
+            <div><span class="row-title">读者评审团</span><span class="row-sub">多类读者反应和付费追更风险</span></div>
+            <select><option>章末</option><option>手动</option><option>关闭自动</option></select>
+            <select><option>Flash</option><option>Pro</option></select>
+            <span class="override" onclick="showPane('p4')">配置 persona</span>
+          </div>
+          <div class="role-row" data-search="humanizer 润色师 去 AI 味 style">
+            <label class="switch"><input type="checkbox" checked><i></i></label>
+            <div><span class="row-title">润色师</span><span class="row-sub">表达层改写和去 AI 味</span></div>
+            <select><option>按需</option><option>自动建议</option></select>
+            <select><option>Pro</option><option>Flash</option></select>
+            <span class="inline-note">下轮生效</span>
+          </div>
+          <div class="role-row" data-search="reflector 反思学习者 memory learning">
+            <label class="switch"><input type="checkbox" checked><i></i></label>
+            <div><span class="row-title">反思学习者</span><span class="row-sub">从审定和反馈中沉淀经验</span></div>
+            <select><option>只学明确反馈</option><option>学审批选择</option></select>
+            <select><option>Flash</option><option>Pro</option></select>
+            <span class="override" onclick="showPane('p6')">管理 Memory</span>
+          </div>
         </div>
 
-        <div id="p3" class="pane-hidden">
-          <div class="scope-banner">🌐 <b>全局</b> — 重绑持久化到 settings.json,冲突即时校验</div>
-          <table class="t">
+        <div id="p4" class="pane-hidden">
+          <div class="scope-banner">📂 <b>项目级</b> — ReaderPanel 改读者视角;Assistant Persona 只改协作表达,不改写盘权限</div>
+          <div class="field" data-search="readerpanel persona 读者评审团 爽文读者 老书虫 平台编辑 逻辑洁癖 付费追更">
+            <label>ReaderPanel persona</label>
+            <div class="check-list">
+              <label><input type="checkbox" checked> 爽文读者</label>
+              <label><input type="checkbox" checked> 老书虫</label>
+              <label><input type="checkbox" checked> 平台编辑</label>
+              <label><input type="checkbox"> 逻辑洁癖</label>
+              <label><input type="checkbox" checked> 付费追更</label>
+            </div>
+            <div class="desc">persona 会影响 ReaderPanel 报告视角,不会改变项目事实或审批边界。</div>
+          </div>
+          <div class="control-grid">
+            <div class="control-card" data-search="readerpanel depth report length chapter review">
+              <b>评审深度</b>
+              <div class="seg"><button class="on">快速</button><button>标准</button><button>深入</button></div>
+              <div class="desc" style="margin-top:8px">章末自动评审已开启;报告长度:中等。</div>
+            </div>
+            <div class="control-card" data-search="assistant persona tone concise proactive options reminder nickname">
+              <b>Assistant Persona</b>
+              <div class="desc">语气:直接 · 详略:适中 · 主动列选项:开启 · 提醒强度:中</div>
+              <div class="input" style="margin-top:8px"><input type="text" value="称呼我为作者" style="width:170px"></div>
+            </div>
+          </div>
+          <div class="field" data-search="persona boundary permission facts rules">
+            <label>边界说明</label>
+            <div class="info-card" style="margin-bottom:0">Assistant Persona 不能让 Discuss 写盘,不能降低阻断级风险,不能覆盖用户当前显式指令。</div>
+          </div>
+        </div>
+
+        <div id="p5" class="pane-hidden">
+          <div class="scope-banner">📂 <b>项目级</b> — Rules 调节提示体验,不让阻断级风险静默落盘</div>
+          <div class="rule-row" style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em"><span>守则</span><span>阈值</span><span>提示方式</span><span></span></div>
+          <div class="rule-row" data-search="rules 阻断级 一致性 guardrail facts consistency">
+            <div><span class="row-title">事实一致性</span><span class="row-sub">最近触发:主角年龄与第 2 章冲突</span></div>
+            <select><option>阻断级</option><option>确认级</option></select>
+            <select><option>审批卡拦截</option><option>强提醒</option></select>
+            <button class="btn btn-sm" onclick="lockRule(this)">关闭</button>
+          </div>
+          <div class="rule-row" data-search="rules 爽点 节奏 density confirmation">
+            <div><span class="row-title">爽点密度</span><span class="row-sub">1500-2500 字一个承诺推进</span></div>
+            <select><option>确认级</option><option>提示级</option></select>
+            <select><option>章末摘要</option><option>边写边提示</option></select>
+            <button class="btn btn-sm">恢复默认</button>
+          </div>
+          <div class="rule-row" data-search="rules platform red line safety">
+            <div><span class="row-title">平台红线</span><span class="row-sub">违规风险不可静默通过</span></div>
+            <select><option>阻断级</option><option>确认级</option></select>
+            <select><option>审批卡拦截</option><option>强提醒</option></select>
+            <span class="inline-danger" id="ruleLockMsg"></span>
+          </div>
+        </div>
+
+        <div id="p6" class="pane-hidden">
+          <div class="scope-banner">📂 <b>项目级</b> — 关闭学习不等于忘掉旧经验;单条经验可调权、关闭或删除</div>
+          <div class="field" style="display:flex;align-items:center;gap:12px" data-search="reflector memory learning 开关 关闭学习">
+            <label class="switch"><input type="checkbox" checked><i></i></label>
+            <div><b style="font-size:13px">Reflector 学习新经验</b><div class="desc" style="margin-top:2px">关闭后不再学习新经验,已有经验是否注入由下方列表决定。</div></div>
+          </div>
+          <div class="memory-row" style="font-size:11px;color:var(--text-tertiary);letter-spacing:.04em"><span>经验</span><span>权重</span><span>注入</span><span></span></div>
+          <div class="memory-row" data-search="memory 经验 权重 context 注入 来源 turn">
+            <div><span class="row-title">偏好短句和强动作动词</span><span class="row-sub">来源 turn-184 · 作用范围:写手/润色师</span></div>
+            <input class="range" type="range" min="0" max="100" value="72">
+            <label><input type="checkbox" checked> 注入 context</label>
+            <button class="btn btn-sm">删除</button>
+          </div>
+          <div class="memory-row" data-search="memory 禁用词 humanizer">
+            <div><span class="row-title">避免「眸子」「在某种程度上」</span><span class="row-sub">来源 turn-209 · 作用范围:全书表达</span></div>
+            <input class="range" type="range" min="0" max="100" value="88">
+            <label><input type="checkbox" checked> 注入 context</label>
+            <button class="btn btn-sm">删除</button>
+          </div>
+          <div class="danger-zone" data-search="memory conflict candidate 采用新 保留旧 两条都不用">
+            <h4>待确认冲突候选</h4>
+            <div class="danger-row"><span>旧经验:「对白要克制」</span><span>新候选:「主角发狠时对白可以外放」</span></div>
+            <div class="danger-row"><button class="btn btn-sm">采用新</button><button class="btn btn-sm">保留旧</button><button class="btn btn-sm">两条都不用</button><span class="inline-note">未确认前不注入 context</span></div>
+          </div>
+        </div>
+
+        <div id="p7" class="pane-hidden">
+          <div class="scope-banner">🌐 <b>全局</b> — 重绑持久化到偏好设置,冲突即时校验</div>
+          <table class="t" data-search="shortcut keybinding tab cmd enter esc conflict">
             <tr><th>命令</th><th>默认键</th><th>当前键</th><th></th></tr>
             <tr><td>切换 Agent 模式</td><td><kbd>Tab</kbd></td><td><kbd>Tab</kbd></td><td><button class="btn btn-sm">重绑</button></td></tr>
             <tr><td>发送消息</td><td><kbd>Cmd+Enter</kbd></td><td><span class="kbd-capture">按下新组合键…(Esc 取消)</span></td><td><span class="conflict">与 approval.approve 冲突,不可保存</span></td></tr>
@@ -160,9 +345,9 @@
           </table>
         </div>
 
-        <div id="p4" class="pane-hidden">
+        <div id="p8" class="pane-hidden">
           <div class="scope-banner">📂 <b>项目级</b> — 仅作用于〈重生互联网〉· 存 project.json</div>
-          <div class="field">
+          <div class="field" data-search="appearance theme light dark auto">
             <label>外观 <span class="badge badge-neutral" style="margin-left:4px">🌐 全局字段,陈列于此便于发现</span></label>
             <div class="seg" id="appearance">
               <button data-ap="light">浅色</button>
@@ -171,11 +356,11 @@
             </div>
             <div class="desc">切换立即生效(本原型真实切换);命令面板亦可搜「切换 dark mode」。</div>
           </div>
-          <div class="field">
+          <div class="field" data-search="style writing voice">
             <label>文风描述</label>
             <div class="input"><input type="text" value="冷峻克制,短句为主,商战细节真实"></div>
           </div>
-          <div class="field">
+          <div class="field" data-search="banned words 禁用词">
             <label>全书禁用词</label>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               <span class="badge badge-neutral">在某种程度上 ×</span>
@@ -186,9 +371,7 @@
           </div>
         </div>
 
-        <div id="px5" class="pane-hidden"><div class="placeholder">读者仿真器 + 叙事引擎:启用发布前评审、章末钩子检查、爽点密度提醒和角色弧光偏离提示</div></div>
-
-        <div id="p7" class="pane-hidden">
+        <div id="p10" class="pane-hidden">
           <div class="scope-banner">🌐+📂 <b>全局 + 当前项目</b></div>
           <div class="field">
             <label>Workspace 路径(🌐)</label>
@@ -212,7 +395,7 @@
           </div>
         </div>
 
-        <div id="p8" class="pane-hidden">
+        <div id="p11" class="pane-hidden">
           <div class="scope-banner">🌐 <b>全局</b> — 揭示系统内部基础设施,普通用户不需要</div>
           <div class="field" style="display:flex;align-items:center;gap:12px">
             <label class="switch"><input type="checkbox" id="devmode" onchange="this.checked && alert('原型演示: Developer Mode 已开启 (Cmd+Shift+D)')"><i></i></label>
@@ -228,7 +411,7 @@
           </ul>
         </div>
 
-        <div id="px9" class="pane-hidden"><div class="placeholder">Open Novel 0.3.0-poc · 检查更新 · 开源许可信息</div></div>
+        <div id="p12" class="pane-hidden"><div class="placeholder">Open Novel 0.3.0-poc · 检查更新 · 开源许可信息</div></div>
       </div>
     </div>
 
@@ -249,18 +432,94 @@ function toggleTheme() {
   h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('onovel-theme', h.dataset.theme);
 }
+var searchMatches = [];
 document.querySelectorAll('.nav-row[data-pane]').forEach(function (row) {
-  row.addEventListener('click', function () {
-    document.querySelectorAll('.nav-row').forEach(function (r) { r.classList.remove('active'); });
-    row.classList.add('active');
-    document.querySelectorAll('.pane > div').forEach(function (p) { p.classList.add('pane-hidden'); });
-    document.getElementById(row.dataset.pane).classList.remove('pane-hidden');
-  });
+  row.addEventListener('click', function () { showPane(row.dataset.pane); });
 });
-function filterNav(q) {
+function showPane(paneId, target) {
   document.querySelectorAll('.nav-row').forEach(function (r) {
-    r.style.display = r.textContent.toLowerCase().indexOf(q.toLowerCase()) >= 0 ? '' : 'none';
+    r.classList.toggle('active', r.dataset.pane === paneId);
   });
+  document.querySelectorAll('.pane > div').forEach(function (p) { p.classList.add('pane-hidden'); });
+  var pane = document.getElementById(paneId);
+  if (!pane) return;
+  pane.classList.remove('pane-hidden');
+  if (target) {
+    setTimeout(function () {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      target.classList.add('highlight');
+      setTimeout(function () { target.classList.remove('highlight'); }, 2000);
+    }, 40);
+  }
+}
+function paneFor(el) {
+  while (el && el.parentElement && !el.parentElement.classList.contains('pane')) el = el.parentElement;
+  return el && el.id ? el.id : 'p1';
+}
+function labelFor(el) {
+  var label = el.querySelector('label, h3, b, .row-title');
+  return label ? label.textContent.trim() : el.textContent.trim().slice(0, 24);
+}
+function sectionName(paneId) {
+  var row = document.querySelector('.nav-row[data-pane="' + paneId + '"]');
+  return row ? row.childNodes[0].textContent.trim() : paneId;
+}
+function filterNav(q) {
+  var box = document.getElementById('searchResults');
+  var query = q.trim().toLowerCase();
+  if (!query) {
+    box.classList.remove('open');
+    box.innerHTML = '';
+    searchMatches = [];
+    return;
+  }
+  var nodes = Array.prototype.slice.call(document.querySelectorAll('.pane [data-search]'));
+  searchMatches = nodes.filter(function (el) {
+    var hay = (el.dataset.search + ' ' + el.textContent).toLowerCase();
+    return hay.indexOf(query) >= 0;
+  }).slice(0, 6).map(function (el, idx) {
+    var paneId = paneFor(el);
+    return { el: el, paneId: paneId, label: labelFor(el), section: sectionName(paneId), selected: idx === 0 };
+  });
+  if (!searchMatches.length) {
+    box.innerHTML = '<div class="search-result"><b>无匹配设置</b><span>试试 Memory、ReaderPanel、workspace 或快捷键</span></div>';
+    box.classList.add('open');
+    return;
+  }
+  box.innerHTML = searchMatches.map(function (m, idx) {
+    return '<div class="search-result' + (idx === 0 ? ' sel' : '') + '" data-idx="' + idx + '"><b>' + m.label + '</b><span>' + m.section + '</span></div>';
+  }).join('');
+  box.classList.add('open');
+  box.querySelectorAll('.search-result[data-idx]').forEach(function (row) {
+    row.addEventListener('click', function () {
+      jumpToResult(Number(row.dataset.idx));
+    });
+  });
+}
+function jumpToResult(idx) {
+  var match = searchMatches[idx || 0];
+  if (!match) return;
+  document.getElementById('searchResults').classList.remove('open');
+  showPane(match.paneId, match.el);
+}
+function searchKey(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    jumpToResult(0);
+  }
+  if (e.key === 'Escape') {
+    e.currentTarget.value = '';
+    filterNav('');
+  }
+}
+function showImportPreview() {
+  var preview = document.getElementById('importPreview');
+  preview.style.display = '';
+  showPane('p1', preview);
+}
+function lockRule(btn) {
+  btn.blur();
+  document.getElementById('ruleLockMsg').textContent = '阻断级风险不能静默落盘';
 }
 function checkDel(v) { document.getElementById('delBtn').disabled = v !== '重生互联网'; }
 document.querySelectorAll('#appearance button').forEach(function (b) {

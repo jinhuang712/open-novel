@@ -7,7 +7,9 @@
 - Router actions。
 - ChangeSet、dependency group、approval item、residual obligation、internal recovery result。
 - approval queue item、approval invalidation、rejection redo request、no-change-evidence。
+- apply journal entry、light apply transaction、mode gate、cancel plan、interrupted run、obligation state。
 - context package、impact analysis result、fact query result。
+- prompt budget envelope、provider failure envelope、embedding capability envelope。
 - tool result envelope。
 - narrative report、reader report、cardinal rules report。
 - humanizer diff、style report、inline review suggestion。
@@ -47,9 +49,11 @@
 | Search / Command | search intent、result group、preview payload、command invocation |
 | Writing / Planning / Approval | proposal draft、ChangeSet、dependency group、approval item、residual obligation、risk acknowledgement、decision payload |
 | Approval Queue / Evidence | pending approval queue item、Invalidated reason、EditedAccepted recheck result、rejection redo payload、no-change-evidence |
+| Turn / Journal / Recovery | apply journal entry、light apply transaction、turn state、mode gate、cancel plan、manual recovery、interrupted run |
 | Inline Review / Humanizer | inline suggestion、diff hunk、near-text action、style report |
 | Creative Engine / ReaderPanel | cardinal rule report、narrative report、reader persona report、aggregation summary |
 | Knowledge / Identity | entity governance proposal、alias status、merge/split preview、obligation list item |
+| Provider / Budget | prompt budget envelope、provider failure envelope、embedding capability envelope、context overflow envelope |
 | Trace / Recap | trace step、developer detail envelope、recap payload、activity item、author note |
 | Settings / Onboarding / Project Library | settings patch、danger action request、workspace bootstrap result、project list item |
 | platform/Ixx/Rxx | provider capability, adapter event, import/export manifest, backup/restore result, migration result, diagnostic bundle manifest |

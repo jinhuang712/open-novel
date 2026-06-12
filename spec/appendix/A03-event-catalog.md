@@ -7,6 +7,7 @@
 - stream progress / output / control / diagnostic 事件字段。
 - turn lifecycle 事件。
 - approval、cancel、internal recovery 事件。
+- apply journal、light apply、mode gate、interrupted run、manual recovery 事件。
 - approval queue、approval invalidated、obligation opened/resolved/invalidated、rejection redo 事件。
 - recap created、author note added、correction requested、continuation selected 事件。
 - trace、tool run、LLM call、cost、canonical agent role 事件。
@@ -33,7 +34,8 @@
 | 能力/平台 | 事件族 |
 |---|---|
 | Turn / Stream | turn created、state changed、step started/finished、control emitted、stream recovered |
-| Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed |
+| Turn / Journal / Recovery | apply prepared/file-applied/committed、light apply accepted、mode changed/blocked、run interrupted、manual recovery opened |
+| Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed、apply failed/degraded |
 | Approval Queue / Obligation | approval enqueued、approval focused、approval invalidated、obligation opened/snoozed/resolved/dismissed/invalidated、redo requested |
 | Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed |
 | Inline Review / Editor | selection captured、suggestion rendered、near-text action selected、editor replace applied、undo bridge recorded |

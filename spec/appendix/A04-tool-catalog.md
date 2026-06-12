@@ -2,6 +2,8 @@
 
 本 appendix 是工具、命令、快捷键和查询能力参数的归口。[S09 · Agent Tooling Boundary](../S09-agent-tooling-boundary.md) 定义工具能做什么、不能做什么、失败如何处理、二次 LLM 调用如何受控和是否需要审批。
 
+工具/命令族不是 Agent 角色或 runner 清单。工具调用归 S09 授权、S03 执行记录,角色 id 仍以 [M13 · Agent Team Controls](../M13-agent-team-controls.md) 的七个 canonical id 为准。
+
 ## 归口内容
 
 - Agent 读取工具参数。
@@ -25,6 +27,7 @@
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M08 Approval Cascade](../M08-approval-cascade.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
+- [M13 Agent Team Controls](../M13-agent-team-controls.md)
 
 ## 实现前工具覆盖矩阵
 

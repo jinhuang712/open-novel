@@ -64,6 +64,18 @@ Validator 输出的阻断级结论必须带 source refs、检查范围、failure
 
 完整 schema 归 A02/A04。S09 只规定工具结果不能是裸字符串,也不能把失败藏进自然语言。
 
+## 工具取消与超时
+
+每个工具必须声明 cancelability。S03 收到 stop signal 后按这里的声明等待、取消或交给 S04 manual recovery。
+
+| cancelability | 适用 | stop 后收场 |
+|---|---|---|
+| immediate | 只读查询、可中断分析、未提交外部 side effect 的二次 LLM | 立即停止,返回 stopped tool result。 |
+| safe-point | 文件扫描、reindex 批次、批量 embedding、诊断导出预览 | 到下一个安全点停止,返回已完成范围和未完成范围。 |
+| non-cancellable | provider in-flight、外部系统不可撤销请求、已开始写入的 platform 操作 | 标记 waiting/unknown,超时后进入 interrupted 或 manual recovery。 |
+
+工具超时必须区分 `tool_timeout`、`provider_timeout`、`host_watchdog_timeout` 和 `user_cancelled`。只有可证明 transient 的超时才进入 retry budget;不可取消工具的未知状态不能被包装成成功或普通失败,必须让 S04/S05 展示“需要决定”或“等待安全收场”。
+
 ## 二次 LLM 调用边界
 
 工具内部允许使用模型做摘要、候选复核或格式化,但必须满足四条约束:

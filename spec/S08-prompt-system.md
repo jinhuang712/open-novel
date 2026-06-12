@@ -66,6 +66,19 @@ prompt injection 的处理不只靠文字提醒。S08 定义围栏,S09 限制工
 
 完整字段定义归 [A02 · JSON Schemas](./appendix/A02-json-schemas.md)。本篇只定义 packet 必须存在和它在链路中的意义。
 
+## 终局预算校验
+
+S07 负责估算 context package,S08 负责在 prompt packet 完整拼装后做最终预算校验。模板正文、role/mode 层、output contract、tool result marker、不可信内容围栏和 experience 片段都会增加实际体量;这些不能只靠 S07 的 context 估算替代。
+
+| 校验项 | 失败收场 |
+|---|---|
+| input 超过 I01 声明的 context window | 返回 `prompt_budget_overflow`,带完整层级体量,退回 S07 overflow 决策。 |
+| output reserve 不足 | 缩小任务、分批或要求用户确认;不能让模型在半截输出里失败。 |
+| template / fenced content 体量异常 | 标记模板或导入材料问题,进入 Trace/Developer Mode。 |
+| provider 上限未知 | 返回 `needs data`,不能用乐观默认值继续。 |
+
+S08 不得静默删除高优先级层,也不得把 fenced content 截断到失去来源。若只能裁剪低优先级 experience、近期会话或语义召回补充,裁剪摘要和缺口必须写入 prompt packet manifest,供 S10 replay 和 S11 gate 检查。
+
 ## 变更治理
 
 | 变更类型 | 只改 A05? | 必须同步 |

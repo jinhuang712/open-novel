@@ -35,6 +35,24 @@ flowchart LR
 
 对象定义的字段明细不在根层。根层只定义它们的职责和失败后果。
 
+## 时点、卷和兑现窗口
+
+图谱查询必须能按章节时点回答。relation、timeline、dependency 和 entity state 都要带来源章节、有效起止或至少可比较的 chapter order;否则只能作为低置信提示,不能支撑前文改写。
+
+卷/册 summary 是派生索引对象,来源于 S01 的作者文件结构和章节范围。它服务 S07 的 long-form partition,但不能成为比原文更高的事实源。卷边界变更会使对应 summary、跨卷依赖和 volume arc 健康度 stale。
+
+伏笔和承诺 dependency 必须允许声明兑现窗口:
+
+| 字段 | 行为意义 |
+|---|---|
+| opened_at | 伏笔/承诺首次建立的来源锚点。 |
+| expected_window | 预计兑现章节、卷内阶段或明确截止点。 |
+| latest_safe_point | 超过后会触发确认级或阻断级风险的位置。 |
+| resolved_at | 审定后的回收/兑现来源。 |
+| status | open、due、overdue、resolved、dismissed。 |
+
+没有 expected window 的伏笔不能触发“超期”阻断,只能提示“未声明兑现窗口”。一旦用户或审批明确给出窗口,S12 可以用 due/overdue 判定期待感兑现风险。
+
 ## 实体身份治理
 
 entity 身份是图谱主权对象,不是展示层临时猜测。同名、别名、改名和误合并必须有可追踪治理动作:
@@ -127,6 +145,8 @@ stateDiagram-v2
 | embedding | 语义相似段落能补召回但不制造无来源事实 | 语义召回只作为补充,不进入主权候选 |
 
 如果 spike 暴露系统性漏召回,应先重设计图谱对象、锚点粒度或依赖声明方式,再恢复高风险 cascade。
+
+Embedding 模型、维度和索引版本必须来自 I01/V03。模型未知或维度未落定时,embedding 对象处于 `needs data`;语义搜索、相似桥段和补召回必须降级为不可用或低置信,不能提前落地不可迁移的向量表结构。
 
 ## 事故表
 

@@ -18,7 +18,7 @@
 - Approval Cascade: Search 发起写入、低置信项、关闭 pending、internal recovery / reindex 失败收场。
 - Turn Recap: append-only 时间线、正常/停止/失败/待审/已落盘 recap、作者备注、forward-only 修正和续接入口。
 - ReaderPanel: persona 并行、inconclusive、注入防御、审批说明联动。
-- onboarding、settings、danger action 测试。
+- onboarding、settings、credential security、danger action、import/export preview 和 diagnostics redaction 测试。
 
 ## 对应核心文档
 
@@ -51,8 +51,8 @@
 |---|---|
 | S01/S06 storage + graph | 原子写、外部编辑冲突、reindex 降级、anchor 失效、派生文件守卫 |
 | S03/S04 runner + orchestration | JSON retry、doom-loop、cancel plan、stopped recap、approval idempotency |
-| S05/S14 UI + editor | stream 恢复、事件乱序、IME/focus trap、inline review accept/reject、editor undo bridge |
-| S07/S08/S09 context + prompt + tools | context overflow、long-form partition、impact analysis 收敛、prompt injection、tool permission、二次 LLM 失败 |
+| S05/S14 UI + editor | stream 恢复、事件乱序、IME/focus trap、shortcut conflict、inline review accept/reject、editor undo bridge |
+| S07/S08/S09 context + prompt + tools | context overflow、long-form partition、as-of chapter、prompt final budget、impact analysis 收敛、prompt injection、tool permission、二次 LLM 失败、tool cancelability |
 | S10/S11 harness + evaluation | run evidence、failure replay、golden regression、阻断阈值、prompt/context/tool 改动验收 |
 | S12/S13 creative + humanizer | 风险分级、ReaderPanel 聚合、Humanizer 越权升级 |
 | S12/M08 quality + approval | EditedAccepted 轻量重检、阻断级风险解决证据、no-change-evidence、审批前质检汇合 |
@@ -60,9 +60,9 @@
 | M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、dependency group、低置信项、residual obligation、writing-blocked、部分接受和失败收场 |
 | M03/M10/S06 knowledge governance | as-of chapter 查询、同名歧义、别名确认、实体合并/拆分、obligation 全局清单 |
 | M09-M13 trace/memory/agent controls | Trace 层级、经验可见/关闭/删除、agent 开关和预算限制 |
-| M14-M17 settings/onboarding/library/recap | danger action、workspace 初始化、项目切换隔离、Activity append-only |
-| platform/Ixx | provider probe、editor adapter、watcher、import/export、desktop permission |
-| platform/Rxx | project lifecycle、backup/restore、migration、repair、diagnostics export |
+| M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、danger action、workspace 初始化、项目切换隔离、Activity append-only、Recap 导出 |
+| platform/Ixx | provider probe、editor adapter、watcher、import/export、desktop permission、keychain、shortcut registration |
+| platform/Rxx | project lifecycle、backup/restore、migration、repair、diagnostics export preview/redaction |
 
 ## Storage / Platform 可靠性验证项
 
@@ -70,6 +70,10 @@
 
 | 场景 | 预期 |
 |---|---|
+| Apply journal crash recovery | prepared/file-applied/committed 任一阶段崩溃后,启动扫描能前滚、放弃或进入人工恢复,UI 不误判为外部编辑。 |
+| direct edit light apply | 作者保存直接编辑后生成 light apply journal、activity、reindex request,不生成大审批卡。 |
+| inline accept light apply | 选区接受进入 undo bridge 和 light apply;触及事实/跨文档/阻断风险时升级 ChangeSet。 |
+| editor undo after committed light apply | 生成新的反向 light apply,不修改旧 journal。 |
 | 项目事实库真源损坏 | 项目进入 facts-degraded;作者文件只读可导出;写入、审批应用和高风险 Agent turn 阻断;用户可选备份恢复或以文件为准重建最小事实库。 |
 | 文件与事实账本冲突 | 作者文件优先;审批历史或 obligation 标记 lost/invalidated,不能覆盖文件来匹配旧账本。 |
 | 系统自写 watcher 回声 | write token、owner、指纹和水位匹配时只推进 ledger,不触发外部编辑失效。 |
@@ -80,6 +84,27 @@
 | 恢复前置不满足 | 无 writable lease、active turn 或 pending approval 未处理时只能预览,不能覆盖项目。 |
 | 版本 forward-compat | 旧应用打开新 schema/package format 显式拒开,不得忽略未知字段或创建假项目。 |
 | repair job 重入 | 相同范围/水位/index version 幂等复用;部分完成从输出水位继续;输入指纹变化时关闭旧 job 并新建。 |
+| provider credential 写入 | API key/token 只进入系统安全凭据库;项目、settings export、Trace、诊断包均不出现 secret。 |
+| provider credential 删除 | 删除后 provider 变为未配置;需要 secret 的 Agent 能力禁用;历史事实、审批和 recap 保留。 |
+| 旧明文凭据迁移 | 安全凭据库写入和旧来源清理都成功才恢复 provider;任一步失败保持禁用并给出脱敏清理提示。 |
+| provider 认证失效 | 无 durable change 的运行中 turn 失败并生成 recap;pending approval 可查看但不能继续扩写或重做。 |
+| 项目包导出预览 | 作者文件、项目事实、经验/分析、recap、审批历史、settings 偏好和 trace/debug 附件分族展示。 |
+| 项目包凭据剔除 | manifest 只记录 provider 类型和需重配状态;API key/token/keychain item 不进入包。 |
+| 经验/分析随项目包 | 默认随完整项目包导出;用户排除时 manifest 明确标记不完整或排除范围。 |
+| 审批历史随项目包 | pending/applied/rejected/invalidated 摘要可追溯;导入后 pending 必须重校验才能继续接受。 |
+| 诊断包分类预览 | 正文、经验、审批、provider、trace/tool 和系统环境分级展示敏感等级与脱敏策略。 |
+| 诊断脱敏阻断 | 发现 secret、未知 provider payload 或无法分类正文片段时阻断导出,不得生成残缺包。 |
+| 快捷键 / IME 冲突 | IME 组合态、modal focus trap、编辑器文本命令优先;无法判断焦点时按只读处理。 |
+| 快捷键登记失败 | 系统占用或重绑冲突时提示替代入口,命令能力不隐藏。 |
+| persistent pending turn export/import | pending approval 随项目包导出后导入必须重校验前置,不能靠 runtime.db 直接接受。 |
+| runtime recent project isolation | 项目内 Search 不读取其他 project id 的 recent object 或 query history。 |
+| mode gate restart | 重启后恢复持久模式;pending/recovery 时模式切换被阻断并说明原因。 |
+| writing mode planning prerequisite | 写作发现必须先改设定时生成 planning prerequisite,正文 proposal 不越权落盘。 |
+| post-apply reindex failure | 作者文件已保存,索引 degraded/repair,审批不倒退为未接受。 |
+| provider context overflow | I01 返回 context_overflow 时退回 S07 overflow,不进入 provider transient retry。 |
+| embedding model unknown | 语义召回 needs data,向量表和相关能力不上线。 |
+| host interrupted run | host crash/restart 后 run 标记 interrupted,展示最后可信 step 和可重试点,不自动重放危险动作。 |
+| heavy reindex stream heartbeat | 批量 SQLite/reindex/embedding 写入期间 stream heartbeat 延迟在 V03 实测阈值内;超阈值需隔离执行。 |
 
 ## 外部 spike 对应验证
 
@@ -108,6 +133,8 @@
 | obligation 去重 | 同一来源/风险/锚点重复命中只追加证据,不生成多条噪音待办 |
 | 实体拆分 | 同名误并能生成审批 proposal,未审定前不改派生身份 |
 | no-change-evidence | “已分析无需改动”必须有检查范围、证据和置信状态 |
+| as-of chapter 查询 | 改写前文默认排除未来事实;用户切换“最新”时结果明确标时点。 |
+| dependency due/overdue | 无 expected window 只提示补计划;due/overdue 按 S06 window 触发确认/阻断风险。 |
 
 ## Memory / Reflector 验证项
 

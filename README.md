@@ -31,7 +31,7 @@
 | 层 | 选型 | 备注 |
 |---|---|---|
 | 前后端 | Next.js 15 + React 19 + TypeScript 5.9 | 单仓单应用 |
-| Agent loop | Vercel AI SDK 6 (`generateText` / `streamText` + `stopWhen`) | 自定义 13 个 runner,不用 Agent 框架 |
+| Agent loop | Vercel AI SDK 6 (`generateText` / `streamText` + `stopWhen`) | 单一受控 Runner 契约承载七个 canonical AI 角色,不用 Agent 框架 |
 | LLM | DeepSeek V4 Pro / Flash(直连 API) | Pro=max effort,Flash=default;ctx 1M,max output 384K,原生 JSON mode |
 | 编辑器 | TipTap 3.x + ProseMirror Decorations + Aho-Corasick | 不用 Mention 节点 |
 | 状态机 | XState v5 | 三模式闸门 |
@@ -48,7 +48,7 @@
 
 当前实现方向已统一为:
 
-- **Agent runner**: 自定义 runner + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;prompt、context、tool、harness 和 golden gate 各有系统主权层
+- **Agent runner**: 单一受控 Runner 契约 + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;run envelope 使用 [M13](./spec/M13-agent-team-controls.md) 的七个 canonical role id,prompt、context、tool、harness 和 golden gate 各有系统主权层
 - **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
 - **系统设计**: `S00-S15` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
 - **能力闭环**: `M01-M17` 写用户可触发、可感知、可验收的完整能力
@@ -59,7 +59,19 @@
 - **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
 - **外部事实审计闸门**: 代码前的外部依赖和运行事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
 
+## 文档 lint
+
+当前仓库没有根层 `package.json`,直接运行:
+
+```bash
+node scripts/docs-lint.js
+```
+
+该脚本检查 Markdown 相对链接、仓库内 Markdown 链接不得指向 `.html` 文件、活跃 TODO 编号声明唯一性和产品红线编号声明唯一性。
+
 ## 快速启动
+
+当前仓库仍处于文档与 HTML 原型阶段,尚未包含根层 `package.json` 或应用工程目录。应用代码落仓后的目标启动方式是:
 
 ```bash
 pnpm install
@@ -86,11 +98,11 @@ pnpm dev
 ├── spec/                      # 核心技术文档(S/M) + platform/ + appendix/
 ├── design/                    # 界面设计: 交互文档 + HTML 高保真原型(prototypes/)
 ├── progress/                  # 历史进度档案(只做追溯,不再承担 rolling plan)
-├── app/                       # Next.js 路由 + API
-├── components/                # 前端组件
-├── lib/                       # Agent / Tools / Storage / Editor
+├── scripts/                   # 轻量文档质量检查脚本
 └── ~/.open-novel/workspaces/  # 你的小说项目数据(在用户目录,不在仓库)
 ```
+
+未来应用工程落仓时会新增 `app/`、`components/`、`lib/` 等目标结构;当前工作树尚未包含这些目录。
 
 ## 文档导航
 

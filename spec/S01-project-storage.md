@@ -42,6 +42,36 @@ Lease 不是内存布尔值。项目事实库必须持久记录 lease owner、le
 
 作者文件和审批后事实共同构成作品账本。派生索引是账本的目录和检索卡片,不是第二本账。
 
+## Append-only apply journal
+
+所有会改变作者文件、项目事实库、审批终态、obligation、recap/activity 投影或恢复水位的动作,都必须先进入 append-only apply journal。Journal 是落盘事实序列,不是调试日志;Trace、Recap、Activity、诊断包和恢复入口都从它投影,不能各自发明一套“这次到底发生了什么”。
+
+每条 journal entry 至少说明:turn id、action id、apply id、来源模式、事务类型、当前 fencing token、输入文件指纹、输出文件指纹、影响文件、项目事实水位、reindex 水位、用户裁定、恢复策略和投影状态。写入过程按三段提交:
+
+| 阶段 | 写什么 | 崩溃后怎么收场 |
+|---|---|---|
+| prepared | 记录意图、前置条件、输入指纹、临时文件路径和恢复策略 | 启动扫描时若未 touching 原文件,标记 abandoned;用户看到未生效。 |
+| file-applied | 临时文件已 rename 替换,输出指纹已知 | 启动扫描必须前滚项目事实和投影,不能把自写结果误判为外部编辑。 |
+| committed | 项目事实、审批终态、obligation/recap 投影和 reindex request 已入账 | 允许展示已生效;若 reindex 失败,进入 degraded/repair,不回滚作者文件。 |
+
+跨文件 ChangeSet 不是文件系统原子事务。它通过同一 apply id、每文件 prepared/file-applied 记录和单一 committed 水位表达原子结果:用户侧看到的是整批成功、整批失败、或需要内部恢复;系统内部可以前滚已替换文件并阻断后续写入,直到 journal 恢复到可解释状态。
+
+启动、接管、恢复和 repair 前必须扫描未完成 journal。只要存在 prepared/file-applied 未收场记录,项目进入恢复流程:先停止新的可写 turn 和审批应用,再按 journal 记录前滚、放弃或要求人工处理。恢复结果同样追加 journal,不能修改旧记录来假装事故没发生。
+
+## 轻量写入事务
+
+作者直接输入、普通保存、小选区 inline accept 和 Humanizer 就地接受不需要整批审批卡,但仍然是作品事实写入。它们走 light apply transaction:
+
+| 来源 | 是否生成 ChangeSet | 必须入账 |
+|---|---|---|
+| 作者直接编辑并保存 | 不生成审批 ChangeSet | editor action id、文件指纹、锚点变化、activity 摘要、reindex request。 |
+| inline review accept | 生成轻量 accepted edit,不进入 cascade card | 原文范围、用户接受版本、undo bridge、风险重检结果。 |
+| Humanizer 小改接受 | 生成轻量 accepted edit | diff、不可改事实校验、风格来源、reindex request。 |
+
+Light apply 与审批 apply 共用 lease、fencing token、fingerprint ledger、journal 和 reindex/degraded 收场。差别只在用户交互重量:小改就地审定,大改整批审批。任何 light apply 若触及跨文件、设定、关系、伏笔、事实库治理或阻断级风险,必须升级为 ChangeSet 或 planning prerequisite,不能继续伪装成轻量保存。
+
+Editor undo 不是历史回滚。用户撤销一个已 journal committed 的 light apply 时,系统生成新的反向 light apply entry,向前追加,并重新触发 reindex/obligation 投影。
+
 ## 文件指纹与自写回声
 
 每个作者源文件都有持久 fingerprint ledger,记录文件身份、内容指纹、mtime/size 辅助信息、最近一次已确认 watcher 水位、最近一次系统写入 token 和写入完成后的指纹。指纹是判断外部编辑、审批失效和离线窗口重开的基线;mtime/size 只能作为快速筛选,不能单独证明文件未变。
@@ -107,8 +137,10 @@ sequenceDiagram
 
   O->>S: apply approved ChangeSet
   S->>S: 校验项目边界和版本指纹
-  S->>F: 写作者文件
-  S->>D: 记录审批后事实和写入结果
+  S->>D: append journal prepared
+  S->>F: 写临时文件并 rename 替换
+  S->>D: append journal file-applied
+  S->>D: commit 项目事实、审批终态和投影
   S->>K: 请求局部 reindex
   alt reindex ok
     K-->>S: 索引健康
@@ -159,7 +191,7 @@ stateDiagram-v2
 |---|---|---|---|
 | 路径越界或 workspace 不可写 | 无 | 无法写入项目位置 | 修复路径/权限后重试 |
 | 文件写失败 | 无或部分临时状态 | 审批未生效 | 从失败点重试或取消 |
-| 项目事实库写失败 | 不得标记完成 | 落盘失败,文件状态需校正 | 内部回滚文件或重跑事务 |
+| 项目事实库写失败 | journal 决定是否 file-applied | 落盘未完成,进入恢复 | 启动扫描前滚/放弃/人工处理 |
 | reindex 失败 | 作者文件已生效 | 索引过期,查询/高亮降级 | 重新索引 |
 | internal recovery 快照缺失 | 已生效变更保留 | 无法自动生成反向修正 | 人工处理并重新索引 |
 | 外部编辑冲突 | 外部文件事实优先 | 待审批内容失效 | 重新生成 proposal |

@@ -9,6 +9,8 @@ Inline Rewrite 和 Humanizer 是表达层改写能力。用户框选文字或主
 | Inline Rewrite | `Cmd+K` 框选改写 | 局部语句重写 |
 | Humanizer | 输入条或 ReaderPanel 风险入口 | 去套话、降 AI 味、贴近作者风格 |
 
+入口受当前模式闸门约束:Discuss 只能解释和预览,不能接受替换;Planning 只能对设定/大纲文本提出可审定建议,不能改正文;Writing 允许正文 inline review 和 Humanizer。存在 pending approval、writing-blocked obligation 或 lease lost 时,接受动作禁用,只读查看和复制仍可用。
+
 ## Inline Review 是默认路径
 
 ```mermaid
