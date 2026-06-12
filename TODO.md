@@ -20,11 +20,6 @@
 | TODO-P1-59【裁决/待讨论】 | Append-only apply journal 的产品/技术语义需要解释并裁决:用户不理解它为什么存在、作者能看见什么、崩溃后如何恢复、它与普通保存/撤销/recap 的关系是什么。 | [S14](./spec/S14-project-storage.md) · [S03](./spec/S03-turn-orchestration.md) · [S04](./spec/S04-streaming-ui-protocol.md) · [M17](./spec/M17-turn-recap-and-continuation.md) · [A01](./spec/appendix/A01-schema-tables.md) · [V01](./spec/appendix/V01-test-matrix.md) | 用户已明确要求继续讨论,不能把 append-only apply journal 当作本轮可直接关闭的技术实现项;需要先把落盘、崩溃恢复、用户可见回执和历史语义讲成用户能理解的方案。 | 给出用户能理解的落盘崩溃恢复方案,说明哪些内容已写入、哪些内容可恢复、哪些内容需要人工确认、recap 如何呈现;经用户确认后再同步 S14/S03/S04/M17/A01/V01 并关闭。 |
 | TODO-P1-60【裁决/待讨论】 | `facts-degraded` 模式的产品/技术语义需要解释并裁决:它是否应该作为独立模式存在、何时进入、用户看到什么、哪些写入要阻断、与 index degraded / R04 重建 / 作者文件优先的关系是什么。 | [S14](./spec/S14-project-storage.md) · [R04](./spec/platform/R04-index-health-and-repair.md) · [R01](./spec/platform/R01-project-lifecycle.md) · [A01](./spec/appendix/A01-schema-tables.md) · [V01](./spec/appendix/V01-test-matrix.md) | 用户已明确表示“不明白在干嘛,记入 TODO 作为待讨论”。如果继续把它写成已定模式,会让实现直接固化未确认恢复体验。 | 给出更容易理解的项目事实库损坏恢复方案,说明与索引损坏的区别、作者文件如何取用、是否允许继续写、恢复后哪些历史会丢失;经用户确认后同步 S14/R04/R01/A01/V01 并关闭。 |
 
-## P2 · 同步与体验优化
-
-| ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
-|---|---|---|---|---|
-
 ## 验证入口
 
 需要真实代码、依赖或运行数据证明的事项不作为游离 TODO 漂浮:
