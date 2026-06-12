@@ -70,7 +70,7 @@ flowchart TB
 
 - 召出:`Cmd+B` / 点库按钮;推开式,纸面右移
 - 顶部:纯文字类目行(章节 / 角色 / 世界观 / 大纲),活动类目 `--text-primary` + 底部 2px accent 短线,其余 `--text-secondary`;`Cmd+1~4` 直达(面板收起时先展开)
-- 列表:行高 32px,文字 + 右侧弱化元信息(字数/修改时间);活动行左缘 2px accent 线,不做整行底色;`_` 前缀派生文件默认隐藏(Developer Mode 显示并标「派生」,read-only,[spec/S15](../spec/S15-settings-and-onboarding.md))
+- 列表:行高 32px,文字 + 右侧弱化元信息(字数/修改时间);活动行左缘 2px accent 线,不做整行底色;`_` 前缀派生文件默认隐藏(Developer Mode 显示并标「派生」,read-only,[spec/M18](../spec/M18-developer-mode.md))
 - 「最近」置于章节类目顶部一组(替代 Tabs 的多文件心智);空态(新项目):居中衬线短句 +「让 AI 起草第一章」按钮 → 召出输入条并预填
 - 库面板只放「能打开的东西」;查询是动作(独立浮层,见下节),偏好是 AI 沉淀的规则(归 Settings)
 

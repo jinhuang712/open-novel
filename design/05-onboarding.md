@@ -1,6 +1,6 @@
 # design/05 — Onboarding 首启引导
 
-> 原型:`design/prototypes/05-onboarding.html` · 上游:[spec/S15 Settings 与 Onboarding](../spec/S15-settings-and-onboarding.md)
+> 原型:`design/prototypes/05-onboarding.html` · 上游:[spec/M15 Onboarding 与 New Book](../spec/M15-onboarding-and-new-book.md)
 
 首启 = 品牌时刻:全屏素色底 + 居中 620px 卡片,标题用衬线,是整个产品里书卷气最重的一页。目标 3 分钟进入主界面。首启首先确认 workspace,因为项目事实和权限检查都从这个路径开始。
 
@@ -28,7 +28,7 @@ flowchart LR
 
 ## 渐进式 Tooltip(进入主界面后)
 
-一次性气泡:`--bg-raised` + `--shadow-md` + accent 左条,指向目标控件,「知道了」关闭即写入 `seenTips`,不重复弹([spec/S15](../spec/S15-settings-and-onboarding.md))。同屏最多 1 条,排队不叠加。重置入口:Settings §数据管理。
+一次性气泡:`--bg-raised` + `--shadow-md` + accent 左条,指向目标控件,「知道了」关闭即写入 `seenTips`,不重复弹([spec/M15](../spec/M15-onboarding-and-new-book.md))。同屏最多 1 条,排队不叠加。重置入口:Settings §数据管理。
 
 ## 状态矩阵
 
