@@ -7,7 +7,7 @@
 - stream progress / output / control / diagnostic 事件字段。
 - turn lifecycle 事件。
 - approval、cancel、internal recovery 事件。
-- write/apply record、light apply、mode gate、interrupted run、manual recovery 事件。
+- ledger entry、decision record、write/apply record、light apply、recovery record、correction record、projection record、mode gate、interrupted run、manual recovery 事件。
 - approval queue、approval invalidated、obligation opened/resolved/invalidated、rejection redo 事件。
 - recap created、author note added、correction requested、continuation selected 事件。
 - trace、tool run、LLM call、cost、canonical agent role 事件。
@@ -22,6 +22,7 @@
 - [S13 Editor And Interaction](../S13-editor-and-interaction.md)
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
 - [S01 Runtime State](../S01-runtime-state.md)
+- [S15 Journal And Ledger](../S15-journal-and-ledger.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
@@ -34,19 +35,19 @@
 | 能力/平台 | 事件族 |
 |---|---|
 | Turn / Stream | turn created、state changed、step started/finished、control emitted、stream recovered |
-| Turn / Write Record / Recovery | write prepared/file-applied/committed、light apply accepted、mode changed/blocked、run interrupted、manual recovery opened |
+| Turn / Ledger / Recovery | ledger entry created、decision recorded、write prepared/file_applied/facts_committed/projection_committed、light apply accepted、recovery record created、correction recorded、mode changed/blocked、run interrupted、manual recovery opened |
 | Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed、apply failed/degraded |
 | Approval Queue / Obligation | approval enqueued、approval focused、approval invalidated、obligation opened/snoozed/resolved/dismissed/invalidated、redo requested |
 | Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed、light activity recorded |
 | Inline Review / Editor | selection captured、suggestion rendered、near-text action selected、editor replace applied、undo bridge recorded |
-| Trace / Recap / Activity | trace step appended、developer detail attached、recap created、author note added、continuation selected |
+| Trace / Recap / Activity | trace step appended、developer detail attached、projection committed、recap created、author note added、continuation selected |
 | Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent tier/frequency/weight changed |
 | Settings / Onboarding / Library | settings saved、danger action confirmed、workspace initialized、project opened/closed |
 | platform/Ixx/Rxx | provider capability checked、watcher event received、migration/repair job updated、diagnostics exported |
 
 ## Recap / Activity 触发边界
 
-事件流必须区分 UI 事件、轻量 activity 和 turn recap。Search、Quick Open、Command Palette 的本地打开/预览/跳转事件只是 UI 或 recent-state 事件;它们不能写项目 Activity 时间线,也不能触发 `recap created`。Fact Query 是例外:答案展示后写 `light activity recorded`,但不创建 turn recap。
+事件流必须区分 UI 事件、轻量 activity 和 turn recap。Search、Quick Open、Command Palette 的本地打开/预览/跳转事件只是 UI 或 recent-state 事件;它们不能写项目 Activity 时间线,也不能触发 `recap created`。Fact Query 是例外:答案展示后经 S15 写 `light activity recorded`,但不创建 turn recap。
 
 | 触发 | 事件 | 项目 Activity | Recap |
 |---|---|---|---|
@@ -66,6 +67,12 @@
 所有表示 turn 最终结果的事件字段必须引用 [S03 · Canonical turn terminal enum](../S03-turn-orchestration.md#canonical-turn-terminal-enum),字段建议命名为 `terminal_result` 或 `canonical_turn_terminal_result`。合法值只有:`Completed`、`StoppedNoChange`、`Cancelled`、`Rejected`、`Applied`、`ApplyFailed`、`FailedTerminal`、`Interrupted`、`ManualRecoveryOpened`。
 
 事件可以同时携带本层投影字段,例如 stream status、UI status、write phase、reindex health、runner run state 或 recovery note type;这些字段不能替代 canonical turn terminal result,也不能新增 `success`、`done`、`abandoned`、`errored`、`recovered` 等同义终态。`AwaitingApproval` 只能作为 pending activity/control state,不得写入 terminal result。
+
+## Ledger 事件约束
+
+S15 相关事件只通知状态变化,不把事件流变成账本。`ledger entry created`、`decision recorded`、`write prepared`、`write file_applied`、`write facts_committed`、`projection committed`、`recovery record created` 和 `correction recorded` 必须带 `ledger_entry_id`、`project_id`、`turn_id` 或对应 source id。UI 收到这些事件后读取持久记录渲染,不能直接用事件 payload 生成 Recap/Activity 正文。
+
+作者可见事件文案使用“审批结果、保存回执、恢复、活动记录、备注、更正”,不展示 journal、ledger、write phase 等内部名词。
 
 ## 去重键
 

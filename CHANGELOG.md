@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/spec · TODO-P1-59 决策与写入账本
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 新增 S15「决策与写入账本」作为独立系统设计,统一审批裁定、写入账本、light apply、恢复记录、反向修正、危险操作审计和 Recap/Activity 投影;S14 回退为项目物理存储与落盘协议,S03/S04/M17/A01/A02/A03/V01 改为引用 S15 账本语义。 | `README.md` `spec/S00` `spec/S15` `spec/S14` `spec/S03` `spec/S04` `spec/M17` `A01` `A02` `A03` `V01` `TODO.md` | 关闭 TODO-P1-59。 |
+
 ## 2026-06-13 · docs/decision · TODO-P1-47 Discuss 学习边界
 
 | 变更 | 影响文档 | 关联 |

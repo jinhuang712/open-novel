@@ -7,7 +7,7 @@
 - Router actions。
 - ChangeSet、dependency group、approval item、residual obligation、internal recovery result。
 - approval queue item、approval invalidation、rejection redo request、no-change-evidence。
-- write/apply record、light apply transaction、mode gate、cancel plan、interrupted run、obligation state。
+- ledger entry、decision record、write/apply record、light apply transaction、recovery record、correction record、projection record、mode gate、cancel plan、interrupted run、obligation state。
 - context package、impact analysis result、fact query result。
 - prompt budget envelope、provider failure envelope、embedding capability envelope。
 - tool result envelope。
@@ -33,6 +33,7 @@
 - [S11 Creative Engine](../S11-creative-engine.md)
 - [S12 Style And Humanizer](../S12-style-and-humanizer.md)
 - [S13 Editor And Interaction](../S13-editor-and-interaction.md)
+- [S15 Journal And Ledger](../S15-journal-and-ledger.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
@@ -49,12 +50,12 @@
 | Search / Command | search intent、result group、preview payload、command invocation |
 | Writing / Planning / Approval | proposal draft、ChangeSet、dependency group、approval item、residual obligation、risk acknowledgement、decision payload |
 | Approval Queue / Evidence | pending approval queue item、Invalidated reason、EditedAccepted recheck result、rejection redo payload、no-change-evidence |
-| Turn / Write Record / Recovery | write/apply record、light apply transaction、turn state、mode gate、cancel plan、manual recovery、interrupted run |
+| Turn / Ledger / Recovery | ledger entry、decision record、write/apply record、light apply transaction、recovery record、correction record、projection record、turn state、mode gate、cancel plan、manual recovery、interrupted run |
 | Inline Review / Humanizer | inline suggestion、diff hunk、near-text action、style report |
 | Creative Engine / ReaderPanel | cardinal rule report、narrative report、reader persona report、aggregation summary |
 | Knowledge / Identity | entity governance proposal、alias status、merge/split preview、obligation list item |
 | Provider / Budget | prompt budget envelope、provider failure envelope、embedding capability envelope、context overflow envelope |
-| Trace / Recap | trace step、developer detail envelope、recap payload、activity item、author note |
+| Trace / Recap | trace step、developer detail envelope、S15 projection payload、recap payload、activity item、author note |
 | Settings / Onboarding / Project Library | settings patch、danger action request、workspace bootstrap result、project list item |
 | platform/Ixx/Rxx | provider capability, adapter event, manual copy acknowledgement, migration result, diagnostic bundle manifest |
 

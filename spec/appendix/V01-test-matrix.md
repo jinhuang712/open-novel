@@ -64,6 +64,7 @@
 | M03/M10/S05 knowledge governance | as-of chapter 查询、同名歧义、别名确认、实体合并/拆分、obligation 全局清单 |
 | M09-M13 trace/memory/agent controls | Trace 层级、经验可见/0-5 权重/删除、agent 调档/频率/权重且不可关闭 |
 | M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、受限操作、启动项目选择、Settings 不含项目/数据管理、项目切换隔离、Activity append-only |
+| S15 journal/ledger | 审批裁定、写入账本、light apply、恢复记录、反向修正、危险操作审计、Recap/Activity 投影 |
 | platform/Ixx | provider probe、editor adapter、watcher、desktop permission、keychain、shortcut registration |
 | platform/Rxx | project lifecycle、migration、repair、diagnostics export preview/redaction |
 
@@ -73,11 +74,15 @@
 
 | 场景 | 预期 |
 |---|---|
-| 写入记录崩溃恢复 | prepared/file-applied/committed 这类阶段是否保留待 TODO-P1-59 裁决;裁决前只验收“崩溃后不能误判为外部编辑,用户能看见未完成写入如何收场”。 |
-| direct edit light apply | 作者保存直接编辑后生成写入记录、activity、reindex request,不生成大审批卡。 |
+| 写入账本崩溃恢复 | `prepared` / `file_applied` / `facts_committed` / `projection_committed` / `reindex_requested` 阶段可恢复;崩溃后不能误判为外部编辑,用户能看见未完成写入如何收场。 |
+| decision record 写入失败 | 用户点击接受但裁定记录未落库时不进入 Applying,审批卡保留并显示可重试/关闭。 |
+| direct edit light apply | 作者保存直接编辑后生成 S15 light apply 记录、activity、reindex request,不生成大审批卡。 |
 | inline accept pre-commit undo | 选区接受或 Humanizer 小改接受后,在保存/light apply 提交前可用普通 editor undo 撤掉,且不生成写入记录。 |
-| inline accept light apply | 选区接受提交后生成 light apply 写入记录、activity、reindex request;触及事实/跨文档/阻断风险时升级 ChangeSet。 |
-| editor undo after committed light apply | 生成新的反向 light apply,不修改旧写入记录。 |
+| inline accept light apply | 选区接受提交后生成 light apply 写入账本、activity、reindex request;触及事实/跨文档/阻断风险时升级 ChangeSet。 |
+| editor undo after committed light apply | 生成新的反向 light apply/correction record,不修改旧写入账本。 |
+| projection 写入失败 | 作品事实已提交时不回滚落盘;S15 标记 projection 缺失或待补写,UI 不伪造 Activity。 |
+| recovery record manual path | file_applied 但 facts 状态未知、快照缺失或指纹冲突时打开 manual recovery,列出已知事实和禁止自动重放原因。 |
+| danger action audit | 删除、清理、凭据移除、迁移、诊断导出等危险操作先记录确认范围和 preflight,失败时不得静默执行。 |
 | 项目事实库真源损坏 | 作者文件仍可取用;不得把派生索引重建伪装成丢失审批历史;恢复/保护路径待 TODO-P1-60 裁决后补齐。 |
 | 文件与事实账本冲突 | 作者文件优先;审批历史或 obligation 标记 lost/invalidated,不能覆盖文件来匹配旧账本。 |
 | 系统自写 watcher 回声 | write token、owner、指纹和水位匹配时只推进 ledger,不触发外部编辑失效。 |
@@ -111,7 +116,7 @@
 | post-apply reindex failure | 作者文件已保存,索引 degraded/repair,审批不倒退为未接受。 |
 | provider context overflow | I01 返回 context_overflow 时退回 S07 overflow,不进入 provider transient retry。 |
 | embedding model unknown | 语义召回 needs data,向量表和相关能力不上线。 |
-| canonical turn terminal enum | S02 run state、S04 control event、S05 reindex health、S14 write phase、M17 recap/activity 和 A03 event 字段都只引用 S03 的 `Completed`/`StoppedNoChange`/`Cancelled`/`Rejected`/`Applied`/`ApplyFailed`/`FailedTerminal`/`Interrupted`/`ManualRecoveryOpened`,不出现本地同义终态。 |
+| canonical turn terminal enum | S02 run state、S04 control event、S05 reindex health、S14 physical phase、S15 ledger projection、M17 recap/activity 和 A03 event 字段都只引用 S03 的 `Completed`/`StoppedNoChange`/`Cancelled`/`Rejected`/`Applied`/`ApplyFailed`/`FailedTerminal`/`Interrupted`/`ManualRecoveryOpened`,不出现本地同义终态。 |
 | host interrupted run | host crash/restart 后 run 标记 interrupted,由 S03 映射为 `Interrupted` 或恢复相关 canonical result;展示最后可信 step 和可重试点,不自动重放危险动作。 |
 | heavy reindex stream heartbeat | 批量 SQLite/reindex/embedding 写入期间 stream heartbeat 延迟在 V03 实测阈值内;超阈值需隔离执行。 |
 
@@ -206,6 +211,8 @@ Turn Recap 的测试归本篇维护。实施时至少覆盖:
 | pending / applying 状态取消 | 不直接丢弃;先展示 cancel plan 和影响范围 |
 | append-only 历史 | 原 recap 不被删除或改写;作者备注和更正以追加记录保存 |
 | 撤销 / 恢复入口 | 生成反向修改或恢复 proposal,经审批后向前追加新 recap |
+| S15 投影来源 | Recap/Activity/recovery note 从 S15 projection record 读取,前端事件流只通知 ready,不能拼装历史。 |
+| UI 不说 journal | 普通作者 UI 文案使用回执、恢复、活动记录、备注、更正,不出现 journal、ledger、write phase。 |
 | 事实边界 | recap 不能覆盖项目事实;与项目事实冲突时必须让位 |
 | 经验边界 | `StoppedNoChange` / `Cancelled` / `Rejected` / `Interrupted` / `ManualRecoveryOpened` 不自动进入 Reflector 学习 |
 | 来源跳转失效 | recap 保留,对应来源标记过期并提供重新定位路径 |

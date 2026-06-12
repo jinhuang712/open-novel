@@ -165,7 +165,8 @@ flowchart TB
 | 五大守则和读者预演怎么进入审批 | [S11 · Creative Engine](./S11-creative-engine.md) |
 | 去 AI 味如何不改剧情 | [S12 · Style And Humanizer](./S12-style-and-humanizer.md) |
 | 编辑器、命令、焦点、查询怎么协作 | [S13 · Editor And Interaction](./S13-editor-and-interaction.md) |
-| 作品事实怎么保存、外部编辑怎么处理 | [S14 · Project Storage](./S14-project-storage.md) |
+| 作品文件和数据库怎么物理落盘 | [S14 · Project Storage](./S14-project-storage.md) |
+| 审批裁定、写入、恢复和回执怎么留痕 | [S15 · 决策与写入账本](./S15-journal-and-ledger.md) |
 | 首启、设置、经验管理、危险操作归哪 | [M15 · Onboarding And New Book](./M15-onboarding-and-new-book.md)、[M14 · Settings](./M14-settings.md) |
 | 全局搜索如何查角色、阵营、概念、章节和来源 | [M01 · Universal Search](./M01-universal-search.md) |
 | 命令面板和快速打开如何分工 | [M02 · Command Palette / Quick Open](./M02-command-palette-and-quick-open.md) |
