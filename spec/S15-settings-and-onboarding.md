@@ -25,6 +25,7 @@ flowchart TD
 | Workspace | 我的项目放在哪里 | 路径、项目列表、导入导出 |
 | Model | AI 能不能用 | 凭据、连通性、可用模型 |
 | Agents | 哪些角色参与、强度如何 | 角色开关、档位、Reflector 学习 |
+| Assistant Persona | 助手怎么说话和协作 | 语气、详略、主动性、提醒强度 |
 | Style | 文字像不像我 | 风格偏好、范文、Humanizer 相关经验 |
 | Rules | 风险提示多严格 | 五大守则阈值、提示偏好 |
 | Memory | 系统学到了什么 | 经验查看、权重、关闭、删除 |
@@ -32,6 +33,8 @@ flowchart TD
 | Developer | 出问题怎么查 | Trace、过程日志、索引健康度、审计结果 |
 
 内部 retry 常数、SQL 字段、prompt 片段、包版本和 native binding 细节不作为普通设置暴露。
+
+Assistant Persona 只改变助手表达和协作方式,不改变系统规则、项目事实、审批边界或守则阈值。它可以影响回答是简短还是展开、是否主动列选项、提醒频率和称呼风格;不能让 Discuss 写盘、让 Humanizer 改剧情、让 Validator 降低阻断级风险,也不能覆盖用户当前显式指令。
 
 ## 控制面板边界图
 
@@ -90,6 +93,7 @@ sequenceDiagram
 | 阈值 | 影响后续检测 | 自动改历史报告 |
 | 自定义偏好 | 改变诊断解释口径 | 覆盖项目事实 |
 | Agent 档位 | 调整分析深度 | 绕过审批主路径 |
+| Assistant Persona | 调整协作语气和主动程度 | 改变写入权限或事实优先级 |
 
 守则是产品契约,不是纯偏好。Settings 可以调节体验,不能让系统变成无提示的静默改稿器。
 

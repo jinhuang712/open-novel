@@ -61,7 +61,11 @@ sequenceDiagram
   V-->>O: 一致性和守则风险
 ```
 
-诊断可以异步,但不能伪装成已完成。报告缺失时,UI 应说明诊断不可用,而不是显示“通过”。
+诊断可以异步,但 AwaitingApproval 前必须有明确汇合点:Writer/Humanizer 草稿、Validator 一致性复核、Checker/BeatAnalyzer 叙事诊断和 ReaderPanel 风险要么完成并汇入同一张审批卡,要么以 `unavailable` / `inconclusive` / `needs data` 标记进入卡片。系统不能先打开审批卡并把阻断级质检留在后台补结论。
+
+Checker 拥有叙事风险的对外解释权;BeatAnalyzer 是 Checker 内部的结构诊断工具,不是新的 canonical agent role。BeatAnalyzer 可以输出节奏、爽点密度、承诺推进、章内结构和趋势信号,但所有风险归因、审批说明和事件 `role_id` 都记为 `checker`。Validator 只复核事实、一致性、依赖和阻断级落盘条件,不接管“好不好看”的叙事判断。
+
+报告缺失时,UI 应说明诊断不可用,而不是显示“通过”。
 
 ## ReaderPanel 的边界
 
@@ -100,6 +104,8 @@ flowchart TD
 | 审批前 | 把确认级/阻断级风险带进 ChangeSet |
 | 审批后 | 用户反馈可进入经验候选 |
 
+审批卡内的“已分析无需改动”也是质量信号,不是空白区。它必须带证据来源、检查范围、风险类型、结论原因和置信状态;证据不足时只能写 `needs data` 或 `inconclusive`,不能写成无需修改。
+
 ## 能力未验证时的质检降级
 
 Creative Engine 依赖 S07/S06 给出的影响范围和证据包。若 [V03](./appendix/V03-external-spikes.md) 的长篇能力 gate 未通过,五大守则、叙事诊断和 ReaderPanel 不能把“未发现风险”说成“全书无风险”。
@@ -118,6 +124,7 @@ Creative Engine 依赖 S07/S06 给出的影响范围和证据包。若 [V03](./a
 | 事故 | 收场 |
 |---|---|
 | 守则检测失败 | 高风险写入不能标记通过 |
+| EditedAccepted 轻量重检失败 | 审批卡回到待审或失效,不能进入落盘 |
 | 叙事诊断失败 | 报告标记不可用,不生成假结论 |
 | ReaderPanel 样本不足 | 输出 inconclusive |
 | persona 注入越权 | 隔离或拒绝 persona |

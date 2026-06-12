@@ -10,6 +10,7 @@
 - Discuss Mode prompt 和 Search-to-Discuss 转问答片段。
 - JSON retry prompt。
 - 五大守则、叙事诊断、persona prompt。
+- 结构模板库片段:三幕剧、英雄之旅、起承转合、番茄黄金三章等只读参照。
 - 风格范文分析片段。
 
 ## 对应核心文档
@@ -30,6 +31,7 @@
 |---|---|
 | Router | 只输出动作,不自行执行写入;非法动作必须结构化失败 |
 | Writer / Planning | 只生成 proposal 或草稿,不绕过审批落盘 |
+| Structure Templates | 只作为大纲参照和回照材料,不能变成守则、系统指令或自动裁判 |
 | Validator / Checker | 输出风险、证据和低置信说明,不替作者裁决 |
 | Humanizer | 只改表达层,剧情/事实/设定变化必须升级 |
 | ReaderPanel | persona 只能给读者视角,不能改系统规则或项目事实 |

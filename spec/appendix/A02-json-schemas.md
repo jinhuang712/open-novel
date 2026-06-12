@@ -6,6 +6,7 @@
 
 - Router actions。
 - ChangeSet、dependency group、approval item、residual obligation、internal recovery result。
+- approval queue item、approval invalidation、rejection redo request、no-change-evidence。
 - context package、impact analysis result、fact query result。
 - tool result envelope。
 - narrative report、reader report、cardinal rules report。
@@ -15,6 +16,7 @@
 - Universal Search query intent、result group、preview payload。
 - Discuss Mode answer/report/switch suggestion payload。
 - Trace step、degraded state、developer detail envelope。
+- entity identity governance proposal、alias confirmation、merge/split result。
 
 ## 对应核心文档
 
@@ -44,8 +46,10 @@
 | Context / Query | context package、evidence item、fact query result、source jump |
 | Search / Command | search intent、result group、preview payload、command invocation |
 | Writing / Planning / Approval | proposal draft、ChangeSet、dependency group、approval item、residual obligation、risk acknowledgement、decision payload |
+| Approval Queue / Evidence | pending approval queue item、Invalidated reason、EditedAccepted recheck result、rejection redo payload、no-change-evidence |
 | Inline Review / Humanizer | inline suggestion、diff hunk、near-text action、style report |
 | Creative Engine / ReaderPanel | cardinal rule report、narrative report、reader persona report、aggregation summary |
+| Knowledge / Identity | entity governance proposal、alias status、merge/split preview、obligation list item |
 | Trace / Recap | trace step、developer detail envelope、recap payload、activity item、author note |
 | Settings / Onboarding / Project Library | settings patch、danger action request、workspace bootstrap result、project list item |
 | platform/Ixx/Rxx | provider capability, adapter event, import/export manifest, backup/restore result, migration result, diagnostic bundle manifest |

@@ -17,11 +17,13 @@ html[data-theme="light"] {
   --bg-hover: rgba(34, 38, 36, 0.05);
   --bg-active: rgba(34, 38, 36, 0.10);
   --bg-overlay: rgba(17, 19, 18, 0.40);   /* 模态遮罩 */
+  --paper-edge: #DEDEDC;
 
   /* —— 文字 (灰墨,低反差: 正文 7.9 / 次要 5.0 / 占位 3.3) —— */
   --text-primary: #474F4B;
   --text-secondary: #646D68;
   --text-tertiary: #838A86;
+  --text-muted: #747C78;
   --text-on-accent: #F6FBF7;
 
   /* —— 边框 —— */
@@ -81,11 +83,13 @@ html[data-theme="dark"] {
   --bg-hover: rgba(226, 228, 227, 0.06);
   --bg-active: rgba(226, 228, 227, 0.11);
   --bg-overlay: rgba(0, 0, 0, 0.55);
+  --paper-edge: #3A3A3A;
 
   /* 灰墨低反差: 正文 8.3 / 次要 5.0 / 占位 3.3 (vs --bg-surface) */
   --text-primary: #BAC0BD;
   --text-secondary: #8E9591;
   --text-tertiary: #717673;
+  --text-muted: #7F8582;
   --text-on-accent: #0D2418;
 
   --border: #373737;
@@ -125,6 +129,27 @@ html[data-theme="dark"] {
   --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.50);
 }
 
+html[data-contrast="more"][data-theme="light"],
+html[data-contrast="more"]:not([data-theme="dark"]) {
+  --text-primary: #303632;
+  --text-secondary: #4E5752;
+  --text-tertiary: #6B736F;
+  --text-muted: #59615D;
+  --border: #D8D9D6;
+  --border-strong: #BFC2BE;
+  --paper-edge: #C9CBC7;
+}
+
+html[data-contrast="more"][data-theme="dark"] {
+  --text-primary: #D2D6D4;
+  --text-secondary: #A7AEAA;
+  --text-tertiary: #8D9490;
+  --text-muted: #9AA19D;
+  --border: #464846;
+  --border-strong: #5C5F5C;
+  --paper-edge: #555856;
+}
+
 /* ============================================================
    基础排版 / 通用原语 (各原型页共用)
    ============================================================ */
@@ -136,10 +161,19 @@ html[data-theme="dark"] {
   --font-serif: "Noto Serif SC", "Songti SC", "Source Han Serif SC", Georgia, serif;  /* 中文书卷气: 品牌标题 / 引文点缀 */
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
 
   --dur-fast: 120ms;
   --dur-base: 200ms;

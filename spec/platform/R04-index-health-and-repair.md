@@ -38,6 +38,10 @@ stateDiagram-v2
 
 每个 repair job 必须记录范围、触发原因、输入 watermark、输出 watermark、失败原因和用户可见说明。repair 运行时不得假装索引健康;它只能把健康级别从更坏状态推进到已验证状态。
 
+Repair job 必须按范围和输入 watermark 幂等。相同范围、相同输入 watermark、相同 index version 的重复 job 只能复用或重试同一修复意图,不能重复写入派生事实或制造多份冲突记录。job 重入时先读取当前输出 watermark:已成功则直接返回 succeeded,部分完成则从最后确认的输出 watermark 继续,输入文件指纹已变化则关闭旧 job 并排入新 job。
+
+R04 只修派生索引。项目事实库真源损坏时,它可以报告 `facts-degraded` 并建议 R02 恢复或 S01 最小事实库重建,但不能用 reindex 伪造审批历史、版本指纹或 obligation 解决状态。
+
 ## 修复流
 
 ```mermaid
@@ -59,6 +63,7 @@ flowchart LR
 | embedding 失败 | 语义召回降级 | 影响精确查询 |
 | KG 冲突 | 展示冲突来源 | 自动裁决 |
 | repair job 失败 | 失败范围和重试/人工入口 | 继续开放高风险写入 |
+| facts-degraded | 项目事实账本损坏和可选恢复路线 | 把派生重建冒充事实恢复 |
 
 ## FAQ
 

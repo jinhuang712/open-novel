@@ -8,6 +8,7 @@
 - proposal 工具参数。
 - analyzeImpact、assembleContext、queryFacts 工具明细。
 - reindex、anchor health、knowledge graph 查询工具。
+- Validator、Checker 和 BeatAnalyzer 工具参数、风险输出和 failure envelope。
 - Universal Search source fanout、ranker 参数、preview action 和快捷键。
 - CommandRegistry、ShortcutRegistry、Quick Open、Discuss Mode 入口全表。
 - Settings / Debug 只读诊断命令。
@@ -33,6 +34,8 @@
 | proposal tools | 是否能构造 ChangeSet、审批前置条件、禁止直接写入的边界 |
 | context / impact tools | 输入证据、候选范围、低置信标记、收敛条件 |
 | writer / humanizer tools | 输出形态、diff 约束、守则风险注入、不可越权字段 |
+| validator / checker tools | 检查范围、source refs、风险级别、阻断条件、needs-data/partial failure envelope |
+| BeatAnalyzer | 作为 checker 内部工具记录结构诊断维度、趋势窗口和证据片段,不得作为 role id |
 | search / command tools | 快捷键、命令 id、可用模式、pending approval 下的只读限制 |
 | storage / reindex / recovery tools | 原子写边界、reindex 范围、内部恢复结果、用户可见收场 |
 | platform tools | provider probe、watcher setup、import/export、backup/restore、diagnostic export 的命令与权限 |

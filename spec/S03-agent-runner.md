@@ -50,10 +50,10 @@ Runner 在桌面壳的常驻执行宿主/sidecar 中运行,不绑定 renderer、
 | model loop | 控制一次模型调用、工具调用、继续调用和结束条件,不把循环交给模型自由延展。 |
 | structured result | 校验模型输出是否满足本次 output contract;失败只能重试、降级为 failure 或交回 S04。 |
 | retry budget | 管理结构化修复、工具失败恢复和 provider transient retry 的上限,防止 doom-loop。 |
-| stream step | 把 step、tool call、partial text、failure 和 final result 映射为 [S05](./S05-streaming-ui-protocol.md) 可恢复事件。 |
+| stream step | 把 step、tool call、partial text、failure 和 final result 映射为 [S05](./S05-streaming-ui-protocol.md) 可去重事件。 |
 | cancellation | 接收 S04 的 stop/cancel 信号,停止后交回已发生的 step 和未完成状态,不能自行决定写入。 |
 
-Runner 还必须把每个 run 的持久身份交给执行宿主。stream 连接只是观察窗口;执行宿主负责让取消信号、step 写入、恢复读取和最终结果不随 UI 断线丢失。
+Runner 还必须把每个 run 的持久身份交给执行宿主。stream 连接只是观察窗口;执行宿主负责让取消信号、step 写入、恢复读取和最终结果不随 UI 断线丢失。每条 stream step 必须有 turn id、attempt id、step id 和递增序号,使 UI 可以去重和重排,但不能把事件流当事实源。
 
 ## Runner 不拥有什么
 

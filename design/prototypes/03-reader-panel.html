@@ -38,6 +38,7 @@
   .mark-row:hover { background: var(--bg-hover); }
   .mark-row .where { margin-left: auto; flex: none; color: var(--accent-text); cursor: pointer; font-size: 12px; }
   .mark-row .where:hover { text-decoration: underline; }
+  .mark-row input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); flex: none; }
 
   .fold-head { display: flex; align-items: center; gap: 8px; padding: 12px 18px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; user-select: none; }
   .fold-head .mini { font-weight: 400; color: var(--text-tertiary); }
@@ -58,8 +59,7 @@
   .rp-actions { display: flex; gap: 8px; padding: 12px 18px; background: var(--bg-sunken); }
   .rp-actions .grow { flex: 1; }
 
-  .prog-card .skel { height: 13px; border-radius: 6px; background: var(--bg-active); margin: 9px 18px; animation: sk 1.4s infinite; }
-  @keyframes sk { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+  .prog-card .skel { height: 13px; border-radius: 6px; background: var(--bg-active); margin: 9px 18px; }
   .prog-top { display: flex; flex-direction: column; gap: 6px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
   .progress-track { height: 4px; border-radius: 99px; background: var(--bg-active); overflow: hidden; }
   .progress-fill { height: 100%; width: 60%; border-radius: 99px; background: var(--accent); }
@@ -99,9 +99,9 @@
 
     <div class="sec">
       <div class="sec-title">多人标记的风险</div>
-      <div class="mark-row sev-mid"><span class="badge badge-danger">节奏拖 · 3/5 标</span><span>第 5-7 段铺垫过长,追更党几乎划走</span><span class="where">→ 第 5-7 段</span></div>
-      <div class="mark-row sev-high"><span class="badge badge-danger">AI 味 · 2/5 标</span><span>第 3 段长句过密,"在某种程度上"出现 2 次</span><span class="where">→ 第 3 段</span></div>
-      <div class="mark-row sev-mid"><span class="badge badge-danger">突兀 · 2/5 标</span><span>守夜人会直接登门,缺一环铺垫</span><span class="where">→ 第 4 段</span></div>
+      <div class="mark-row sev-mid"><input type="checkbox" checked data-risk><span class="badge badge-danger">节奏拖 · 3/5 标</span><span>第 5-7 段铺垫过长,追更党几乎划走</span><span class="where">→ 第 5-7 段</span></div>
+      <div class="mark-row sev-high"><input type="checkbox" checked data-risk><span class="badge badge-danger">AI 味 · 2/5 标</span><span>第 3 段长句过密,"在某种程度上"出现 2 次</span><span class="where">→ 第 3 段</span></div>
+      <div class="mark-row sev-mid"><input type="checkbox" data-risk><span class="badge badge-danger">突兀 · 2/5 标</span><span>守夜人会直接登门,缺一环铺垫</span><span class="where">→ 第 4 段</span></div>
     </div>
 
     <div class="sec">
@@ -147,7 +147,7 @@
       <button class="btn btn-ghost btn-sm">导出报告</button>
       <div class="grow"></div>
       <button class="btn">跳过</button>
-      <button class="btn btn-primary">按风险点修改</button>
+      <button class="btn btn-primary" id="riskAction">按已选 2 条风险修改</button>
     </div>
   </div>
 
@@ -185,6 +185,14 @@ function toggleTheme() {
   h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('onovel-theme', h.dataset.theme);
 }
+function refreshRiskAction() {
+  var n = Array.prototype.filter.call(document.querySelectorAll('[data-risk]'), function (c) { return c.checked; }).length;
+  var btn = document.getElementById('riskAction');
+  btn.disabled = n === 0;
+  btn.textContent = n ? '按已选 ' + n + ' 条风险修改' : '先勾选风险点';
+}
+document.querySelectorAll('[data-risk]').forEach(function (c) { c.addEventListener('change', refreshRiskAction); });
+refreshRiskAction();
 </script>
 </body>
 </html>

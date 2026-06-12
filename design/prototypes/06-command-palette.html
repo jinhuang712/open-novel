@@ -78,7 +78,7 @@
   .spinner { width: 11px; height: 11px; border: 2px solid var(--border-strong); border-top-color: var(--accent); border-radius: 99px; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  .toast-row { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  .toast-row { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; max-width: 420px; margin-left: auto; }
   .toast .dot { width: 8px; height: 8px; border-radius: 99px; }
   .toast .act { color: var(--accent-text); font-weight: 600; cursor: pointer; margin-left: 6px; }
 </style>
@@ -173,7 +173,7 @@
     </div>
   </div>
 
-  <div class="stage-label">TOAST — 右栏左缘上方,同屏最多 3 条,4S 自动消退,HOVER 暂停</div>
+  <div class="stage-label">TOAST — 右下状态点上方 72PX,同屏最多 3 条,4S 自动消退,HOVER 暂停</div>
   <div class="toast-row">
     <div class="toast"><span class="dot" style="background:var(--info)"></span>已切到 plan 模式</div>
     <div class="toast"><span style="color:var(--success)">✓</span>已落盘 7/9 项<span class="act">查看回执</span></div>

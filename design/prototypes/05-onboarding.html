@@ -57,7 +57,10 @@
   .proj-card.sel .blank-form { display: block; }
   .blank-form label { display: block; font-size: 12px; font-weight: 600; margin: 10px 0 4px; }
   .blank-form input, .blank-form select, .blank-form textarea { width: 100%; font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); outline: none; }
+  .blank-form input.error { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent); }
   .blank-form textarea { min-height: 56px; resize: vertical; }
+  .field-error { display: none; margin-top: 4px; font-size: 12px; color: var(--danger); }
+  .field-error.show { display: block; }
 
   .three { display: flex; flex-direction: column; gap: 10px; }
   .three-card { display: flex; gap: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; background: var(--bg-surface); }
@@ -129,16 +132,16 @@
       <h1 class="serif">创建你的第一个项目</h1>
       <p class="sub">建议先看样例:5 分钟理解「提议 → 审批 → cascade」整套流程。</p>
       <div class="proj-grid">
-        <div class="proj-card sel" onclick="selProj(this)">
+        <div class="proj-card sel" data-project="sample" onclick="selProj(this)">
           <span class="reco badge badge-accent">推荐 · 5 分钟看懂全流程</span>
           <b>加载样例项目〈重生互联网〉</b>
           <div class="desc">已含世界观 / 大纲 / 3 个角色 · 第 1 章概要 + 3000 字正文 · 5 条审批历史 + 3 条已学偏好(展示反馈学习)</div>
         </div>
-        <div class="proj-card" onclick="selProj(this)">
+        <div class="proj-card" data-project="blank" onclick="selProj(this)">
           <b>创建空白项目</b>
           <div class="desc">从一个故事种子开始,设定逐项生成</div>
           <div class="blank-form" onclick="event.stopPropagation()">
-            <label>项目名 *</label><input placeholder="例:大荒镖局">
+            <label>项目名 *</label><input id="projectName" placeholder="例:大荒镖局" oninput="render()"><div class="field-error" id="projectNameError">先给项目起个名字</div>
             <label>流派</label><select><option>都市重生</option><option>玄幻</option><option>悬疑异闻</option><option>科幻</option><option>历史</option></select>
             <label>风格描述</label><input placeholder="例:冷峻克制,短句为主">
             <label>故事种子</label><textarea placeholder="一两句话:谁,在什么世界,要做成什么事"></textarea>
@@ -202,10 +205,20 @@ function render() {
   document.getElementById('prevBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
   var next = document.getElementById('nextBtn');
   next.style.display = step === 4 ? 'none' : '';
-  next.disabled = (step === 2 && !keyOk);
-  next.title = next.disabled ? '测试连接通过,或选择 Mock 模式' : '';
+  var blankSelected = step === 3 && document.querySelector('.proj-card.sel[data-project="blank"]');
+  var projectName = document.getElementById('projectName');
+  var missingProjectName = blankSelected && !projectName.value.trim();
+  next.disabled = (step === 2 && !keyOk) || missingProjectName;
+  next.title = step === 2 && !keyOk ? '测试连接通过,或选择 Mock 模式' : (missingProjectName ? '先给项目起个名字' : '');
+  projectName.classList.toggle('error', !!missingProjectName);
+  document.getElementById('projectNameError').classList.toggle('show', !!missingProjectName);
 }
-function go(d) { step = Math.min(4, Math.max(1, step + d)); render(); }
+function go(d) {
+  render();
+  if (d > 0 && document.getElementById('nextBtn').disabled) return;
+  step = Math.min(4, Math.max(1, step + d));
+  render();
+}
 function selId(el) {
   document.querySelectorAll('.id-card').forEach(function (c) { c.classList.remove('sel'); });
   el.classList.add('sel');
@@ -213,6 +226,7 @@ function selId(el) {
 function selProj(el) {
   document.querySelectorAll('.proj-card').forEach(function (c) { c.classList.remove('sel'); });
   el.classList.add('sel');
+  render();
 }
 function testKey() {
   var v = document.getElementById('keyInput').value;
@@ -232,7 +246,9 @@ function useMock() {
   render();
 }
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' && step < 4 && !document.getElementById('nextBtn').disabled) go(1);
+  var active = document.activeElement;
+  var typing = active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName);
+  if (e.key === 'Enter' && step < 4 && !typing && !e.isComposing && !document.getElementById('nextBtn').disabled) go(1);
 });
 render();
 </script>

@@ -59,12 +59,24 @@ flowchart TB
 
 每条风险可点击 → 跳对应章节段(anchor 跳转,与实体跳转同机制)。write 模式章节类工具时,此区域上方再嵌 ReaderPanel 章节风险报告(见 [design/03](./03-reader-panel.md))。
 
+## 对照审批
+
+审批中查看上下文不关闭审批,也不把中央卡片留在正文上方挡住阅读。点击风险、ChangeRow 路径或「跳对应章节段」时进入对照审批:
+
+- 审批卡折叠为底部审定条,显示审批摘要、已勾选计数、风险状态和「返回审批卡」。底部条不遮挡当前段落,不承载完整 diff。
+- 主纸面打开命中章节段;原审批卡的完整内容保留在待审状态,不会因为跳转而丢失勾选、编辑草稿或拒绝反馈草稿。
+- 对照阅读期间只允许只读跳转、搜索和 Trace 查看;任何会改变作品的动作仍被待审锁拦住。
+- 点击「返回审批卡」、状态点待审批文案或底部条本身,回到完整 ApprovalCard,并恢复先前滚动位置和勾选状态。
+- 若从 ReaderPanel 风险行进入,底部条追加「来自 ReaderPanel」来源 chip;返回后该风险行保持选中。
+
+这一路径与 [design/01 §对照视图](./01-main-layout.md#对照视图) 共用双 pane 心智,但审批主权仍属于 ApprovalCard。
+
 ## 行动栏
 
 - 右对齐主次序:`全选` `全不选`(ghost)→ `拒绝全部 (N)`(danger 描边)→ `同意勾选项 7/9 (Y)`(primary)
 - 同意按钮 disabled 条件:勾选数 = 0,或存在未确认「确认级」风险,或存在「阻断级」风险
 - **拒绝必填反馈**:点拒绝弹 inline 反馈框(textarea + 「为什么拒绝?」占位 + 示例),提交后自动发一条输入条消息驱动 Agent 重做([plan/08 §否决要给理由](../plan/08-approval-and-cascade.md#否决要给理由))
-- 键盘(卡片焦点内,[spec/S14](../spec/S14-editor-and-interaction.md)):`Y` 同意 / `N` 拒绝 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;inline 编辑中 `Esc` 先取消编辑,否则收回卡片并保持 pending
+- 键盘(卡片焦点内,[spec/S14](../spec/S14-editor-and-interaction.md)):`Y` 同意 / `N` 展开拒绝反馈 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;inline 编辑中 `Esc` 先取消编辑,否则收回卡片并保持 pending。卡片自动出现后的 600ms 忽略 `Y/E/N`;确认级未勾确认或阻断级存在时 `Y` 不生效。
 
 ## 状态矩阵
 

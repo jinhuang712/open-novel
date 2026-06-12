@@ -51,10 +51,12 @@ stateDiagram-v2
   SuggestSwitch --> AwaitUserIntent: 建议 Planning/Writing
   AwaitUserIntent --> Planning: 用户明确切换
   AwaitUserIntent --> Writing: 用户明确切换
+  AwaitUserIntent --> Discussing: 用户拒绝切换
   Answered --> Idle
 ```
 
 状态机的重点不是 UI 动画,而是写入门槛:只有用户明确切换到 Planning/Writing 或触发 cascade,系统才可以进入 proposal 路径。
+如果用户拒绝升级或拒绝审批卡建议并选择“回讨论”,系统必须回到 Discussing,保留来源和拒绝理由作为本轮讨论材料,但不能把它写成项目事实或新 ChangeSet。
 
 ## Context 规则
 
@@ -117,6 +119,7 @@ Discuss Mode 使用 [design/01 主界面](../design/01-main-layout.md) 的输入
 | 只读边界 | Discuss 中的“帮我改掉”不会创建 ChangeSet |
 | 来源 | 有来源回答展示引用;无来源回答明确未找到 |
 | 升级 | 用户确认切换后,讨论摘要进入下一 turn 参考材料 |
+| 回边 | 用户拒绝切换或审批建议后可回 Discuss,理由只作讨论材料 |
 | 冲突 | 两个来源冲突时并列呈现,不自动裁决 |
 | Trace | 过程解释能定位到 trace step,但不把 trace 当事实源 |
 | 待审期间讨论 | 只解释和引用当前待审状态,不创建 ChangeSet |

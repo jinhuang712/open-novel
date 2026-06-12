@@ -38,6 +38,16 @@ Runner 执行 tool loop,但工具是否允许、是否可读、是否可生成 p
 
 工具可以输出建议,不能输出已经生效的作品事实。任何可改变作品的工具结果都必须进入 S04 审定路径。
 
+Validator、Checker 和 BeatAnalyzer 的工具边界如下:
+
+| 名称 | 主权 | 工具职责 |
+|---|---|---|
+| Validator | `validator` 角色 | 复核事实、依赖、连带影响、阻断级一致性和落盘前置条件。 |
+| Checker | `checker` 角色 | 解释节奏、爽点、守则和表达风险,形成审批说明。 |
+| BeatAnalyzer | `checker` 内部工具 | 输出结构诊断信号,不得独立审批、独立写盘或作为 canonical role id。 |
+
+Validator 输出的阻断级结论必须带 source refs、检查范围、failure envelope 和可解决条件。Checker/BeatAnalyzer 输出的叙事风险必须带证据片段和置信状态;证据不足时返回 partial 或 needs-data,不能让 Runner 当成成功通过。
+
 ## 工具结果信封
 
 每个工具结果都必须带有:

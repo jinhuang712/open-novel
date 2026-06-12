@@ -20,11 +20,13 @@
   .rail .cur::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--accent); }
   .rail .spacer { flex: 1; }
   .paper-wrap { overflow: hidden; position: relative; }
-  .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); padding: 82px 60px 160px; box-sizing: border-box; color: var(--text-primary); }
+  .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); border-left: 1px solid var(--paper-edge); border-right: 1px solid var(--paper-edge); padding: 82px 60px 160px; box-sizing: border-box; color: var(--text-primary); }
   .paper h2 { font-family: var(--font-serif); font-size: 23px; margin: 0 0 34px; }
   .paper p { font-size: 16px; line-height: 1.8; margin: 0 0 .9em; color: var(--text-secondary); }
   .paper .mark { border-bottom: 1.5px solid var(--accent); color: var(--text-primary); }
   .overlay { position: absolute; inset: 0; background: var(--bg-overlay); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .overlay.compare { align-items: flex-end; background: transparent; pointer-events: none; }
+  .overlay.compare .stage { display: none; }
   .stage { width: min(600px, calc(100vw - 120px)); max-height: calc(100vh - 100px); display: flex; flex-direction: column; gap: 10px; }
   .dotzone { position: fixed; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; z-index: 50; font-size: 12px; color: var(--text-secondary); }
   .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--accent); }
@@ -75,6 +77,8 @@
   .rule-block { border-radius: var(--radius-sm); padding: 8px 0 8px 12px; font-size: 12.5px; border-left: 2px solid var(--border-strong); background: transparent; }
   .rule-confirm { border-left-color: var(--warning); background: color-mix(in srgb, var(--warning) 5%, transparent); }
   .rule-confirm .rt { color: var(--warning); font-weight: 600; }
+  .rule-blocking { border-left-color: var(--danger); background: var(--danger-subtle); }
+  .rule-blocking .rt { color: var(--danger); font-weight: 600; }
   .rule-tip { border-left-color: var(--border-strong); background: transparent; }
   .rule-tip .rt { color: var(--text-secondary); font-weight: 600; }
   .rule-block .jump { color: inherit; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
@@ -92,6 +96,9 @@
   .reject-pane .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
   .kbd-hints { display: flex; gap: 16px; justify-content: center; font-size: 11.5px; color: var(--text-tertiary); }
+  .compare-bar { display: none; pointer-events: auto; width: min(760px, calc(100vw - 96px)); margin: 0 auto 26px; padding: 10px 14px; align-items: center; gap: 10px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); font-size: 12.5px; color: var(--text-secondary); }
+  .overlay.compare .compare-bar { display: flex; }
+  .compare-bar .grow { flex: 1; }
 </style>
 </head>
 <body>
@@ -116,8 +123,9 @@
       <p>雨下到第三天,知微书馆的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。</p>
       <p>林溪把最后一摞服务器报价单推到桌角,揉了揉眉心。她知道这次改名会牵动前文所有称谓。</p>
       <p><span class="mark">当前命中处 C-03</span> · 完整连带修改进入审批层,正文只保留轻量锚点。</p>
+      <p>对照审批演示:点击审批卡中的章节段风险后,中央卡片收为底部审定条,纸面跳到命中段,勾选与反馈草稿不丢。</p>
     </div>
-    <div class="overlay">
+    <div class="overlay" id="overlay">
       <div class="stage">
   <div class="turn-banner">1 个修改待审批<span class="right">× / Esc 暂不处理,状态点仍待审批</span></div>
 
@@ -222,9 +230,13 @@
     </div>
 
     <div class="rules">
+      <div class="rule-block rule-blocking">
+        <div class="rt">1 项阻断级 — 承诺冲突</div>
+        <div style="margin-top:4px">ch_001 <span class="jump" onclick="enterCompare()">§ 段 5</span>:主角身份被改写后与已审定伏笔冲突;同意按钮保持禁用,只能拒绝或编辑后重新审。</div>
+      </div>
       <div class="rule-block rule-confirm">
         <div class="rt">1 项确认级 — 人设风险</div>
-        <div style="margin-top:4px">ch_003 <span class="jump">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让写手重做。</div>
+        <div style="margin-top:4px">ch_003 <span class="jump" onclick="enterCompare()">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让写手重做。</div>
         <label class="ack"><input type="checkbox" id="ackRisk" onchange="refresh()">我已阅读上述风险,明知风险仍通过</label>
       </div>
       <div class="rule-block rule-tip">
@@ -238,14 +250,14 @@
       <button class="btn btn-ghost btn-sm" onclick="setAll(false)">全不选</button>
       <div class="grow"></div>
       <button class="btn btn-danger" onclick="document.getElementById('approval').classList.toggle('rejecting')">拒绝全部 <kbd style="border-color:currentColor;color:inherit;background:transparent">N</kbd></button>
-      <button class="btn btn-primary" id="approveBtn">同意勾选项 <span id="count">7/9</span> <kbd style="background:transparent;border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.95)">Y</kbd></button>
+      <button class="btn btn-primary" id="approveBtn" disabled title="存在阻断级风险,不能同意">同意勾选项 <span id="count">7/9</span> <kbd style="background:transparent;border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.95)">Y</kbd></button>
     </div>
 
     <div class="reject-pane">
       <label>为什么拒绝?(必填 — 会作为反馈让写手重做)</label>
       <textarea placeholder="例:改性别后语气还是男性化的,口吻没调整"></textarea>
       <div class="hint">提交后自动发一条消息驱动 Agent 带着拒绝理由重新生成。</div>
-      <div class="row"><button class="btn btn-sm" onclick="document.getElementById('approval').classList.remove('rejecting')">取消</button><button class="btn btn-primary btn-sm">提交反馈并拒绝</button></div>
+      <div class="row"><button class="btn btn-sm" onclick="document.getElementById('approval').classList.remove('rejecting')">取消</button><button class="btn btn-danger btn-sm">提交反馈并拒绝</button></div>
     </div>
   </div>
 
@@ -253,6 +265,12 @@
     <span><kbd>Y</kbd> 同意</span><span><kbd>N</kbd> 拒绝</span><span><kbd>E</kbd> 编辑后同意</span>
     <span><kbd>Esc</kbd> 暂不处理</span><span><kbd>Cmd+]</kbd> 下一条待审</span>
   </div>
+      </div>
+      <div class="compare-bar">
+        <span class="badge badge-warning">对照审批</span>
+        <span>主修改: characters/lin.md · 已勾选 <span id="barCount">7/9</span> · 风险段 ch_003 §9</span>
+        <span class="grow"></span>
+        <button class="btn btn-sm" onclick="exitCompare()">返回审批卡</button>
       </div>
     </div>
   </div>
@@ -280,15 +298,21 @@ function setAll(v) {
   document.querySelectorAll('[data-check]').forEach(function (c) { c.checked = v; });
   refresh();
 }
+function enterCompare() {
+  document.getElementById('overlay').classList.add('compare');
+}
+function exitCompare() {
+  document.getElementById('overlay').classList.remove('compare');
+}
 function refresh() {
   var checks = Array.prototype.slice.call(document.querySelectorAll('[data-check]'));
   checks.forEach(function (c) { c.closest('[data-row]').classList.toggle('off', !c.checked); });
   var on = checks.filter(function (c) { return c.checked; }).length;
   document.getElementById('count').textContent = on + '/' + checks.length;
-  var acked = document.getElementById('ackRisk').checked;
   var btn = document.getElementById('approveBtn');
-  btn.disabled = on === 0 || !acked;
-  btn.title = !acked ? '存在确认级风险:先勾选"明知风险仍通过"' : (on === 0 ? '至少勾选一项' : '');
+  btn.disabled = true;
+  btn.title = '存在阻断级风险,不能同意';
+  document.getElementById('barCount').textContent = on + '/' + checks.length;
   document.querySelectorAll('.group').forEach(function (g) {
     var gc = g.querySelectorAll('[data-check]');
     var gon = Array.prototype.filter.call(gc, function (c) { return c.checked; }).length;

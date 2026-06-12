@@ -42,6 +42,20 @@
 | platform/Ixx | provider capability cache、editor adapter state、watcher cursor、import/export manifest、desktop permission |
 | platform/Rxx | lifecycle state、backup manifest、migration version、repair job、diagnostics export audit |
 
+## Storage / Platform 可靠性字段族
+
+P009 存储与平台可靠性修复涉及的字段族统一归口在本篇,实现时不得分散发明。
+
+| 字段族 | 最少覆盖 | 行为约束 |
+|---|---|---|
+| file fingerprint ledger | project id、file id/path、content hash、mtime/size 辅助值、last seen watcher watermark、last system write token、post-write hash | mtime/size 不能单独证明文件未变;缺失或不可信时进入 reconcile。 |
+| lease / fencing | owner id、lease token、fencing token、renewed at、expires at、takeover reason | 所有写入、审批应用、restore、migration、repair 都必须校验 fencing token。 |
+| project facts health | facts health、degraded reason、lost fact families、rebuild source、user decision audit | facts-degraded 不能被派生索引修复自动清除。 |
+| backup manifest | project id、package id、schema/index/package format version、file fingerprint summary、fact ledger watermark、watcher watermark、repair watermark、pending summary、degraded flag | 备份必须来自一致性静止点;恢复前必须校验 manifest。 |
+| migration version | schema version、index version、package format version、minimum compatible app、migration stage、backup id | forward-compat 拒开必须可解释,迁移中项目处于 Migrating。 |
+| repair job | scope、reason、input watermark、output watermark、index version、status、retry count、failure reason | repair 按范围和水位幂等,不能重复制造派生事实。 |
+| import/export manifest | project identity、package identity、content inventory、integrity digest、degraded marker、duplicate import decision | 同 project id 导入需创建副本或显式覆盖/恢复。 |
+
 ## Canonical Agent Role 字段
 
 角色相关持久化字段必须使用 [M13](../M13-agent-team-controls.md) 定义的 canonical id:

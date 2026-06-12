@@ -1,5 +1,41 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/platform · 存储与可靠性 TODO 收口
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| S01/I03/A01/V01 补 facts-degraded、持久文件指纹、write token 自写回声、lease fencing 与双窗口接管验证;明确文件与事实账本冲突时作者文件优先。 | `spec/S01-project-storage.md` `spec/platform/I03-filesystem-and-watcher.md` `spec/appendix/A01-schema-tables.md` `spec/appendix/V01-test-matrix.md` | 关闭 TODO-P1-16、TODO-P1-17。 |
+| R02 补备份一致性静止点、manifest 水位和恢复前置条件;恢复后审批重新判定并进入 R04 reindex/degraded 收场。 | `spec/platform/R02-backup-restore.md` | 关闭 TODO-P1-18、TODO-P2-11。 |
+| R03/R01/I04 补 schema/index/package 三版本模型、项目包 manifest、Migrating 态、同 id 导入语义和 forward-compat 拒开;R04 补 repair job 按水位幂等重入。 | `spec/platform/R03-migration-and-upgrade.md` `spec/platform/R01-project-lifecycle.md` `spec/platform/I04-import-export-contract.md` `spec/platform/R04-index-health-and-repair.md` | 关闭 TODO-P1-19;收窄 TODO-P2-19、TODO-P2-20。 |
+
+## 2026-06-12 · docs/spec · M 层与 appendix TODO 收口
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| Approval Cascade 补 EditedAccepted 轻量重检、Invalidated 投影、obligation 生命周期、多审批卡队列和拒绝理由重做回路;Creative Engine/Writing 明确审批前质检汇合和 no-change-evidence。 | `spec/M08-approval-cascade.md` `spec/S12-creative-engine.md` `spec/M06-writing-mode.md` `spec/appendix/A02-json-schemas.md` `spec/appendix/A03-event-catalog.md` `spec/appendix/V01-test-matrix.md` | 收窄 TODO-P1-11、TODO-P1-12、TODO-P1-13。 |
+| Knowledge Graph/Surface/Fact Query 补实体身份治理、别名确认、合并/拆分、as-of chapter 查询和全局 obligation 清单;保留 A01 存储字段为剩余 TODO。 | `spec/S06-knowledge-graph.md` `spec/M10-knowledge-surface.md` `spec/M03-fact-query.md` | 收窄 TODO-P1-27。 |
+| ReaderPanel/S12/V02 补叙事诊断的章内四维体检、趋势/存档、旧章和单维度重跑;design/prototype 剩余范围保留在 TODO。 | `spec/M11-reader-panel.md` `spec/S12-creative-engine.md` `spec/appendix/V02-golden-cases.md` | 收窄 TODO-P1-29。 |
+| Planning/A05 承接结构模板库为只读参照;M13/S09/A04 明确 BeatAnalyzer 是 checker 内部工具,Validator/Checker failure envelope 归口。 | `spec/M05-planning-mode.md` `spec/appendix/A05-prompt-templates.md` `spec/M13-agent-team-controls.md` `spec/S09-agent-tooling-boundary.md` `spec/appendix/A04-tool-catalog.md` | 关闭 TODO-P1-30、TODO-P2-12。 |
+| A03 补 turn/attempt/seq/step/delta 去重身份;M04 补拒绝后回 Discuss 回边;M07 补批阅层未决标记生命周期;S15 承接 Assistant Persona 设置边界。 | `spec/appendix/A03-event-catalog.md` `spec/M04-discuss-mode.md` `spec/M07-inline-rewrite-and-humanizer.md` `spec/S15-settings-and-onboarding.md` | P2-16 的 A03 部分已落地;关闭 TODO-P2-21。 |
+
+## 2026-06-12 · docs/design · 产品设计闭环 TODO 收口
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 补齐审批聚焦卡焦点守卫、拒绝必填反馈、对照视图、召唤层并存层级、对照审批、toast placement 与 Onboarding Enter/IME/必填契约;对应原型同步演示。 | `design/01-main-layout.md` `design/02-approval-cascade.md` `design/05-onboarding.md` `design/06-command-palette.md` `design/prototypes/01-main-layout.html` `design/prototypes/02-approval-cascade.html` `design/prototypes/05-onboarding.html` `design/prototypes/06-command-palette.html` | 关闭 TODO-P1-33/P1-34/P1-35/P1-36/P1-40/P2-03/P2-14。 |
+| ReaderPanel 增加风险勾选与 report→action 两条产品出路;视觉 token 落高对比变量、纸面边界、状态点命中区、五态状态点和字号/间距 token。 | `plan/09-narrative-and-reader.md` `design/03-reader-panel.md` `design/00-design-tokens.md` `design/prototypes/03-reader-panel.html` `design/prototypes/tokens.css` | 关闭 TODO-P1-37/P2-17。 |
+| 审批原型补阻断级演示、对照审批底部条、拒绝 danger 提交;P2-18 保留 Settings 搜索交互分叉和不在本批范围的原型细节。 | `design/prototypes/02-approval-cascade.html` `TODO.md` | 收窄 TODO-P2-18。 |
+
+## 2026-06-12 · docs/cleanup · 运行时门禁与 plan 口径收敛
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| S00 主路径拆清运行时校验/创作风险与开发期 Harness/Golden Regression;S10/S11 继续作为记录、回放和合入门禁。 | `spec/S00-system-contract.md` `spec/S10-llm-quality-harness.md` `spec/S11-evaluation-and-golden-regression.md` | 关闭 TODO-P1-01。 |
+| Prompt 层级改为当前用户指令压过历史经验和默认偏好,但仍不能覆盖系统律、审批和工具边界;S02/S13 同步经验优先级。 | `spec/S08-prompt-system.md` `spec/S02-runtime-state.md` `spec/S13-style-and-humanizer.md` | 关闭 TODO-P1-02。 |
+| R5/R6 收窄为“有审定才学习”和“已入故事世界/显式关系/可追踪引用可确定列出”;纯讨论不沉淀经验,疑似语义影响只作低置信候选。 | `plan/03-guardrails.md` `plan/10-memory-and-learning.md` | 关闭 TODO-P1-05、TODO-P1-06。 |
+| plan 层移除本地 Web/桌面壳双路线和模型档位实现映射,改为本地桌面级工作台与产品级用量档位;长历史与本轮 context package 的分层由 S02/S07 既有契约承接。 | `plan/04-goals-and-non-goals.md` `plan/06-agent-team.md` `spec/S02-runtime-state.md` `spec/S07-context-management.md` | 关闭 TODO-P2-08、TODO-P2-10。 |
+| S03 事件措辞从“可恢复事件”收窄为“可去重事件”,A03 落 `project_id/turn_id/attempt_id/step_id/seq/event_kind` 去重键,并要求 text delta 额外带 `delta_id`。 | `spec/S03-agent-runner.md` `spec/appendix/A03-event-catalog.md` | 关闭 TODO-P2-16。 |
+
 ## 2026-06-12 · docs/decision · Cascade 成本与延迟预算归口
 
 | 变更 | 影响文档 | 关联 |

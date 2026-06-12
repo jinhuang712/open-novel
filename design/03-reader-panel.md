@@ -14,8 +14,9 @@ flowchart TB
   RISK["多人标记的风险 (按标记人数降序)"]
   WIN["多人标记的亮点"]
   DETAIL["展开 5 个读者反馈 (persona 卡)"]
+  PICK["选择风险: 勾选要处理的风险行"]
   ACT["行动: 按风险点修改 / 跳过"]
-  HEAD --> RISK --> WIN --> DETAIL --> ACT
+  HEAD --> RISK --> WIN --> DETAIL --> PICK --> ACT
 ```
 
 ## 头部
@@ -32,6 +33,7 @@ flowchart TB
 | 类型 chip | 风险:毒点 / 坑 / 突兀 / AI 味(danger 系);亮点:爽点 / 钩子 / 亮点(success 系) |
 | 描述 | 一行原因 + 段落定位「第 5-7 段」,点击跳编辑器对应段(anchor 同款跳转) |
 | severity | 风险行左缘 2px 条:high=danger / mid=warning / low=neutral |
+| 选择框 | 只出现在风险行;默认勾选 ≥3 人标记或 high severity 的风险,亮点不可勾选 |
 
 排序:标记人数 desc → severity desc。各最多直出 4 行,更多收进「全部 N 条」。
 
@@ -56,9 +58,14 @@ flowchart TB
 | 部分失败(≥3 成功) | 正常聚合;失败 persona 色点空心 + tooltip 错误摘要 + 单个重跑 |
 | <3 成功 | `insufficient` 徽标,只列已完成反馈,无分类建议 |
 | 章节过短(<800 字) | 空态:「章节太短,读者还没进入状态」+ 继续写作引导 |
-| 嵌在 ApprovalCard 内 | 报告作为卡内一个 section,行动钮「按风险点修改」= 拒绝 + 预填反馈 |
+| 嵌在 ApprovalCard 内 | 报告作为卡内一个 section,行动钮「按风险点修改」= 将已勾风险转入拒绝反馈 |
 
-「按风险点修改」预填内容 = 已勾选风险行的 reason 列表,进入拒绝反馈环([design/02 §行动栏](./02-approval-cascade.md#行动栏))。
+「按风险点修改」有两条出路:
+
+- 嵌在 ApprovalCard 内:已勾风险行的 reason、段落位置和 persona 共识转入拒绝反馈框,提交后进入拒绝反馈环([design/02 §行动栏](./02-approval-cascade.md#行动栏))。
+- 独立 ReaderPanel 报告面板:已勾风险行转成润色清单预填项,发起一次 Humanizer 修改提案;每个预填项保留来源段落,生成结果仍需审定。
+
+未勾风险只保留在报告里,不会进入反馈或润色清单。若没有勾选风险,「按风险点修改」禁用。
 
 ## 主题适配
 

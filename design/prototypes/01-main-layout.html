@@ -78,7 +78,7 @@
 
   /* ===== 纸面 ===== */
   .mid { flex: 1; min-width: 0; overflow-y: auto; position: relative; }
-  .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); padding: 84px 60px 160px; box-sizing: border-box; }
+  .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); border-left: 1px solid var(--paper-edge); border-right: 1px solid var(--paper-edge); padding: 84px 60px 160px; box-sizing: border-box; }
   .vol-line { font-size: 12px; color: var(--text-tertiary); margin: 0 0 8px; }
   .paper h2 { font-family: var(--font-serif); font-size: 23px; font-weight: 600; margin: 0 0 34px; }
   .paper p { margin: 0 0 0.9em; font-size: 16px; line-height: 1.8; position: relative; }
@@ -122,19 +122,22 @@
   .micro .mv { color: var(--danger); cursor: pointer; }
 
   /* ===== 状态点 ===== */
-  .dotzone { position: fixed; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; z-index: 50; font-size: 12px; color: var(--text-secondary); }
+  .dotzone { position: fixed; right: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; z-index: 50; font-size: 12px; color: var(--text-secondary); min-height: 24px; }
   .dotzone .label { display: flex; align-items: center; gap: 10px; opacity: 0; transition: opacity var(--dur-base) var(--ease); white-space: nowrap; }
   .dotzone .label.show { opacity: 1; }
   .dotzone .cancel { color: var(--text-tertiary); cursor: pointer; border: none; background: none; font: inherit; font-size: 11.5px; padding: 0; }
   .dotzone .cancel:hover { color: var(--danger); }
   .dotzone .track { width: 90px; height: 3px; border-radius: 99px; background: var(--bg-active); overflow: hidden; }
   .dotzone .fill { display: block; height: 100%; width: 60%; background: var(--accent); }
-  .dot { width: 8px; height: 8px; border-radius: 99px; background: var(--text-tertiary); cursor: pointer; flex: none; transition: background var(--dur-base) var(--ease); }
-  .dot.run { background: var(--accent); animation: breathe 2.4s ease-in-out infinite; }
-  .dot.approval { background: var(--accent); }
-  .dot.error { background: var(--danger); }
+  .dot { width: 24px; height: 24px; border-radius: 99px; background: transparent; cursor: pointer; flex: none; transition: background var(--dur-base) var(--ease); position: relative; }
+  .dot::after { content: ""; position: absolute; left: 8px; top: 8px; width: 8px; height: 8px; border-radius: 99px; background: var(--text-tertiary); transition: background var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease); }
+  .dot.run { background: transparent; }
+  .dot.run::after { background: var(--accent); animation: breathe 2.4s ease-in-out infinite; }
+  .dot.approval::after { background: var(--accent); }
+  .dot.stopped::after { background: var(--text-tertiary); }
+  .dot.error::after { background: var(--danger); }
   @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
-  @media (prefers-reduced-motion: reduce) { .dot.run { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .dot.run::after { animation: none; } }
   .dotzone .appr { color: var(--accent-text); font-weight: 500; cursor: pointer; }
   .dotzone .err { color: var(--danger); cursor: pointer; }
 
@@ -189,8 +192,14 @@
   .ap-cas a:hover { text-decoration: underline; }
   .ap-act { display: flex; gap: 8px; align-items: center; border-top: 1px solid var(--border); padding-top: 14px; }
   .ap-act .hint { margin-left: auto; font-size: 10.5px; font-family: var(--font-mono); color: var(--text-tertiary); }
+  .reject-pane { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .ap-card.rejecting .reject-pane { display: block; }
+  .reject-pane label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+  .reject-pane textarea { width: 100%; min-height: 70px; resize: vertical; font: inherit; font-size: 12.5px; color: var(--text-primary); background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; outline: none; }
+  .reject-pane textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
+  .reject-pane .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
-  .toast-zone { position: fixed; left: 50%; transform: translateX(-50%); bottom: 130px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast-zone { position: fixed; right: 20px; bottom: 88px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 </style>
 </head>
 <body>
@@ -205,7 +214,7 @@
   <button class="btn btn-sm" onclick="toggleUSearch()">全局搜索 (Shift×2)</button>
   <button class="btn btn-sm" onclick="toggleQuery()">查询 (Cmd+E)</button>
   <span style="display:inline-flex;gap:2px;align-items:center">状态点:
-    <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
+    <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('stopped')">已停止</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
   </span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
@@ -327,7 +336,7 @@
 </div>
 
 <div class="ap-layer" id="apLayer">
-  <div class="ap-card">
+  <div class="ap-card" id="focusApproval" tabindex="-1">
     <div class="ap-t"><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理 (Esc)">×</button></div>
     <div class="ap-path">characters/lin.md · proposal ap_3e9d · 写手</div>
     <div class="diff">
@@ -338,8 +347,13 @@
     <div class="ap-act">
       <button class="btn btn-primary btn-sm" onclick="approve()">同意</button>
       <button class="btn btn-sm" onclick="toast('进入编辑(演示)')">编辑后同意</button>
-      <button class="btn btn-danger btn-sm" onclick="closeApproval();setState('idle');toast('已拒绝')">拒绝</button>
+      <button class="btn btn-danger btn-sm" onclick="showReject()">拒绝</button>
       <span class="hint">Y · E · N</span>
+    </div>
+    <div class="reject-pane">
+      <label>为什么拒绝?(必填 — 会作为反馈让写手重做)</label>
+      <textarea id="focusRejectText" placeholder="例:改性别后称谓和语气没有一起调整"></textarea>
+      <div class="row"><button class="btn btn-sm" onclick="hideReject()">取消</button><button class="btn btn-danger btn-sm" onclick="submitReject()">提交反馈并拒绝</button></div>
     </div>
   </div>
 </div>
@@ -505,10 +519,11 @@ noteEl.addEventListener('mouseleave', function () { hideTimer = setTimeout(hideN
 /* ===== 状态点 ===== */
 var state = 'run';
 var lastShiftAt = 0;
+var approvalOpenedAt = 0;
 function setState(s) {
   state = s;
   var dot = document.getElementById('dot'), label = document.getElementById('dotLabel');
-  dot.className = 'dot' + (s === 'run' ? ' run' : s === 'approval' ? ' approval' : s === 'error' ? ' error' : '');
+  dot.className = 'dot' + (s === 'run' ? ' run' : s === 'approval' ? ' approval' : s === 'stopped' ? ' stopped' : s === 'error' ? ' error' : '');
   var comp = document.getElementById('composer');
   comp.classList.remove('locked');
   if (s === 'idle') {
@@ -528,6 +543,11 @@ function setState(s) {
     dot.title = '待审批';
     comp.classList.add('locked');
     openApproval();
+  } else if (s === 'stopped') {
+    label.innerHTML = '<span style="color:var(--text-muted)">已停止 · 没有修改 · 查看 recap</span>';
+    label.classList.add('show');
+    dot.onclick = function () { toggleTrace(); };
+    dot.title = '已停止';
   } else {
     label.innerHTML = '<span class="err" onclick="toast(\'打开 Settings §API Keys\')">连接失败 · 去 Settings 检查 key</span>';
     label.classList.add('show');
@@ -590,7 +610,32 @@ document.addEventListener('keydown', function (e) {
     else if (document.getElementById('trace').classList.contains('open')) toggleTrace();
     else if (document.getElementById('lib').classList.contains('open')) toggleLib();
   }
+  var apOpen = document.getElementById('apLayer').classList.contains('open');
+  var focusInCard = apOpen && document.getElementById('focusApproval').contains(document.activeElement);
+  var inTextInput = active && /^(INPUT|TEXTAREA)$/.test(active.tagName);
+  if (apOpen && focusInCard && !inTextInput && !e.isComposing && Date.now() - approvalOpenedAt > 600) {
+    var k = e.key.toLowerCase();
+    if (k === 'y') { e.preventDefault(); approve(); }
+    if (k === 'e') { e.preventDefault(); toast('进入编辑(演示)'); }
+    if (k === 'n') { e.preventDefault(); showReject(); }
+  }
 });
+function showReject() {
+  var card = document.getElementById('focusApproval');
+  card.classList.add('rejecting');
+  document.getElementById('focusRejectText').focus();
+}
+function hideReject() { document.getElementById('focusApproval').classList.remove('rejecting'); }
+function submitReject() {
+  var text = document.getElementById('focusRejectText').value.trim();
+  if (!text) { toast('请先填写拒绝原因'); document.getElementById('focusRejectText').focus(); return; }
+  closeApproval(); setState('run'); toast('已提交反馈,写手正在重做');
+}
+var oldOpenApproval = openApproval;
+openApproval = function () {
+  oldOpenApproval();
+  approvalOpenedAt = Date.now();
+};
 function toast(msg) {
   var t = document.createElement('div');
   t.className = 'toast'; t.textContent = msg;

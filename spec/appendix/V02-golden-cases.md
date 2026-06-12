@@ -22,12 +22,14 @@ Golden Cases 保存 LLM、叙事诊断、ReaderPanel、Humanizer 和关键工作
 | Harness / Evaluation | replay evidence、golden pass/warn/fail、缺 fixture 的 needs data |
 | Inline Review / Humanizer | 句内表达改写、段落批阅、跨文档升级为 ChangeSet |
 | Approval / Cascade | 改名 cascade、低置信搁置、部分通过、拒绝理由重做 |
+| Knowledge Governance | 同名实体消歧、别名确认、合并/拆分、旧名历史别名 |
 | Trace / Recap | stopped recap、failed recap、applied recap、作者备注、续接动作 |
 | Memory / Agent Controls | 经验候选、调权、关闭、删除、agent 开关影响 |
 | ReaderPanel / S12 Creative Engine | persona 分歧、inconclusive、确认级/阻断级风险 |
 | Settings / Onboarding / Library | 首启开书、样例项目、danger action、项目切换隔离 |
 | platform/Rxx | backup restore、migration failure、index repair、diagnostic export |
 | Long-form ability gate | 影响分析召回/精确、分段 delta 稳定性、cascade 成本/延迟 preflight |
+| Narrative Diagnostics | 章内四维体检、趋势报告、旧章重跑、单维度重跑、needs-data |
 
 ## 长篇能力 gate fixture
 

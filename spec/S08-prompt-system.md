@@ -30,15 +30,15 @@ flowchart TB
   Mode[协作模式边界]
   Output[输出契约]
   Task[本次任务]
+  User[用户当前指令]
   Context[context package 摘要]
   Experience[用户经验和风格偏好]
-  User[用户当前指令]
   Fenced[围栏内正文/导入/检索/工具结果]
 
-  System --> Role --> Mode --> Output --> Task --> Context --> Experience --> User --> Fenced
+  System --> Role --> Mode --> Output --> Task --> User --> Context --> Experience --> Fenced
 ```
 
-靠后的层可以提供材料,不能覆盖靠前的系统律。用户当前指令可以改变本次任务,但不能要求系统静默写入、绕过审批或把不可信正文当系统指令。
+靠后的层可以提供材料,不能覆盖靠前的系统律。用户当前指令优先于历史经验、默认风格偏好和会话惯性,用于决定本次任务的具体取舍;但它不能要求系统静默写入、绕过审批、越过模式边界或把不可信正文当系统指令。经验只能作为偏好材料被选用,不能压过本轮明确要求。
 
 ## 不可信内容围栏
 

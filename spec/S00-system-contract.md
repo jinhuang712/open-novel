@@ -6,7 +6,7 @@
 
 ## 十分钟读法
 
-先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实和 prompt,Agent Runner 受控执行,质量证据被记录和验收,作者审定,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。
+先看这张图。Open Novel 的主路径只有一条:作者提出意图,系统装配事实和 prompt,Agent Runner 受控执行,运行时校验与创作风险信号进入可审定结果,作者审定,项目存储落盘,知识图谱更新,UI 把过程透明展示出来。开发期 harness 和 golden regression 记录并验收这条链路,但不等于每次用户请求里的业务节点。
 
 ```mermaid
 flowchart LR
@@ -16,9 +16,9 @@ flowchart LR
   Prompt --> Agent[Agent Runner]
   Agent --> Tools[Tooling Boundary]
   Tools --> Agent
-  Agent --> Harness[Quality Harness]
-  Harness --> Eval[Evaluation / Golden Gate]
-  Eval --> Draft[回答 / 报告 / 批阅建议 / Proposal]
+  Agent --> Validate[Runtime Validation]
+  Validate --> Risk[Creative Risk Signal]
+  Risk --> Draft[回答 / 报告 / 批阅建议 / Proposal]
   Draft --> Approval{是否写入作品?}
   Approval -->|否| Stream[Streaming UI]
   Approval -->|是,需审定| Decision[作者审定]
@@ -31,6 +31,8 @@ flowchart LR
   Runtime[Runtime State] --> Context
   Runtime --> Prompt
   Runtime --> Stream
+  Agent -.记录证据.-> Harness[LLM Quality Harness]
+  Harness -.开发期回归.-> Eval[Golden Regression]
 ```
 
 如果只能记住一件事,就是:系统可以自动分析、自动提议、自动解释,但不能静默改变作品事实。任何看起来“方便”的捷径,只要绕过作者审定、主权边界或可恢复状态,都是架构错误。
@@ -56,7 +58,7 @@ sequenceDiagram
   participant O as Turn Orchestration
   participant Q as Context Management
   participant R as Agent Runner
-  participant H as Quality Gate
+  participant H as Runtime Validation
   participant S as Storage
   participant K as Knowledge Graph
   participant V as Streaming UI
@@ -67,8 +69,8 @@ sequenceDiagram
   Q->>K: 查实体、伏笔、章节锚点
   K-->>Q: 候选章节和来源
   Q->>R: 请求复核和生成候选改写
-  R->>H: 记录并验收 LLM run
-  H-->>O: ChangeSet proposal + quality evidence
+  R->>H: 校验结构化结果和创作风险
+  H-->>O: ChangeSet proposal + risk evidence
   O->>V: 展示待审批状态
   U->>O: 接受 / 修改后接受 / 拒绝
   O->>S: 审批后落盘
@@ -119,7 +121,7 @@ flowchart TB
 |---|---|---|
 | 应用形态 | 桌面壳是唯一主产品形态,开发调试也在桌面壳开发模式中进行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、lease、journal 和安全凭据,renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、导入导出、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
 | Agent loop | 自定义 runner 显式控制模型调用、结构化输出、retry、tool loop 和 stream | 不把审批、memory、workflow 交给黑盒框架 |
-| LLM 质量闭环 | prompt、context、tool、harness 和 golden regression 分层拥有主权 | LLM 行为变化必须可复现、可验收、可阻断 |
+| LLM 质量闭环 | runtime validation / creative risk 进入用户请求;harness / golden regression 属于记录、回放和开发期合入门禁 | 运行时失败语义和开发期质量门禁不能混成同一个业务节点 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
 | UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、Universal Search 和查询浮层暴露 | 过程透明,但不让日志淹没写作 |
 | 明细归口 | 字段、schema、模板全文、工具参数、测试矩阵、golden 明细和 spike 证据进 appendix;接入、恢复、迁移、诊断契约进 platform | 核心 spec 读完必须懂设计,不被字段表打断 |
