@@ -1,5 +1,15 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · 移除导入导出与备份恢复
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 用户裁决:POC 阶段不做任何导入导出功能,备份恢复一并移除;“数据归你”由作品本身是本机纯文本文件满足(任何编辑器可开、整目录复制即迁移)。删除 `spec/platform/I04-import-export-contract.md` 与 `spec/platform/R02-backup-restore.md`。 | `spec/platform/I04-import-export-contract.md`(删除) `spec/platform/R02-backup-restore.md`(删除) `spec/platform/README.md` `README.md` `WORKFLOW.md` | 数据归你原则改写见 `plan/02-principles.md` 原则六。 |
+| plan 全量去除导出/导入/备份承诺:原则六改为本机纯文本 + 整目录带走;非目标“云同步/平台自动发布”措辞改为整目录复制即迁移、正文即本机文件自行取用;审批历史“导出日志”段删除;经验“一键导出导入”改为随项目数据留在本机;“导出成稿”类措辞改为标记可发布/发布本章。 | `plan/01-overview.md` `plan/02-principles.md` `plan/04-goals-and-non-goals.md` `plan/08-approval-and-cascade.md` `plan/09-narrative-and-reader.md` `plan/10-memory-and-learning.md` | — |
+| spec 清理:S15 设置导出语义整节删、首启导入分支删;M08 审批历史导出整节删;M17 Recap/Activity 导出整节删;M15 导入分支删;S01 facts-degraded 收为单一出路(以作者文件为准重建最小事实库);R03 收为 schema/index 两版本模型、迁移前提示手动复制项目目录并显式确认(不可逆);R01 删除操作改为明确不可恢复提示;R04/R05 对 R02 的恢复引用改指 S01 重建;I05/S00/S02/S08/S09/S14/M14/M16 相关措辞清理;“导入资料”围栏语义改为“外部粘贴/拖入的资料”。 | `spec/S00-system-contract.md` `spec/S01-project-storage.md` `spec/S02-runtime-state.md` `spec/S08-prompt-system.md` `spec/S09-agent-tooling-boundary.md` `spec/S14-editor-and-interaction.md` `spec/S15-settings-and-onboarding.md` `spec/M08-approval-cascade.md` `spec/M14-settings-and-developer-mode.md` `spec/M15-onboarding-and-new-book.md` `spec/M16-project-library-and-navigation.md` `spec/M17-turn-recap-and-continuation.md` `spec/platform/R01-project-lifecycle.md` `spec/platform/R03-migration-and-upgrade.md` `spec/platform/R04-index-health-and-repair.md` `spec/platform/R05-diagnostics-and-debug-mode.md` `spec/platform/I05-desktop-shell-contract.md` | R05 诊断包导出保留(排障用途,非数据迁移)。 |
+| appendix 与 design 清理:A01 删 backup manifest / import-export manifest / project package export inventory 字段族;A04 platform tools 行去掉 import/export、backup/restore;V01 删备份/恢复/项目包导出导入验证行(诊断包预览/脱敏保留);design/04 与 design/05 及对应原型删导入项目包、导出 zip、整体设置导入导出、首启导入分支等 UI;命令面板原型删“导出当前项目”。 | `spec/appendix/A01-schema-tables.md` `spec/appendix/A04-tool-catalog.md` `spec/appendix/V01-test-matrix.md` `design/04-settings.md` `design/05-onboarding.md` `design/06-command-palette.md` `design/prototypes/03-reader-panel.html` `design/prototypes/04-settings.html` `design/prototypes/05-onboarding.html` `design/prototypes/06-command-palette.html` | — |
+| spec-archive 历史归档同步清理:`progress/spec-archive/` 整目录删除,旧 29 篇 spec 原文不再保留;相关引用改写为“历史原文已清理”。 | `progress/spec-archive/*`(删除) `progress/README.md` `spec/appendix/README.md` `spec/appendix/A06-migration-notes.md` `README.md` | — |
+
 ## 2026-06-12 · docs/design · 剩余设计与体验 TODO 收口
 
 | 变更 | 影响文档 | 关联 |

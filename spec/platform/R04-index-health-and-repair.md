@@ -53,7 +53,7 @@ stateDiagram-v2
 
 Repair job 必须按范围和输入 watermark 幂等。相同范围、相同输入 watermark、相同 index version 的重复 job 只能复用或重试同一修复意图,不能重复写入派生事实或制造多份冲突记录。job 重入时先读取当前输出 watermark:已成功则直接返回 succeeded,部分完成则从最后确认的输出 watermark 继续,输入文件指纹已变化则关闭旧 job 并排入新 job。
 
-R04 只修派生索引。项目事实库真源损坏时,它可以报告 `facts-degraded` 并建议 R02 恢复或 S01 最小事实库重建,但不能用 reindex 伪造审批历史、版本指纹或 obligation 解决状态。
+R04 只修派生索引。项目事实库真源损坏时,它可以报告 `facts-degraded` 并建议按 S01 以作者文件为准重建最小事实库,但不能用 reindex 伪造审批历史、版本指纹或 obligation 解决状态。
 
 ## 修复流
 

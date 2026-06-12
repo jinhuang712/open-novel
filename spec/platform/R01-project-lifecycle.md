@@ -33,18 +33,18 @@ stateDiagram-v2
 |---|---|
 | 创建 | workspace 可写、模板完整 |
 | 打开 | 文件存在、schema 兼容、索引健康、项目 lease |
-| 迁移 | writable lease、备份恢复点、无 Applying 事务、pending approval 已处理 |
+| 迁移 | writable lease、用户已确认迁移提示(见 R03)、无 Applying 事务、pending approval 已处理 |
 | 关闭 | active turn、pending approval、未保存内容 |
 | 接管 | 原 owner、pending approval、repair job、stale lease |
 | 归档 | 不影响可恢复数据 |
-| 删除 | 二次确认和备份提示 |
+| 删除 | 二次确认和明确不可恢复提示 |
 
 ## 失败收场
 
 | 失败 | 用户看到 | 系统不能做 |
 |---|---|---|
 | 打开失败 | 原因和修复建议 | 创建假项目 |
-| migration 失败 | 当前阶段、恢复点和拒开原因 | 继续以半迁移状态写入 |
+| migration 失败 | 当前阶段和拒开原因 | 继续以半迁移状态写入 |
 | 关闭冲突 | 先处理 turn/approval | 丢 pending |
 | lease 冲突 | 只读打开或显式接管 | 最后写入覆盖 |
 | stale lease | 展示恢复路径 | 自动假定原 owner 已退出 |
@@ -63,4 +63,4 @@ A: 可以,但只有一个窗口拥有写入权。第二个窗口默认只读;接
 
 **Q: 归档和删除的区别是什么?**
 
-A: 归档是从日常列表移走但保持可恢复;删除是破坏性动作,必须有二次确认和备份提示。
+A: 归档是从日常列表移走但保持可恢复;删除是破坏性动作,必须有二次确认和明确不可恢复提示。

@@ -119,7 +119,7 @@ flowchart TB
 
 | 决策 | 当前路线 | 根层关心的理由 |
 |---|---|---|
-| 应用形态 | 桌面壳是唯一主产品形态,开发调试也在桌面壳开发模式中进行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、lease、journal 和安全凭据,renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、导入导出、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
+| 应用形态 | 桌面壳是唯一主产品形态,开发调试也在桌面壳开发模式中进行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、lease、journal 和安全凭据,renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
 | Agent loop | 自定义 runner 显式控制模型调用、结构化输出、retry、tool loop 和 stream | 不把审批、memory、workflow 交给黑盒框架 |
 | LLM 质量闭环 | runtime validation / creative risk 进入用户请求;harness / golden regression 属于记录、回放和开发期合入门禁 | 运行时失败语义和开发期质量门禁不能混成同一个业务节点 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
@@ -187,11 +187,9 @@ flowchart TB
 | 模型 provider 如何接入和审计 | [I01 · LLM Provider Contract](./platform/I01-llm-provider-contract.md) |
 | 编辑器适配层如何隔离实现 | [I02 · Editor Adapter Contract](./platform/I02-editor-adapter-contract.md) |
 | 文件监听、原子写和冲突如何收场 | [I03 · Filesystem / Watcher](./platform/I03-filesystem-and-watcher.md) |
-| 导入导出如何保持可迁移 | [I04 · Import / Export](./platform/I04-import-export-contract.md) |
 | 桌面壳和本地权限如何约束 | [I05 · Desktop Shell](./platform/I05-desktop-shell-contract.md) |
 | 项目打开、关闭、归档如何定义 | [R01 · Project Lifecycle](./platform/R01-project-lifecycle.md) |
-| 备份恢复如何避免假成功 | [R02 · Backup / Restore](./platform/R02-backup-restore.md) |
-| 迁移升级如何可回滚 | [R03 · Migration / Upgrade](./platform/R03-migration-and-upgrade.md) |
+| 迁移升级如何确认与收场 | [R03 · Migration / Upgrade](./platform/R03-migration-and-upgrade.md) |
 | 索引坏了如何降级和修复 | [R04 · Index Health / Repair](./platform/R04-index-health-and-repair.md) |
 | 诊断包和 Debug Mode 如何保护隐私 | [R05 · Diagnostics / Debug Mode](./platform/R05-diagnostics-and-debug-mode.md) |
 

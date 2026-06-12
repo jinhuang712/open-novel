@@ -170,11 +170,9 @@ pnpm dev
 - [I01-llm-provider-contract](./spec/platform/I01-llm-provider-contract.md) — 模型 provider 能力、失败、审计和降级边界
 - [I02-editor-adapter-contract](./spec/platform/I02-editor-adapter-contract.md) — 编辑器适配层的选择、锚点、选区和 undo 责任
 - [I03-filesystem-and-watcher](./spec/platform/I03-filesystem-and-watcher.md) — 文件系统、外部编辑监听、原子写和冲突处理
-- [I04-import-export-contract](./spec/platform/I04-import-export-contract.md) — 导入、导出、可迁移格式和错误收场
 - [I05-desktop-shell-contract](./spec/platform/I05-desktop-shell-contract.md) — 桌面壳、系统权限、窗口与本地路径契约
 
 - [R01-project-lifecycle](./spec/platform/R01-project-lifecycle.md) — 项目创建、打开、关闭、归档和恢复入口
-- [R02-backup-restore](./spec/platform/R02-backup-restore.md) — 备份、恢复、版本保留和不可恢复提示
 - [R03-migration-and-upgrade](./spec/platform/R03-migration-and-upgrade.md) — 文档、数据和索引迁移升级策略
 - [R04-index-health-and-repair](./spec/platform/R04-index-health-and-repair.md) — 索引健康、重建、降级查询和修复体验
 - [R05-diagnostics-and-debug-mode](./spec/platform/R05-diagnostics-and-debug-mode.md) — 诊断包、Debug Mode、导出边界和隐私保护
@@ -253,7 +251,7 @@ pnpm dev
 - 多用户协作与实时协同
 - 云同步 / 多设备
 - 移动端
-- 平台自动发布(导出成稿,作者自行上传)
+- 平台自动发布(正文即本机文件,作者自行取用上传)
 - 模型微调
 - 跨项目共享记忆与经验
 - 写作中实时干预

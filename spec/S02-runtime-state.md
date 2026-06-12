@@ -43,7 +43,7 @@ flowchart TB
 
 Recap 是作者级 changelog,不是作品。过程历史再完整也只是证据,不是作品。会话消息再像“设定”,也不能绕过项目事实层。
 
-持久 turn 状态属于 project fact store。pending approval、approval queue、obligation、mode gate、apply journal 投影和 recovery pointer 都随项目走;runtime.db 只保存跨项目打开、最近项目和 UI 恢复指针,不能成为 pending approval 的唯一来源。项目包导出/导入时,pending 状态必须从项目事实库重校验,不能靠 runtime.db 复活。
+持久 turn 状态属于 project fact store。pending approval、approval queue、obligation、mode gate、apply journal 投影和 recovery pointer 都随项目走;runtime.db 只保存跨项目打开、最近项目和 UI 恢复指针,不能成为 pending approval 的唯一来源。pending 状态恢复时必须从项目事实库重校验,不能靠 runtime.db 复活。
 
 runtime.db 里的 recent objects 和 query history 必须按 project id 分区。全局最近项目列表可以跨项目,但任何项目内 search、context、preview cache 都只能读取当前 project id;找不到项目分区时,宁可显示少历史模式,不能把别的书的最近对象注入当前项目。
 

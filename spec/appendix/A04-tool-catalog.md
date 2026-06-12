@@ -41,7 +41,7 @@
 | BeatAnalyzer | 作为 checker 内部工具记录结构诊断维度、趋势窗口和证据片段,不得作为 role id |
 | search / command tools | 快捷键、命令 id、可用模式、pending approval 下的只读限制 |
 | storage / reindex / recovery tools | 原子写边界、reindex 范围、内部恢复结果、用户可见收场 |
-| platform tools | provider probe、watcher setup、import/export、backup/restore、diagnostic export 的命令与权限 |
+| platform tools | provider probe、watcher setup、diagnostic export 的命令与权限 |
 
 ## 边界
 

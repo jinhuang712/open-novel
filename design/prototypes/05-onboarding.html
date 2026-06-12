@@ -67,14 +67,10 @@
   .reco { position: absolute; top: -9px; right: 14px; }
   .blank-form { display: none; margin-top: 10px; border-top: 1px dashed var(--border-strong); padding-top: 12px; }
   .proj-card.sel .blank-form { display: block; }
-  .import-panel { display: none; margin-top: 10px; border-top: 1px dashed var(--border-strong); padding-top: 12px; }
-  .proj-card.sel .import-panel { display: block; }
   .blank-form label { display: block; font-size: 12px; font-weight: 600; margin: 10px 0 4px; }
-  .blank-form input, .blank-form select, .blank-form textarea, .import-panel input { width: 100%; font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); outline: none; }
+  .blank-form input, .blank-form select, .blank-form textarea { width: 100%; font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); outline: none; }
   .blank-form input.error { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent); }
   .blank-form textarea { min-height: 56px; resize: vertical; }
-  .import-meta { display: none; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-sunken); font-size: 12px; color: var(--text-secondary); line-height: 1.65; }
-  .import-meta.show { display: block; }
   .choice-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
   .choice-row label { display: flex; align-items: center; gap: 5px; margin: 0; font-size: 12px; font-weight: 400; }
   .field-error { display: none; margin-top: 4px; font-size: 12px; color: var(--danger); }
@@ -127,7 +123,7 @@
 
     <div class="step on" id="s1">
       <h1 class="serif">欢迎来到 Open Novel</h1>
-      <p class="sub">像用 IDE 写代码一样写长篇 — 先确认作品放在哪里。workspace 通过写权限检查后,后续项目事实和导入恢复才会落到这里。</p>
+      <p class="sub">像用 IDE 写代码一样写长篇 — 先确认作品放在哪里。workspace 通过写权限检查后,后续项目事实和权限检查都从这里开始。</p>
       <div class="key-row">
         <input id="workspacePath" value="~/.open-novel/workspaces/" oninput="workspaceOk=false;render()" aria-label="workspace path">
         <button class="btn" onclick="checkWorkspace()">检查权限</button>
@@ -155,7 +151,7 @@
       <div class="info-card">
         怎么拿 key:platform.deepseek.com/api_keys<br>
         成本预估:10 万字正文 ≈ $3(Pro 写作 + Flash 路由)<br>
-        Key 只写入系统安全凭据库;项目包、设置导出和诊断包都会剔除
+        Key 只写入系统安全凭据库;诊断包等任何持久产物都会剔除
       </div>
       <div class="key-row">
         <input type="password" id="keyInput" placeholder="sk-…">
@@ -167,7 +163,7 @@
 
     <div class="step" id="s3">
       <h1 class="serif">创建你的第一个项目</h1>
-      <p class="sub">从样例、空白故事或项目包导入开始。导入失败会停在本步,不会写入项目列表。</p>
+      <p class="sub">从样例或空白故事开始。</p>
       <div class="proj-grid">
         <div class="proj-card sel" data-project="sample" onclick="selProj(this)">
           <span class="reco badge badge-accent">推荐 · 5 分钟看懂全流程</span>
@@ -182,24 +178,6 @@
             <label>流派</label><select><option>都市重生</option><option>玄幻</option><option>悬疑异闻</option><option>科幻</option><option>历史</option></select>
             <label>风格描述</label><input placeholder="例:冷峻克制,短句为主">
             <label>故事种子</label><textarea placeholder="一两句话:谁,在什么世界,要做成什么事"></textarea>
-          </div>
-        </div>
-        <div class="proj-card" data-project="import" onclick="selProj(this)">
-          <b>导入项目包</b>
-          <div class="desc">恢复完整项目或从另一台机器带入项目。先读 manifest,再预览影响。</div>
-          <div class="import-panel" onclick="event.stopPropagation()">
-            <label>项目包</label>
-            <div class="key-row"><input id="importPath" value="~/Downloads/reborn-internet.onovelpkg"><button class="btn" onclick="previewImport()">读取 manifest</button></div>
-            <div class="import-meta show" id="importMeta">
-              <span class="warning-text">检测到同 project id:重生互联网</span><br>
-              包版本:0.3 · 导出时间:2026-06-10 21:40 · pending approval:2 条<br>
-              <div class="choice-row">
-                <label><input type="radio" name="importMode" checked onchange="importOk=true;render()"> 另存副本</label>
-                <label><input type="radio" name="importMode" onchange="importOk=true;render()"> 覆盖恢复(进入恢复预览)</label>
-                <label><input type="radio" name="importMode" onchange="importOk=false;render()"> 取消导入</label>
-              </div>
-            </div>
-            <div class="field-error" id="importError">manifest 不兼容:需要 Open Novel 0.4+,本次不创建项目</div>
           </div>
         </div>
       </div>
@@ -250,7 +228,7 @@ function toggleTheme() {
   h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
   localStorage.setItem('onovel-theme', h.dataset.theme);
 }
-var step = 1, keyOk = false, workspaceOk = false, importOk = true, importFailed = false;
+var step = 1, keyOk = false, workspaceOk = false;
 function render() {
   for (var i = 1; i <= 4; i++) document.getElementById('s' + i).classList.toggle('on', i === step);
   var dots = '';
@@ -261,17 +239,14 @@ function render() {
   var next = document.getElementById('nextBtn');
   next.style.display = step === 4 ? 'none' : '';
   var blankSelected = step === 3 && document.querySelector('.proj-card.sel[data-project="blank"]');
-  var importSelected = step === 3 && document.querySelector('.proj-card.sel[data-project="import"]');
   var projectName = document.getElementById('projectName');
   var missingProjectName = blankSelected && !projectName.value.trim();
   var blockedByWorkspace = step === 1 && !workspaceOk;
   var blockedByKey = step === 2 && !keyOk;
-  var blockedByImport = !!(importSelected && (!importOk || importFailed));
-  next.disabled = blockedByWorkspace || blockedByKey || missingProjectName || blockedByImport;
-  next.title = blockedByWorkspace ? '先检查 workspace 写权限' : (blockedByKey ? '测试连接通过,或选择 Mock 模式' : (missingProjectName ? '先给项目起个名字' : (blockedByImport ? '导入校验通过后才能继续' : '')));
+  next.disabled = blockedByWorkspace || blockedByKey || missingProjectName;
+  next.title = blockedByWorkspace ? '先检查 workspace 写权限' : (blockedByKey ? '测试连接通过,或选择 Mock 模式' : (missingProjectName ? '先给项目起个名字' : ''));
   projectName.classList.toggle('error', !!missingProjectName);
   document.getElementById('projectNameError').classList.toggle('show', !!missingProjectName);
-  document.getElementById('importError').classList.toggle('show', !!(importSelected && importFailed));
 }
 function go(d) {
   render();
@@ -321,8 +296,6 @@ function resumeDraft() {
 function restartDraft() {
   workspaceOk = false;
   keyOk = false;
-  importOk = true;
-  importFailed = false;
   step = 1;
   document.getElementById('wizard').classList.remove('mock');
   document.getElementById('workspaceState').textContent = '';
@@ -344,20 +317,6 @@ function useMock() {
   keyOk = true;
   document.getElementById('wizard').classList.add('mock');
   document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选 Mock 模式 — 示例文本,可随时在 Settings 填入真实 key</span>';
-  render();
-}
-function previewImport() {
-  var path = document.getElementById('importPath').value;
-  var meta = document.getElementById('importMeta');
-  if (path.indexOf('future') >= 0) {
-    importFailed = true;
-    importOk = false;
-    meta.classList.remove('show');
-  } else {
-    importFailed = false;
-    importOk = true;
-    meta.classList.add('show');
-  }
   render();
 }
 document.addEventListener('keydown', function (e) {

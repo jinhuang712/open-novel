@@ -198,13 +198,12 @@ var cmds = [
   { cat: '读者预演', name: '运行 ReaderPanel', keys: [] },
   { cat: '读者预演', name: '打开最近 ReaderPanel 报告', keys: [] },
   { cat: '实体', name: '修复 violation(跑一次 cascade)', keys: [] },
-  { cat: '项目', name: '导出当前项目', keys: [] },
   { cat: '项目', name: '删除项目', keys: [], danger: true },
   { cat: '系统', name: '打开 Settings', keys: ['Cmd+,'] },
   { cat: '系统', name: '重置首启提示', keys: [] },
   { cat: '数据', name: '查看审批历史', keys: [] }
 ];
-var recent = ['项目: 创建项目(5 分钟前)', '项目: 导出当前项目'];
+var recent = ['项目: 创建项目(5 分钟前)', '数据: 查看审批历史'];
 var sel = 0;
 function renderPal() {
   var q = document.getElementById('palInput').value.trim();
@@ -214,7 +213,7 @@ function renderPal() {
   var html = '';
   if (q) {
     html += '<div class="pal-group">匹配命令 (' + hits.length + ')</div>';
-    if (!hits.length) html += '<div class="pal-empty">没有匹配的命令 — 试试 设置 / 章节 / 导出</div>';
+    if (!hits.length) html += '<div class="pal-empty">没有匹配的命令 — 试试 设置 / 章节 / 审批</div>';
     hits.forEach(function (c, i) {
       var name = q ? c.name.split(q).join('<mark>' + q + '</mark>') : c.name;
       html += '<div class="pal-row' + (i === sel ? ' sel' : '') + '" onclick="sel=' + i + ';renderPal()">'

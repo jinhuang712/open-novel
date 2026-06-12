@@ -92,16 +92,15 @@ Editor undo 不是历史回滚。用户撤销一个已 journal committed 的 lig
 
 项目事实库里的审批历史、版本指纹、obligation、lease 和恢复账本不可完全从 Markdown 文件重建。只要这些真源记录损坏、丢失或校验失败,项目进入 `facts-degraded` 模式。
 
-`facts-degraded` 下,作者文件仍可只读打开,用户可以导出正文、查看可解析 frontmatter,并选择恢复路线;系统必须阻断新的可写 Agent turn、审批应用、自动 cascade 和会改写项目事实的 repair。派生索引可以重建,但重建结果不得伪装成丢失的审批历史或 obligation。
+`facts-degraded` 下,作者文件仍可只读打开,用户可以直接取用正文文件、查看可解析 frontmatter,并选择恢复路线;系统必须阻断新的可写 Agent turn、审批应用、自动 cascade 和会改写项目事实的 repair。派生索引可以重建,但重建结果不得伪装成丢失的审批历史或 obligation。
 
-`facts-degraded` 只有两条显式出路:
+`facts-degraded` 只有一条显式出路:
 
 | 出路 | 结果 |
 |---|---|
-| 从 R02 备份恢复项目事实账本 | 恢复审批历史、版本指纹、obligation 和 lease/repair 水位;恢复后按 manifest 校验并 reindex。 |
 | 以作者文件为准重建最小事实库 | 正文和设定继续作为事实;审批历史、obligation 解决状态和旧版本指纹标记为 lost,相关能力降级,后续变更从新账本向前追加。 |
 
-两条出路都必须留下用户可见记录,说明哪些事实被恢复、哪些历史不可恢复、哪些审批或 obligation 已失效。
+这条出路必须留下用户可见记录,说明哪些事实被保留、哪些历史不可恢复、哪些审批或 obligation 已失效。
 
 ## 项目拓扑
 
@@ -160,12 +159,12 @@ sequenceDiagram
 | 情况 | 存储层处理 |
 |---|---|
 | frontmatter 合法 | 文件进入项目事实和索引刷新路径 |
-| frontmatter 缺失但可识别 | 提示修复或进入受限导入流程 |
+| frontmatter 缺失但可识别 | 提示修复或进入受限识别流程 |
 | frontmatter 损坏 | 阻断高风险生成,不把文件当可信事实 |
 | 文件标记为派生 | 防止派生内容伪装成作者原始事实 |
 | 编码/换行不一致 | 只做不改变语义的归一化 |
 
-文件可读不等于模型可随意相信。导入资料、用户粘贴正文和外部编辑内容仍是普通内容,不能变成系统指令。
+文件可读不等于模型可随意相信。外部粘贴或拖入的资料、用户粘贴正文和外部编辑内容仍是普通内容,不能变成系统指令。
 
 ## 外部编辑的冲突判定
 
@@ -195,7 +194,7 @@ stateDiagram-v2
 | reindex 失败 | 作者文件已生效 | 索引过期,查询/高亮降级 | 重新索引 |
 | internal recovery 快照缺失 | 已生效变更保留 | 无法自动生成反向修正 | 人工处理并重新索引 |
 | 外部编辑冲突 | 外部文件事实优先 | 待审批内容失效 | 重新生成 proposal |
-| 项目事实库真源损坏 | 作者文件仍优先 | facts-degraded,写入和审批阻断 | 备份恢复账本或以文件为准重建最小事实库 |
+| 项目事实库真源损坏 | 作者文件仍优先 | facts-degraded,写入和审批阻断 | 以作者文件为准重建最小事实库 |
 
 ## 与其他 spec 的握手
 
@@ -205,7 +204,7 @@ stateDiagram-v2
 | [S06](./S06-knowledge-graph.md) | 文件变更范围、版本、派生写入边界 | reindex 健康度和过期范围 |
 | [S07](./S07-context-management.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
 | [S14](./S14-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
-| [S15](./S15-settings-and-onboarding.md) | workspace/project 生命周期结果 | 导入、导出、删除等危险操作确认 |
+| [S15](./S15-settings-and-onboarding.md) | workspace/project 生命周期结果 | 删除等危险操作确认 |
 | [I03](./platform/I03-filesystem-and-watcher.md) | watcher cursor、外部编辑事件和 lease loss | 平台层不能绕过存储写入权 |
 | [R01](./platform/R01-project-lifecycle.md) | 打开、关闭、接管和恢复流程 | 项目 open/close 必须尊重 lease |
 

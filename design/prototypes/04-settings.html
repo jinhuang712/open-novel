@@ -148,9 +148,9 @@
 
       <div class="pane">
         <div id="p1">
-          <div class="scope-banner">🌐+📂 <b>全局 + 当前项目</b> — workspace 是项目事实、导入恢复和权限检查的入口</div>
-          <div class="section-title" data-search="workspace path writable import project package 新建项目 导入项目包 恢复预览">
-            <div><h3>Workspace 与项目入口</h3><p>路径检查通过后才保存;导入默认另存副本,覆盖必须先看恢复预览。</p></div>
+          <div class="scope-banner">🌐+📂 <b>全局 + 当前项目</b> — workspace 是项目事实和权限检查的入口</div>
+          <div class="section-title" data-search="workspace path writable 新建项目">
+            <div><h3>Workspace 与项目入口</h3><p>路径检查通过后才保存。</p></div>
             <span class="badge badge-success">可写 · 2 个项目</span>
           </div>
           <div class="field" data-search="workspace path finder migrate writable permission">
@@ -164,16 +164,6 @@
               <div class="desc">进入开书向导,生成世界/角色/大纲 proposal,不直接落盘。</div>
               <button class="btn btn-sm" style="margin-top:9px">新建项目</button>
             </div>
-            <div class="control-card" data-search="import project package manifest conflict duplicate">
-              <b>导入项目包</b>
-              <div class="desc">先读 manifest 与版本,同 project id 默认另存副本。</div>
-              <button class="btn btn-sm" style="margin-top:9px" onclick="showImportPreview()">选择 .onovelpkg…</button>
-            </div>
-          </div>
-          <div class="danger-zone" id="importPreview" style="display:none;margin-bottom:18px" data-search="导入冲突 manifest 恢复预览 覆盖 另存副本">
-            <h4>导入预览</h4>
-            <div class="danger-row"><span>检测到同 project id:重生互联网 · 导出于 2026-06-10 21:40</span><span class="badge badge-warning">默认另存副本</span></div>
-            <div class="danger-row"><button class="btn btn-sm">另存副本</button><button class="btn btn-sm">进入覆盖恢复预览</button><button class="btn btn-ghost btn-sm">取消</button></div>
           </div>
         </div>
 
@@ -197,7 +187,7 @@
           </div>
           <div class="field" style="opacity:.55">
             <label>外部研究与素材搜索</label>
-            <div class="input"><input type="text" value="不内置联网研究;外部材料请手动导入工作区" disabled> <span class="badge badge-neutral">不提供</span></div>
+            <div class="input"><input type="text" value="不内置联网研究;外部材料请手动放入工作区" disabled> <span class="badge badge-neutral">不提供</span></div>
           </div>
         </div>
 
@@ -380,7 +370,7 @@
           </div>
           <div class="field">
             <label>当前项目〈重生互联网〉(📂)</label>
-            <div class="input"><button class="btn btn-sm">改名</button><button class="btn btn-sm">归档(可随时恢复)</button><button class="btn btn-sm">导出 zip(含 index.db)</button></div>
+            <div class="input"><button class="btn btn-sm">改名</button><button class="btn btn-sm">归档(可随时恢复)</button></div>
           </div>
           <div class="danger-zone">
             <h4>危险区域</h4>
@@ -418,8 +408,6 @@
     <div class="dlg-foot">
       <span class="dirty-note"><i></i>2 个 section 未保存:<span class="override">API Keys</span>、<span class="override">风格定制</span></span>
       <div class="grow"></div>
-      <button class="btn btn-sm">导入</button>
-      <button class="btn btn-sm">导出</button>
       <button class="btn">取消</button>
       <button class="btn btn-primary">应用</button>
     </div>
@@ -511,11 +499,6 @@ function searchKey(e) {
     e.currentTarget.value = '';
     filterNav('');
   }
-}
-function showImportPreview() {
-  var preview = document.getElementById('importPreview');
-  preview.style.display = '';
-  showPane('p1', preview);
 }
 function lockRule(btn) {
   btn.blur();

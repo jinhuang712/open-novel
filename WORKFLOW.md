@@ -42,8 +42,8 @@ flowchart LR
 |---|---|---|---|
 | `Sxx` | `spec/` 根层 | System Design | 系统主权、跨层契约、运行时、存储、上下文、底层协议 |
 | `Mxx` | `spec/` 根层 | User-facing Capability | 用户可触发、可感知、可验收的能力闭环 |
-| `Ixx` | `spec/platform/` | Integration Contract | 模型、编辑器、文件系统、导入导出、桌面壳、第三方服务等跨边界接入 |
-| `Rxx` | `spec/platform/` | Reliability / Runtime Operations | 生命周期、备份恢复、迁移升级、索引修复、诊断排障 |
+| `Ixx` | `spec/platform/` | Integration Contract | 模型、编辑器、文件系统、桌面壳、第三方服务等跨边界接入 |
+| `Rxx` | `spec/platform/` | Reliability / Runtime Operations | 生命周期、迁移升级、索引修复、诊断排障 |
 | `Axx` | `spec/appendix/` | Appendix Implementation Detail | 表结构、schema、事件、工具、prompt、迁移字段等实现明细 |
 | `Vxx` | `spec/appendix/` | Verification Detail | 测试矩阵、golden cases、外部能力 spike、实查记录 |
 | `Pxxx` | `progress/` | Progress Record | 历史进度、迁移记录、复盘归档 |
