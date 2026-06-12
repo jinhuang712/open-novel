@@ -14,7 +14,7 @@
 - editor IME、focus trap、shortcut conflict、undo 测试。
 - Universal Search: `Shift+Shift`、分组排序、hover preview、索引降级和 pending approval 只读限制。
 - Project Library: 单窗口项目切换 preflight、active turn/pending approval/未保存编辑收口、runtime/history 分桶、样例/真实项目隔离和切换恢复。
-- Discuss Mode: 只读边界、来源缺口、升级到 Planning/Writing、Trace 解释。
+- Discuss Mode: 只读边界、来源缺口、升级到 Planning/Writing、Trace 解释、默认不学习和显式记忆候选。
 - Trace Observability: 可见层级、断线恢复、降级解释、隐私遮蔽。
 - Approval Cascade: Search 发起写入、低置信项、关闭 pending、pending 写入锁、internal recovery / reindex 失败收场。
 - Turn Recap: append-only 时间线、正常/停止/失败/待审/已落盘 recap、作者备注、forward-only 修正和续接入口。
@@ -175,6 +175,8 @@
 | 无逐条注入开关 | UI 和 schema 不出现 inject_enabled / muted / 单条关闭注入字段 |
 | 删除全部经验 | 必须二次确认范围;存在 active turn / pending approval 时先阻断或要求处理 |
 | 学习冲突 | 相似或相反经验进入即时裁决或预设策略路径,不得进入 Settings 常驻队列或重复追加噪音经验 |
+| Discuss 默认不学习 | 普通讨论、方案比较、过程追问和临时偏好不生成经验候选 |
+| Discuss 显式记忆 | 用户说“记住这个/以后都这样/把这条当规则”时生成可见经验候选,但不直接确认为长期经验 |
 
 ## Settings / Developer Mode 验证项
 

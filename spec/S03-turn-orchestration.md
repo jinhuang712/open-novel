@@ -137,7 +137,7 @@ Discuss Mode 是 Router action 中最严格的只读分支,详见 [M04 · Discus
 
 | 当前模式 | 可生成什么 | 必须阻断什么 |
 |---|---|---|
-| Discuss | answer/report、只读查询、切换建议 | 任何写入、ChangeSet、inline accept 和经验沉淀。 |
+| Discuss | answer/report、只读查询、切换建议、显式记忆意图产生的经验候选 | 任何写入、ChangeSet、inline accept 和从普通闲聊自动学习。 |
 | Planning | 设定、结构、角色、关系、伏笔、世界规则 proposal,以及随 cascade 审批的机械一致性正文项 | 正文创作、场面/对白/情绪/节奏重写。 |
 | Writing | 正文草稿、正文改写、轻量表达修改、读者/守则报告 | 直接改设定、治理实体、改变世界规则。 |
 
