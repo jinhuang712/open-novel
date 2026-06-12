@@ -38,6 +38,13 @@
 - `TODO.md`: 当前开放问题和实施前验证项。
 - `CHANGELOG.md`: 跨文档变更流水线。
 
+TODO / progress / CHANGELOG 职责边界:
+
+- TODO 清空必须先把已裁决项迁入稳定主权文档,或把实现期验证迁入明确的 `Vxx` 门禁;只有 `TODO.md` 不再提供额外判断价值时,才清空活跃区。
+- 真实工程验证交给真正实现阶段执行;文档阶段只记录验证归口、触发点、关闭条件和失败后回写位置。
+- `progress/` 只保存历史档案、复盘和已经批准的阶段计划快照;不承担 rolling checklist、当前任务板或实现阶段唯一入口。
+- 被新裁决取代的 progress 计划应标为历史草案/废止,或在无当前链接依赖时删除,并同步 `progress/README.md`。
+
 文档规则:
 
 - **图表一律使用 mermaid 代码块**(```mermaid fence)。整个仓库不允许 ASCII 框图 / 文字版流程图;目录树文件列举(`├──` 风格)按文件列表对待,可保留在普通代码块中。
@@ -162,6 +169,16 @@ plan 禁止出现:
 - 主会话/整合者负责 commit 与 push;subagent/子代理只改文件或报告结果,不得自行 commit/push。
 - 如果用户明确指定当前会话为 subagent、worker 或要求不要提交,按用户指令保留未提交变更并在回复中说明。
 - 不要回滚用户或其他 agent 的无关改动。
+
+## 多 agent / worktree 协作
+
+多文档批量任务默认使用 multi subagents + git worktree 工作法:
+
+- 每个 agent 使用独立 git worktree 和独立分支,文件集尽量互不重叠。
+- subagent/子代理只改分配文件并报告结果;除非用户明确授权,不得自行 commit、push 或改共享入口文件。
+- 共享文件(`README.md`、`TODO.md`、`CHANGELOG.md`、索引类文档、章程文件)由主会话/整合者统一收口,或明确只交给一个 agent。
+- 每个 TODO 或主题单独形成一个提交;不要把多个无关裁决、修复和索引调整挤进同一提交。
+- 主会话合并各 worktree 后,统一跑全局文档 lint、链接检查、`git diff --check` 和章程一致性检查,再按主题提交并 push。
 
 ## 文档职责边界
 

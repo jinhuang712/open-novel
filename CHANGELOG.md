@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/workflow · multi subagents + git worktree 工作法
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将本轮形成的实践落入工作流:多文档批量任务默认使用 multi subagents + 独立 git worktree,subagent 只改分配文件并报告结果,共享入口由主会话收口,每个 TODO/主题单独提交;TODO 清空流程要求先迁入主权文档或 Vxx 门禁,progress 不承担 rolling checklist。 | `WORKFLOW.md` `AGENTS.md` `CLAUDE.md` | 用户要求“任何过程中觉得很好的实践,都可以落地到 workflow 文件”。 |
+
 ## 2026-06-13 · docs/progress · TODO-P1-48 P010 归属裁决
 
 | 变更 | 影响文档 | 关联 |
