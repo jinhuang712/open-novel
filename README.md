@@ -40,7 +40,7 @@
 | 存储 | Markdown(产物) + SQLite 三库 | `runtime.db` 跨项目会话 / `index.db` 每项目知识图谱 / `session_history.db` 每项目过程数据 |
 | 包管理 | pnpm | |
 
-技术路线入口见 [spec/S00-system-contract](./spec/S00-system-contract.md)。表结构、schema、工具、prompt、测试和审计明细的归口见 [spec appendix](./spec/appendix/README.md);旧细节原文已归档,需要时再抽取成当前明细。
+技术路线入口见 [spec/S00-system-contract](./spec/S00-system-contract.md)。表结构、schema、工具、prompt、测试和审计明细的归口见 [spec appendix](./spec/appendix/README.md)。
 
 ## 文档状态
 
@@ -53,7 +53,7 @@
 - **系统设计**: `S00-S15` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
 - **能力闭环**: `M01-M17` 写用户可触发、可感知、可验收的完整能力
 - **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
-- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文归 [progress archive](./progress/spec-archive/2026-06-11-pre-core-spec-details/README.md),具体有效明细按需抽取
+- **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文已清理,不再保留
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
 - **项目存储主权**: 项目文件、项目事实库和派生索引由 [spec/S01](./spec/S01-project-storage.md) 定义
 - **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S04](./spec/S04-turn-orchestration.md) 定义

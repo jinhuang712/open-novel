@@ -29,6 +29,4 @@
 
 ## 专题归档
 
-| 目录 | 内容 | 当前主权 |
-|---|---|---|
-| [spec-archive/2026-06-11-pre-core-spec-details](./spec-archive/2026-06-11-pre-core-spec-details/README.md) | 2026-06-11 根层 spec 二层重整前的 29 篇旧 spec 原文 | 当前技术契约以 [spec/S00](../spec/S00-system-contract.md) 和 [spec appendix](../spec/appendix/README.md) 为准 |
+2026-06-11 根层 spec 二层重整前的 29 篇旧 spec 原文已清理,不再保留;当前技术契约以 [spec/S00](../spec/S00-system-contract.md) 和 [spec appendix](../spec/appendix/README.md) 为准。

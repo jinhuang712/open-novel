@@ -20,7 +20,7 @@
 
 ## 历史原文
 
-旧 29 篇 spec 原文已归档到 [progress/spec-archive/2026-06-11-pre-core-spec-details](../../progress/spec-archive/2026-06-11-pre-core-spec-details/README.md)。它们只用于追溯和抽取细节,不再作为 active appendix 或当前契约入口。
+旧 29 篇 spec 原文已清理,不再保留。有效明细已抽取进当前 appendix,当前契约入口以根层 spec 与本目录为准。
 
 ## 边界
 

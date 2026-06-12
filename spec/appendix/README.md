@@ -2,7 +2,7 @@
 
 appendix 只承接实现者偶尔需要查的机器级明细。读者不需要先读 appendix 才能理解系统;系统主路径、设计取舍、职责边界、失败语义和用户可见结果必须在根层 `spec/Sxx` / `spec/Mxx` 或 `spec/platform/Ixx` / `spec/platform/Rxx` 讲清。
 
-当前 appendix 只保留两类编号:`Axx` 是实现明细,`Vxx` 是验证明细。旧 29 篇原文已迁出 active appendix;后续需要具体字段、schema、工具参数、prompt、golden case 或测试矩阵时,从历史归档抽取仍有效内容,整理进这里对应分类。
+当前 appendix 只保留两类编号:`Axx` 是实现明细,`Vxx` 是验证明细。旧 29 篇原文已清理,不再保留;具体字段、schema、工具参数、prompt、golden case 或测试矩阵按实现需要直接补进这里对应分类。
 
 ## Active Appendix 范围
 
@@ -19,15 +19,15 @@ appendix 不保存:
 - 已关闭问题、旧 MVP/Phase/Wave/Wn 计划。
 - 未验证事实伪装成当前契约。
 
-旧 29 篇 spec 原文已作为历史材料归档到 [progress/spec-archive/2026-06-11-pre-core-spec-details](../../progress/spec-archive/2026-06-11-pre-core-spec-details/README.md)。它们不是 active appendix,不再作为当前 spec 的阅读入口。
+旧 29 篇 spec 原文已清理,不再保留,不再作为当前 spec 的阅读入口。
 
-## 抽取完成口径
+## 补全口径
 
-历史归档不再需要被“整理完”才能开始实现。实现某个 `S/M/platform` 文档前,只需要按下表把该能力的必要字段、schema、事件、工具、prompt、测试和外部 spike 抽到对应 A/V 文件;没有被实现触发的旧细节继续留在历史归档,不进入 active appendix。
+实现某个 `S/M/platform` 文档前,只需要按下表把该能力的必要字段、schema、事件、工具、prompt、测试和外部 spike 补到对应 A/V 文件;没有被实现触发的明细不进入 active appendix。
 
 ## 最小接口先行
 
-开始实现任何可写 vertical slice 前,必须先补齐该 slice 的最小实现接口,而不是把历史 appendix 全量搬回来。
+开始实现任何可写 vertical slice 前,必须先补齐该 slice 的最小实现接口。
 
 | slice 需要什么 | 归口 |
 |---|---|
@@ -38,7 +38,7 @@ appendix 不保存:
 | prompt template id、公共片段和模板全文 | `A05` |
 | 测试矩阵、golden case、外部 spike | `V01` / `V02` / `V03` |
 
-没有被当前 slice 触发的旧细节继续留在历史归档。appendix 不是“先补完整再开工”的大仓库,而是每个实现入口的最小接口闸门。
+appendix 不是“先补完整再开工”的大仓库,而是每个实现入口的最小接口闸门。
 
 | 触发场景 | 必补 appendix | 关闭标准 |
 |---|---|---|
@@ -48,7 +48,7 @@ appendix 不保存:
 | 新增或实现一个 `platform/Rxx` 恢复/迁移契约 | `A01` / `A03` / `A06` / `V01`;不可恢复或迁移风险补 `V03` | 失败收场在 platform,持久化、事件、迁移和验证细节在 appendix |
 | 修改风险等级、审批、写入或取消语义 | `A02` / `A03` / `V01` | 根层行为和 appendix 枚举/事件/测试同步,不出现只有一边更新 |
 
-若某个旧归档细节无法归入上表,默认不抽取。它要么是历史叙事,要么需要先回到根层 spec/platform 重新定义行为意义。
+若某个明细无法归入上表,默认不进入 appendix;它需要先回到根层 spec/platform 重新定义行为意义。
 
 ## 分类索引
 
