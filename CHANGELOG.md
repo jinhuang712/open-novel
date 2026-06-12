@@ -1,5 +1,12 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/audit · plan/spec/design 架构审计 TODO 回填
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将本轮 plan/spec/design 只读审计发现的活跃架构缺陷回填到 `TODO.md`,按 P0/P1/P2 分级记录主权文档、不能直接关闭的原因和关闭条件。 | `TODO.md` `README.md` | 用户要求“都记到 todo 里面去”。 |
+| TODO 状态从“当前无活跃开放项”改为“活跃架构审计项”,覆盖轻量写入事务、模式跨界、审批 atomic group、运行时门禁、prompt 优先级、recap 生命周期、索引 blocked、Settings/Onboarding/design 原型一致性等问题族。 | `TODO.md` | 后续可按 TODO 拆文档修复批次。 |
+
 ## 2026-06-12 · docs/todo · TODO 空态清理
 
 | 变更 | 影响文档 | 关联 |

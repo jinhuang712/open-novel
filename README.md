@@ -80,7 +80,7 @@ pnpm dev
 ├── WORKFLOW.md                # 文档与实现协作流程
 ├── AGENTS.md                  # Agent 工作规范(与 CLAUDE.md 内容一致)
 ├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
-├── TODO.md                    # 当前无活跃开放项 + 新增规则
+├── TODO.md                    # 当前活跃架构审计项 + 新增规则
 ├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 产品 PRD(纯产品定义)
 ├── spec/                      # 核心技术文档(S/M) + platform/ + appendix/
@@ -210,7 +210,7 @@ pnpm dev
 
 ### 项目档案
 
-- [TODO.md](./TODO.md) — 当前无活跃开放项与新增规则
+- [TODO.md](./TODO.md) — 当前活跃架构审计项与新增规则
 - [CHANGELOG.md](./CHANGELOG.md) — 跨文档变更流水线
 - [WORKFLOW.md](./WORKFLOW.md) — 文档与实现协作流程
 - [AGENTS.md](./AGENTS.md) / [CLAUDE.md](./CLAUDE.md) — Agent 工作规范(两份内容一致)
