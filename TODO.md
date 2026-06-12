@@ -13,7 +13,6 @@
 
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
 |---|---|---|---|---|
-| TODO-P1-48【裁决】 | P010 实施计划的归属需要定方向:progress 规则说 progress 只做历史档案,但 P010 写明会随实现进度勾选,承担 active checklist。 | [progress/README](./progress/README.md) · [P010](./progress/P010-implementation-plan.md) · [WORKFLOW](./WORKFLOW.md) | 这会影响 TODO、CHANGELOG、progress 的职责边界。可选方向是把 P010 改成一次性实施计划快照,或把 active checklist 迁出 progress 成为独立实施跟踪文档。 | 用户裁决后,修订 P010/progress README/README 导航和后续阶段更新规则。 |
 
 ## P0 · 设计原型覆盖
 

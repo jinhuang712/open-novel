@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/progress · TODO-P1-48 P010 归属裁决
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决 progress 不承担 rolling checklist 或当前实施任务板;P010 改为历史草案 / 已废止占位,移除阶段 checkbox、agent 执行指令、TODO 编号反链和旧实施清单;README 与 progress 索引同步改口。 | `README.md` `progress/README.md` `progress/P010` `TODO.md` | 关闭 TODO-P1-48。 |
+
 ## 2026-06-13 · docs/spec · TODO-P1-60 文件版本与编辑安全
 
 | 变更 | 影响文档 | 关联 |

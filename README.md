@@ -227,7 +227,7 @@ pnpm dev
 - [P007-opencode-borrowings](./progress/P007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
 - [P008-plan-rewrite](./progress/P008-plan-rewrite.md) — plan/ 纯产品 PRD 重写实施计划
 - [P009-pre-implementation-audit](./progress/P009-pre-implementation-audit.md) — 落地前全量架构与设计审计(79 文档通读 + 逐条验证)
-- [P010-implementation-plan](./progress/P010-implementation-plan.md) — 从纯文档到可运行应用的实施计划快照
+- [P010-implementation-plan](./progress/P010-implementation-plan.md) — 历史草案 / 已废止:从纯文档到可运行应用的实施计划草稿
 
 ### 项目档案
 
