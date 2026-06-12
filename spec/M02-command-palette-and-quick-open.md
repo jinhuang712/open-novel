@@ -77,7 +77,7 @@ Command Palette 和 Quick Open 可以有全局入口,但不是全局抢键。快
 | 快捷键 | `Cmd+Shift+P`、`F1`、`Cmd+P`、`>` 前缀切换 |
 | 上下文 | pending approval、输入框聚焦、IME composition |
 | 命令 | 危险命令必须确认或审批 |
-| 审批 | `Cmd+Shift+A` 打开待审卡,不直接同意 |
+| 审批 | 从命令面板打开待审审批卡(无快捷键),不直接同意 |
 | ReaderPanel | 可运行当前章节,也可打开最近报告;无报告时空态 |
 | 打开 | 最近项、章节、设定、角色卡可预览和打开 |
 

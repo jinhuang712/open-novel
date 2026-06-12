@@ -1,5 +1,7 @@
 # P001 — W2: VSCode-Like Shell + EditorAdapter 骨架
 
+> **[归档注]** 本计划于 2026-05 起被文档化路线取代,文中的 W2/W3 等代码里程碑未在本仓库落地;状态行不再维护。
+
 **日期**: 2026-04-29 起 **周次**: W2 **主要 Owner**: `jin.huang@klook.com` **状态**: 进行中
 
 > **[info]** 本条目按 docs-before-code 双 commit 规则于 W2 期前置。后续在末尾追加"实际完成 / 偏差 / 教训"作为 retro。

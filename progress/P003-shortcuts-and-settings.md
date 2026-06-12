@@ -1,5 +1,7 @@
 # P003 — UX 治理: Tab 切模式 + 快捷键 Registry + SettingsDialog 重设计
 
+> **[归档注]** 本计划于 2026-05 起被文档化路线取代,文中的 W2/W3 等代码里程碑未在本仓库落地;状态行不再维护。
+
 **日期**: 2026-04-30 **周次**: (跨期决策,影响 W2-W14 整套 UX 实现) **主要 Owner**: `jin.huang@klook.com` **状态**: docs 写完 / 等用户 approve / 实施分散到多个周
 
 > **[info]** 本条目按 docs-before-code 三段式 (docs → approve → code) 在战略升级 (002) 之后追加。捕捉一类 UX 治理决策,不属于具体周里程碑,但影响 W2 起所有 UX 实现细节。

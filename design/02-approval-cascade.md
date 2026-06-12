@@ -85,7 +85,7 @@ flowchart TB
 - 右对齐主次序:`全选` `全不选`(ghost)→ `拒绝全部 (N)`(danger 描边)→ `同意勾选项 7/9 (Y)`(primary)
 - 同意按钮 disabled 条件:勾选数 = 0,或存在未确认「确认级」风险,或存在「阻断级」风险
 - **拒绝必填反馈**:点拒绝弹 inline 反馈框(textarea + 「为什么拒绝?」占位 + 示例),提交后自动发一条输入条消息驱动 Agent 重做([plan/08 §否决要给理由](../plan/08-approval-and-cascade.md#否决要给理由))
-- 键盘(卡片焦点内,[spec/S14](../spec/S14-editor-and-interaction.md)):`Y` 同意 / `N` 展开拒绝反馈 / `E` 编辑后同意 / `Cmd+Shift+A` cascade 全选同意;inline 编辑中 `Esc` 先取消编辑,否则收回卡片并保持 pending。卡片自动出现后的 600ms 忽略 `Y/E/N`;确认级未勾确认或阻断级存在时 `Y` 不生效。
+- 键盘(卡片焦点内,[spec/S14](../spec/S14-editor-and-interaction.md)):`Y` 同意 / `N` 展开拒绝反馈 / `E` 编辑后同意;卡内全选用鼠标或行动栏「全选」按钮,不配快捷键;inline 编辑中 `Esc` 先取消编辑,否则收回卡片并保持 pending。卡片自动出现后的 600ms 忽略 `Y/E/N`;确认级未勾确认或阻断级存在时 `Y` 不生效。
 
 ## 状态矩阵
 
@@ -98,7 +98,7 @@ flowchart TB
 | ApplyFailed / 部分失败 | 卡片转为失败回执,拆开说明已生效、未生效、索引/恢复状态和下一步;已生效项不得回滚成未审批,未生效项进入重试、修正提案或人工处理 |
 | 拒绝完成 | 卡片折叠为回执「已拒绝,反馈已发给写手」,新一轮生成开始 |
 | 跨进程恢复 | 启动时 hydrate,输入条恢复 banner「有 1 条待审的修改」点击重开卡片 |
-| doom-loop 升级 | 卡头替换为 warning 块「写手与一致性守护者 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/S04](../spec/S04-turn-orchestration.md)) |
+| doom-loop 升级 | 卡头替换为 warning 块「写手与一致性守护者 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/S04](../spec/S04-turn-orchestration.md);收敛上限默认值见 [A04 §用户可见默认值登记](../spec/appendix/A04-tool-catalog.md#用户可见默认值登记)) |
 
 ## 主题适配
 

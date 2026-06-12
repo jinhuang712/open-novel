@@ -46,3 +46,18 @@
 ## 边界
 
 工具参数变化可以只改 appendix。工具是否允许读取、是否允许构造 proposal、是否可能写入、是否触发审批、是否允许二次 LLM 调用或内部恢复,必须在 [S09](../S09-agent-tooling-boundary.md) 及受影响的根层 spec 说明。
+
+## 用户可见默认值登记
+
+散落在 design 文案里的产品行为默认值在此统一登记。默认值在此登记,design 文案引用此表;调整默认值改这里并同步 design。
+
+| 参数 | 默认值 | 语义 | 主权文档 |
+|---|---|---|---|
+| 自动重做收敛上限 | 连续 3 轮 | 写手与一致性守护者连续 3 轮未收敛即停止升级,转人工裁决 | [design/02 §状态矩阵](../../design/02-approval-cascade.md#状态矩阵) |
+| ReaderPanel 最少成功 persona 数 | ≥3 | ≥3 个 persona 成功才聚合报告;<3 标 `insufficient`,不出分类建议 | [design/03 §进行态](../../design/03-reader-panel.md#进行态长任务) |
+| 章节过短阈值 | <800 字 | 章节不足 800 字不跑读者预演,展示空态与继续写作引导 | [design/03 §状态矩阵](../../design/03-reader-panel.md#状态矩阵) |
+| 审批聚焦卡按键忽略窗口 | 600ms | 审批卡自动出现后的 600ms 内忽略 `Y/E/N` 单字母键,防误触 | [design/01 §审批聚焦卡](../../design/01-main-layout.md#审批聚焦卡) |
+| toast 自动消退 | 4s | toast 出现后 4s 自动消退 | [design/01](../../design/01-main-layout.md) |
+| toast 同屏上限 | 3 条 | 同屏最多 3 条 toast,超出排队 | [design/01](../../design/01-main-layout.md) |
+| hover 旁注出现延迟 | 100ms | hover 100ms 后展示旁注 | [design/01](../../design/01-main-layout.md) |
+| hover 旁注收回延迟 | 200ms | 鼠标移出 200ms 后收回旁注 | [design/01](../../design/01-main-layout.md) |
