@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/decision · TODO-P1-46 待审期间只读放行
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决 pending approval 期间项目进入写入锁定、只读放行:搜索、打开、Trace、Discuss 和打开当前审批卡可用;继续写作、改设定、批量改名、跨文档改写、ReaderPanel 写入链路、可写模式切换以及任何新 proposal / ChangeSet 都被阻断。 | `plan/08` `spec/M02` `spec/M04` `spec/M08` `spec/S03` `V01` `TODO.md` | 关闭 TODO-P1-46。 |
+
 ## 2026-06-13 · docs/decision · TODO-P1-45 规划正文连带边界
 
 | 变更 | 影响文档 | 关联 |
