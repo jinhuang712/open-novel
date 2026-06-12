@@ -100,6 +100,19 @@ stateDiagram-v2
 | Editor Interaction | 高亮、旁注、跳转 | 弱化或隐藏过期提示 |
 | Project Storage | 文件变更后触发 reindex | 作品事实保留,索引过期 |
 
+## 影响分析证据门槛
+
+图谱可以提供 entity、relation、timeline、dependency、anchor 和 embedding 候选,但它们能否支撑“全书连带改”必须由 [V03](./appendix/V03-external-spikes.md) 的长篇能力 spike 证明。未通过前,图谱输出只能作为候选证据,不能宣称已经覆盖全部受影响位置。
+
+| 证据能力 | 必须被 spike 覆盖 | 不达标时的降级 |
+|---|---|---|
+| entity / alias 召回 | 改名、别名、称谓变化能跨章节找回相关锚点 | 要求用户确认别名或限制在显式命中范围 |
+| relation / timeline | 关系、状态、时间点变化能按 as-of 语义返回正确候选 | 高风险写作阻断或进入低置信审查 |
+| dependency | 伏笔、承诺、禁忌和世界规则能被关联到来源段落 | cascade 只处理已声明依赖,未声明部分改为提示 |
+| embedding | 语义相似段落能补召回但不制造无来源事实 | 语义召回只作为补充,不进入主权候选 |
+
+如果 spike 暴露系统性漏召回,应先重设计图谱对象、锚点粒度或依赖声明方式,再恢复高风险 cascade。
+
 ## 事故表
 
 | 事故 | 系统状态 | 用户可见 |

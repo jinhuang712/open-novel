@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/gate · 长篇能力成立性门禁
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 将「改完连带改 / 百万字一致性」前置为能力成立性 gate:实施前必须用长篇语料或等价 fixture 证明影响分析召回/精确、分段 delta 稳定性、cascade 成本/延迟。 | `spec/appendix/V03-external-spikes.md` `spec/appendix/V02-golden-cases.md` | TODO-P1-43 进入待实测证据状态。 |
+| S07/S06/S12 写明 gate 未通过时的降级:低置信审查、人工确认、承诺收窄、裁判链重设计或分批 cascade;不得把未验证能力包装成“已全书检查”。 | `spec/S07-context-management.md` `spec/S06-knowledge-graph.md` `spec/S12-creative-engine.md` | 关闭文档缺口,不关闭外部 spike 缺口。 |
+| TODO-P1-43 从“V03 无能力 spike”更新为“gate 已落文档,等待真实 spike 结果回写后关闭”。 | `TODO.md` | 保留为实施前验证项。 |
+
 ## 2026-06-12 · docs/decision · 桌面壳主形态裁决
 
 | 变更 | 影响文档 | 关联 |
