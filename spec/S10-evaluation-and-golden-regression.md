@@ -1,4 +1,4 @@
-# S11 · Evaluation And Golden Regression
+# S10 · Evaluation And Golden Regression
 
 这篇定义 LLM 质量门禁:哪些 prompt/context/runner/tool/quality 改动必须跑 golden,哪些指标会阻断合入,失败后如何收场。Golden case 明细继续归 [V02 · Golden Cases](./appendix/V02-golden-cases.md),测试矩阵和命令归 [V01 · Test Matrix](./appendix/V01-test-matrix.md)。
 

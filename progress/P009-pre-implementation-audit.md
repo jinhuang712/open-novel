@@ -16,7 +16,7 @@
 
 ### AR-01 审批落盘中途 crash 无恢复协议(已对抗验证)
 
-- **证据**:`spec/S01-project-storage.md:64-85` 落盘剧本只定义顺序(校验→写文件→记事实→reindex),无崩溃语义;`S01:127` 称「内部回滚文件或重跑事务」、`S01:129` 又承认「internal recovery 快照缺失」时只能人工处理,而快照何时建、含什么、与 apply 是否同事务,全仓无定义;`spec/S04-turn-orchestration.md:183`「recovery 缺少状态则不重跑」同样悬空。
+- **证据**:`spec/S14-project-storage.md:64-85` 落盘剧本只定义顺序(校验→写文件→记事实→reindex),无崩溃语义;`S01:127` 称「内部回滚文件或重跑事务」、`S01:129` 又承认「internal recovery 快照缺失」时只能人工处理,而快照何时建、含什么、与 apply 是否同事务,全仓无定义;`spec/S03-turn-orchestration.md:183`「recovery 缺少状态则不重跑」同样悬空。
 - **影响**:进程在「写完第 3/7 个文件」或「文件已写、事实库未记」时崩溃,重启后半应用 ChangeSet 会被 S01 冲突规则误判为外部编辑,可能双写或连带误杀其它 pending 审批;多文件 cascade 半应用直接破坏全书一致性且无修复入口。这是 S01 开场承诺「每个事故都有可信收场」中最大的没收场的事故。
 - **改法**:在 S01 定义 apply 协议:(1) apply 前在项目事实库事务性写入 apply journal(ChangeSet id、目标文件清单、每文件前像/后像指纹、快照引用);(2) 逐文件临时文件+rename 原子替换;(3) 事实记录与 journal 完成标记在同一 SQLite 事务提交,作为唯一提交点;(4) 启动时扫描未完成 journal,按指纹判定前滚或回滚;(5) 明确审批/turn 状态主权落项目事实库,runtime/session 只是投影。A01 落字段,V01 加 crash 注入测试。
 
@@ -26,11 +26,11 @@
 
 ### AR-02 长任务执行宿主无主权定义(已对抗验证)
 
-`spec/S05-streaming-ui-protocol.md:93` 承诺断线恢复「不重跑 Agent,只恢复订阅」,预设了独立于客户端连接的服务端执行宿主,但没有任何文档定义 runner run 归属哪个执行上下文。Next.js 下最自然的写法(SSE route handler 内跑 model loop)会让刷新/断网杀死 turn,dev 热重载清空内存态,恢复路径整体不成立;进程崩溃后 running turn 如何标记也无人定义。`V03` 只 spike 了 better-sqlite3,没有长流式承载 spike。**改法**:S03(或新增 platform 契约)定义 run execution host——turn 被接受后由进程内后台执行器持有,SSE 仅是只读订阅;进程重启后对持久 running turn 标记 interrupted,不自动重跑;V03 增加承载方式与热重载存活 spike。
+`spec/S04-streaming-ui-protocol.md:93` 承诺断线恢复「不重跑 Agent,只恢复订阅」,预设了独立于客户端连接的服务端执行宿主,但没有任何文档定义 runner run 归属哪个执行上下文。Next.js 下最自然的写法(SSE route handler 内跑 model loop)会让刷新/断网杀死 turn,dev 热重载清空内存态,恢复路径整体不成立;进程崩溃后 running turn 如何标记也无人定义。`V03` 只 spike 了 better-sqlite3,没有长流式承载 spike。**改法**:S03(或新增 platform 契约)定义 run execution host——turn 被接受后由进程内后台执行器持有,SSE 仅是只读订阅;进程重启后对持久 running turn 标记 interrupted,不自动重跑;V03 增加承载方式与热重载存活 spike。
 
 ### AR-03 取消语义不完备(已对抗验证)
 
-`spec/S03-agent-runner.md:73` 状态机唯一通向 Stopped 的迁移是 `CallingModel --> Stopped`;ToolRequested(含数十秒的二次 LLM 调用)、Validating、Repairing 中取消行为未定义,`S04:160` 取消表也没有「工具执行中」一行。同篇还自相矛盾:`S03:135` 把 cancel 列入 failure 枚举,`S03:79` 又说「Stopped 不是失败」。**改法**:所有非终态可达 Stopped;S03/S09 定义 in-flight tool 取消策略(read/query 立即 abort、二次 LLM 透传 abort、不可中止的等待但弃用结果并记 cancelled);runner result 增加独立 stopped 类型;被取消 step 仍写入 S10 证据。
+`spec/S02-agent-runner.md:73` 状态机唯一通向 Stopped 的迁移是 `CallingModel --> Stopped`;ToolRequested(含数十秒的二次 LLM 调用)、Validating、Repairing 中取消行为未定义,`S04:160` 取消表也没有「工具执行中」一行。同篇还自相矛盾:`S03:135` 把 cancel 列入 failure 枚举,`S03:79` 又说「Stopped 不是失败」。**改法**:所有非终态可达 Stopped;S03/S09 定义 in-flight tool 取消策略(read/query 立即 abort、二次 LLM 透传 abort、不可中止的等待但弃用结果并记 cancelled);runner result 增加独立 stopped 类型;被取消 step 仍写入 S10 证据。
 
 ### AR-04 全链路无超时/心跳/watchdog(已对抗验证)
 
@@ -46,7 +46,7 @@
 
 ### AR-07 持久 turn 状态无库归属
 
-`spec/S00-system-contract.md:85-89` 把「持久 turn 状态」列为主权层,但 `spec/S02-runtime-state.md:38-43` 三库职责表没有它的归属行(runtime.db 只写「跨项目会话恢复状态」)。pending approval、active turn 若落全局 runtime.db,会与「审批后事实在项目库」「项目包导出可带走全部状态」冲突。**改法**:S02 三库表补「持久 turn 状态」行,明确落项目事实库(随项目迁移),runtime.db 只存跨项目恢复指针;A01 落表归属。
+`spec/S00-system-contract.md:85-89` 把「持久 turn 状态」列为主权层,但 `spec/S01-runtime-state.md:38-43` 三库职责表没有它的归属行(runtime.db 只写「跨项目会话恢复状态」)。pending approval、active turn 若落全局 runtime.db,会与「审批后事实在项目库」「项目包导出可带走全部状态」冲突。**改法**:S02 三库表补「持久 turn 状态」行,明确落项目事实库(随项目迁移),runtime.db 只存跨项目恢复指针;A01 落表归属。
 
 ### AR-08 动作队列与多审批卡无 spec 承接
 

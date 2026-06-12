@@ -1,6 +1,6 @@
 # M09 · Trace Observability
 
-Trace Observability 解释作者如何看见 Agent 过程。根层 [Streaming UI Protocol](./S05-streaming-ui-protocol.md) 定义事件和状态恢复;本篇定义 Trace 作为用户可读产品能力的闭环。
+Trace Observability 解释作者如何看见 Agent 过程。根层 [Streaming UI Protocol](./S04-streaming-ui-protocol.md) 定义事件和状态恢复;本篇定义 Trace 作为用户可读产品能力的闭环。
 
 ## Trace 的产品目标
 

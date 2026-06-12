@@ -7,7 +7,7 @@
 - stream progress / output / control / diagnostic 事件字段。
 - turn lifecycle 事件。
 - approval、cancel、internal recovery 事件。
-- apply journal、light apply、mode gate、interrupted run、manual recovery 事件。
+- write/apply record、light apply、mode gate、interrupted run、manual recovery 事件。
 - approval queue、approval invalidated、obligation opened/resolved/invalidated、rejection redo 事件。
 - recap created、author note added、correction requested、continuation selected 事件。
 - trace、tool run、LLM call、cost、canonical agent role 事件。
@@ -17,11 +17,11 @@
 
 ## 对应核心文档
 
-- [S04 Turn Orchestration](../S04-turn-orchestration.md)
-- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [S14 Editor And Interaction](../S14-editor-and-interaction.md)
+- [S03 Turn Orchestration](../S03-turn-orchestration.md)
+- [S04 Streaming UI Protocol](../S04-streaming-ui-protocol.md)
+- [S13 Editor And Interaction](../S13-editor-and-interaction.md)
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
-- [S02 Runtime State](../S02-runtime-state.md)
+- [S01 Runtime State](../S01-runtime-state.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
@@ -34,15 +34,15 @@
 | 能力/平台 | 事件族 |
 |---|---|
 | Turn / Stream | turn created、state changed、step started/finished、control emitted、stream recovered |
-| Turn / Journal / Recovery | apply prepared/file-applied/committed、light apply accepted、mode changed/blocked、run interrupted、manual recovery opened |
+| Turn / Write Record / Recovery | write prepared/file-applied/committed、light apply accepted、mode changed/blocked、run interrupted、manual recovery opened |
 | Approval / Cascade | changeset created、approval opened/closed、decision submitted、internal recovery needed、reindex state changed、apply failed/degraded |
 | Approval Queue / Obligation | approval enqueued、approval focused、approval invalidated、obligation opened/snoozed/resolved/dismissed/invalidated、redo requested |
 | Search / Command / Query | search opened、query submitted、preview requested、result action selected、command executed |
 | Inline Review / Editor | selection captured、suggestion rendered、near-text action selected、editor replace applied、undo bridge recorded |
 | Trace / Recap / Activity | trace step appended、developer detail attached、recap created、author note added、continuation selected |
-| Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent toggled、tier changed |
+| Memory / Reflector / Agent Controls | learning candidate created、learning accepted/muted/deleted、agent tier/frequency/weight changed |
 | Settings / Onboarding / Library | settings saved、danger action confirmed、workspace initialized、project opened/closed |
-| platform/Ixx/Rxx | provider capability checked、watcher event received、import/export completed、backup/restore completed、migration/repair job updated、diagnostics exported |
+| platform/Ixx/Rxx | provider capability checked、watcher event received、migration/repair job updated、diagnostics exported |
 
 ## Agent role id 事件约束
 

@@ -7,7 +7,7 @@
 - Router actions。
 - ChangeSet、dependency group、approval item、residual obligation、internal recovery result。
 - approval queue item、approval invalidation、rejection redo request、no-change-evidence。
-- apply journal entry、light apply transaction、mode gate、cancel plan、interrupted run、obligation state。
+- write/apply record、light apply transaction、mode gate、cancel plan、interrupted run、obligation state。
 - context package、impact analysis result、fact query result。
 - prompt budget envelope、provider failure envelope、embedding capability envelope。
 - tool result envelope。
@@ -22,17 +22,17 @@
 
 ## 对应核心文档
 
-- [S03 Agent Runner](../S03-agent-runner.md)
-- [S04 Turn Orchestration](../S04-turn-orchestration.md)
-- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [S07 Context Management](../S07-context-management.md)
-- [S08 Prompt System](../S08-prompt-system.md)
-- [S09 Agent Tooling Boundary](../S09-agent-tooling-boundary.md)
-- [S10 LLM Quality Harness](../S10-llm-quality-harness.md)
-- [S11 Evaluation And Golden Regression](../S11-evaluation-and-golden-regression.md)
-- [S12 Creative Engine](../S12-creative-engine.md)
-- [S13 Style And Humanizer](../S13-style-and-humanizer.md)
-- [S14 Editor And Interaction](../S14-editor-and-interaction.md)
+- [S02 Agent Runner](../S02-agent-runner.md)
+- [S03 Turn Orchestration](../S03-turn-orchestration.md)
+- [S04 Streaming UI Protocol](../S04-streaming-ui-protocol.md)
+- [S06 Context Management](../S06-context-management.md)
+- [S07 Prompt System](../S07-prompt-system.md)
+- [S08 Agent Tooling Boundary](../S08-agent-tooling-boundary.md)
+- [S09 LLM Quality Harness](../S09-llm-quality-harness.md)
+- [S10 Evaluation And Golden Regression](../S10-evaluation-and-golden-regression.md)
+- [S11 Creative Engine](../S11-creative-engine.md)
+- [S12 Style And Humanizer](../S12-style-and-humanizer.md)
+- [S13 Editor And Interaction](../S13-editor-and-interaction.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M07 Inline Rewrite And Humanizer](../M07-inline-rewrite-and-humanizer.md)
@@ -49,14 +49,14 @@
 | Search / Command | search intent、result group、preview payload、command invocation |
 | Writing / Planning / Approval | proposal draft、ChangeSet、dependency group、approval item、residual obligation、risk acknowledgement、decision payload |
 | Approval Queue / Evidence | pending approval queue item、Invalidated reason、EditedAccepted recheck result、rejection redo payload、no-change-evidence |
-| Turn / Journal / Recovery | apply journal entry、light apply transaction、turn state、mode gate、cancel plan、manual recovery、interrupted run |
+| Turn / Write Record / Recovery | write/apply record、light apply transaction、turn state、mode gate、cancel plan、manual recovery、interrupted run |
 | Inline Review / Humanizer | inline suggestion、diff hunk、near-text action、style report |
 | Creative Engine / ReaderPanel | cardinal rule report、narrative report、reader persona report、aggregation summary |
 | Knowledge / Identity | entity governance proposal、alias status、merge/split preview、obligation list item |
 | Provider / Budget | prompt budget envelope、provider failure envelope、embedding capability envelope、context overflow envelope |
 | Trace / Recap | trace step、developer detail envelope、recap payload、activity item、author note |
 | Settings / Onboarding / Project Library | settings patch、danger action request、workspace bootstrap result、project list item |
-| platform/Ixx/Rxx | provider capability, adapter event, import/export manifest, backup/restore result, migration result, diagnostic bundle manifest |
+| platform/Ixx/Rxx | provider capability, adapter event, manual copy acknowledgement, migration result, diagnostic bundle manifest |
 
 ## 边界
 

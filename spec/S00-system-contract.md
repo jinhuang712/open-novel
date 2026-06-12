@@ -119,11 +119,11 @@ flowchart TB
 
 | 决策 | 当前路线 | 根层关心的理由 |
 |---|---|---|
-| 应用形态 | 桌面壳是唯一主产品形态,采用 Tauri(多端 macOS / Windows / Linux),应用单实例运行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、窗口写入权、journal 和安全凭据,宿主以 Tauri 管理的 sidecar 进程承载(进程形态与 native binding 兼容性经 V03 实查后落定),renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
+| 应用形态 | 桌面壳是唯一主产品形态,采用 Tauri(多端 macOS / Windows / Linux),应用单实例单窗口运行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、写入记录、启动恢复扫描和安全凭据,宿主以 Tauri 管理的 sidecar 进程承载(进程形态与 native binding 兼容性经 V03 实查后落定),renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
 | Agent loop | 自定义 runner 显式控制模型调用、结构化输出、retry、tool loop 和 stream | 不把审批、memory、workflow 交给黑盒框架 |
 | LLM 质量闭环 | runtime validation / creative risk 进入用户请求;harness / golden regression 属于记录、回放和开发期合入门禁 | 运行时失败语义和开发期质量门禁不能混成同一个业务节点 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
-| 状态机实现 | 状态机库只是实现方式;turn、mode、approval、obligation 和 recovery 的主权语义在 S04/S02/S01 | 不能让库名、前端 tab 或临时 UI 状态定义业务结果 |
+| 状态机实现 | 状态机库只是实现方式;turn、mode、approval、obligation 和 recovery 的主权语义在 S03/S01/S14 | 不能让库名、前端 tab 或临时 UI 状态定义业务结果 |
 | UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、Universal Search 和查询浮层暴露 | 过程透明,但不让日志淹没写作 |
 | 明细归口 | 字段、schema、模板全文、工具参数、测试矩阵、golden 明细和 spike 证据进 appendix;接入、恢复、迁移、诊断契约进 platform | 核心 spec 读完必须懂设计,不被字段表打断 |
 
@@ -152,20 +152,20 @@ flowchart TB
 
 | 想理解的问题 | 先读 |
 |---|---|
-| 作品事实怎么保存、外部编辑怎么处理 | [S01 · Project Storage](./S01-project-storage.md) |
-| 系统记住什么、Reflector 关闭是什么意思 | [S02 · Runtime State](./S02-runtime-state.md) |
-| Agent Runner 怎么运行、结构化输出和 retry 怎么收场 | [S03 · Agent Runner](./S03-agent-runner.md) |
-| 一次 turn 怎么审批、取消和收场 | [S04 · Turn Orchestration](./S04-turn-orchestration.md) |
-| UI 怎么看见过程、断线怎么恢复 | [S05 · Streaming UI Protocol](./S05-streaming-ui-protocol.md) |
-| 实体、锚点、embedding 怎么维护 | [S06 · Knowledge Graph](./S06-knowledge-graph.md) |
-| 上下文、分卷、影响分析和 overflow 怎么装配 | [S07 · Context Management](./S07-context-management.md) |
-| prompt 分层、优先级和不可信内容围栏归哪 | [S08 · Prompt System](./S08-prompt-system.md) |
-| 工具白名单、工具失败和二次 LLM 调用归哪 | [S09 · Agent Tooling Boundary](./S09-agent-tooling-boundary.md) |
-| LLM run 如何记录、回放和复现失败 | [S10 · LLM Quality Harness](./S10-llm-quality-harness.md) |
-| golden regression 和质量门禁如何阻断合入 | [S11 · Evaluation And Golden Regression](./S11-evaluation-and-golden-regression.md) |
-| 五大守则和读者预演怎么进入审批 | [S12 · Creative Engine](./S12-creative-engine.md) |
-| 去 AI 味如何不改剧情 | [S13 · Style And Humanizer](./S13-style-and-humanizer.md) |
-| 编辑器、命令、焦点、查询怎么协作 | [S14 · Editor And Interaction](./S14-editor-and-interaction.md) |
+| 系统记住什么、Reflector 关闭是什么意思 | [S01 · Runtime State](./S01-runtime-state.md) |
+| Agent Runner 怎么运行、结构化输出和 retry 怎么收场 | [S02 · Agent Runner](./S02-agent-runner.md) |
+| 一次 turn 怎么审批、取消和收场 | [S03 · Turn Orchestration](./S03-turn-orchestration.md) |
+| UI 怎么看见过程、断线怎么恢复 | [S04 · Streaming UI Protocol](./S04-streaming-ui-protocol.md) |
+| 实体、锚点、embedding 怎么维护 | [S05 · Knowledge Graph](./S05-knowledge-graph.md) |
+| 上下文、分卷、影响分析和 overflow 怎么装配 | [S06 · Context Management](./S06-context-management.md) |
+| prompt 分层、优先级和不可信内容围栏归哪 | [S07 · Prompt System](./S07-prompt-system.md) |
+| 工具白名单、工具失败和二次 LLM 调用归哪 | [S08 · Agent Tooling Boundary](./S08-agent-tooling-boundary.md) |
+| LLM run 如何记录、回放和复现失败 | [S09 · LLM Quality Harness](./S09-llm-quality-harness.md) |
+| golden regression 和质量门禁如何阻断合入 | [S10 · Evaluation And Golden Regression](./S10-evaluation-and-golden-regression.md) |
+| 五大守则和读者预演怎么进入审批 | [S11 · Creative Engine](./S11-creative-engine.md) |
+| 去 AI 味如何不改剧情 | [S12 · Style And Humanizer](./S12-style-and-humanizer.md) |
+| 编辑器、命令、焦点、查询怎么协作 | [S13 · Editor And Interaction](./S13-editor-and-interaction.md) |
+| 作品事实怎么保存、外部编辑怎么处理 | [S14 · Project Storage](./S14-project-storage.md) |
 | 首启、设置、经验管理、危险操作归哪 | [M15 · Onboarding And New Book](./M15-onboarding-and-new-book.md)、[M14 · Settings](./M14-settings.md) |
 | 全局搜索如何查角色、阵营、概念、章节和来源 | [M01 · Universal Search](./M01-universal-search.md) |
 | 命令面板和快速打开如何分工 | [M02 · Command Palette / Quick Open](./M02-command-palette-and-quick-open.md) |

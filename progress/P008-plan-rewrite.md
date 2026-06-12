@@ -1,5 +1,7 @@
 # P008 — plan/ 重写实施计划
 
+> **归档提示:** 本文是 2026-06-11 plan 重写的历史执行快照。文中的 sub-skill 要求、每任务 commit、旧文映射和 checkbox 只解释当时迁移过程,不是当前执行规则;当前工作流以 `README.md`、`WORKFLOW.md`、`AGENTS.md` / `CLAUDE.md`、`TODO.md` 与 `CHANGELOG.md` 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把 plan/ 从 12 篇被技术细节污染的"半技术 PRD"重写为 10 篇纯产品 PRD,技术内容全部迁入 spec/,UI 内容归 design/,并同步章程(README / CLAUDE.md / AGENTS.md)与全仓引用。

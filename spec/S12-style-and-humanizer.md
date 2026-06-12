@@ -1,4 +1,4 @@
-# S13 · Style And Humanizer
+# S12 · Style And Humanizer
 
 这篇只讲表达层。Humanizer 的使命是让文字更像作者、更像这本书、更少 AI 腔;它不是剧情医生,也不是设定编辑器。只要改写触碰事实,它就离开了自己的权限范围。
 

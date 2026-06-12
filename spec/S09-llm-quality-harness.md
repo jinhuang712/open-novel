@@ -1,6 +1,6 @@
-# S10 · LLM Quality Harness
+# S09 · LLM Quality Harness
 
-这篇定义 LLM quality harness:它如何运行真实/模拟任务、记录输入输出、复现失败、为质量门禁提供证据。Harness 是实验室和记录仪,不是质量标准本身;哪些结果通过、阻断或需要人工审查,由 [S11 · Evaluation And Golden Regression](./S11-evaluation-and-golden-regression.md) 定义。
+这篇定义 LLM quality harness:它如何运行真实/模拟任务、记录输入输出、复现失败、为质量门禁提供证据。Harness 是实验室和记录仪,不是质量标准本身;哪些结果通过、阻断或需要人工审查,由 [S10 · Evaluation And Golden Regression](./S10-evaluation-and-golden-regression.md) 定义。
 
 ## Harness 在链路中的位置
 

@@ -1,6 +1,6 @@
 # A04 · Tool Catalog
 
-本 appendix 是工具、命令、快捷键和查询能力参数的归口。[S09 · Agent Tooling Boundary](../S09-agent-tooling-boundary.md) 定义工具能做什么、不能做什么、失败如何处理、二次 LLM 调用如何受控和是否需要审批。
+本 appendix 是工具、命令、快捷键和查询能力参数的归口。[S08 · Agent Tooling Boundary](../S08-agent-tooling-boundary.md) 定义工具能做什么、不能做什么、失败如何处理、二次 LLM 调用如何受控和是否需要审批。
 
 工具/命令族不是 Agent 角色或 runner 清单。工具调用归 S09 授权、S03 执行记录,角色 id 仍以 [M13 · Agent Team Controls](../M13-agent-team-controls.md) 的七个 canonical id 为准。
 
@@ -11,18 +11,18 @@
 - analyzeImpact、assembleContext、queryFacts 工具明细。
 - reindex、anchor health、knowledge graph 查询工具。
 - Validator、Checker 和 BeatAnalyzer 工具参数、风险输出和 failure envelope。
-- Universal Search source fanout、ranker 参数、preview action 和快捷键。
+- Universal Search source fanout、ranker 参数、fact answer/source view、preview action 和快捷键。
 - CommandRegistry、ShortcutRegistry、Quick Open、Discuss Mode 入口全表。
-- Settings / Debug 只读诊断命令。
+- Settings 只读/受限命令、dev build gated Debug 只读诊断命令。
 
 ## 对应核心文档
 
-- [S03 Agent Runner](../S03-agent-runner.md)
-- [S04 Turn Orchestration](../S04-turn-orchestration.md)
-- [S06 Knowledge Graph](../S06-knowledge-graph.md)
-- [S07 Context Management](../S07-context-management.md)
-- [S09 Agent Tooling Boundary](../S09-agent-tooling-boundary.md)
-- [S14 Editor And Interaction](../S14-editor-and-interaction.md)
+- [S02 Agent Runner](../S02-agent-runner.md)
+- [S03 Turn Orchestration](../S03-turn-orchestration.md)
+- [S05 Knowledge Graph](../S05-knowledge-graph.md)
+- [S06 Context Management](../S06-context-management.md)
+- [S08 Agent Tooling Boundary](../S08-agent-tooling-boundary.md)
+- [S13 Editor And Interaction](../S13-editor-and-interaction.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M08 Approval Cascade](../M08-approval-cascade.md)
@@ -39,13 +39,15 @@
 | writer / humanizer tools | 输出形态、diff 约束、守则风险注入、不可越权字段 |
 | validator / checker tools | 检查范围、source refs、风险级别、阻断条件、needs-data/partial failure envelope |
 | BeatAnalyzer | 作为 checker 内部工具记录结构诊断维度、趋势窗口和证据片段,不得作为 role id |
-| search / command tools | 快捷键、命令 id、可用模式、pending approval 下的只读限制 |
+| search / command tools | 快捷键、命令 id、可用模式、pending approval 下的只读限制;Universal Search 是唯一作者侧顶层搜索入口,Quick Open 只做高级打开 |
 | storage / reindex / recovery tools | 原子写边界、reindex 范围、内部恢复结果、用户可见收场 |
-| platform tools | provider probe、watcher setup、diagnostic export 的命令与权限 |
+| platform tools | provider probe、watcher setup、diagnostic export、dev build gate 的命令与权限 |
 
 ## 边界
 
-工具参数变化可以只改 appendix。工具是否允许读取、是否允许构造 proposal、是否可能写入、是否触发审批、是否允许二次 LLM 调用或内部恢复,必须在 [S09](../S09-agent-tooling-boundary.md) 及受影响的根层 spec 说明。
+工具参数变化可以只改 appendix。工具是否允许读取、是否允许构造 proposal、是否可能写入、是否触发审批、是否允许二次 LLM 调用或内部恢复,必须在 [S08](../S08-agent-tooling-boundary.md) 及受影响的根层 spec 说明。
+
+作者可见 UI 命令主标签使用中文。英文 command id 只用于持久化、开发者视图、快捷键说明或必要括注。
 
 ## 用户可见默认值登记
 

@@ -8,30 +8,30 @@
 
 - **前置设定**: 世界观 / 大纲 / 角色 / 节奏 / 爽点的逐项生成与审阅
 - **章节创作**: 一键章节概要 → 一键章节正文 → 一键去 AI 化
-- **改完连带改**: 改了角色性别,系统自动找出所有相关章节段落,整批审批 + 落盘
-- **边写边查**: 设定中的角色名 / 地点名自动高亮 + 跳转引用;`Shift+Shift` 可全局搜索角色、阵营、概念、章节片段
+- **改完连带改**: 改了角色性别,系统列出确定性影响集合,把疑似受影响段落作为低置信候选补充给你,整批审批 + 落盘
+- **边写边查**: 设定中的角色名 / 地点名自动高亮 + 跳转引用;`Shift+Shift` 打开统一搜索,角色、阵营、概念、章节片段与事实答案都从同一入口进入
 - **多项目并行**: 数据互不污染
 
 它不是一键生成器,而是 Agent 提议 + 用户审定 + 系统持久的合伙人。
 
 ## 核心能力
 
-- **AI 角色编辑部** — 七个分工明确的 AI 角色像编辑部一样围着你的书工作,各司其职、可单独开关,详见 [plan/06](./plan/06-agent-team.md)
+- **AI 角色编辑部** — 七个分工明确的 AI 角色像编辑部一样围着你的书工作,各司其职、可单独调档、配置、按需触发或调整频率/权重,详见 [plan/06](./plan/06-agent-team.md)
 - **三种协作姿态** — 讨论(只聊不写)/ 规划(只动设定)/ 写作(产出正文),界限分明,你随时知道 AI 此刻能动什么
 - **审定必经** — AI 只提议,小修改就地确认,连带修改整批审定,没有静默改动
-- **一致性守护** — 改一个设定,全部连锁影响自动找全,一次看全、一次审完
+- **一致性守护** — 改一个设定,确定性影响集合完整列出,疑似语义影响作为低置信候选提示,一次看全、一次审完
 - **五大网文守则** — 黄金三章 / 人设不崩 / 节奏不崩盘 / 期待感必兑现 / 金手指不依赖 自动检测;高风险改动须作者确认后才能通过
 - **叙事力学诊断** — 节奏、爽点密度、章末钩子与角色弧光的持续体检与偏离预警
 - **发布前读者预演** — 一组模拟读者(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)先于真实读者读完本章,给出弃书风险报告
-- **越用越懂你** — 你的每一次修改、采纳与否决都被记住,系统越写越合你的手感
-- **过程透明** — AI 的每一步提议、依据与影响都在侧栏实时可见,每轮结束都有作者看得懂的 recap,不是黑盒出稿
+- **越用越懂你** — 你的审定结果和明确反馈会形成可见经验候选,系统越写越合你的手感
+- **过程透明** — AI 的工作日志、输入材料、动作记录、依据引用与可解释结论都可回看,每轮结束都有作者看得懂的回顾,不是黑盒出稿
 
 ## 技术栈
 
 | 层 | 选型 | 备注 |
 |---|---|---|
 | 前后端 | Next.js 15 + React 19 + TypeScript 5.9 | 单仓单应用 |
-| 桌面壳 | Tauri(多端 macOS / Windows / Linux) | 单实例;执行宿主 sidecar 形态待 V03 实查 |
+| 桌面壳 | Tauri(多端 macOS / Windows / Linux) | 单实例单窗口;二次启动只聚焦既有窗口;执行宿主 sidecar 形态待 V03 实查 |
 | Agent loop | Vercel AI SDK 6 (`generateText` / `streamText` + `stopWhen`) | 单一受控 Runner 契约承载七个 canonical AI 角色,不用 Agent 框架 |
 | LLM | DeepSeek V4 Pro / Flash(直连 API) | Pro=max effort,Flash=default;ctx 1M,max output 384K,原生 JSON mode |
 | 编辑器 | TipTap 3.x + ProseMirror Decorations + Aho-Corasick | 不用 Mention 节点 |
@@ -49,16 +49,17 @@
 
 当前实现方向已统一为:
 
-- **Agent runner**: 单一受控 Runner 契约 + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;run envelope 使用 [M13](./spec/M13-agent-team-controls.md) 的七个 canonical role id,prompt、context、tool、harness 和 golden gate 各有系统主权层
-- **桌面壳与执行宿主**: 桌面壳采用 Tauri(多端 macOS / Windows / Linux),应用单实例运行,多窗口皆为同一宿主的视图;常驻执行宿主以 Tauri 管理的 sidecar 进程承载,进程形态与 native binding 兼容性经 [V03](./spec/appendix/V03-external-spikes.md) 实查后落定,边界见 [I05](./spec/platform/I05-desktop-shell-contract.md)
+- **AI 运行编排**: 单一受控 Runner 契约 + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;运行信封使用 [M13](./spec/M13-agent-team-controls.md) 的七个 canonical role id,prompt、证据包、tool、harness 和 golden gate 各有系统主权层
+- **桌面壳与执行宿主**: 桌面壳采用 Tauri(多端 macOS / Windows / Linux),应用单实例单窗口运行;二次启动只聚焦既有窗口,不创建第二窗口;常驻执行宿主以 Tauri 管理的 sidecar 进程承载,进程形态与 native binding 兼容性经 [V03](./spec/appendix/V03-external-spikes.md) 实查后落定,边界见 [I05](./spec/platform/I05-desktop-shell-contract.md)
 - **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
 - **系统设计**: `S00-S14` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
 - **能力闭环**: `M01-M18` 写用户可触发、可感知、可验收的完整能力
-- **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
+- **平台支撑契约**: 当前 `spec/platform/` 包含 I01/I02/I03/I05 四篇跨边界接入契约,以及 R01/R03/R04/R05 四篇生命周期、迁移、修复和诊断契约;I04/R02 已按用户裁决撤销并保留跳号
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文已清理,不再保留
-- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
-- **项目存储主权**: 项目文件、真源账本(`project.db`)与派生索引(`index.db`,可整库重建)物理分库,由 [spec/S01](./spec/S01-project-storage.md) 定义
-- **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S04](./spec/S04-turn-orchestration.md) 定义
+- **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S01](./spec/S01-runtime-state.md)
+- **项目存储主权**: 项目文件、真源账本(`project.db`)与派生索引(`index.db`,可整库重建)物理分库,由 [spec/S14](./spec/S14-project-storage.md) 定义
+- **编排主权**: user turn / cascade / approval / cancel plan / forward-only 修正由 [spec/S03](./spec/S03-turn-orchestration.md) 定义
+- **开发者诊断入口**: 真实作者包不显示、不可开启;是否编入或暴露由构建/打包配置决定
 - **外部事实审计闸门**: 代码前的外部依赖和运行事实审计由 [spec/S00](./spec/S00-system-contract.md) 统筹,明细见 appendix
 
 ## 文档 lint
@@ -82,9 +83,9 @@ pnpm dev
 ```
 
 首次启动会引导你:
-1. 选 Workspace 路径(默认 `~/.open-novel/workspaces/`)
-2. 在 Settings 中填入 DeepSeek API key
-3. 创建第一个项目
+1. 选择或创建项目,首次可指定本机项目库位置(默认 `~/.open-novel/workspaces/`)
+2. 填入模型服务凭据
+3. 进入主界面;左上角可随时返回项目选择
 
 ## 目录结构
 
@@ -94,7 +95,7 @@ pnpm dev
 ├── WORKFLOW.md                # 文档与实现协作流程
 ├── AGENTS.md                  # Agent 工作规范(与 CLAUDE.md 内容一致)
 ├── CLAUDE.md                  # Claude 入口(与 AGENTS.md 内容一致)
-├── TODO.md                    # 当前活跃架构审计项 + 新增规则
+├── TODO.md                    # 当前活跃验证项、裁决项、文档修复项与新增规则
 ├── CHANGELOG.md               # 跨文档变更流水线
 ├── plan/                      # 产品 PRD(纯产品定义)
 ├── spec/                      # 核心技术文档(S/M) + platform/ + appendix/
@@ -117,7 +118,7 @@ pnpm dev
 - [03-guardrails](./plan/03-guardrails.md) — 产品红线与网文创作守则的唯一出处
 - [04-goals-and-non-goals](./plan/04-goals-and-non-goals.md) — 为谁而做、做什么、明确不做什么
 - [05-story-world](./plan/05-story-world.md) — 六维故事世界如何守住上百万字的前后一致
-- [06-agent-team](./plan/06-agent-team.md) — 七个 AI 角色的分工、边界与开关
+- [06-agent-team](./plan/06-agent-team.md) — 七个 AI 角色的分工、边界与调配
 - [07-collaboration-and-modes](./plan/07-collaboration-and-modes.md) — 讨论 / 规划 / 写作三种协作方式及其边界
 - [08-approval-and-cascade](./plan/08-approval-and-cascade.md) — 整批审批的形态,连带修改如何一次看全审完
 - [09-narrative-and-reader](./plan/09-narrative-and-reader.md) — 叙事力学体检与发布前的模拟读者
@@ -130,41 +131,41 @@ pnpm dev
 #### S · System Design
 
 - [S00-system-contract](./spec/S00-system-contract.md) — 系统总图、三条系统律、跨层主权和审计闸门
-- [S01-project-storage](./spec/S01-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
-- [S02-runtime-state](./spec/S02-runtime-state.md) — 会话、经验、活动记录、过程历史和 Reflector 生命周期
-- [S03-agent-runner](./spec/S03-agent-runner.md) — 受控 runner 生命周期、结构化输出、tool loop、retry 和失败循环
-- [S04-turn-orchestration](./spec/S04-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批、取消和 recap 触发语义
-- [S05-streaming-ui-protocol](./spec/S05-streaming-ui-protocol.md) — 状态点、Trace、Recap ready、事件分层和断线恢复驾驶舱协议
-- [S06-knowledge-graph](./spec/S06-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
-- [S07-context-management](./spec/S07-context-management.md) — Agent 证据包、长篇分卷、影响分析裁判链、事实查询和 overflow 决策
-- [S08-prompt-system](./spec/S08-prompt-system.md) — prompt 分层、优先级、不可信内容围栏和 prompt 变更治理
-- [S09-agent-tooling-boundary](./spec/S09-agent-tooling-boundary.md) — 工具白名单、读/提议/内部工具、工具失败和二次 LLM 调用边界
-- [S10-llm-quality-harness](./spec/S10-llm-quality-harness.md) — 真实/模拟任务 replay、输入输出证据包和失败复现
-- [S11-evaluation-and-golden-regression](./spec/S11-evaluation-and-golden-regression.md) — golden cases、回归门禁、质量指标和 prompt/context 改动验收
-- [S12-creative-engine](./spec/S12-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
-- [S13-style-and-humanizer](./spec/S13-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
-- [S14-editor-and-interaction](./spec/S14-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
+- [S01-runtime-state](./spec/S01-runtime-state.md) — 会话、经验、活动记录、过程历史和 Reflector 生命周期
+- [S02-agent-runner](./spec/S02-agent-runner.md) — 受控 runner 生命周期、结构化输出、tool loop、retry 和失败循环
+- [S03-turn-orchestration](./spec/S03-turn-orchestration.md) — user turn 事务信封、cascade 泳道、审批、取消和 recap 触发语义
+- [S04-streaming-ui-protocol](./spec/S04-streaming-ui-protocol.md) — 状态点、Trace、Recap ready、事件分层和断线恢复驾驶舱协议
+- [S05-knowledge-graph](./spec/S05-knowledge-graph.md) — 正文到事实的图谱管线、锚点健康度和派生索引边界
+- [S06-context-management](./spec/S06-context-management.md) — Agent 证据包、长篇分卷、影响分析裁判链、事实答案和超限决策
+- [S07-prompt-system](./spec/S07-prompt-system.md) — prompt 分层、优先级、不可信内容围栏和 prompt 变更治理
+- [S08-agent-tooling-boundary](./spec/S08-agent-tooling-boundary.md) — 工具白名单、读/提议/内部工具、工具失败和二次 LLM 调用边界
+- [S09-llm-quality-harness](./spec/S09-llm-quality-harness.md) — 真实/模拟任务 replay、输入输出证据包和失败复现
+- [S10-evaluation-and-golden-regression](./spec/S10-evaluation-and-golden-regression.md) — golden cases、回归门禁、质量指标和 prompt / 证据包改动验收
+- [S11-creative-engine](./spec/S11-creative-engine.md) — 五大守则质检室、叙事诊断、读者面板和风险进入审批
+- [S12-style-and-humanizer](./spec/S12-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
+- [S13-editor-and-interaction](./spec/S13-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
+- [S14-project-storage](./spec/S14-project-storage.md) — 事故驱动的作品事实保管协议、落盘剧本和外部编辑冲突
 
 #### M · User-Facing Capability
 
-- [M01-universal-search](./spec/M01-universal-search.md) — Shift+Shift 全局搜索、角色/阵营/概念/章节分组、hover preview 和降级语义
+- [M01-universal-search](./spec/M01-universal-search.md) — Shift+Shift 统一搜索、角色/阵营/概念/章节分组、悬停预览和降级语义
 - [M02-command-palette-and-quick-open](./spec/M02-command-palette-and-quick-open.md) — 命令面板、快速打开、模式切换和快捷命令路由
-- [M03-fact-query](./spec/M03-fact-query.md) — 事实查询浮层、来源跳转和只读证据解释
+- [M03-fact-query](./spec/M03-fact-query.md) — 统一搜索内的事实答案、来源跳转和只读证据解释
 - [M04-discuss-mode](./spec/M04-discuss-mode.md) — 讨论模式只聊不写、只读上下文和升级到规划/写作的边界
 - [M05-planning-mode](./spec/M05-planning-mode.md) — 规划模式如何改设定、大纲和结构,但不碰正文
 - [M06-writing-mode](./spec/M06-writing-mode.md) — 写作模式如何产出章节内容并进入审批
 - [M07-inline-rewrite-and-humanizer](./spec/M07-inline-rewrite-and-humanizer.md) — 选区改写、去 AI 味和表达层边界
 - [M08-approval-cascade](./spec/M08-approval-cascade.md) — Approval Cascade 能力闭环、审批卡解释内容和 design 对接
-- [M09-trace-observability](./spec/M09-trace-observability.md) — Trace 用户可读过程证据、Developer Mode 分层和可见条目结构
+- [M09-trace-observability](./spec/M09-trace-observability.md) — 用户可读过程证据、开发者诊断分层和可见条目结构
 - [M10-knowledge-surface](./spec/M10-knowledge-surface.md) — 角色、阵营、概念和世界观的知识面板
-- [M11-reader-panel](./spec/M11-reader-panel.md) — ReaderPanel 报告闭环、persona 边界和审批解释关系
+- [M11-reader-panel](./spec/M11-reader-panel.md) — 读者面板报告闭环、读者画像边界和审批解释关系
 - [M12-memory-learning-management](./spec/M12-memory-learning-management.md) — 经验可见、可调、可删和 Reflector 管理
-- [M13-agent-team-controls](./spec/M13-agent-team-controls.md) — 七个 AI 角色的开关、档位和能力边界
-- [M14-settings-and-developer-mode](./spec/M14-settings.md) — Settings 控制面板:分区、Persona 边界、凭据用户语义和危险操作
+- [M13-agent-team-controls](./spec/M13-agent-team-controls.md) — 七个 AI 角色的档位、调配和能力边界
+- [M14-settings-and-developer-mode](./spec/M14-settings.md) — 设置面板:分区、助手语气边界、凭据用户语义和危险操作
 - [M15-onboarding-and-new-book](./spec/M15-onboarding-and-new-book.md) — 首启、开书向导、样例项目和工作区初始化
 - [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开和跨项目隔离
 - [M17-turn-recap-and-continuation](./spec/M17-turn-recap-and-continuation.md) — Turn Recap、项目活动时间线、停止回执和续接入口
-- [M18-developer-mode](./spec/M18-developer-mode.md) — Developer Mode 只读诊断:可见内容分层、不绕审批和修复入口分工
+- [M18-developer-mode](./spec/M18-developer-mode.md) — 开发者诊断模式:可见内容分层、不绕审批和修复入口分工
 
 #### Platform · I/R
 
@@ -183,7 +184,7 @@ pnpm dev
 
 - [appendix README](./spec/appendix/README.md) — `A/V` 明细索引与更新规则
 - [A01-schema-tables](./spec/appendix/A01-schema-tables.md) — 表结构、字段字典、索引和迁移字段
-- [A02-json-schemas](./spec/appendix/A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet、recap 和 context package
+- [A02-json-schemas](./spec/appendix/A02-json-schemas.md) — 结构化输出、报告对象、ChangeSet、回顾和证据包
 - [A03-event-catalog](./spec/appendix/A03-event-catalog.md) — turn、stream、trace、approval、recap 和 UI 事件字段
 - [A04-tool-catalog](./spec/appendix/A04-tool-catalog.md) — Agent 工具、查询工具、命令和快捷键明细
 - [A05-prompt-templates](./spec/appendix/A05-prompt-templates.md) — prompt 模板和公共片段全文
@@ -200,8 +201,8 @@ pnpm dev
 - [00-design-tokens](./design/00-design-tokens.md) — 设计 token:双主题色彩 / 字体 / 圆角 / 动效
 - [01-main-layout](./design/01-main-layout.md) — 主界面:章节轨 · 纸面 · 状态点
 - [02-approval-cascade](./design/02-approval-cascade.md) — ApprovalCard 整批审与 cascade
-- [03-reader-panel](./design/03-reader-panel.md) — ReaderPanel 章节风险报告
-- [04-settings](./design/04-settings.md) — SettingsDialog
+- [03-reader-panel](./design/03-reader-panel.md) — 读者面板章节风险报告
+- [04-settings](./design/04-settings.md) — 设置对话框
 - [05-onboarding](./design/05-onboarding.md) — 首启引导
 - [06-command-palette](./design/06-command-palette.md) — 命令面板与快捷交互
 
@@ -213,17 +214,18 @@ pnpm dev
 - [P000-init](./progress/P000-init.md) — 项目启动记录
 - [P001-scaffolding](./progress/P001-scaffolding.md) — W2 期起始计划与收尾 retro
 - [P002-narrative-reader](./progress/P002-narrative-reader.md) — 叙事引擎 + 读者仿真器
-- [P003-shortcuts-and-settings](./progress/P003-shortcuts-and-settings.md) — 快捷键 + Settings UX 治理
+- [P003-shortcuts-and-settings](./progress/P003-shortcuts-and-settings.md) — 快捷键 + 设置体验治理
 - [P004-docs-hardening](./progress/P004-docs-hardening.md) — W3 启动前 day-1 blocker 排查
 - [P005-knowledge-graph](./progress/P005-knowledge-graph.md) — 知识图谱专攻(cascade + RAG 地基)
 - [P006-memory-and-context](./progress/P006-memory-and-context.md) — 记忆 / 上下文 / JSON / 守则一致性优先重设计
 - [P007-opencode-borrowings](./progress/P007-opencode-borrowings.md) — opencode 借鉴落地 + TODO closure
 - [P008-plan-rewrite](./progress/P008-plan-rewrite.md) — plan/ 纯产品 PRD 重写实施计划
 - [P009-pre-implementation-audit](./progress/P009-pre-implementation-audit.md) — 落地前全量架构与设计审计(79 文档通读 + 逐条验证)
+- [P010-implementation-plan](./progress/P010-implementation-plan.md) — 从纯文档到可运行应用的实施计划快照
 
 ### 项目档案
 
-- [TODO.md](./TODO.md) — 当前活跃架构审计项与新增规则
+- [TODO.md](./TODO.md) — 当前活跃验证项、裁决项、文档修复项与新增规则
 - [CHANGELOG.md](./CHANGELOG.md) — 跨文档变更流水线
 - [WORKFLOW.md](./WORKFLOW.md) — 文档与实现协作流程
 - [AGENTS.md](./AGENTS.md) / [CLAUDE.md](./CLAUDE.md) — Agent 工作规范(两份内容一致)
@@ -240,7 +242,7 @@ pnpm dev
 
 ## 开发约定
 
-1. **每次显著迭代必须 commit**(使用 git 直接命令)
+1. **主会话/整合者负责 commit**(使用 git 直接命令);subagent/子代理不自行提交
 2. **新功能先更新 plan/spec/**,代码后跟
 3. **任何写入用户文件的操作必须经过作者显式审定**,轻量正文改写可就地接受;跨文件或连带变更必须进入 ApprovalCard / Cascade;Agent 不能 silent 落盘
 4. 输出语言中文为主,可夹杂英文术语

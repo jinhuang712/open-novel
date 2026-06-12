@@ -1,6 +1,6 @@
 # A05 · Prompt Templates
 
-本 appendix 是 prompt 模板全文、公共片段和示例的归口。[S08 · Prompt System](../S08-prompt-system.md) 定义 prompt 的职责、分层优先级、不可信内容围栏、变更治理和失败语义。
+本 appendix 是 prompt 模板全文、公共片段和示例的归口。[S07 · Prompt System](../S07-prompt-system.md) 定义 prompt 的职责、分层优先级、不可信内容围栏、变更治理和失败语义。
 
 ## 归口内容
 
@@ -15,13 +15,13 @@
 
 ## 对应核心文档
 
-- [S03 Agent Runner](../S03-agent-runner.md)
-- [S07 Context Management](../S07-context-management.md)
-- [S08 Prompt System](../S08-prompt-system.md)
-- [S10 LLM Quality Harness](../S10-llm-quality-harness.md)
-- [S11 Evaluation And Golden Regression](../S11-evaluation-and-golden-regression.md)
-- [S12 Creative Engine](../S12-creative-engine.md)
-- [S13 Style And Humanizer](../S13-style-and-humanizer.md)
+- [S02 Agent Runner](../S02-agent-runner.md)
+- [S06 Context Management](../S06-context-management.md)
+- [S07 Prompt System](../S07-prompt-system.md)
+- [S09 LLM Quality Harness](../S09-llm-quality-harness.md)
+- [S10 Evaluation And Golden Regression](../S10-evaluation-and-golden-regression.md)
+- [S11 Creative Engine](../S11-creative-engine.md)
+- [S12 Style And Humanizer](../S12-style-and-humanizer.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M11 ReaderPanel](../M11-reader-panel.md)
 
@@ -41,4 +41,4 @@
 
 ## 边界
 
-prompt 文案可以在 appendix 迭代。若 prompt 变化改变 Agent 职责、审批边界、写入权限、上下文优先级、工具权限、失败处理或质量门禁,必须同步 [S08](../S08-prompt-system.md)、受影响的根层 spec 和 V01/V02 验收项。
+prompt 文案可以在 appendix 迭代。若 prompt 变化改变 Agent 职责、审批边界、写入权限、上下文优先级、工具权限、失败处理或质量门禁,必须同步 [S07](../S07-prompt-system.md)、受影响的根层 spec 和 V01/V02 验收项。

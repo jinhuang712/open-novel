@@ -1,12 +1,12 @@
 # M03 · Fact Query
 
-Fact Query 是作者用 `Cmd+E` 或选区“查询”发起的结构化事实问答。它回答“项目里有没有这个事实、来源在哪”,不是让 Agent 自由讨论。
+Fact Query 是 Universal Search 内的结构化事实答案能力。它回答“项目里有没有这个事实、来源在哪”,不是独立顶层入口,也不是让 Agent 自由讨论。作者从 [M01 Universal Search](./M01-universal-search.md) 输入问题、点开结果详情或使用选区“查询”时,才进入本篇定义的答案与来源查看语义。
 
 ## 查询闭环
 
 ```mermaid
 flowchart LR
-  Entry[Cmd+E / 选区查询] --> Intent[Query Intent]
+  Entry[Universal Search / 选区查询] --> Intent[Query Intent]
   Intent --> QueryFacts[S07 queryFacts]
   QueryFacts --> Sources[来源与候选]
   Sources --> Answer[带来源答案]
@@ -31,11 +31,13 @@ flowchart LR
 
 | 入口 | 重点 |
 |---|---|
-| [M01 Universal Search](./M01-universal-search.md) | 找对象并导航 |
-| Fact Query | 回答事实问题 |
+| [M01 Universal Search](./M01-universal-search.md) | 唯一作者侧顶层搜索入口,负责承载输入框、结果分组和事实答案展示 |
+| 事实答案(Fact Query) | 在 Universal Search 内回答事实问题并提供来源查看 |
 | [M04 Discuss Mode](./M04-discuss-mode.md) | 解释、取舍、建议和澄清 |
 
 Fact Query 找不到答案时可以提供“转 Discuss”入口,但不能把 Discuss 的推测回写成事实答案。
+
+Fact Query 不拥有 `Cmd+E` 独立入口。任何快捷键、选区浮动条或对象详情中的“查询来源”动作都必须路由到 Universal Search 的当前浮层或嵌入详情,再由本能力生成答案。
 
 ## 失败收场
 
@@ -60,7 +62,7 @@ Fact Query 找不到答案时可以提供“转 Discuss”入口,但不能把 Di
 | 时点 | as-of chapter 与全书最新返回不同状态时明确标注 |
 | 身份 | 同名实体查询展示候选,不自动合并 |
 | 降级 | KG / semantic / stale index 分别提示 |
-| 选区 | 框选查询预填文本且不污染正文 |
+| 选区 | 框选查询预填 Universal Search 且不污染正文 |
 | 转 Discuss | 推测答案被标记为非项目事实 |
 
 ## FAQ
@@ -69,6 +71,6 @@ Fact Query 找不到答案时可以提供“转 Discuss”入口,但不能把 Di
 
 A: 不能把模型推测展示成项目事实。可以转到 Discuss,但界面必须标明这是讨论推测,不是事实查询结果。
 
-**Q: Fact Query 和 Universal Search 的最大区别是什么?**
+**Q: Fact Query 和 Universal Search 的关系是什么?**
 
-A: Search 帮用户找到对象和来源;Fact Query 直接回答一个事实问题,所以它对来源和索引健康的要求更高。
+A: Universal Search 是入口和结果容器;Fact Query 是其中的事实答案能力。它对来源和索引健康的要求更高,但不再提供独立快捷键或第二个作者搜索浮层。

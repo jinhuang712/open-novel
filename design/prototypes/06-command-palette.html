@@ -35,6 +35,8 @@
   .pal-row .when { font-size: 11px; color: var(--text-tertiary); margin-left: 6px; }
   .pal-empty { padding: 22px 10px; text-align: center; color: var(--text-tertiary); font-size: 13px; }
   .pal-foot { display: flex; gap: 16px; justify-content: center; padding: 8px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-tertiary); background: var(--bg-sunken); }
+  .palette.closed { opacity: .44; pointer-events: none; }
+  .demo-status { min-height: 20px; padding: 0 12px 8px; color: var(--accent-text); font-size: 12px; }
 
   .search-palette { width: 700px; }
   .search-body { display: grid; grid-template-columns: minmax(0, 1fr) 270px; min-height: 318px; }
@@ -86,28 +88,31 @@
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
-  <span class="proto-title">06 · Universal Search 与快捷交互</span>
+  <span class="proto-title">06 · 统一搜索与快捷交互</span>
   <span>文档: design/06-command-palette.md · 上游: spec/S14 / spec/M01</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="stage">
-  <div class="stage-label">UNIVERSAL SEARCH — SHIFT+SHIFT(全局搜索对象 / 章节 / 设定,HOVER 展示预览)</div>
+  <div class="stage-label">统一搜索 — SHIFT+SHIFT(搜索对象 / 章节 / 事实 / 引用,HOVER 展示预览)</div>
   <div class="overlay-demo">
     <div class="palette search-palette">
       <div class="pal-input"><span class="pfx">⌕</span><input value="青岚" readonly><span class="keys"><kbd>Tab</kbd> 类型</span></div>
       <div class="search-body">
         <div class="pal-list">
-          <div class="pal-group">Best Match</div>
+          <div class="pal-group">最佳匹配</div>
           <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>青岚</mark></span><span class="cat">角色 · 主角阵营</span><span class="keys"><kbd>↵</kbd></span></div>
-          <div class="pal-group">Factions</div>
+          <div class="pal-group">阵营</div>
           <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>青岚</mark>宗</span><span class="cat">组织 · 敌友关系</span></div>
-          <div class="pal-group">Concepts</div>
+          <div class="pal-group">概念</div>
           <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span><mark>青岚</mark>剑诀</span><span class="cat">能力 · 代价规则</span></div>
-          <div class="pal-group">Chapters</div>
+          <div class="pal-group">章节</div>
           <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 18 章 · <mark>青岚</mark>初战</span><span class="cat">命中片段</span></div>
-          <div class="pal-group">Maybe Related</div>
+          <div class="pal-group">事实答案 / 引用</div>
+          <div class="pal-row"><span style="color:var(--info)">?</span><span>青岚宗第一次出现在哪章?</span><span class="cat">事实答案 · 2 个来源</span></div>
+          <div class="pal-row"><span style="color:var(--accent)">↗</span><span>查看青岚宗引用</span><span class="cat">引用 · 12 处</span></div>
+          <div class="pal-group">可能相关</div>
           <div class="pal-row"><span style="color:var(--text-tertiary)">≈</span><span>雨夜剑痕与青色灵压</span><span class="cat">低置信语义召回</span></div>
         </div>
         <div class="preview">
@@ -128,6 +133,7 @@
     <div class="palette">
       <div class="pal-input"><span class="pfx">&gt;</span><input id="palInput" value="切换" oninput="renderPal()" placeholder="输入命令…"></div>
       <div class="pal-list" id="palList"></div>
+      <div class="demo-status" id="palStatus">Enter 执行当前高亮命令;Esc 关闭本面板。</div>
       <div class="pal-foot"><span><kbd>↑↓</kbd> 选择</span><span><kbd>Enter</kbd> 执行</span><span><kbd>Esc</kbd> 关闭</span><span>`when` 不满足的命令不出现</span></div>
     </div>
   </div>
@@ -137,14 +143,14 @@
     <div class="palette">
       <div class="pal-input"><span class="pfx">⌕</span><input value="雨夜" readonly></div>
       <div class="pal-list">
-        <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-item)"></span><span><mark>雨夜</mark>来客.md</span><span class="cat">chapters/012</span><span class="keys"><kbd>↵</kbd> 预览 · <kbd>⌘↵</kbd> 新 tab</span></div>
+        <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-item)"></span><span><mark>雨夜</mark>来客.md</span><span class="cat">chapters/012</span><span class="keys"><kbd>↵</kbd> 预览 · <kbd>⌘↵</kbd> 对照打开</span></div>
         <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 7 章 · <mark>雨夜</mark>伏击(旧稿).md</span><span class="cat">chapters/_archive</span></div>
-        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>雨</mark>巷 · 知微书馆.md</span><span class="cat">settings/locations</span></div>
+        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>雨</mark>巷 · 知微书馆.md</span><span class="cat">设定 / 地点</span></div>
       </div>
     </div>
   </div>
 
-  <div class="stage-label">@文件引用 — CHATBOX 内字面 @ 触发(IME 组词中不弹)</div>
+  <div class="stage-label">@文件引用 — 输入条内字面 @ 触发(IME 组词中不弹)</div>
   <div class="chat-mock">
     <div class="ta">帮我检查 @林<span class="caret"></span> 在前三章的称谓一致性</div>
     <div class="mention-pop">
@@ -175,10 +181,10 @@
 
   <div class="stage-label">TOAST — 右下状态点上方 72PX,同屏最多 3 条,4S 自动消退,HOVER 暂停</div>
   <div class="toast-row">
-    <div class="toast"><span class="dot" style="background:var(--info)"></span>已切到 plan 模式</div>
+    <div class="toast"><span class="dot" style="background:var(--info)"></span>已切到规划姿态</div>
     <div class="toast"><span style="color:var(--success)">✓</span>已落盘 7/9 项<span class="act">查看回执</span></div>
     <div class="toast"><span style="color:var(--warning)">⚠</span>完成审批后才能切模式</div>
-    <div class="toast"><span style="color:var(--danger)">✗</span>连接失败,去 Settings 检查 API key<span class="act">打开 Settings</span></div>
+    <div class="toast"><span style="color:var(--danger)">✗</span>连接失败,去设置检查凭据<span class="act">打开设置</span></div>
   </div>
 </div>
 
@@ -189,26 +195,25 @@ function toggleTheme() {
   localStorage.setItem('onovel-theme', h.dataset.theme);
 }
 var cmds = [
-  { cat: '聊天', name: '切换 Agent 模式 (discuss/plan/write)', keys: ['Tab'] },
-  { cat: '视图', name: '切换 dark mode', keys: [] },
-  { cat: '视图', name: '切换 Console', keys: ['Cmd+`'] },
+  { cat: '聊天', name: '切换协作姿态(讨论/规划/写作)', keys: ['Tab'] },
+  { cat: '视图', name: '切换深浅外观', keys: [] },
+  { cat: '视图', name: '打开过程面板', keys: ['Cmd+`'] },
   { cat: '编辑', name: '切换段落批注', keys: ['Cmd+/'] },
-  { cat: '视图', name: '切换 Developer Mode', keys: ['Cmd+Shift+D'] },
   { cat: '审批', name: '打开待审审批卡', keys: [], when: '有待审时可见' },
-  { cat: '读者预演', name: '运行 ReaderPanel', keys: [] },
-  { cat: '读者预演', name: '打开最近 ReaderPanel 报告', keys: [] },
-  { cat: '实体', name: '修复 violation(跑一次 cascade)', keys: [] },
-  { cat: '项目', name: '删除项目', keys: [], danger: true },
-  { cat: '系统', name: '打开 Settings', keys: ['Cmd+,'] },
-  { cat: '系统', name: '重置首启提示', keys: [] },
+  { cat: '读者预演', name: '运行读者预演', keys: [] },
+  { cat: '读者预演', name: '打开最近读者报告', keys: [] },
+  { cat: '实体', name: '修复世界规则风险(跑一次整批审批)', keys: [] },
+  { cat: '系统', name: '打开设置', keys: ['Cmd+,'] },
   { cat: '数据', name: '查看审批历史', keys: [] }
 ];
-var recent = ['项目: 创建项目(5 分钟前)', '数据: 查看审批历史'];
+var recent = ['作品: 创建新作品(5 分钟前)', '数据: 查看审批历史'];
 var sel = 0;
+var currentHits = [];
 function renderPal() {
   var q = document.getElementById('palInput').value.trim();
   var list = document.getElementById('palList');
   var hits = cmds.filter(function (c) { return (c.cat + c.name).indexOf(q) >= 0; });
+  currentHits = hits;
   sel = Math.min(sel, Math.max(0, hits.length - 1));
   var html = '';
   if (q) {
@@ -228,8 +233,18 @@ function renderPal() {
   list.innerHTML = html;
 }
 document.getElementById('palInput').addEventListener('keydown', function (e) {
-  if (e.key === 'ArrowDown') { sel++; renderPal(); e.preventDefault(); }
+  if (e.key === 'ArrowDown') { sel = Math.min(sel + 1, Math.max(0, currentHits.length - 1)); renderPal(); e.preventDefault(); }
   if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); renderPal(); e.preventDefault(); }
+  if (e.key === 'Enter') {
+    var cmd = currentHits[sel];
+    document.getElementById('palStatus').textContent = cmd ? '已执行: ' + cmd.cat + ' / ' + cmd.name : '没有可执行命令';
+    e.preventDefault();
+  }
+  if (e.key === 'Escape') {
+    document.getElementById('palStatus').textContent = '命令面板已关闭;再次触发快捷键可重新打开。';
+    document.querySelectorAll('.overlay-demo .palette')[1].classList.add('closed');
+    e.preventDefault();
+  }
 });
 renderPal();
 </script>

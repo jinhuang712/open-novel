@@ -1,6 +1,6 @@
 # design/03 — ReaderPanel 章节风险报告
 
-> 原型:`design/prototypes/03-reader-panel.html` · 上游:[plan/09 叙事诊断与读者预演](../plan/09-narrative-and-reader.md) · [spec/S12 创作质量](../spec/S12-creative-engine.md)
+> 原型:`design/prototypes/03-reader-panel.html` · 上游:[plan/09 叙事诊断与读者预演](../plan/09-narrative-and-reader.md) · [spec/S12 创作质量](../spec/S11-creative-engine.md)
 
 5 个 persona(追更党 / 逻辑控 / 情感党 / 毒舌读者 / 潜水大佬)并行读一章,聚合成一份**发布前风险预演报告**。报告可嵌入写作审批卡,也可从命令面板独立触发后以 ReaderPanel 报告面板打开。
 

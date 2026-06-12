@@ -27,7 +27,7 @@
 2. **segmented delta stability** — 分段 delta 抽取的重复运行稳定性;
 3. **cascade cost / latency at book scale** — 全书级 cascade 的 context 装配、token 用量与总耗时。
 
-任何一项不达标,「改完连带改」「百万字一致性」的产品承诺即不成立——此时**停止阶段 4 及之后的功能开发**,先回写 [S07](../spec/S07-context-management.md) / [S06](../spec/S06-knowledge-graph.md) / [S12](../spec/S12-creative-engine.md) / [V02](../spec/appendix/V02-golden-cases.md),在「裁判链重设计 / 承诺收窄 / cascade 分批」中经用户裁决后再继续。
+任何一项不达标,「改完连带改」「百万字一致性」的产品承诺即不成立——此时**停止阶段 4 及之后的功能开发**,先回写 [S06](../spec/S06-context-management.md) / [S05](../spec/S05-knowledge-graph.md) / [S11](../spec/S11-creative-engine.md) / [V02](../spec/appendix/V02-golden-cases.md),在「裁判链重设计 / 承诺收窄 / cascade 分批」中经用户裁决后再继续。
 
 排序考量:这三项 gate 需要真实索引管线与真实语料才能测,因此无法放在阶段 0 完成;阶段 0-3 选择的都是即使 gate 失败也不会报废的能力(存储、索引地基、单章创作闭环本身不依赖全书 cascade 成立)。gate 在阶段 1 索引管线可用后即应尽早启动,**最迟在阶段 4 开工前出结果**。
 
@@ -49,7 +49,7 @@ flowchart TB
   S5 --> S6[阶段 6 · 质量闭环与打磨]
 ```
 
-既定事实基线(已裁决,不在本文重议):桌面壳 = Tauri 多端、应用单实例;执行宿主 = Tauri 管理的 Node sidecar(进程形态待 V03 实查落定);每项目库 = `project.db`(真源)+ `index.db`(派生),该拆分正由并行工作落地到 S01/A01;无导入导出/备份功能;无预算控制(只有用量技术指标);LLM = DeepSeek V4 Pro/Flash 直连;栈 = Next.js 15 + AI SDK 6 + better-sqlite3 + sqlite-vec + TipTap + XState。
+既定事实基线(已裁决,不在本文重议):桌面壳 = Tauri 多端、应用单实例单窗口;执行宿主 = Tauri 管理的 Node sidecar(进程形态待 V03 实查落定);每项目库 = `project.db`(真源)+ `index.db`(派生),该拆分由 S14/A01 定义;无导入导出/备份功能;无预算控制(只有用量技术指标);LLM = DeepSeek V4 Pro/Flash 直连;栈 = Next.js 15 + AI SDK 6 + better-sqlite3 + sqlite-vec + TipTap + XState。
 
 ---
 
@@ -57,7 +57,7 @@ flowchart TB
 
 **目标**:把全部「文档说能行但没人跑过」的外部事实变成 V03 证据;搭出最小工程骨架。**对应 V03 全部基础 spike。**
 
-依赖 spec:[S00](../spec/S00-system-contract.md) 审计闸门 · [I01](../spec/platform/I01-llm-provider-contract.md) · [I03](../spec/platform/I03-filesystem-and-watcher.md) · [I05](../spec/platform/I05-desktop-shell-contract.md) · [S03](../spec/S03-agent-runner.md)。必补 appendix:`V03`(每项 spike 的命令/版本/证据)、`A06`(版本能力摘要)。
+依赖 spec:[S00](../spec/S00-system-contract.md) 审计闸门 · [I01](../spec/platform/I01-llm-provider-contract.md) · [I03](../spec/platform/I03-filesystem-and-watcher.md) · [I05](../spec/platform/I05-desktop-shell-contract.md) · [S02](../spec/S02-agent-runner.md)。必补 appendix:`V03`(每项 spike 的命令/版本/证据)、`A06`(版本能力摘要)。
 
 - [ ] pnpm workspace 骨架:`app/`(Next.js 15 应用)+ `spikes/`(一次性实查代码,不进产品依赖图)落仓
 - [ ] Tauri 壳骨架:单实例 lock 与二次启动聚焦、窗口创建/恢复、Node sidecar 进程拉起与生命周期绑定(I05)
@@ -67,7 +67,7 @@ flowchart TB
 - [ ] AI SDK 6 loop spike:`stopWhen` / tool marker / `onStepFinish` / 取消 / 流式事件端到端(S03/S10)
 - [ ] embedding provider 实查:模型、维度、批量上限、failure 行为(I01/S06/A01)
 - [ ] file watcher 实查:cursor、漏事件、休眠恢复、reconcile scan(I03/R04)
-- [ ] desktop host interruption/recovery spike:host crash/restart、in-flight call、apply journal 接管(S03/S05/S01)
+- [ ] desktop host interruption/recovery spike:host crash/restart、in-flight call、启动恢复扫描与写入记录接管(S03/S05/S14)
 - [ ] Tailwind v4 / shadcn token 映射实查(design/00)
 
 **验收口径**:V03 每条 spike 都有「命令 + 版本 + 通过/失败证据 + 路线影响」回写;sidecar 进程形态在 I05/README 落定;无遗留 `needs data` 的阶段 0 范围 spike。
@@ -76,47 +76,47 @@ flowchart TB
 
 **目标**:作品事实有可信收场——落盘、崩溃恢复、外部编辑冲突、派生索引全链路可跑。
 
-依赖 spec:[S01](../spec/S01-project-storage.md)(apply journal / light apply / 指纹 / `project.db` + `index.db` 拆分)· [S06](../spec/S06-knowledge-graph.md)(索引管线 / 锚点 / 差量 reindex / Aho-Corasick 词典)· [R04](../spec/platform/R04-index-health-and-repair.md)(健康度与重建)· [I03](../spec/platform/I03-filesystem-and-watcher.md)。必补 appendix:`A01`(表结构/journal 字段/lease)、`A03`(repair/storage 事件)、`V01`。
+依赖 spec:[S14](../spec/S14-project-storage.md)(写入记录 / light apply / 指纹 / `project.db` + `index.db` 拆分)· [S05](../spec/S05-knowledge-graph.md)(索引管线 / 锚点 / 差量 reindex / Aho-Corasick 词典)· [R04](../spec/platform/R04-index-health-and-repair.md)(健康度与重建)· [I03](../spec/platform/I03-filesystem-and-watcher.md)。必补 appendix:`A01`(表结构/写入记录字段/fencing)、`A03`(repair/storage 事件)、`V01`。
 
 - [ ] 项目目录与双库初始化:Markdown 产物 + `project.db`(真源)+ `index.db`(派生,可整库重建)
-- [ ] apply journal 协议:prepared → file-applied → committed,临时文件 + rename 原子替换,事实记录与 journal 完成标记同事务提交
-- [ ] 启动扫描:未完成 journal 按指纹前滚/放弃/人工恢复,不误判为外部编辑
+- [ ] 写入记录协议:prepared → file-applied → committed,临时文件 + rename 原子替换,事实记录与完成标记同事务提交;具体是否采用 append-only apply journal 待 TODO-P1-59 裁决
+- [ ] 启动扫描:未完成写入记录按指纹前滚/放弃/人工恢复,不误判为外部编辑
 - [ ] light apply 路径:直接编辑落盘、inline accept、committed 后 undo 生成反向 light apply
 - [ ] watcher + 外部编辑冲突:作者文件优先,账本标记 lost/invalidated
-- [ ] S06 索引管线:实体/锚点抽取、差量 reindex、AC 词典构建、embedding 写入
+- [ ] S05 索引管线:实体/锚点抽取、差量 reindex、AC 词典构建、embedding 写入
 - [ ] R04 健康度:索引健康指标、降级查询、整库重建入口
 - [ ] 长篇 fixture 构建(50-100 万字或等价),供 gate spike 使用
 
-**验收口径**:[V01「Storage / Platform 可靠性验证项」](../spec/appendix/V01-test-matrix.md)全表可跑通过(crash recovery、direct edit light apply、真源损坏 facts-degraded、文件账本冲突等);`index.db` 删除后可全量重建且结果一致。
+**验收口径**:[V01「Storage / Platform 可靠性验证项」](../spec/appendix/V01-test-matrix.md)全表可跑通过(crash recovery、direct edit light apply、项目事实库损坏恢复方案、文件账本冲突等);`index.db` 删除后可全量重建且结果一致。
 
 ## 6 · 阶段 2 · 最小创作闭环
 
 **目标**:能开项目、能聊、能查、直接编辑能落盘——第一个用户可感知的端到端环。
 
-依赖 spec:[S03](../spec/S03-agent-runner.md) · [S04](../spec/S04-turn-orchestration.md)(turn 最小态机)· [S05](../spec/S05-streaming-ui-protocol.md) · [S14](../spec/S14-editor-and-interaction.md) · [I02](../spec/platform/I02-editor-adapter-contract.md) · [M04](../spec/M04-discuss-mode.md) · [M03](../spec/M03-fact-query.md) · [M16](../spec/M16-project-library-and-navigation.md) · [R01](../spec/platform/R01-project-lifecycle.md)。必补 appendix:`A02`(结构化输出/query result)、`A03`(turn/stream 事件)、`A04`(只读工具)、`A05`(Discuss prompt)、`V01`。
+依赖 spec:[S02](../spec/S02-agent-runner.md) · [S03](../spec/S03-turn-orchestration.md)(turn 最小态机)· [S04](../spec/S04-streaming-ui-protocol.md) · [S13](../spec/S13-editor-and-interaction.md) · [I02](../spec/platform/I02-editor-adapter-contract.md) · [M04](../spec/M04-discuss-mode.md) · [M03](../spec/M03-fact-query.md) · [M16](../spec/M16-project-library-and-navigation.md) · [R01](../spec/platform/R01-project-lifecycle.md)。必补 appendix:`A02`(结构化输出/query result)、`A03`(turn/stream 事件)、`A04`(只读工具)、`A05`(Discuss prompt)、`V01`。
 
-- [ ] S03 受控 runner:结构化输出、JSON retry、tool loop、doom-loop 防护、取消
-- [ ] S04 turn 最小态机(XState):user turn 信封、cancel plan、stopped 收场;暂不含 cascade/审批
-- [ ] S05 流式协议:状态点、事件分层、断线恢复最小集
+- [ ] S02 受控 runner:结构化输出、JSON retry、tool loop、doom-loop 防护、取消
+- [ ] S03 turn 最小态机(XState):user turn 信封、cancel plan、stopped 收场;暂不含 cascade/审批
+- [ ] S04 流式协议:状态点、事件分层、断线恢复最小集
 - [ ] 项目库与导航(M16/R01 最小):创建/打开/切换项目,跨项目隔离
 - [ ] TipTap 纸面编辑器(S14/I02 最小):章节读写、直接编辑走阶段 1 light apply 落盘
 - [ ] Discuss Mode(M04):只聊不写、只读上下文
 - [ ] Fact Query(M03):事实查询浮层、来源跳转
 
-**验收口径**:新建项目 → 打开章节直接编辑保存(journal/activity/reindex 可查证)→ Discuss 聊天流式可见可取消 → Fact Query 命中并跳转来源,全程无静默写入。
+**验收口径**:新建项目 → 打开章节直接编辑保存(写入记录/activity/reindex 可查证)→ Discuss 聊天流式可见可取消 → Fact Query 命中并跳转来源,全程无静默写入。
 
 ## 7 · 阶段 3 · 写作主路径
 
 **目标**:写一章端到端——M06 全旅程从备料到落盘。
 
-依赖 spec:[M06](../spec/M06-writing-mode.md) · [S07](../spec/S07-context-management.md)(证据包/备料)· [S08](../spec/S08-prompt-system.md) · [S09](../spec/S09-agent-tooling-boundary.md) · [S12](../spec/S12-creative-engine.md)(三路审查)· [M08](../spec/M08-approval-cascade.md)(单卡审批)· [M17](../spec/M17-turn-recap-and-continuation.md)。必补 appendix:`A02`(ChangeSet/recap/context package)、`A03`(approval/recap 事件)、`A05`(Writer/Validator prompt)、`V01`、`V02`(首批 golden cases)。
+依赖 spec:[M06](../spec/M06-writing-mode.md) · [S06](../spec/S06-context-management.md)(证据包/备料)· [S07](../spec/S07-prompt-system.md) · [S08](../spec/S08-agent-tooling-boundary.md) · [S11](../spec/S11-creative-engine.md)(三路审查)· [M08](../spec/M08-approval-cascade.md)(单卡审批)· [M17](../spec/M17-turn-recap-and-continuation.md)。必补 appendix:`A02`(ChangeSet/recap/context package)、`A03`(approval/recap 事件)、`A05`(Writer/Validator prompt)、`V01`、`V02`(首批 golden cases)。
 
-- [ ] S07 备料:Agent 证据包装配、overflow 决策、as-of chapter
+- [ ] S06 备料:Agent 证据包装配、overflow 决策、as-of chapter
 - [ ] 章节概要生成 → 草稿生成(M06 旅程,DeepSeek Pro/Flash 分档)
-- [ ] S12 三路审查:守则/叙事/一致性最小风险信号进入审批解释
+- [ ] S11 三路审查:守则/叙事/一致性最小风险信号进入审批解释
 - [ ] M08 单卡审批:ChangeSet 单卡接受/修改后接受/拒绝 → 阶段 1 apply 协议落盘 → reindex
 - [ ] M17 recap:turn 结束 recap、项目活动时间线 append-only、停止回执
-- [ ] S08 prompt 分层与不可信内容围栏接入 runner
+- [ ] S07 prompt 分层与不可信内容围栏接入 runner
 
 **验收口径**:从「写第 N 章」一句话出发,系统产出概要 → 草稿 → 审查风险 → 审批卡;作者审定后正文落盘、索引更新、recap 可读;拒绝/取消/中途崩溃各有 V01 定义的收场。
 
@@ -124,7 +124,7 @@ flowchart TB
 
 **前置门禁**:V03 三项长篇能力 gate 全部出结果且通过(或回写裁决完成)。**关闭 TODO-P1-43。**
 
-依赖 spec:[S07](../spec/S07-context-management.md)(影响分析裁判链)· [S06](../spec/S06-knowledge-graph.md) · [M08](../spec/M08-approval-cascade.md)(完整 dependency group / residual obligation)· [M05](../spec/M05-planning-mode.md) · [M10](../spec/M10-knowledge-surface.md)(实体治理)· [S04](../spec/S04-turn-orchestration.md)(cascade 泳道)。必补 appendix:`A02`(dependency group/obligation/decision payload)、`V02`(impact/cascade golden)。
+依赖 spec:[S06](../spec/S06-context-management.md)(影响分析裁判链)· [S05](../spec/S05-knowledge-graph.md) · [M08](../spec/M08-approval-cascade.md)(完整 dependency group / residual obligation)· [M05](../spec/M05-planning-mode.md) · [M10](../spec/M10-knowledge-surface.md)(实体治理)· [S03](../spec/S03-turn-orchestration.md)(cascade 泳道)。必补 appendix:`A02`(dependency group/obligation/decision payload)、`V02`(impact/cascade golden)。
 
 - [ ] 执行并回写三项 gate spike(若阶段 1 后已并行启动,此处收口)
 - [ ] 影响分析裁判链:规则预筛 → 索引候选 → 锚点/依赖 → LLM 复核,低置信候选可解释
@@ -139,7 +139,7 @@ flowchart TB
 
 **目标**:补齐全部用户可感知能力面。
 
-依赖 spec 与映射:[M11](../spec/M11-reader-panel.md) ReaderPanel · [M07](../spec/M07-inline-rewrite-and-humanizer.md)/[S13](../spec/S13-style-and-humanizer.md) Humanizer · [M12](../spec/M12-memory-learning-management.md)/[S02](../spec/S02-runtime-state.md) Reflector 与经验管理 · [S12](../spec/S12-creative-engine.md) 守则全量 · [M01](../spec/M01-universal-search.md) Universal Search · [M02](../spec/M02-command-palette-and-quick-open.md) 命令面板 · [M13](../spec/M13-agent-team-controls.md) 角色开关 · [M14](../spec/M14-settings.md)/[M18](../spec/M18-developer-mode.md) Settings 与 Developer Mode · [M15](../spec/M15-onboarding-and-new-book.md) Onboarding · [M09](../spec/M09-trace-observability.md) Trace。必补 appendix:`A04`(命令/快捷键全量)、`A05`(persona/Humanizer prompt)、`V01`/`V02`。
+依赖 spec 与映射:[M11](../spec/M11-reader-panel.md) ReaderPanel · [M07](../spec/M07-inline-rewrite-and-humanizer.md)/[S12](../spec/S12-style-and-humanizer.md) Humanizer · [M12](../spec/M12-memory-learning-management.md)/[S01](../spec/S01-runtime-state.md) Reflector 与经验管理 · [S11](../spec/S11-creative-engine.md) 守则全量 · [M01](../spec/M01-universal-search.md) Universal Search · [M02](../spec/M02-command-palette-and-quick-open.md) 命令面板 · [M13](../spec/M13-agent-team-controls.md) 角色开关 · [M14](../spec/M14-settings.md)/[M18](../spec/M18-developer-mode.md) Settings 与 Developer Mode · [M15](../spec/M15-onboarding-and-new-book.md) Onboarding · [M09](../spec/M09-trace-observability.md) Trace。必补 appendix:`A04`(命令/快捷键全量)、`A05`(persona/Humanizer prompt)、`V01`/`V02`。
 
 - [ ] ReaderPanel(M11):多 persona 并行、inconclusive、报告进入审批解释
 - [ ] Humanizer(M07/S13):选区改写、表达层越权判定与升级
@@ -153,10 +153,10 @@ flowchart TB
 
 ## 10 · 阶段 6 · 质量闭环与打磨
 
-依赖 spec:[S10](../spec/S10-llm-quality-harness.md) · [S11](../spec/S11-evaluation-and-golden-regression.md) · [R03](../spec/platform/R03-migration-and-upgrade.md) · [R05](../spec/platform/R05-diagnostics-and-debug-mode.md) · [I05](../spec/platform/I05-desktop-shell-contract.md) · design 全量。必补 appendix:`V02` 全量 golden、`A06`(打包/迁移说明)。
+依赖 spec:[S09](../spec/S09-llm-quality-harness.md) · [S10](../spec/S10-evaluation-and-golden-regression.md) · [R03](../spec/platform/R03-migration-and-upgrade.md) · [R05](../spec/platform/R05-diagnostics-and-debug-mode.md) · [I05](../spec/platform/I05-desktop-shell-contract.md) · design 全量。必补 appendix:`V02` 全量 golden、`A06`(打包/迁移说明)。
 
-- [ ] S10 harness:run evidence、failure replay 可用作日常调试
-- [ ] S11 golden regression 门禁命令:prompt/context/tool 改动必须过门禁
+- [ ] S09 harness:run evidence、failure replay 可用作日常调试
+- [ ] S10 golden regression 门禁命令:prompt/context/tool 改动必须过门禁
 - [ ] R05 诊断包与 redaction、R03 迁移升级路径
 - [ ] design 全量验收:双主题、design tokens、各原型对照走查
 - [ ] Tauri 多端打包(macOS / Windows / Linux)、签名、更新失败行为(I05 spike 收口)
@@ -172,8 +172,8 @@ flowchart TB
 | sidecar 内重 reindex 冻结 stream 投递 | [TODO-P1-22](../TODO.md) · 阶段 0 spike | 超阈值需回写 S06/S05 隔离约束,可能引入 worker thread/独立进程,影响阶段 1 架构 |
 | 长篇影响分析召回/精确、delta 稳定性、cascade 成本不达标 | [TODO-P1-43](../TODO.md) · 阶段 4 门禁 | 「改完连带改」承诺收窄或裁判链重设计,阶段 4 范围与排期重排 |
 | sidecar 进程形态未落定 | V03 `better-sqlite3 in desktop host` | 阶段 0 出结果前,阶段 1+ 的进程边界代码不定稿 |
-| DeepSeek cache/JSON mode 行为与文档假设不符 | V03 · I01 | S08 prompt 分层与成本口径需回写 |
-| `project.db` + `index.db` 拆分正由并行工作落地 | S01/A01 | 阶段 1 开工前以落地后的 S01/A01 为准,本文不复述字段 |
+| DeepSeek cache/JSON mode 行为与文档假设不符 | V03 · I01 | S07 prompt 分层与体量口径需回写 |
+| `project.db` + `index.db` 拆分正由并行工作落地 | S14/A01 | 阶段 1 开工前以落地后的 S14/A01 为准,本文不复述字段 |
 
 ## 12 · 工程约定
 

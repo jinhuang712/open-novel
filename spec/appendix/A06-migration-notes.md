@@ -13,10 +13,10 @@
 ## 对应核心文档
 
 - [S00 System Contract](../S00-system-contract.md)
-- [S01 Project Storage](../S01-project-storage.md)
-- [S03 Agent Runner](../S03-agent-runner.md)
-- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [S06 Knowledge Graph](../S06-knowledge-graph.md)
+- [S14 Project Storage](../S14-project-storage.md)
+- [S02 Agent Runner](../S02-agent-runner.md)
+- [S04 Streaming UI Protocol](../S04-streaming-ui-protocol.md)
+- [S05 Knowledge Graph](../S05-knowledge-graph.md)
 
 ## 历史原文
 

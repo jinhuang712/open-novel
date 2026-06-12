@@ -159,6 +159,8 @@ plan 禁止出现:
   - `user.name=jinhuang712`
   - `user.email=36698563+jinhuang712@users.noreply.github.com`
 - 提交前确认当前工作树基于最新 `origin/main`,不要在过期 worktree 上提交。
+- 主会话/整合者负责 commit 与 push;subagent/子代理只改文件或报告结果,不得自行 commit/push。
+- 如果用户明确指定当前会话为 subagent、worker 或要求不要提交,按用户指令保留未提交变更并在回复中说明。
 - 不要回滚用户或其他 agent 的无关改动。
 
 ## 文档职责边界
@@ -183,4 +185,4 @@ plan 禁止出现:
 - 不要留下 ASCII 框图、文字版流程图、占位许可证、过期迁移脚本说明或旧架构误导。
 - 修改文档后检查仓库内部链接没有断链、没有指向 `.html` 的残留。
 - 如果只能记录未知项而不能关闭,写入 `TODO.md` 并说明关联文档与回头解决方式。
-- 完成后用原生 `git` 提交并推送。
+- 主会话完成后用原生 `git` 提交并推送;subagent/子代理完成后只汇报变更、验证和剩余风险。

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open Novel · Onboarding 首启引导</title>
+<title>Open Novel · 启动项目选择</title>
 <script>
 (function () {
   var saved = localStorage.getItem('onovel-theme');
@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="tokens.css">
 <style>
   .stage { display: flex; flex-direction: column; align-items: center; padding: 36px 16px 80px; gap: 28px; }
-  .wizard { width: 620px; max-width: 100%; padding: 28px 32px 24px; display: flex; flex-direction: column; min-height: 500px; }
+  .wizard { width: 760px; max-width: 100%; padding: 28px 32px 24px; display: flex; flex-direction: column; min-height: 500px; }
 
   .wz-top { display: flex; align-items: center; margin-bottom: 22px; }
   .dots { display: flex; gap: 8px; align-items: center; }
@@ -29,6 +29,12 @@
   .resume-bar { display: flex; align-items: center; gap: 8px; margin: -6px 0 18px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-sunken); font-size: 12.5px; color: var(--text-secondary); }
   .resume-bar.hide { display: none; }
   .resume-bar .grow { flex: 1; }
+  .project-list { display: grid; gap: 8px; margin-bottom: 18px; }
+  .project-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); padding: 12px 14px; cursor: pointer; }
+  .project-row:hover, .project-row.sel { border-color: var(--accent); background: var(--accent-subtle); }
+  .project-row b { display: block; font-size: 13.5px; margin-bottom: 3px; }
+  .project-row span { display: block; color: var(--text-tertiary); font-size: 12px; }
+  .project-actions { display: flex; gap: 8px; margin-top: 12px; }
 
   h1.serif { font-family: var(--font-serif); font-size: 26px; font-weight: 600; margin: 0 0 6px; }
   .sub { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 22px; }
@@ -36,7 +42,7 @@
   .step { display: none; flex: 1; }
   .step.on { display: block; }
 
-  .id-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .id-grid { display: none; grid-template-columns: 1fr 1fr; gap: 10px; }
   .id-card { border: 1.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; cursor: pointer; background: var(--bg-surface); }
   .id-card:hover { border-color: var(--border-strong); background: var(--bg-hover); }
   .id-card.sel { border-color: var(--accent); background: var(--accent-subtle); }
@@ -99,7 +105,7 @@
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
-  <span class="proto-title">05 · Onboarding 首启引导</span>
+  <span class="proto-title">05 · 启动项目选择</span>
   <span>文档: design/05-onboarding.md</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
@@ -109,21 +115,42 @@
   <div class="card wizard" id="wizard">
     <div class="wz-top">
       <div class="dots" id="dots"></div>
-      <span class="step-no" id="stepNo">Step 1/4</span>
-      <span class="badge badge-warning mock-badge">Mock 模式</span>
-      <button class="skip-all" onclick="alert('原型演示: 跳过全部 → 直接进主界面 (默认 Discuss 模式)')">跳过全部</button>
+      <span class="step-no" id="stepNo">项目选择</span>
+      <span class="badge badge-warning mock-badge">演示模式</span>
+      <button class="skip-all" onclick="toastStart()">主界面左上可返回项目选择</button>
     </div>
     <div class="resume-bar" id="resumeBar">
       <span class="badge badge-warning">可恢复</span>
-      <span>上次停在第 3 步 · workspace 已验证 · Mock 模式草稿可继续</span>
+      <span>上次停在创建项目 · 存放位置已验证 · 演示模式草稿可继续</span>
       <span class="grow"></span>
       <button class="btn btn-sm" onclick="resumeDraft()">继续</button>
       <button class="btn btn-ghost btn-sm" onclick="restartDraft()">重新开始</button>
     </div>
 
     <div class="step on" id="s1">
-      <h1 class="serif">欢迎来到 Open Novel</h1>
-      <p class="sub">像用 IDE 写代码一样写长篇 — 先确认作品放在哪里。workspace 通过写权限检查后,后续项目事实和权限检查都从这里开始。</p>
+      <h1 class="serif">选择作品</h1>
+      <p class="sub">每次启动先选择或创建项目。主界面左上角也可以回到这里。</p>
+      <div class="project-list">
+        <div class="project-row sel" onclick="openProject('重生互联网')">
+          <div><b>重生互联网</b><span>~/.open-novel/books/reborn-net · 今天 01:12 · 1 个待审批</span></div>
+          <button class="btn btn-sm">打开</button>
+        </div>
+        <div class="project-row" onclick="openProject('大荒镖局')">
+          <div><b>大荒镖局</b><span>~/Documents/Open Novel/dahuang · 昨天 22:41 · 无待审批</span></div>
+          <button class="btn btn-sm">打开</button>
+        </div>
+      </div>
+      <div class="project-actions">
+        <button class="btn btn-primary" onclick="step=3;render()">创建新作品</button>
+        <button class="btn" onclick="step=2;render()">首次配置 / 选择存放位置</button>
+        <button class="btn">打开本地文件夹…</button>
+      </div>
+      <div class="info-card" style="margin-top:14px">项目路径、创建、归档和删除不在设置面板里管理;启动页负责进入哪本书。</div>
+    </div>
+
+    <div class="step" id="s2">
+      <h1 class="serif">首次配置</h1>
+      <p class="sub">先确认作品存放位置,再填连接凭据。已有项目时可以直接回到项目选择。</p>
       <div class="key-row">
         <input id="workspacePath" value="~/.open-novel/workspaces/" oninput="workspaceOk=false;render()" aria-label="workspace path">
         <button class="btn" onclick="checkWorkspace()">检查权限</button>
@@ -134,34 +161,22 @@
         <div class="ws-card" onclick="selWorkspace(this, '/Volumes/NovelSSD/Open Novel/')"><b>最近路径</b><span>外接盘项目库</span></div>
       </div>
       <div class="ws-state" id="workspaceState"></div>
-      <div class="info-card" style="margin-top:14px">
-        <b style="color:var(--text-primary)">你是谁?</b> 只影响引导节奏,不改变功能。
-      </div>
-      <div class="id-grid">
-        <div class="id-card sel" onclick="selId(this)"><b>已经在番茄写过书</b><span>老作者,懂签约与全勤</span></div>
-        <div class="id-card" onclick="selId(this)"><b>想试试 AI 辅助写网文</b><span>写过一些,想提效</span></div>
-        <div class="id-card" onclick="selId(this)"><b>学生 / 业余写作</b><span>为爱发电,节奏自由</span></div>
-        <div class="id-card" onclick="selId(this)"><b>先随便看看</b><span>跳过这个,直接用</span></div>
-      </div>
-    </div>
-
-    <div class="step" id="s2">
-      <h1 class="serif">接入 DeepSeek</h1>
-      <p class="sub">Open Novel 用 DeepSeek V4 驱动全部创作 Agent。</p>
+      <h1 class="serif" style="margin-top:22px">连接创作服务</h1>
+      <p class="sub">凭据只存本机,用于驱动 AI 角色。</p>
       <div class="info-card">
-        怎么拿 key:platform.deepseek.com/api_keys<br>
-        Key 只写入系统安全凭据库;诊断包等任何持久产物都会剔除
+        怎么拿凭据:platform.deepseek.com/api_keys<br>
+        凭据只写入系统安全凭据库;诊断包等任何持久产物都会剔除
       </div>
       <div class="key-row">
         <input type="password" id="keyInput" placeholder="sk-…">
         <button class="btn" onclick="testKey()">测试连接</button>
       </div>
       <div class="key-state" id="keyState"></div>
-      <span class="mock-link" onclick="useMock()">跳过 — 用 Mock 模式先看看界面(示例文本,流程走通)</span>
+      <span class="mock-link" onclick="useMock()">跳过 — 用演示模式先看看界面(示例文本,流程走通)</span>
     </div>
 
     <div class="step" id="s3">
-      <h1 class="serif">创建你的第一个项目</h1>
+      <h1 class="serif">创建新作品</h1>
       <p class="sub">从样例或空白故事开始。</p>
       <div class="proj-grid">
         <div class="proj-card sel" data-project="sample" onclick="selProj(this)">
@@ -215,9 +230,9 @@
     <div class="tip"><span class="when">首次焦点输入条</span>试试按 <kbd>Tab</kbd> 切换 plan / write / discuss 模式<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
     <div class="tip"><span class="when">首次出现批阅层</span>AI 建议改正文 — 看见前后对照再决定,不同意就不会落盘<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
     <div class="tip"><span class="when">首次出现 cascade 警告</span>一致性守护者帮你扫了相关章节,看看哪些段需要一起改<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
-    <div class="tip"><span class="when">首次切到 plan 模式</span>现在 AI 只会改 settings/,不会动 chapters/<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
-    <div class="tip"><span class="when">首次出现 ReaderPanel 报告</span>这是 5 个虚拟读者的反应,可参考可忽略<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
-    <div class="tip" style="border-left-color:var(--border-strong)"><span class="when">重置入口</span>Settings → 数据管理 → 危险区域 →「重置首启提示」<div class="ok"><button class="btn btn-sm" disabled>展示用</button></div></div>
+    <div class="tip"><span class="when">首次切到规划姿态</span>现在 AI 只会改设定和大纲,不会动正文<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次出现读者报告</span>这是 5 个模拟读者的反应,可参考可忽略<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip" style="border-left-color:var(--border-strong)"><span class="when">回看提示</span>帮助说明里可回看这些提示;设置面板不提供数据管理重置<div class="ok"><button class="btn btn-sm" disabled>展示用</button></div></div>
   </div>
 </div>
 
@@ -233,17 +248,17 @@ function render() {
   var dots = '';
   for (var j = 1; j <= 4; j++) dots += '<span class="dot ' + (j < step ? 'done' : j === step ? 'cur' : '') + '"></span>';
   document.getElementById('dots').innerHTML = dots;
-  document.getElementById('stepNo').textContent = 'Step ' + step + '/4';
+  document.getElementById('stepNo').textContent = step === 1 ? '项目选择' : 'Step ' + (step - 1) + '/3';
   document.getElementById('prevBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
   var next = document.getElementById('nextBtn');
   next.style.display = step === 4 ? 'none' : '';
   var blankSelected = step === 3 && document.querySelector('.proj-card.sel[data-project="blank"]');
   var projectName = document.getElementById('projectName');
   var missingProjectName = blankSelected && !projectName.value.trim();
-  var blockedByWorkspace = step === 1 && !workspaceOk;
+  var blockedByWorkspace = step === 2 && !workspaceOk;
   var blockedByKey = step === 2 && !keyOk;
   next.disabled = blockedByWorkspace || blockedByKey || missingProjectName;
-  next.title = blockedByWorkspace ? '先检查 workspace 写权限' : (blockedByKey ? '测试连接通过,或选择 Mock 模式' : (missingProjectName ? '先给项目起个名字' : ''));
+  next.title = blockedByWorkspace ? '先检查存放位置写权限' : (blockedByKey ? '测试连接通过,或选择演示模式' : (missingProjectName ? '先给项目起个名字' : ''));
   projectName.classList.toggle('error', !!missingProjectName);
   document.getElementById('projectNameError').classList.toggle('show', !!missingProjectName);
 }
@@ -253,6 +268,8 @@ function go(d) {
   step = Math.min(4, Math.max(1, step + d));
   render();
 }
+function openProject(name) { alert('原型演示: 打开《' + name + '》'); }
+function toastStart() { alert('主界面左上角返回项目选择,不是进设置面板'); }
 function selId(el) {
   document.querySelectorAll('.id-card').forEach(function (c) { c.classList.remove('sel'); });
   el.classList.add('sel');
@@ -275,7 +292,7 @@ function checkWorkspace() {
   var state = document.getElementById('workspaceState');
   if (!path || path.indexOf('/root') === 0) {
     workspaceOk = false;
-    state.innerHTML = '<span class="danger-text">✗ workspace 不可写:请选择当前用户可写目录</span>';
+    state.innerHTML = '<span class="danger-text">✗ 存放位置不可写:请选择当前用户可写目录</span>';
     render();
     return;
   }
@@ -288,7 +305,7 @@ function resumeDraft() {
   keyOk = true;
   step = 3;
   document.getElementById('wizard').classList.add('mock');
-  document.getElementById('workspaceState').innerHTML = '<span class="success-text">✓ 已恢复 workspace 校验</span>';
+  document.getElementById('workspaceState').innerHTML = '<span class="success-text">✓ 已恢复存放位置校验</span>';
   document.getElementById('resumeBar').classList.add('hide');
   render();
 }
@@ -315,7 +332,7 @@ function testKey() {
 function useMock() {
   keyOk = true;
   document.getElementById('wizard').classList.add('mock');
-  document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选 Mock 模式 — 示例文本,可随时在 Settings 填入真实 key</span>';
+  document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选演示模式 — 示例文本,可随时在设置面板填入真实凭据</span>';
   render();
 }
 document.addEventListener('keydown', function (e) {

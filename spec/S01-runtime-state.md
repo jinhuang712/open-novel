@@ -1,4 +1,4 @@
-# S02 · Runtime State
+# S01 · Runtime State
 
 这篇回答一个看似简单的问题:系统到底“记住”了什么?答案分四类:对话连续性、长期经验、用户级活动记录、过程证据。它们都叫运行时状态,但只有少数会影响后续生成,没有任何一类能取代作品事实。
 
@@ -35,18 +35,18 @@ flowchart TB
 
 ## 四种数据库,四种用途
 
-每个项目物理上有两个库:`project.db` 是真源账本,损坏触发 S01 的 facts-degraded;`index.db` 是派生索引,可以整库删除后由 R04 全量重建,损坏不进入 facts-degraded。把两者混在同一个文件里,会让“可随便重建的索引”和“不可重建的审批历史”共享同一种损坏命运,这是数据事故隐患,因此契约层面禁止合库。
+每个项目物理上有两个库:`project.db` 是真源账本,损坏恢复路径待 [TODO-P1-60](../TODO.md) 裁决;`index.db` 是派生索引,可以整库删除后由 R04 全量重建。把两者混在同一个文件里,会让“可随便重建的索引”和“不可重建的审批历史”共享同一种损坏命运,这是数据事故隐患,因此契约层面禁止合库。
 
 | 位置 | 保存什么 | 影响生成吗 | 能恢复作品事实吗 |
 |---|---|---|---|
 | runtime.db(全局) | thread、message、压缩摘要、turn recap 指针、跨项目会话恢复状态 | 可以影响对话连续性和续接提示 | 不能 |
-| project.db(每项目真源) | apply journal、审批终态、obligation、recap/activity 投影、host fencing、文件指纹 ledger、持久 turn 状态、项目级经验 | 可以影响写作裁定和恢复 | 是;它与作者文件共同构成作品账本,损坏触发 facts-degraded |
+| project.db(每项目真源) | 写入记录、审批终态、obligation、recap/activity 投影、host fencing、文件指纹 ledger、持久 turn 状态、项目级经验 | 可以影响写作裁定和恢复 | 是;它与作者文件共同构成作品账本,损坏恢复待 TODO-P1-60 裁决 |
 | index.db(每项目派生索引) | 实体、别名、概念、关系、时间线、依赖、锚点、embedding、卷摘要、搜索缓存 | 可以影响查询和召回 | 不能;整库可删,由 R04 从作者文件 + project.db 全量重建 |
 | session_history.db(每项目) | 模型调用、工具调用、trace、用量、错误 | 默认不影响 | 不能 |
 
 Recap 是作者级 changelog,不是作品。过程历史再完整也只是证据,不是作品。会话消息再像“设定”,也不能绕过项目事实层。
 
-持久 turn 状态属于 project.db。pending approval、approval queue、obligation、mode gate、apply journal 投影和 recovery pointer 都随项目走;runtime.db 只保存跨项目打开、最近项目和 UI 恢复指针,不能成为 pending approval 的唯一来源。pending 状态恢复时必须从 project.db 重校验,不能靠 runtime.db 复活。
+持久 turn 状态属于 project.db。pending approval、approval queue、obligation、mode gate、写入记录投影和 recovery pointer 都随项目走;runtime.db 只保存跨项目打开、最近项目和 UI 恢复指针,不能成为 pending approval 的唯一来源。pending 状态恢复时必须从 project.db 重校验,不能靠 runtime.db 复活。
 
 runtime.db 里的 recent objects 和 query history 必须按 project id 分区。全局最近项目列表可以跨项目,但任何项目内 search、context、preview cache 都只能读取当前 project id;找不到项目分区时,宁可显示少历史模式,不能把别的书的最近对象注入当前项目。
 
@@ -57,20 +57,22 @@ stateDiagram-v2
   [*] --> Observing
   Observing --> Candidate: 用户采纳/修改/否决后
   Candidate --> Stored: 通过去重检查且无冲突
-  Candidate --> PendingConfirmation: 与已有经验冲突
-  PendingConfirmation --> Stored: 用户确认采用
-  PendingConfirmation --> Dropped: 用户拒绝或两条都不用
+  Candidate --> ConflictDecision: 与已有经验冲突
+  ConflictDecision --> Stored: 即时裁决或预设策略采用
+  ConflictDecision --> Dropped: 用户拒绝或策略丢弃
   Candidate --> Dropped: 噪音
   Stored --> Injected: Context Builder 选用
-  Stored --> Muted: 用户调低/关闭
+  Stored --> Archived: 权重 0 仅留档
   Stored --> Deleted: 用户删除
   Observing --> Paused: Reflector off
   Paused --> Observing: Reflector on
 ```
 
-Reflector 关闭的含义很具体:不再学习新经验。它不等于清空已有经验,也不等于本次生成忽略所有风格偏好。已有经验是否注入,由 Settings 中的权重、关闭和删除动作决定。
+Reflector 暂停的含义很具体:不再学习新经验。它不等于清空已有经验,也不等于本次生成忽略所有风格偏好。已确认经验默认参与 context builder,由 0-5 权重控制强弱;权重 0 仅留档,删除才移除经验。系统不提供逐条注入开关。
 
-经验冲突不自动仲裁。Reflector 发现新候选与既有经验在同一任务、同一作用域下互相否定时,必须进入 PendingConfirmation,在 Settings / Memory 中展示新旧两条、来源 turn 和影响范围,由用户选择采用新经验、保留旧经验或两条都不用。PendingConfirmation 不进入 context 注入,也不能被普通 Agent 当作偏好使用。
+经验冲突不静默仲裁。Reflector 发现新候选与既有经验在同一任务、同一作用域下互相否定时,必须在当前学习回执、相关 recap 或下一次受影响任务前即时提示,或按用户预设策略处理。冲突不进入 Settings 常驻待办队列。未裁决的冲突候选不进入 context,也不能被普通 Agent 当作偏好使用。
+
+经验来源可以是普通记录、单轮证据摘要或跨多轮证据摘要。每条经验都必须能解释“为什么学到”,但不强制绑定单一 turn。
 
 ## 什么会进入上下文
 
@@ -78,12 +80,12 @@ Reflector 关闭的含义很具体:不再学习新经验。它不等于清空已
 |---|---|---|
 | 最近消息 | 当前 thread 需要对话连续性 | 当前显式指令 |
 | 压缩摘要 | 原始消息太长且摘要可信 | 原始事实和当前指令 |
-| 用户经验 | 任务类型匹配、权重有效、未被关闭 | 项目事实和当前显式指令 |
+| 用户经验 | 任务类型匹配、已确认、权重 1-5 | 项目事实和当前显式指令 |
 | turn recap | 用户要求续接、查看历史或基于历史生成恢复提案 | 项目事实和当前指令 |
 | 过程 trace | 用户问“刚才为什么这样做”或 Debug 展示 | 不参与作品事实 |
 | 失败记录 | 用于恢复、提示、诊断 | 持久 turn 状态 |
 
-Agent 不能自己挑 runtime 材料。所有注入都经 [S07](./S07-context-management.md) 的 context builder。
+Agent 不能自己挑 runtime 材料。所有注入都经 [S06](./S06-context-management.md) 的 context builder。
 
 ## 恢复不是重放
 
@@ -105,11 +107,11 @@ flowchart LR
 | 事故 | 不能做 | 应该做 |
 |---|---|---|
 | 压缩摘要失败 | 删除原始消息只留空摘要 | 保留原始消息,延后压缩 |
-| 经验写入冲突 | 自动覆盖旧经验或重复追加几条相似经验 | 进入待确认,展示新旧经验和来源,等用户选择 |
+| 经验写入冲突 | 自动覆盖旧经验、重复追加相似经验或塞进常驻队列 | 即时展示新旧经验和来源摘要,由用户选择或按预设策略处理 |
 | recap 写入失败 | 假装已进入用户 changelog | 保留 turn 结果并标记活动记录缺失 |
 | 过程日志写失败 | 阻断已审批的文件落盘 | 标记 Trace 不完整 |
 | runtime.db 读取失败 | 假装拥有历史上下文 | 以少历史模式运行并提示 |
-| Reflector 关闭 | 清空用户已有手感 | 停止学习新经验,已有经验按设置处理 |
+| Reflector 暂停 | 清空用户已有手感 | 停止学习新经验,已有确认经验按权重处理 |
 
 ## 用户可见面
 
@@ -119,7 +121,7 @@ flowchart LR
 |---|---|
 | Trace | 本次 turn 做过什么、哪里失败、诊断是否完整 |
 | Activity / Recap | 项目活动时间线、作者备注、续接入口 |
-| Settings / Memory | 学到了哪些经验、来源大意、权重、关闭、删除 |
+| Settings / Memory | 学到了哪些经验、来源记录/证据摘要、0-5 权重、删除 |
 | 输入条/状态点 | 当前是否有历史缺失、是否待审批、是否失败 |
 | Debug Mode | 只读查看 session history、索引健康度、上下文包 |
 
@@ -129,9 +131,9 @@ flowchart LR
 
 A: 当前契约按项目隔离。跨项目共享会带来风格和隐私污染,不在主路径内。
 
-**Q: 用户关闭 Reflector 后,为什么旧经验还会生效?**
+**Q: 用户暂停 Reflector 后,为什么旧经验还会生效?**
 
-A: 因为“停止学习”和“停止使用已学经验”是两件事。后者需要用户在 Memory/Style 中关闭或删除。
+A: 因为“停止学习”和“使用已学经验”是两件事。已确认经验默认按权重参与后续上下文;用户可以把权重调到 0 或删除经验。
 
 **Q: 过程历史能不能作为审计证据?**
 

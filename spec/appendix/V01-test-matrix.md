@@ -9,7 +9,7 @@
 - runner / JSON retry / tool failure / tool boundary / harness replay 测试。
 - turn / approval / cancel / recovery / recap 测试。
 - stream 断线、重复、乱序测试。
-- context overflow、impact analysis、fact query 测试。
+- context overflow、impact analysis、Universal Search 内 fact answer/source view 测试。
 - golden regression、creative engine、reader aggregation、cardinal rules 风险分级测试。
 - editor IME、focus trap、shortcut conflict、undo 测试。
 - Universal Search: `Shift+Shift`、分组排序、hover preview、索引降级和 pending approval 只读限制。
@@ -18,25 +18,25 @@
 - Approval Cascade: Search 发起写入、低置信项、关闭 pending、internal recovery / reindex 失败收场。
 - Turn Recap: append-only 时间线、正常/停止/失败/待审/已落盘 recap、作者备注、forward-only 修正和续接入口。
 - ReaderPanel: persona 并行、inconclusive、注入防御、审批说明联动。
-- onboarding、settings、credential security、danger action、import/export preview 和 diagnostics redaction 测试。
+- onboarding、settings、credential security、受限操作、project choice、diagnostics redaction 和 dev build gate 测试。
 
 ## 对应核心文档
 
 - [S00 System Contract](../S00-system-contract.md)
-- [S01 Project Storage](../S01-project-storage.md)
-- [S02 Runtime State](../S02-runtime-state.md)
-- [S03 Agent Runner](../S03-agent-runner.md)
-- [S04 Turn Orchestration](../S04-turn-orchestration.md)
-- [S05 Streaming UI Protocol](../S05-streaming-ui-protocol.md)
-- [S06 Knowledge Graph](../S06-knowledge-graph.md)
-- [S07 Context Management](../S07-context-management.md)
-- [S08 Prompt System](../S08-prompt-system.md)
-- [S09 Agent Tooling Boundary](../S09-agent-tooling-boundary.md)
-- [S10 LLM Quality Harness](../S10-llm-quality-harness.md)
-- [S11 Evaluation And Golden Regression](../S11-evaluation-and-golden-regression.md)
-- [S12 Creative Engine](../S12-creative-engine.md)
-- [S13 Style And Humanizer](../S13-style-and-humanizer.md)
-- [S14 Editor And Interaction](../S14-editor-and-interaction.md)
+- [S14 Project Storage](../S14-project-storage.md)
+- [S01 Runtime State](../S01-runtime-state.md)
+- [S02 Agent Runner](../S02-agent-runner.md)
+- [S03 Turn Orchestration](../S03-turn-orchestration.md)
+- [S04 Streaming UI Protocol](../S04-streaming-ui-protocol.md)
+- [S05 Knowledge Graph](../S05-knowledge-graph.md)
+- [S06 Context Management](../S06-context-management.md)
+- [S07 Prompt System](../S07-prompt-system.md)
+- [S08 Agent Tooling Boundary](../S08-agent-tooling-boundary.md)
+- [S09 LLM Quality Harness](../S09-llm-quality-harness.md)
+- [S10 Evaluation And Golden Regression](../S10-evaluation-and-golden-regression.md)
+- [S11 Creative Engine](../S11-creative-engine.md)
+- [S12 Style And Humanizer](../S12-style-and-humanizer.md)
+- [S13 Editor And Interaction](../S13-editor-and-interaction.md)
 - [M14 Settings](../M14-settings.md)
 - [M15 Onboarding And New Book](../M15-onboarding-and-new-book.md)
 - [M18 Developer Mode](../M18-developer-mode.md)
@@ -51,18 +51,18 @@
 
 | 能力/平台 | 必测场景 |
 |---|---|
-| S01/S06 storage + graph | 原子写、外部编辑冲突、reindex 降级、anchor 失效、派生文件守卫 |
-| S03/S04 runner + orchestration | JSON retry、doom-loop、cancel plan、stopped recap、approval idempotency |
-| S05/S14 UI + editor | stream 恢复、事件乱序、IME/focus trap、shortcut conflict、inline review accept/reject、editor undo bridge |
-| S07/S08/S09 context + prompt + tools | context overflow、long-form partition、as-of chapter、prompt final budget、impact analysis 收敛、prompt injection、tool permission、二次 LLM 失败、tool cancelability |
-| S10/S11 harness + evaluation | run evidence、failure replay、golden regression、阻断阈值、prompt/context/tool 改动验收 |
-| S12/S13 creative + humanizer | 风险分级、ReaderPanel 聚合、Humanizer 越权升级 |
-| S12/M08 quality + approval | EditedAccepted 轻量重检、阻断级风险解决证据、no-change-evidence、审批前质检汇合 |
-| M01-M04 search/query/discuss | Shift+Shift、fact query 来源跳转、command routing、只读边界 |
+| S14/S05 storage + graph | 原子写、外部编辑冲突、reindex 降级、anchor 失效、派生文件守卫 |
+| S02/S03 runner + orchestration | JSON retry、doom-loop、cancel plan、stopped recap、approval idempotency |
+| S04/S13 UI + editor | stream 恢复、事件乱序、IME/focus trap、shortcut conflict、inline review accept/reject、editor undo bridge |
+| S06/S07/S08 context + prompt + tools | context overflow、long-form partition、as-of chapter、prompt final budget、impact analysis 收敛、prompt injection、tool permission、二次 LLM 失败、tool cancelability |
+| S09/S10 harness + evaluation | run evidence、failure replay、golden regression、阻断阈值、prompt/context/tool 改动验收 |
+| S11/S12 creative + humanizer | 风险分级、ReaderPanel 聚合、Humanizer 越权升级 |
+| S11/M08 quality + approval | EditedAccepted 轻量重检、阻断级风险解决证据、no-change-evidence、审批前质检汇合 |
+| M01-M04 search/query/discuss | Shift+Shift、Search 内 fact answer 来源跳转、无 Cmd+E 独立入口、command routing、只读边界 |
 | M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、dependency group、低置信项、residual obligation、writing-blocked、部分接受和失败收场 |
-| M03/M10/S06 knowledge governance | as-of chapter 查询、同名歧义、别名确认、实体合并/拆分、obligation 全局清单 |
-| M09-M13 trace/memory/agent controls | Trace 层级、经验可见/关闭/删除、agent 开关和档位调整 |
-| M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、danger action、workspace 初始化、项目切换隔离、Activity append-only |
+| M03/M10/S05 knowledge governance | as-of chapter 查询、同名歧义、别名确认、实体合并/拆分、obligation 全局清单 |
+| M09-M13 trace/memory/agent controls | Trace 层级、经验可见/0-5 权重/删除、agent 调档/频率/权重且不可关闭 |
+| M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、受限操作、启动项目选择、Settings 不含项目/数据管理、项目切换隔离、Activity append-only |
 | platform/Ixx | provider probe、editor adapter、watcher、desktop permission、keychain、shortcut registration |
 | platform/Rxx | project lifecycle、migration、repair、diagnostics export preview/redaction |
 
@@ -72,17 +72,17 @@
 
 | 场景 | 预期 |
 |---|---|
-| Apply journal crash recovery | prepared/file-applied/committed 任一阶段崩溃后,启动扫描能前滚、放弃或进入人工恢复,UI 不误判为外部编辑。 |
-| direct edit light apply | 作者保存直接编辑后生成 light apply journal、activity、reindex request,不生成大审批卡。 |
+| 写入记录崩溃恢复 | prepared/file-applied/committed 这类阶段是否保留待 TODO-P1-59 裁决;裁决前只验收“崩溃后不能误判为外部编辑,用户能看见未完成写入如何收场”。 |
+| direct edit light apply | 作者保存直接编辑后生成写入记录、activity、reindex request,不生成大审批卡。 |
 | inline accept light apply | 选区接受进入 undo bridge 和 light apply;触及事实/跨文档/阻断风险时升级 ChangeSet。 |
-| editor undo after committed light apply | 生成新的反向 light apply,不修改旧 journal。 |
-| 项目事实库真源损坏 | 项目进入 facts-degraded;作者文件只读可直接取用;写入、审批应用和高风险 Agent turn 阻断;用户可以作者文件为准重建最小事实库。 |
+| editor undo after committed light apply | 生成新的反向 light apply,不修改旧写入记录。 |
+| 项目事实库真源损坏 | 作者文件仍可取用;不得把派生索引重建伪装成丢失审批历史;恢复/保护路径待 TODO-P1-60 裁决后补齐。 |
 | 文件与事实账本冲突 | 作者文件优先;审批历史或 obligation 标记 lost/invalidated,不能覆盖文件来匹配旧账本。 |
 | 系统自写 watcher 回声 | write token、owner、指纹和水位匹配时只推进 ledger,不触发外部编辑失效。 |
 | 离线外部编辑 | 下次打开对账 fingerprint ledger,命中 pending approval 的审批失效,索引进入 stale/reindex。 |
-| 宿主崩溃后重启 | 新宿主签发新 fencing token;旧宿主残留的延迟写入/repair 被拒绝;journal 启动扫描接管未收场事务并进入恢复流程。 |
-| 单实例锁 | 应用已运行时二次启动不创建第二个宿主,聚焦既有实例窗口。 |
-| 多窗口可写权切换 | 切换后原可写窗口降为只读视图,写入/审批命令禁用;运行中 turn 不中断;新可写窗口重新加载 pending 状态。 |
+| 宿主崩溃后重启 | 新宿主签发新 fencing token;旧宿主残留的延迟写入/repair 被拒绝;启动恢复扫描接管未收场事务并进入恢复流程。 |
+| 单实例锁 | 应用已运行时二次启动不创建第二个宿主,聚焦既有窗口。 |
+| 单实例单窗口 | 二次启动聚焦既有窗口并转交打开请求;不得创建第二窗口。 |
 | 版本 forward-compat | 旧应用打开新 schema 显式拒开,不得忽略未知字段或创建假项目。 |
 | repair job 重入 | 相同范围/水位/index version 幂等复用;部分完成从输出水位继续;输入指纹变化时关闭旧 job 并新建。 |
 | provider credential 写入 | API key/token 只进入系统安全凭据库;项目、settings 文件、Trace、诊断包均不出现 secret。 |
@@ -91,7 +91,7 @@
 | provider 认证失效 | 无 durable change 的运行中 turn 失败并生成 recap;pending approval 可查看但不能继续扩写或重做。 |
 | 诊断包分类预览 | 正文、经验、审批、provider、trace/tool 和系统环境分级展示敏感等级与脱敏策略。 |
 | 诊断脱敏阻断 | 发现 secret、未知 provider payload 或无法分类正文片段时阻断导出,不得生成残缺包。 |
-| 快捷键 / IME 冲突 | IME 组合态、modal focus trap、编辑器文本命令优先;无法判断焦点时按只读处理。 |
+| 快捷键 / IME 冲突 | IME 组合态、modal focus trap、编辑器文本命令优先;无法判断焦点时按项目只读状态处理。 |
 | 快捷键登记失败 | 系统占用或重绑冲突时提示替代入口,命令能力不隐藏。 |
 | runtime recent project isolation | 项目内 Search 不读取其他 project id 的 recent object 或 query history。 |
 | mode gate restart | 重启后恢复持久模式;pending/recovery 时模式切换被阻断并说明原因。 |
@@ -116,7 +116,7 @@
 | 落盘到可搜 | light apply 后新内容进入索引可查的延迟 | 待实测 |
 | 重 reindex 期间心跳 | stream 心跳延迟(对应 TODO-P1-22 spike) | 待实测 |
 
-目标填入后,任何超出目标的劣化按 [S11](../S11-evaluation-and-golden-regression.md) 的 warn/fail 处理。
+目标填入后,任何超出目标的劣化按 [S10](../S10-evaluation-and-golden-regression.md) 的 warn/fail 处理。
 
 ## 外部 spike 对应验证
 
@@ -129,7 +129,7 @@
 | AI SDK loop | stopWhen/tool marker/onStepFinish 或手写 loop 的等价测试,覆盖 cancel、tool result、step finish | 最小 runner spike |
 | SQLite/native binding | `sqlite-vec` CRUD/JOIN、WAL 并发、Route Handler 连接泄漏测试 | macOS arm64 / Linux x64 原始输出 |
 | watcher / repair | cursor、水位、reconcile scan、repair job lifecycle、健康级别降级测试 | 文件系统平台行为实查 |
-| desktop shell | 权限、窗口恢复、系统菜单、单实例锁与多窗口可写权切换测试 | 打包/权限/系统行为实查 |
+| desktop shell | 权限、窗口恢复、系统菜单、单实例锁、单窗口和二次启动聚焦测试 | 打包/权限/系统行为实查 |
 | design token mapping | Tailwind/shadcn dark variant、Button variant、深色主题前景色测试 | 首个真实组件验证结果 |
 
 ## Approval / Knowledge 补充验证项
@@ -156,12 +156,25 @@
 |---|---|
 | 经验可见性 | 每条经验展示来源、适用范围、状态和权重;无来源经验不得出现在用户可见列表 |
 | 调高 / 调低 | 保存成功后 context builder 使用新权重;保存失败时 UI 保留原值并提示失败 |
-| 关闭单条经验 | 经验仍可见但不再注入 context;Trace / Debug 能解释未注入原因 |
+| 权重 0 | 经验仍可见但默认不主动选用;Trace / Debug 能解释未选用原因 |
 | 删除单条经验 | 列表、context 注入和搜索入口都不再出现;删除失败时不得隐藏残留记录 |
-| 关闭 Reflector | 后续 turn 不产生新经验候选;已有 active 经验仍按设置注入 |
-| 停用经验注入 | Reflector 可继续学习新经验,但已有经验不进入 context |
-| 清空经验 | 必须二次确认范围;存在 active writable turn / pending approval 时先阻断或要求处理 |
-| 学习冲突 | 相似或相反经验进入合并 / 排队 / 冲突提示路径,不得重复追加多条噪音经验 |
+| 暂停学习 | 后续 turn 不产生新经验候选;已有 active 经验仍按权重参与 |
+| 无逐条注入开关 | UI 和 schema 不出现 inject_enabled / muted / 单条关闭注入字段 |
+| 删除全部经验 | 必须二次确认范围;存在 active turn / pending approval 时先阻断或要求处理 |
+| 学习冲突 | 相似或相反经验进入即时裁决或预设策略路径,不得进入 Settings 常驻队列或重复追加噪音经验 |
+
+## Settings / Developer Mode 验证项
+
+Settings、项目选择和 Developer Mode 的测试归本篇维护。实施时至少覆盖:
+
+| 场景 | 预期 |
+|---|---|
+| Settings 无项目管理 | Settings 不出现 Workspace、项目列表、项目删除、导入导出、清理缓存或数据管理页。 |
+| 启动项目选择 | 每次启动先选择或创建项目;主界面左上项目入口可返回项目选择。 |
+| Appearance 独立 | 外观是独立 section,不混入 Style / 风格定制。 |
+| Rules 只读 | Rules 页面只展示规则、检测说明和审批关系;不提供阈值、提示方式、关闭或恢复默认。 |
+| Assistant Persona 边界 | Assistant Persona 只影响助手表达;不混入 ReaderPanel persona。 |
+| Developer dev build gate | dev build 才显示 Developer 入口;真实用户包不显示且不可通过配置、快捷键或隐藏路由开启。 |
 
 ## Turn Recap 验证项
 

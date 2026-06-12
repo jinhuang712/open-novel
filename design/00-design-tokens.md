@@ -18,10 +18,10 @@ Open Novel 的自有视觉语言,关键词是**轻盈、纸感、书卷气**,落
 双主题是硬性要求,实现约定:
 
 - 所有颜色一律经 CSS 变量引用,**禁止在组件样式中硬编码 hex**
-- `html[data-theme="light" | "dark"]` 切换整套变量;首次进入跟随系统 `prefers-color-scheme`,用户手动切换后写入本地配置(原型中为 `localStorage.onovel-theme`,产品中为 `settings.json.theme: 'auto' | 'light' | 'dark'`)
-- 命令面板提供 `view.toggleDarkMode`(见 [spec/S14 编辑器与交互契约](../spec/S14-editor-and-interaction.md))
+- `html[data-theme="light" | "dark"]` 切换整套变量;首次进入跟随系统 `prefers-color-scheme`,用户手动切换后写入外观设置(原型中为 `localStorage.onovel-theme`,产品中为 `theme: 'auto' | 'light' | 'dark'`)
+- 命令面板提供「切换深浅外观」命令(见 [spec/S14 编辑器与交互契约](../spec/S13-editor-and-interaction.md))
 - 对比度验收(两套主题同标准):**正文 7:1–9:1、次要文字 4.5:1–5.5:1、信息承载弱文字 ≥ 4.5:1、占位/disabled ≥ 3:1、accent 底上的按钮文字 ≥ 4.5:1**。区间上限是设计约束(书卷气),下限是可达性红线
-- Settings 的「提高对比度」开关在根节点增加 `data-contrast="more"`;它只覆盖颜色 token,不改变字号、间距和布局
+- 设置面板的「提高对比度」归入独立「外观」分区,在根节点增加 `data-contrast="more"`;它只覆盖颜色 token,不改变字号、间距和布局
 
 ```mermaid
 flowchart LR
@@ -30,7 +30,7 @@ flowchart LR
   CFG -->|light / dark| FIX[固定主题]
   SYS --> APPLY["html[data-theme=...] 应用变量"]
   FIX --> APPLY
-  TOGGLE[用户切换: Settings 或命令面板] --> CFG
+  TOGGLE[用户切换: 设置面板 / 命令面板] --> CFG
 ```
 
 ## 色彩 Token
@@ -73,7 +73,7 @@ flowchart LR
 
 | 组 | Token | Light | Dark | 用途 |
 |---|---|---|---|---|
-| 实体 | `--entity-character` | `#4F7DAF` | `#7FA7D1` | 角色(下划线/hover 卡,见 [spec/S14](../spec/S14-editor-and-interaction.md)) |
+| 实体 | `--entity-character` | `#4F7DAF` | `#7FA7D1` | 角色(下划线/hover 卡,见 [spec/S14](../spec/S13-editor-and-interaction.md)) |
 | 实体 | `--entity-place` | `#5E8C61` | `#82A886` | 地点 |
 | 实体 | `--entity-item` | `#C2762D` | `#D99A55` | 物品 |
 | 实体 | `--entity-org` | `#8A6FB8` | `#AC93D9` | 阵营 / 组织 |
@@ -98,7 +98,7 @@ flowchart LR
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--font-ui` | system + `PingFang SC` 栈 | 全部 UI 与编辑器正文(编辑器 16px / 行距 1.8,可调,见 [design/04 §风格定制](./04-settings.md)) |
+| `--font-ui` | system + `PingFang SC` 栈 | 全部 UI 与编辑器正文(编辑器 16px / 行距 1.8,可调,见 [design/04 §风格偏好](./04-settings.md)) |
 | `--font-serif` | `Noto Serif SC` / `Songti SC` / `Source Han Serif SC` | 书卷气点缀:品牌标题(Onboarding、空态)与读者引文;中文宋体优先,不依赖任何私有字体 |
 | `--font-mono` | `JetBrains Mono` / ui-monospace | diff、路径、kbd、token 用量 |
 
@@ -130,11 +130,11 @@ flowchart LR
 ## 焦点与可达性
 
 - 键盘焦点一律 `box-shadow: 0 0 0 3px var(--focus-ring)`(accent 半透明),不裸用浏览器默认 outline
-- 低反差是美学选择,不是可达性妥协:全部文字 token 带实测对比度,不允许任何文字低于其档位下限;Settings 提供「提高对比度」开关,映射到一套高反差变量覆盖。
+- 低反差是美学选择,不是可达性妥协:全部文字 token 带实测对比度,不允许任何文字低于其档位下限;设置面板「外观」提供「提高对比度」开关,映射到一套高反差变量覆盖。
 - 状态点、关闭按钮、浮层角标等小视觉目标的可点热区最小 24px;可见点可以是 8px,但命中容器不能小于 24px。
 - 纸面与窗口底至少用 1px `--paper-edge` 或等效明度差形成边界;浅色主题不允许只靠 1.04:1 的明度差裸分层。
 - 颜色不是唯一信号:置信度同时有文字(高/中/低),violation 同时有 ⚠ 图标,diff 同时有 +/- 前缀
-- 全部浮层可被 `Esc` 关闭(硬约束,[spec/S14](../spec/S14-editor-and-interaction.md));模态实现 Focus Trap
+- 全部浮层可被 `Esc` 关闭(硬约束,[spec/S14](../spec/S13-editor-and-interaction.md));模态实现 Focus Trap
 
 ## 实现对接(Tailwind v4 + shadcn/ui)
 

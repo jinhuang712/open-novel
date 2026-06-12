@@ -47,7 +47,7 @@
   .lib-row .num { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); width: 24px; flex: none; }
   .lib-sect { padding: 10px 12px 4px; font-size: 10.5px; letter-spacing: .08em; color: var(--text-tertiary); }
   .lib-foot { padding: 10px 20px; font-size: 11px; color: var(--text-tertiary); border-top: 1px solid var(--border); }
-  /* ===== Universal Search (Shift+Shift) ===== */
+  /* ===== 统一搜索 (Shift+Shift) ===== */
   .usearch { position: fixed; left: 50%; top: 14%; transform: translateX(-50%) translateY(6px); width: 720px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px 16px 16px; z-index: 66; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
   .usearch.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
   .usearch input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14px; color: var(--text-primary); background: transparent; border: none; outline: none; padding: 2px 0 10px; border-bottom: 1px solid var(--border); }
@@ -64,18 +64,6 @@
   .us-preview .p-name { color: var(--text-primary); font-weight: 600; margin-bottom: 4px; }
   .us-preview .p-meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); margin-bottom: 8px; }
   .us-hint { display: flex; gap: 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
-  /* ===== 查询浮层 (Cmd+E, 一键互换) ===== */
-  .query { position: fixed; left: 50%; top: 16%; transform: translateX(-50%) translateY(6px); width: 560px; background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 14px 16px 12px; z-index: 65; display: flex; flex-direction: column; gap: 10px; opacity: 0; pointer-events: none; transition: opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
-  .query.open { opacity: 1; pointer-events: auto; transform: translateX(-50%); }
-  .query input { font: inherit; font-size: 13.5px; color: var(--text-primary); background: transparent; border: none; outline: none; padding: 2px 0 8px; border-bottom: 1px solid var(--border); }
-  .qp-types { display: flex; gap: 16px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
-  .qp-type { cursor: pointer; padding-bottom: 4px; border-bottom: 2px solid transparent; }
-  .qp-type.on { color: var(--text-primary); border-bottom-color: var(--accent); }
-  .qp-r { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); padding: 8px 0; border-top: 1px solid var(--border); line-height: 1.7; cursor: pointer; }
-  .qp-r:hover b { color: var(--accent-text); }
-  .qp-r b { color: var(--text-primary); font-weight: 500; }
-  .q-hint { font-family: var(--font-mono); font-size: 10.5px; color: var(--text-tertiary); }
-
   /* ===== 纸面 ===== */
   .mid { flex: 1; min-width: 0; overflow-y: auto; position: relative; }
   .paper { max-width: 840px; min-height: 100%; margin: 0 auto; background: var(--bg-surface); border-left: 1px solid var(--paper-edge); border-right: 1px solid var(--paper-edge); padding: 84px 60px 160px; box-sizing: border-box; }
@@ -208,11 +196,10 @@
   <span class="proto-title">01 · 主界面:章节轨 · 纸面 · 状态点</span>
   <span>文档: design/01-main-layout.md</span>
   <span class="spacer"></span>
-  <button class="btn btn-sm" onclick="toggleLib()">库 (Cmd+B)</button>
-  <button class="btn btn-sm" onclick="toggleTrace()">Trace (Cmd+J)</button>
-  <button class="btn btn-sm" onclick="toggleComposer()">输入 (Cmd+L)</button>
-  <button class="btn btn-sm" onclick="toggleUSearch()">全局搜索 (Shift×2)</button>
-  <button class="btn btn-sm" onclick="toggleQuery()">查询 (Cmd+E)</button>
+  <button class="btn btn-sm" title="库 Cmd+B" onclick="toggleLib()">库</button>
+  <button class="btn btn-sm" title="过程 Cmd+J" onclick="toggleTrace()">过程</button>
+  <button class="btn btn-sm" title="输入 Cmd+L" onclick="toggleComposer()">输入</button>
+  <button class="btn btn-sm" title="搜索 Shift×2" onclick="toggleUSearch()">⌕ 搜索</button>
   <span style="display:inline-flex;gap:2px;align-items:center">状态点:
     <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('stopped')">已停止</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
   </span>
@@ -221,6 +208,7 @@
 
 <div class="app">
   <div class="rail">
+    <button class="rail-btn" title="返回项目选择" onclick="location.href='05-onboarding.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/><path d="M9 12h11"/></svg></button>
     <button class="rail-btn" title="库 (Cmd+B)" onclick="toggleLib()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
     <div class="rail-vol" title="第三卷 · 重生七年">卷三</div>
     <div class="rail-ch" title="009 · 旧仓库的钥匙" onclick="toast('切到 009(演示)')">009</div>
@@ -230,7 +218,7 @@
     <div class="rail-ch" title="013 · 概要 · 反转伏笔" onclick="toast('切到 013(演示)')">013</div>
     <div class="rail-spacer"></div>
     <button class="rail-btn" title="新手指引 → 05 号原型" onclick="location.href='05-onboarding.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></button>
-    <button class="rail-btn" title="Settings (Cmd+,) → 04 号原型" onclick="location.href='04-settings.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></button>
+    <button class="rail-btn" title="设置 (Cmd+,) → 04 号原型" onclick="location.href='04-settings.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8L9.4 5.6a7 7 0 0 0-2 1.2l-2.3-1-2 3.5 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.5 2.3-1a7 7 0 0 0 2 1.2l.4 2.6h4.4l.4-2.6a7 7 0 0 0 2-1.2l2.3 1 2-3.5-2-1.5c.06-.4.1-.8.1-1.2z"/></svg></button>
   </div>
 
   <div class="lib" id="lib">
@@ -249,7 +237,7 @@
       <p>雨下到第三天,<span class="ent ent-place" data-note="zhiwei">知微书馆</span>的霓虹灯牌短路了半边,只剩"知"字在水雾里一明一灭。<span class="ent ent-char" data-note="linxi">林溪</span>把最后一摞服务器报价单推到桌角,揉了揉眉心。</p>
       <p>门铃响的时候是凌晨一点十四分。</p>
       <p>来人收了伞,雨水顺着伞尖在地板上积出一小滩。<span class="ent ent-char" data-note="luchen">陆沉</span>就站在那滩水后面,西装笔挺得不像一个深夜造访的人。"林总,"他笑了笑,"我替<span class="ent ent-org" data-note="shouye">守夜人会</span>带个话。"</p>
-      <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span> 让 AI 修改 <kbd>Cmd+K</kbd></button><button onclick="openQuery('林溪的指尖在桌沿轻轻敲了两下')">查询</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
+      <p><span class="selection">林溪的指尖在桌沿轻轻敲了两下,这是她紧张时的旧习惯。<span class="float-toolbar"><button><span class="spark">✦</span> 修改 <kbd>Cmd+K</kbd></button><button onclick="openUSearchWith('林溪的指尖在桌沿轻轻敲了两下')">查引用</button></span></span>重生回来的第七年,她以为自己早就把这个动作戒掉了。</p>
       <p>林溪低头看了一眼自己的手。<span class="review-delete">这是她紧张时的旧习惯。</span><span class="review-insert">那枚旧习惯又从指尖漏了出来。</span><span class="review-note"><b>太直白</b><button>接受</button><button class="reject">拒绝</button><button>重试</button></span><span class="cascade-chip" onclick="toast('打开 C-03 cascade(演示)')">C-03</span></p>
       <p>"带话之前,先把东西还我。"她目光落在对方手里的<span class="ent ent-item" data-note="luopan">青铜罗盘</span>上——盘面上的<span class="violation" data-note="lingqi">灵气</span>纹路在灯下泛着不正常的青色。</p>
       <p>陆沉挑了挑眉,没接话,只是把罗盘放在了吧台上,推过来。</p>
@@ -259,8 +247,8 @@
 
   <div class="trace" id="trace">
     <div class="trace-inner">
-      <div class="tr-head"><span class="t">Trace</span><span class="cost">本 turn 24.6K tok · cache 87% · 已保存 01:12</span>
-        <span class="acts"><button class="btn btn-ghost btn-sm">复制</button><button class="btn btn-ghost btn-sm">折叠</button></span>
+      <div class="tr-head"><span class="t">过程</span><span class="cost">本轮 24.6K tok · 缓存 87% · 已保存 01:12</span>
+        <span class="acts"><button class="btn btn-ghost btn-sm">复制过程</button><button class="btn btn-ghost btn-sm">折叠</button></span>
       </div>
       <div class="tr-body">
         <div class="ag">
@@ -271,7 +259,7 @@
           <div class="ag-h"><span class="ag-dot" style="background:var(--agent-writer)"></span>写手 <span class="time">12.3s</span></div>
           <div class="ag-b">
             <div class="tool"><b>readSetting</b>('characters/lin.md') → 1,234 字</div>
-            <details class="tj"><summary class="tool"><b>writeSettingProposal</b>(…) → proposal ap_3e9d ▸ JSON</summary>
+            <details class="tj"><summary class="tool"><b>生成设定提议</b>(…) → 提议 ap_3e9d ▸ 明细</summary>
 <pre>{
   "kind": "proposal",
   "approvalId": "ap_3e9d",
@@ -306,14 +294,14 @@
   <div class="comp-lock">完成或取消上方审批后才能继续输入</div>
   <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用文件)"></textarea>
   <div class="comp-foot">
-    <span class="modes" id="modes"><span class="mode" data-m="discuss">Discuss</span><span class="mode on" data-m="plan">Plan</span><span class="mode" data-m="write">Write</span></span>
+    <span class="modes" id="modes"><span class="mode" data-m="讨论">讨论</span><span class="mode on" data-m="规划">规划</span><span class="mode" data-m="写作">写作</span></span>
     <span class="hint">tab 切模式 · @ 引用 · esc 收回</span>
     <span class="send"><button class="btn btn-primary btn-sm" onclick="demoSend()">发送 ⌘↵</button></span>
   </div>
 </div>
 
 <div class="usearch" id="usearch">
-  <input id="usInput" placeholder="搜索角色、阵营、概念、章节…" value="林溪">
+  <input id="usInput" placeholder="搜索角色、阵营、概念、章节、事实或引用…" value="林溪">
   <div class="us-body">
     <div>
       <div class="us-group">
@@ -329,6 +317,11 @@
         <div class="us-title">章节</div>
         <div class="us-row" data-us="chapter"><span class="us-kind">章节</span><span class="us-name">第 12 章 · 雨夜来客</span><span class="us-meta">当前打开</span></div>
       </div>
+      <div class="us-group">
+        <div class="us-title">事实答案 / 引用</div>
+        <div class="us-row" data-us="fact"><span class="us-kind">事实</span><span class="us-name">林溪紧张时会敲桌沿吗?</span><span class="us-meta">2 个来源</span></div>
+        <div class="us-row" data-us="mentions"><span class="us-kind">引用</span><span class="us-name">林溪的旧习惯</span><span class="us-meta">ch3, ch12</span></div>
+      </div>
     </div>
     <div class="us-preview" id="usPreview"></div>
   </div>
@@ -338,7 +331,7 @@
 <div class="ap-layer" id="apLayer">
   <div class="ap-card" id="focusApproval" tabindex="-1">
     <div class="ap-t"><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理 (Esc)">×</button></div>
-    <div class="ap-path">characters/lin.md · proposal ap_3e9d · 写手</div>
+    <div class="ap-path">characters/lin.md · 提议 ap_3e9d · 写手</div>
     <div class="diff">
       <div class="del">- 林川,男,29 岁,重生前是纵横资本的数据分析师</div>
       <div class="add">+ 林溪,女,29 岁,重生前是纵横资本的数据分析师</div>
@@ -356,16 +349,6 @@
       <div class="row"><button class="btn btn-sm" onclick="hideReject()">取消</button><button class="btn btn-danger btn-sm" onclick="submitReject()">提交反馈并拒绝</button></div>
     </div>
   </div>
-</div>
-
-<div class="query" id="query">
-  <input id="qInput" placeholder="问一个事实:林溪 在第 3 章时…" onkeydown="if(event.key==='Enter'){event.preventDefault();toast('查询已发出(演示)')}">
-  <div class="qp-types" id="qTypes"><span class="qp-type on" onclick="qType(this)">entity-at</span><span class="qp-type" onclick="qType(this)">relations</span><span class="qp-type" onclick="qType(this)">mentions</span><span class="qp-type" onclick="qType(this)">semantic</span></div>
-  <div>
-    <div class="qp-r" onclick="closeQuery();toast('跳到 ch3 来源段(演示)')"><b>林溪 @ ch3</b> · 身份: 数据分析师(重生前) · 位置: 知微书馆</div>
-    <div class="qp-r" onclick="closeQuery();toast('跳到 ch10 来源段(演示)')"><b>关系</b> · 林溪 — 陆沉: 对手(强度 0.8 · 来源 ch10-12)</div>
-  </div>
-  <div class="q-hint">enter 查询 · tab 切类型 · esc / ⌘E 收回</div>
 </div>
 
 <div class="toast-zone" id="toastZone"></div>
@@ -392,6 +375,10 @@ function openUSearch() {
   u.classList.add('open');
   document.getElementById('usInput').focus();
 }
+function openUSearchWith(prefill) {
+  document.getElementById('usInput').value = prefill || '';
+  openUSearch();
+}
 function closeUSearch() { document.getElementById('usearch').classList.remove('open'); }
 function toggleUSearch() {
   document.getElementById('usearch').classList.contains('open') ? closeUSearch() : openUSearch();
@@ -399,7 +386,7 @@ function toggleUSearch() {
 
 /* ===== 库面板 ===== */
 var LIB = {
-  chapters: { foot: '3 个 `_` 前缀派生文件已隐藏 — Developer Mode 可见', html:
+  chapters: { foot: '3 个 `_` 前缀派生文件已隐藏 — 开发构建才显示', html:
     '<div class="lib-sect">最近</div>' +
     '<div class="lib-row">林溪.md<span class="meta">角色 · 2 分钟前</span></div>' +
     '<div class="lib-row">outline.md<span class="meta">大纲 · 昨天</span></div>' +
@@ -440,10 +427,6 @@ function setCat(cat) {
   document.getElementById('libFoot').textContent = LIB[cat].foot;
   if (!document.getElementById('lib').classList.contains('open')) toggleLib();
 }
-function qType(el) {
-  el.parentElement.querySelectorAll('.qp-type').forEach(function (c) { c.classList.remove('on'); });
-  el.classList.add('on');
-}
 document.getElementById('libList').addEventListener('click', function (e) {
   var row = e.target.closest('.lib-row');
   if (!row) return;
@@ -459,7 +442,9 @@ var US_PREVIEW = {
   linxi: { name: '林溪', meta: '角色 · 主角 · 当前状态:掌握青铜罗盘线索', text: '阵营:知微书馆。关系:与陆沉敌对,与王胖子互信。最近出现:第 12 章雨夜来客。' },
   luchen: { name: '陆沉', meta: '角色 · 对手 · 首次正面交锋', text: '阵营:纵横资本。关系:守夜人会外围执行者,试图用罗盘交换条件。' },
   shouye: { name: '守夜人会', meta: '阵营 · 暗线组织 · 敌对', text: '成员:陆沉等。敌对关系:知微书馆。风险:其规则尚未完全公开。' },
-  chapter: { name: '第 12 章 · 雨夜来客', meta: '章节 · 当前打开 · 3,214 字', text: '命中:林溪、陆沉、青铜罗盘。存在 1 个世界规则 violation 和 1 个 cascade 锚点。' }
+  chapter: { name: '第 12 章 · 雨夜来客', meta: '章节 · 当前打开 · 3,214 字', text: '命中:林溪、陆沉、青铜罗盘。存在 1 个世界规则风险和 1 个整批审批锚点。' },
+  fact: { name: '林溪紧张时会敲桌沿吗?', meta: '事实答案 · 2 个来源 · 只读', text: '是。第 3 章和第 12 章都把「敲桌沿」作为紧张时的旧习惯。点击可跳来源段,不改变正文。' },
+  mentions: { name: '林溪的旧习惯', meta: '引用 · ch3 / ch12', text: '引用查看并入统一搜索。Enter 打开当前来源,Cmd+Enter 对照打开。' }
 };
 function renderUSPreview(key) {
   var p = US_PREVIEW[key] || US_PREVIEW.linxi;
@@ -527,7 +512,7 @@ function setState(s) {
   var comp = document.getElementById('composer');
   comp.classList.remove('locked');
   if (s === 'idle') {
-    label.innerHTML = '<span style="color:var(--text-tertiary)">plan</span>';
+    label.innerHTML = '<span style="color:var(--text-tertiary)">规划</span>';
     label.classList.add('show');
     dot.onclick = function () { toggleComposer(); };
     dot.title = '对话 (Cmd+L)';
@@ -535,7 +520,7 @@ function setState(s) {
     label.innerHTML = '写手正在生成 diff · 12s <span class="track"><span class="fill"></span></span> 3/5 · 毒舌读者 <button class="cancel" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button>';
     label.classList.add('show');
     dot.onclick = function () { toggleTrace(); };
-    dot.title = '查看 trace (Cmd+J)';
+    dot.title = '查看过程 (Cmd+J)';
   } else if (s === 'approval') {
     label.innerHTML = '<span class="appr" onclick="openApproval()">1 个修改待审批 — 查看</span>';
     label.classList.add('show');
@@ -544,14 +529,14 @@ function setState(s) {
     comp.classList.add('locked');
     openApproval();
   } else if (s === 'stopped') {
-    label.innerHTML = '<span style="color:var(--text-muted)">已停止 · 没有修改 · 查看 recap</span>';
+    label.innerHTML = '<span style="color:var(--text-muted)">已停止 · 没有修改 · 查看回执</span>';
     label.classList.add('show');
     dot.onclick = function () { toggleTrace(); };
     dot.title = '已停止';
   } else {
-    label.innerHTML = '<span class="err" onclick="toast(\'打开 Settings §API Keys\')">连接失败 · 去 Settings 检查 key</span>';
+    label.innerHTML = '<span class="err" onclick="toast(\'打开设置 · 连接凭据\')">连接失败 · 去设置检查凭据</span>';
     label.classList.add('show');
-    dot.onclick = function () { toast('打开 Settings §API Keys'); };
+    dot.onclick = function () { toast('打开设置 · 连接凭据'); };
     dot.title = '错误';
   }
 }
@@ -560,21 +545,11 @@ document.querySelectorAll('.mode').forEach(function (m) {
   m.addEventListener('click', function () {
     document.querySelectorAll('.mode').forEach(function (x) { x.classList.remove('on'); });
     m.classList.add('on');
-    toast('已切到 ' + m.dataset.m + ' 模式');
+    toast('已切到' + m.dataset.m + '模式');
   });
 });
 
 /* ===== 键盘 ===== */
-function openQuery(prefill) {
-  var q = document.getElementById('query'), i = document.getElementById('qInput');
-  q.classList.add('open');
-  if (prefill) i.value = prefill;
-  i.focus();
-}
-function closeQuery() { document.getElementById('query').classList.remove('open'); }
-function toggleQuery() {
-  document.getElementById('query').classList.contains('open') ? closeQuery() : openQuery();
-}
 document.addEventListener('keydown', function (e) {
   var cmd = e.metaKey || e.ctrlKey;
   var active = document.activeElement;
@@ -592,19 +567,10 @@ document.addEventListener('keydown', function (e) {
   if (cmd && e.key.toLowerCase() === 'b') { e.preventDefault(); toggleLib(); }
   if (cmd && e.key.toLowerCase() === 'j') { e.preventDefault(); toggleTrace(); }
   if (cmd && e.key.toLowerCase() === 'l') { e.preventDefault(); toggleComposer(); }
-  if (cmd && e.key.toLowerCase() === 'e') { e.preventDefault(); toggleQuery(); }
   if (cmd && CAT_KEYS[e.key]) { e.preventDefault(); setCat(CAT_KEYS[e.key]); }
-  if (e.key === 'Tab' && document.getElementById('query').classList.contains('open') && !e.isComposing) {
-    e.preventDefault();
-    var types = Array.prototype.slice.call(document.querySelectorAll('#qTypes .qp-type'));
-    var cur = types.findIndex(function (t) { return t.classList.contains('on'); });
-    types[cur].classList.remove('on');
-    types[(cur + (e.shiftKey ? types.length - 1 : 1)) % types.length].classList.add('on');
-  }
   if (e.key === 'Escape') {
     if (document.getElementById('apLayer').classList.contains('open')) closeApproval();
     else if (document.getElementById('usearch').classList.contains('open')) closeUSearch();
-    else if (document.getElementById('query').classList.contains('open')) closeQuery();
     else if (document.getElementById('composer').classList.contains('open')) closeComposer();
     else if (noteEl.classList.contains('show')) hideNote();
     else if (document.getElementById('trace').classList.contains('open')) toggleTrace();

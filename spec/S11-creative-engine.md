@@ -1,4 +1,4 @@
-# S12 · Creative Engine
+# S11 · Creative Engine
 
 这篇把 Creative Engine 写成一间“质检室”。它不替作者判定小说好坏,也不把模型评分当圣旨。它负责把网文创作中的关键风险变成可观察、可解释、可进入审批的信号。
 
