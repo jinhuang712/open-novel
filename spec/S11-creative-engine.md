@@ -122,6 +122,8 @@ flowchart TD
 
 增量范围必须进入 no-change-evidence 和风险报告。系统不能只说“已检查”,必须说检查了哪个范围、没检查哪个范围、为什么足够。
 
+当风险来自 Planning cascade 时,Creative Engine 只能把创作性正文风险标成说明、obligation 或 Writing 前置项。称谓、旧名、直接引用、事实性短替换可以随设定审批做机械一致性处理;场面重写、对白走向、情绪铺垫、节奏调整和读者感受修复必须进入 Writing 的正文 proposal,并在写作审批前重新汇合质量信号。
+
 ## 质量信号与主路径的关系
 
 | 主路径阶段 | Creative Engine 做什么 |

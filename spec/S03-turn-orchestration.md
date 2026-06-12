@@ -138,10 +138,10 @@ Discuss Mode 是 Router action 中最严格的只读分支,详见 [M04 · Discus
 | 当前模式 | 可生成什么 | 必须阻断什么 |
 |---|---|---|
 | Discuss | answer/report、只读查询、切换建议 | 任何写入、ChangeSet、inline accept 和经验沉淀。 |
-| Planning | 设定、结构、角色、关系、伏笔、世界规则 proposal | 正文落笔和正文替换。 |
+| Planning | 设定、结构、角色、关系、伏笔、世界规则 proposal,以及随 cascade 审批的机械一致性正文项 | 正文创作、场面/对白/情绪/节奏重写。 |
 | Writing | 正文草稿、正文改写、轻量表达修改、读者/守则报告 | 直接改设定、治理实体、改变世界规则。 |
 
-"Planning 阻断正文落笔"指 Planning 不产出正文创作;设定变更的 cascade ChangeSet 可以包含维持一致性所必需的正文替换 item,它们随整批在审批卡内由作者审定([M08](./M08-approval-cascade.md)),不构成模式越界。
+"Planning 阻断正文落笔"指 Planning 不产出正文创作。设定变更的 cascade ChangeSet 可以包含维持一致性所必需的机械正文 item:称谓、旧名、直接引用、事实性短替换。它们随整批在审批卡内由作者审定([M08](./M08-approval-cascade.md)),不构成模式越界。凡是需要重写场面、对白走向、情绪铺垫、叙事节奏或读者感受的正文修复,都必须拆成 Writing proposal。
 
 模式切换只能由用户显式发起。切换前 S04 必须检查 active writable turn、pending approval、applying/recovery、未关闭 atomic group 和 writing-blocked obligation。若任何条件不满足,切换进入 blocked projection,说明先处理什么;系统不能静默切换后继续执行旧队列。
 

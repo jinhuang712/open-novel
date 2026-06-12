@@ -60,7 +60,7 @@
 | S11/S12 creative + humanizer | 风险分级、ReaderPanel 聚合、Humanizer 越权升级 |
 | S11/M08 quality + approval | EditedAccepted 轻量重检、阻断级风险解决证据、no-change-evidence、审批前质检汇合 |
 | M01-M04 search/query/discuss | Shift+Shift、Search 内 fact answer 来源跳转、无 Cmd+E 独立入口、command routing、只读边界 |
-| M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、dependency group、低置信项、residual obligation、writing-blocked、部分接受和失败收场 |
+| M05-M08 planning/writing/approval | proposal 生成、ChangeSet 审批、dependency group、低置信项、residual obligation、writing-blocked、Planning 机械一致性正文项、创作性正文拆到 Writing、部分接受和失败收场 |
 | M03/M10/S05 knowledge governance | as-of chapter 查询、同名歧义、别名确认、实体合并/拆分、obligation 全局清单 |
 | M09-M13 trace/memory/agent controls | Trace 层级、经验可见/0-5 权重/删除、agent 调档/频率/权重且不可关闭 |
 | M14-M17 settings/onboarding/library/recap | credential 写入/删除/迁移、受限操作、启动项目选择、Settings 不含项目/数据管理、项目切换隔离、Activity append-only |
@@ -104,6 +104,8 @@
 | project switch crash recovery | 切换中崩溃后不得误把目标项目设为 active;源项目 pending、recent 和编辑状态可恢复或可解释失效。 |
 | mode gate restart | 重启后恢复持久模式;pending/recovery 时模式切换被阻断并说明原因。 |
 | writing mode planning prerequisite | 写作发现必须先改设定时生成 planning prerequisite,正文 proposal 不越权落盘。 |
+| planning mechanical text consistency | Planning cascade 只允许称谓、旧名、直接引用、事实性短替换随批审定;结果在审批卡中可见且受 dependency group 约束。 |
+| planning creative body split | Planning 命中场面重写、对白走向、情绪铺垫、节奏调整或读者感受修复时只生成只读影响说明和 Writing 前置项,不生成正文 proposal。 |
 | post-apply reindex failure | 作者文件已保存,索引 degraded/repair,审批不倒退为未接受。 |
 | provider context overflow | I01 返回 context_overflow 时退回 S07 overflow,不进入 provider transient retry。 |
 | embedding model unknown | 语义召回 needs data,向量表和相关能力不上线。 |

@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/decision · TODO-P1-45 规划正文连带边界
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决 Planning 不创作正文,但可随设定 cascade 同批审批称谓、旧名、直接引用、事实性短替换等机械一致性正文项;场面、对白走向、情绪铺垫、节奏调整和读者感受修复必须拆到 Writing proposal。 | `plan/07` `spec/M05` `spec/M06` `spec/M08` `spec/S03` `spec/S11` `V01` `TODO.md` | 关闭 TODO-P1-45。 |
+
 ## 2026-06-13 · docs/todo · P0 设计原型全分支覆盖
 
 | 变更 | 影响文档 | 关联 |
