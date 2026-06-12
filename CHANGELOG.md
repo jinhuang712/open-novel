@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · ReaderPanel 风险信号裁决
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决 ReaderPanel 只输出弃读风险信号,不输出留存预测、发布建议或“可发布/应重写”聚合结论;报告只展示风险信号、证据位置、来源 persona 和可选处理方向。 | `plan/09-narrative-and-reader.md` `spec/M11-reader-panel.md` | 关闭 TODO-P1-31。 |
+| 设计与原型删除“可发布 / 小修 / 重做建议”发布裁判心智和“留存环”图形,改为「风险低 / 需留意 / 风险集中 / 证据不足」风险信号。 | `design/03-reader-panel.md` `design/prototypes/03-reader-panel.html` | 用户选择方案 A。 |
+| TODO 移除 P009 中最后一个【裁决】项;当前仍有同日架构评审新增的 TODO-P1-42【裁决】待处理。 | `TODO.md` | 继续按 TODO 表逐项裁决。 |
+
 ## 2026-06-12 · docs/todo · 架构评审 TODO 回填
 
 | 变更 | 影响文档 | 关联 |
@@ -13,7 +21,7 @@
 |---|---|---|
 | 裁决经验冲突为“显式询问”:Reflector 发现新旧经验互相否定时不自动覆盖旧经验,也不静默丢弃新经验;候选进入待确认状态,由用户选择采用新经验、保留旧经验或两条都不用。 | `plan/10-memory-and-learning.md` `spec/S02-runtime-state.md` `spec/M12-memory-learning-management.md` | 关闭 TODO-P1-24。 |
 | Experience / Reflector 字段归口补 `pending_confirmation`、冲突对象 id 和冲突确认审计;待确认经验不得注入 context。 | `spec/appendix/A01-schema-tables.md` | 用户选择方案 C。 |
-| TODO 移除已裁决的 TODO-P1-24,剩余【裁决】项为 TODO-P1-31。 | `TODO.md` | 继续逐项裁决。 |
+| TODO 移除已裁决的 TODO-P1-24。 | `TODO.md` | P009 裁决项随后继续逐项处理。 |
 
 ## 2026-06-12 · docs/decision · 待审期间输入策略裁决
 
