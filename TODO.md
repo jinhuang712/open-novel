@@ -24,7 +24,6 @@
 
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
 |---|---|---|---|---|
-| TODO-P2-25 | S05/S07 需要补交叉映射说明:S05 pipeline phase、R04 health、S03/S04 用户投影术语未成表;S05 的事实优先级图容易把共同真源读成简单上下级;S07 prompt 层级图需说明它不推翻 S01/S06 的上下文取舍优先级。 | [S05](./spec/S05-knowledge-graph.md) · [S07](./spec/S07-prompt-system.md) · [S01](./spec/S01-runtime-state.md) · [S06](./spec/S06-context-management.md) · [R04](./spec/platform/R04-index-health-and-repair.md) | 术语可理解但实现容易分叉,属于解释性补强。 | S05 增加 phase→health→UI 投影表和事实来源/冲突处理表;S07 补安全结构层级 vs context 取舍优先级说明。 |
 
 ## 验证入口
 

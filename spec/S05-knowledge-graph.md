@@ -123,6 +123,17 @@ reindex 水位记录“索引已追到哪次落盘”。水位、五级健康度
 
 S05 的健康度不是 turn 终态。reindex 失败、partial、degraded 或 interrupted job 只能作为索引投影交给 S03/S14:若作品事实已提交,turn 结果仍由 [S03 · Canonical turn terminal enum](./S03-turn-orchestration.md#canonical-turn-terminal-enum) 判为 `Applied` 并附 degraded/repair 说明;若写入或恢复本身未收场,则由 S03/S14 判为 `ApplyFailed`、`Interrupted` 或 `ManualRecoveryOpened`。S05 不能把 `healthy`、`degraded`、`partial` 或 `blocked` 当作 turn terminal result。
 
+### 管线阶段、健康度和用户投影
+
+| S05 管线阶段 | R04 健康投影 | 交给 S03/S04 的用户可见状态 |
+|---|---|---|
+| 指纹未变,水位一致 | healthy | Search、查询、高亮和上下文正常;不生成 turn 终态。 |
+| 同步段已入 reindex request,异步未追平 | stale | 作品事实已保存,相关查询/高亮标记“索引正在追赶”;高风险写作和 cascade 需等待或缩小范围。 |
+| 锚点迁移失败、抽取冲突、embedding 不完整 | partial / degraded | 只读能力带 warning;S04 preflight 显示风险,依赖索引的写入任务降级或阻断。 |
+| repair 失败、大范围 anchor 丢失、KG 冲突未裁决 | blocked | S04 阻断新的依赖索引写入和审批应用,给出 repair / 人工处理入口。 |
+| post-apply reindex 失败 | degraded / repair pending | S03 仍按写入结果投影 `Applied`;UI 说明“作品已保存,索引能力降级”。 |
+| 写入或恢复本身未收场 | 不由 S05 定义 | S03/S14 投影 `ApplyFailed`、`Interrupted` 或 `ManualRecoveryOpened`;S05 只提供索引证据。 |
+
 ## 从一段正文到可用事实
 
 ```mermaid
@@ -200,6 +211,16 @@ flowchart TB
 ```
 
 越上层越权威。派生抽取不能覆盖作者文件;embedding 只能提示相关段落,不能单独断言事实。
+
+这张图不是“上级自动覆盖下级”的数据结构,而是冲突时的裁决顺序。作者文件与审批后事实共同构成作品账本;明确设定快照是作者事实的一种结构化投影;派生抽取和语义召回只是帮助发现来源。冲突处理按下表收口:
+
+| 来源组合 | 系统如何处理 | 不能做什么 |
+|---|---|---|
+| 作者文件 vs 审批历史 / 版本指纹 | 作者文件表达当前正文事实;审批历史标记失效、lost 或需重新定位。 | 为了匹配旧审批历史而覆盖当前文件。 |
+| 明确设定快照 vs 正文段落 | 标出冲突来源,交给一致性报告或审批;默认不自动改正文。 | 直接把设定快照当作可静默替换正文的命令。 |
+| 已确认 entity / alias / concept vs LLM 新候选 | 新候选保持低置信或待确认,除非用户审定合并/拆分/改名。 | 让 LLM 候选自动升级为高置信图谱事实。 |
+| 派生关系 / 时间线 vs source anchor 失效 | 保留历史裁决记录,证据标失效并要求重建或人工确认。 | 删除历史来假装图谱没有冲突。 |
+| embedding 语义召回 vs 精确来源 | embedding 只作为补召回,最终证据必须回到原文、设定或审批记录。 | 用相似段落单独断言事实或进入高风险写入。 |
 
 ## Reindex 是维护健康度,不是重写作品
 

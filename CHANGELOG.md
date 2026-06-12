@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs · TODO-P2-25 索引健康与 Prompt 边界映射
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| S05 补管线阶段到 R04 健康度再到 S03/S04 用户投影的映射表,并把事实优先级图解释为冲突裁决顺序而非简单上下级覆盖;S07 明确 prompt 层级不重新裁定 S01/S06 的事实优先级与 context package 取舍,context package 归 S06。 | `spec/S05` `spec/S07` `TODO.md` | 关闭 TODO-P2-25。 |
+
 ## 2026-06-13 · docs · TODO-P1-51 light apply undo 边界
 
 | 变更 | 影响文档 | 关联 |
