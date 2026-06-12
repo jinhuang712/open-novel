@@ -95,7 +95,7 @@ stateDiagram-v2
 | Context Management | 提供不可改事实、章节语境、风格经验 |
 | Creative Engine | 复核改写是否触发守则风险 |
 | Turn Orchestration | 承接升级后的 proposal 或审批项 |
-| Editor Interaction | 承接 inline review、近文批注、undo、diff 展示 |
+| Editor Interaction | 承接 inline review、近文批注、提交前 undo bridge、diff 展示 |
 | Runtime State | 提供和管理风格经验 |
 
 ## 失败收场
@@ -125,7 +125,7 @@ A: 标记依据不足,做轻度去模板化,不要强行拟合一个不存在的
 
 **Q: 改写能不能直接替换编辑器选区?**
 
-A: 可以,但只限明确安全的 inline review:用户在文字附近看到修订痕迹并接受后替换,且可 editor undo。高风险、跨段或跨文档改写应进入段落批阅或 Approval Cascade。
+A: 可以,但只限明确安全的 inline review:用户在文字附近看到修订痕迹并接受后替换。提交前可以普通 editor undo;保存入账后只能生成新的反向 light apply。高风险、跨段或跨文档改写应进入段落批阅或 Approval Cascade。
 
 **Q: “去 AI 味”如何验证?**
 

@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs · TODO-P1-51 light apply undo 边界
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 明确 inline accept / Humanizer 小改的撤销分界:提交前通过 editor undo bridge 当作本地替换撤销,不生成写入记录;保存并入账为 light apply 后只能生成新的反向 light apply,旧写入记录不可改写。 | `spec/S13` `spec/S12` `spec/S14` `V01` `TODO.md` | 关闭 TODO-P1-51。 |
+
 ## 2026-06-13 · docs/design · TODO-P2-26 设计原型一致性补齐
 
 | 变更 | 影响文档 | 关联 |

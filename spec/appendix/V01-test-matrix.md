@@ -75,7 +75,8 @@
 |---|---|
 | 写入记录崩溃恢复 | prepared/file-applied/committed 这类阶段是否保留待 TODO-P1-59 裁决;裁决前只验收“崩溃后不能误判为外部编辑,用户能看见未完成写入如何收场”。 |
 | direct edit light apply | 作者保存直接编辑后生成写入记录、activity、reindex request,不生成大审批卡。 |
-| inline accept light apply | 选区接受进入 undo bridge 和 light apply;触及事实/跨文档/阻断风险时升级 ChangeSet。 |
+| inline accept pre-commit undo | 选区接受或 Humanizer 小改接受后,在保存/light apply 提交前可用普通 editor undo 撤掉,且不生成写入记录。 |
+| inline accept light apply | 选区接受提交后生成 light apply 写入记录、activity、reindex request;触及事实/跨文档/阻断风险时升级 ChangeSet。 |
 | editor undo after committed light apply | 生成新的反向 light apply,不修改旧写入记录。 |
 | 项目事实库真源损坏 | 作者文件仍可取用;不得把派生索引重建伪装成丢失审批历史;恢复/保护路径待 TODO-P1-60 裁决后补齐。 |
 | 文件与事实账本冲突 | 作者文件优先;审批历史或 obligation 标记 lost/invalidated,不能覆盖文件来匹配旧账本。 |
