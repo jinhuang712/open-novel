@@ -85,6 +85,11 @@ flowchart LR
 | Agent | `--agent-reflector` | `#8A6FB8` | `#AC93D9` | `reflector` 反思学习者 |
 | Agent | `--agent-humanizer` | `#4E9B8F` | `#6FB8AC` | `humanizer` 润色师 |
 | Agent | `--agent-reader-panel` | `#C95F8E` | `#D9849E` | `reader_panel` 读者评审团 |
+| ReaderPanel persona | `--persona-zhui` | `#C95F8E` | `#D9849E` | 追更党;近邻色,只标来源 |
+| ReaderPanel persona | `--persona-luo` | `#B46EA4` | `#CB8CB5` | 逻辑控;近邻色,只标来源 |
+| ReaderPanel persona | `--persona-qing` | `#9B78B7` | `#B99DCA` | 情感党;近邻色,只标来源 |
+| ReaderPanel persona | `--persona-du` | `#827FBD` | `#A3A7D3` | 毒舌读者;近邻色,只标来源 |
+| ReaderPanel persona | `--persona-qian` | `#6E87B8` | `#96B1D6` | 潜水大佬;近邻色,只标来源 |
 | 置信度 | `--confidence-high/-mid/-low` | 复用 success / warning / tertiary | 同左 | cascade 勾选默认值的视觉对应 |
 | Diff | `--diff-del-bg/-text` | `#FBEAE8` / `#A33D34` | `#46302E` / `#E5938A` | 删除行 |
 | Diff | `--diff-add-bg/-text` | `#E8F2E8` / `#44693F` | `#2E3A2F` / `#A4C9A0` | 新增行 |
@@ -98,6 +103,20 @@ flowchart LR
 | `--font-mono` | `JetBrains Mono` / ui-monospace | diff、路径、kbd、token 用量 |
 
 字号阶梯:11(角标)/ 12(辅助)/ 13(UI 默认)/ 14(正文)/ 16(编辑器)/ 18(区块标题)/ 24(衬线品牌标题)。字重只用 400 / 500 / 600。
+
+## 中文排版契约
+
+编辑器、ReaderPanel、审批 diff 和长文预览共享同一套中文排版观感。这里定义设计契约,不绑定具体排版库或浏览器实现:
+
+| 契约 | 要求 |
+|---|---|
+| 避头尾 | 行首避免右引号、右括号、句末标点和省略号续点;行尾避免左引号、左括号和连接性符号。无法完全避让时,优先保持正文列宽稳定,再用微调而不是拉大字距。 |
+| 标点悬挂 | 正文阅读区允许句末标点、右引号和顿号/逗号等轻量标点在视觉上微悬挂,让汉字列更齐;UI 控件、表格、按钮、标签和代码区不做悬挂。 |
+| 中英数混排 | 中文、英文、数字和内联 code 的基线必须稳定;英文/数字不应上下漂移,也不应被压缩成装饰字。中英之间可用细间隔增强可读性,但不得改变原文内容或复制结果。 |
+| 标点宽度 | 中文正文优先使用全角中文标点;英文专名、路径、命令和 token 保留原字符宽度。设计只修正显示节奏,不自动改写作者文本。 |
+| 可解释降级 | 受限环境无法满足避头尾或悬挂时,界面仍保持行距、列宽和基线一致;不得出现文字重叠、按钮撑开或 diff 对齐错位。 |
+
+任何排版增强都不能改变文本事实、diff 粒度、复制内容或审批锚点。若显示层和可复制文本不一致,用户操作以原文和 S04/S14 的锚点语义为准。
 
 ## 圆角 · 阴影 · 间距 · 动效
 

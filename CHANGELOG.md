@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/design · 剩余设计与体验 TODO 收口
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| Approval Cascade 设计与原型改为 dependency group / atomic group 裁决:必需一致性项锁定同组接受或同组拒绝,只有独立低置信项可搁置并生成 residual obligation;原型补真实 hover 联动、ApplyFailed/部分失败态、词级 diff 和同模式聚合摘要。 | `design/02-approval-cascade.md` `design/prototypes/02-approval-cascade.html` | 关闭 TODO-P0-03、TODO-P2-18;承接 TODO-P2-22 的词级 diff 与同模式聚合。 |
+| ReaderPanel 设计与原型补叙事诊断区块:章内四维体检、趋势地形图、历史快照、旧章重跑、单维度重跑和 inconclusive/人工判断态;persona 增加近邻色 token 和首字识别。 | `design/03-reader-panel.md` `design/prototypes/03-reader-panel.html` `design/00-design-tokens.md` `design/prototypes/tokens.css` | 关闭 TODO-P1-29;承接 TODO-P2-22 的 persona 识别。 |
+| 体验提升簇落入主权文档:中文排版契约、自动滚动备份、run 内工具结果缓存、turn 成本预算 / cascade preflight 一等状态、风格来源分级防 AI 回声室、单条 stale freshness marker。 | `design/00-design-tokens.md` `spec/platform/R02-backup-restore.md` `spec/S03-agent-runner.md` `spec/S09-agent-tooling-boundary.md` `spec/S04-turn-orchestration.md` `spec/S13-style-and-humanizer.md` | 关闭 TODO-P2-22。 |
+| TODO 仅保留必须真实实测才能关闭的两项:heavy SQLite/reindex stream heartbeat 与 long-form impact/cascade 能力 spike。 | `TODO.md` | 活跃 TODO 收缩为 TODO-P1-22、TODO-P1-43。 |
+
 ## 2026-06-12 · docs/todo · 主权链路与剩余 TODO 大收口
 
 | 变更 | 影响文档 | 关联 |

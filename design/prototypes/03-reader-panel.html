@@ -24,9 +24,14 @@
   .rp-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .rp-sub { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
   .pdots { display: flex; gap: 6px; margin-top: 8px; }
-  .pdot { width: 11px; height: 11px; border-radius: 99px; background: var(--agent-reader-panel); cursor: help; }
+  .pdot { width: 18px; height: 18px; border-radius: 99px; background: var(--persona, var(--agent-reader-panel)); color: var(--bg-surface); cursor: help; display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; line-height: 1; }
   .pdot.fail { background: transparent; border: 1.5px dashed var(--text-tertiary); }
   .pdot.todo { background: var(--bg-active); }
+  .p-zhui { --persona: var(--persona-zhui); }
+  .p-luo { --persona: var(--persona-luo); }
+  .p-qing { --persona: var(--persona-qing); }
+  .p-du { --persona: var(--persona-du); }
+  .p-qian { --persona: var(--persona-qian); }
 
   .sec { padding: 12px 18px; border-bottom: 1px solid var(--border); }
   .sec-title { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
@@ -40,6 +45,44 @@
   .mark-row .where:hover { text-decoration: underline; }
   .mark-row input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); flex: none; }
 
+  .diag-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+  .diag-head-main { flex: 1; min-width: 0; }
+  .diag-copy { font-size: 12px; color: var(--text-secondary); line-height: 1.55; margin-top: 4px; }
+  .diag-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .diag-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .diag-card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-app); padding: 10px 12px; min-height: 128px; display: flex; flex-direction: column; gap: 8px; }
+  .diag-card.warn { border-color: color-mix(in srgb, var(--warning) 42%, var(--border)); }
+  .diag-card.inconclusive { background: var(--bg-sunken); }
+  .diag-card-head { display: flex; align-items: center; gap: 8px; }
+  .diag-name { font-size: 13px; font-weight: 600; }
+  .diag-card p { margin: 0; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+  .diag-evidence { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .evidence-box { border-radius: var(--radius-sm); background: var(--bg-sunken); padding: 7px 8px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.45; min-height: 48px; }
+  .evidence-box strong { display: block; color: var(--text-primary); font-size: 11px; margin-bottom: 2px; }
+  .diag-card-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; }
+  .spark { display: flex; align-items: end; gap: 3px; height: 28px; min-width: 66px; }
+  .spark span { width: 8px; border-radius: 3px 3px 1px 1px; background: var(--agent-reader-panel); opacity: .34; }
+  .spark span.hot { opacity: .9; }
+  .spark span.cold { background: var(--warning); opacity: .72; }
+
+  .terrain { margin-top: 12px; border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-app); }
+  .terrain-top { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  .terrain-title { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+  .terrain-note { margin-left: auto; font-size: 11.5px; color: var(--text-tertiary); }
+  .terrain-grid { display: grid; grid-template-columns: 56px repeat(8, minmax(34px, 1fr)); }
+  .terrain-label, .terrain-chapter { padding: 8px 6px; font-size: 11px; color: var(--text-tertiary); border-bottom: 1px solid var(--border); text-align: center; }
+  .terrain-label { text-align: left; padding-left: 12px; }
+  .terrain-cell { position: relative; height: 34px; border-bottom: 1px solid var(--border); display: flex; align-items: end; justify-content: center; padding-bottom: 5px; }
+  .terrain-cell.current { background: var(--bg-active); }
+  .terrain-cell.current::after { content: ""; position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent); opacity: .75; }
+  .terrain-cell button { width: 26px; border: 0; border-radius: 5px 5px 2px 2px; background: var(--agent-reader-panel); opacity: .72; cursor: pointer; }
+  .terrain-cell button:hover { opacity: 1; }
+  .terrain-cell button.low { background: var(--warning); }
+  .terrain-cell button.mid { opacity: .56; }
+  .terrain-cell button.dim { background: var(--bg-active); border: 1px dashed var(--text-tertiary); }
+  .snapshots { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 12px; }
+  .snapshot { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-sunken); padding: 7px 9px; font-size: 11.5px; color: var(--text-secondary); }
+
   .fold-head { display: flex; align-items: center; gap: 8px; padding: 12px 18px; font-size: 12.5px; font-weight: 600; color: var(--text-secondary); cursor: pointer; user-select: none; }
   .fold-head .mini { font-weight: 400; color: var(--text-tertiary); }
   .fold-head .chev { margin-left: auto; transition: transform var(--dur-fast) var(--ease); }
@@ -47,12 +90,13 @@
   .fold-body { display: none; padding: 0 18px 14px; flex-direction: column; gap: 10px; }
   .fold.open .fold-body { display: flex; }
 
-  .pcard { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; background: var(--bg-app); }
+  .pcard { border: 1px solid var(--border); border-left: 3px solid var(--persona, var(--agent-reader-panel)); border-radius: var(--radius-md); padding: 12px 14px; background: var(--bg-app); }
   .pc-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .pc-initial { width: 18px; height: 18px; border-radius: 99px; background: var(--persona, var(--agent-reader-panel)); color: var(--bg-surface); display: inline-grid; place-items: center; font-size: 10px; font-weight: 700; line-height: 1; }
   .pc-name { font-weight: 600; font-size: 13px; }
   .pc-tag { font-size: 11.5px; color: var(--text-tertiary); }
   .pc-metrics { margin-left: auto; display: flex; gap: 10px; font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
-  .pc-quote { margin: 8px 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--agent-reader-panel); font-family: var(--font-serif); font-style: italic; font-size: 13px; line-height: 1.7; color: var(--text-primary); }
+  .pc-quote { margin: 8px 0; padding: 2px 0 2px 12px; border-left: 3px solid var(--persona, var(--agent-reader-panel)); font-family: var(--font-serif); font-style: italic; font-size: 13px; line-height: 1.7; color: var(--text-primary); }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chips .where { cursor: pointer; }
 
@@ -64,6 +108,14 @@
   .progress-track { height: 4px; border-radius: 99px; background: var(--bg-active); overflow: hidden; }
   .progress-fill { height: 100%; width: 60%; border-radius: 99px; background: var(--accent); }
   .prog-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-secondary); }
+
+  @media (max-width: 560px) {
+    .diag-head { flex-direction: column; }
+    .diag-actions { justify-content: flex-start; }
+    .diag-grid { grid-template-columns: 1fr; }
+    .terrain-grid { grid-template-columns: 48px repeat(8, minmax(28px, 1fr)); }
+    .terrain-cell button { width: 20px; }
+  }
 </style>
 </head>
 <body>
@@ -88,11 +140,11 @@
         <div class="rp-title">第 12 章 · 雨夜来客 <span class="badge badge-warning">3/5 标记节奏风险</span></div>
         <div class="rp-sub">5/5 个读者完成 · 平均阅读视角耗时 19.8s · 触发: write 审批前自动</div>
         <div class="pdots">
-          <span class="pdot" title="追更党 ✓ 追更意愿高"></span>
-          <span class="pdot" title="逻辑控 ✓ 铺垫不足"></span>
-          <span class="pdot" title="情感党 ✓ 人物细节有效"></span>
-          <span class="pdot" title="毒舌读者 ✓ AI 味风险"></span>
-          <span class="pdot" title="潜水大佬 ✓ 长线伏笔有效"></span>
+          <span class="pdot p-zhui" title="追更党 ✓ 追更意愿高">追</span>
+          <span class="pdot p-luo" title="逻辑控 ✓ 铺垫不足">逻</span>
+          <span class="pdot p-qing" title="情感党 ✓ 人物细节有效">情</span>
+          <span class="pdot p-du" title="毒舌读者 ✓ AI 味风险">毒</span>
+          <span class="pdot p-qian" title="潜水大佬 ✓ 长线伏笔有效">潜</span>
         </div>
       </div>
     </div>
@@ -110,33 +162,130 @@
       <div class="mark-row win"><span class="badge badge-success">细节真 · 3/5 标</span><span>敲桌沿的旧习惯,人物厚度 +1</span><span class="where">→ 第 4 段</span></div>
     </div>
 
+    <div class="sec">
+      <div class="diag-head">
+        <div class="diag-head-main">
+          <div class="sec-title" style="margin-bottom:0">叙事诊断 · 章内四维体检</div>
+          <div class="diag-copy">BeatAnalyzer 对本章爽点、情绪、因果和悬念做结构体检。当前报告保留 3 个历史快照,可重跑整章或只刷新单个维度。</div>
+        </div>
+        <div class="diag-actions">
+          <button class="btn btn-sm">重跑本章诊断</button>
+          <button class="btn btn-ghost btn-sm">打开历史快照</button>
+        </div>
+      </div>
+
+      <div class="diag-grid">
+        <div class="diag-card warn">
+          <div class="diag-card-head"><span class="diag-name">爽点密度</span><span class="badge badge-warning">偏稀</span></div>
+          <p>第 5-7 段连续铺垫后才出现罗盘推进,中段爽点空窗偏长。</p>
+          <div class="diag-evidence">
+            <div class="evidence-box"><strong>最强证据</strong>章末罗盘被 5/5 读者标为钩子强</div>
+            <div class="evidence-box"><strong>最弱证据</strong>报价单三段被 3/5 标为节奏拖</div>
+          </div>
+          <div class="diag-card-foot">
+            <div class="spark" aria-label="爽点走势"><span style="height:11px"></span><span style="height:10px"></span><span class="cold" style="height:7px"></span><span class="hot" style="height:24px"></span></div>
+            <button class="btn btn-ghost btn-sm">只重跑爽点</button>
+          </div>
+        </div>
+
+        <div class="diag-card">
+          <div class="diag-card-head"><span class="diag-name">情绪推进</span><span class="badge badge-success">充足</span></div>
+          <p>林溪旧习惯带出情绪支点,章末压迫感自然抬升,没有明显断崖。</p>
+          <div class="diag-evidence">
+            <div class="evidence-box"><strong>最强证据</strong>第 4 段细节被情感党和潜水大佬同时标亮</div>
+            <div class="evidence-box"><strong>最弱证据</strong>陆沉对峙缺两句潜台词</div>
+          </div>
+          <div class="diag-card-foot">
+            <div class="spark" aria-label="情绪走势"><span style="height:9px"></span><span style="height:15px"></span><span class="hot" style="height:20px"></span><span style="height:18px"></span></div>
+            <button class="btn btn-ghost btn-sm">只重跑情绪</button>
+          </div>
+        </div>
+
+        <div class="diag-card warn">
+          <div class="diag-card-head"><span class="diag-name">因果链</span><span class="badge badge-warning">需人工判断</span></div>
+          <p>守夜人从传闻到登门之间缺一环,但是否属于作者刻意留白需要人工裁决。</p>
+          <div class="diag-evidence">
+            <div class="evidence-box"><strong>最强证据</strong>罗盘来历与第 9 章伏笔可对齐</div>
+            <div class="evidence-box"><strong>不确定点</strong>守夜人动机依赖未展示的旧章信息</div>
+          </div>
+          <div class="diag-card-foot">
+            <span class="badge badge-neutral">inconclusive</span>
+            <button class="btn btn-ghost btn-sm">只重跑因果</button>
+          </div>
+        </div>
+
+        <div class="diag-card">
+          <div class="diag-card-head"><span class="diag-name">悬念钩子</span><span class="badge badge-success">充足</span></div>
+          <p>章末钩子明确牵引下一章,同时把商战线轻轻推向异闻线。</p>
+          <div class="diag-evidence">
+            <div class="evidence-box"><strong>最强证据</strong>5/5 读者都记住罗盘推近动作</div>
+            <div class="evidence-box"><strong>最弱证据</strong>世界观偏移需要后三章承接</div>
+          </div>
+          <div class="diag-card-foot">
+            <div class="spark" aria-label="悬念走势"><span style="height:8px"></span><span style="height:13px"></span><span style="height:17px"></span><span class="hot" style="height:26px"></span></div>
+            <button class="btn btn-ghost btn-sm">只重跑悬念</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="terrain">
+        <div class="terrain-top">
+          <span class="terrain-title">趋势地形图</span>
+          <span class="badge badge-neutral">当前: 第 12 章</span>
+          <span class="terrain-note">点击旧章点位可旧章重跑</span>
+        </div>
+        <div class="terrain-grid">
+          <div class="terrain-label"></div><div class="terrain-chapter">07</div><div class="terrain-chapter">08</div><div class="terrain-chapter">09</div><div class="terrain-chapter">10</div><div class="terrain-chapter">11</div><div class="terrain-chapter">12</div><div class="terrain-chapter">重跑</div><div class="terrain-chapter">旧照</div>
+          <div class="terrain-label">爽点</div><div class="terrain-cell"><button style="height:18px" title="第 7 章 · 正常"></button></div><div class="terrain-cell"><button class="mid" style="height:15px" title="第 8 章 · 正常"></button></div><div class="terrain-cell"><button style="height:20px" title="第 9 章 · 伏笔高点"></button></div><div class="terrain-cell"><button style="height:16px" title="第 10 章 · 正常"></button></div><div class="terrain-cell"><button style="height:19px" title="第 11 章 · 正常"></button></div><div class="terrain-cell current"><button class="low" style="height:9px" title="第 12 章 · 爽点空窗"></button></div><div class="terrain-cell"><button class="dim" style="height:13px" title="重跑快照 · 部分刷新"></button></div><div class="terrain-cell"><button class="mid" style="height:15px" title="旧快照 · 审批前"></button></div>
+          <div class="terrain-label">情绪</div><div class="terrain-cell"><button class="mid" style="height:15px" title="第 7 章"></button></div><div class="terrain-cell"><button style="height:17px" title="第 8 章"></button></div><div class="terrain-cell"><button style="height:21px" title="第 9 章"></button></div><div class="terrain-cell"><button style="height:16px" title="第 10 章"></button></div><div class="terrain-cell"><button style="height:18px" title="第 11 章"></button></div><div class="terrain-cell current"><button style="height:22px" title="第 12 章 · 情绪有效"></button></div><div class="terrain-cell"><button class="dim" style="height:20px" title="重跑快照"></button></div><div class="terrain-cell"><button class="mid" style="height:16px" title="旧快照"></button></div>
+          <div class="terrain-label">因果</div><div class="terrain-cell"><button style="height:18px" title="第 7 章"></button></div><div class="terrain-cell"><button style="height:17px" title="第 8 章"></button></div><div class="terrain-cell"><button style="height:20px" title="第 9 章"></button></div><div class="terrain-cell"><button class="mid" style="height:13px" title="第 10 章"></button></div><div class="terrain-cell"><button style="height:18px" title="第 11 章"></button></div><div class="terrain-cell current"><button class="dim" style="height:12px" title="第 12 章 · 需人工判断"></button></div><div class="terrain-cell"><button class="dim" style="height:12px" title="重跑快照 · inconclusive"></button></div><div class="terrain-cell"><button class="mid" style="height:15px" title="旧快照"></button></div>
+          <div class="terrain-label">悬念</div><div class="terrain-cell"><button class="mid" style="height:14px" title="第 7 章"></button></div><div class="terrain-cell"><button style="height:16px" title="第 8 章"></button></div><div class="terrain-cell"><button style="height:22px" title="第 9 章"></button></div><div class="terrain-cell"><button style="height:18px" title="第 10 章"></button></div><div class="terrain-cell"><button style="height:20px" title="第 11 章"></button></div><div class="terrain-cell current"><button style="height:27px" title="第 12 章 · 章尾钩子强"></button></div><div class="terrain-cell"><button class="dim" style="height:24px" title="重跑快照"></button></div><div class="terrain-cell"><button class="mid" style="height:18px" title="旧快照"></button></div>
+        </div>
+        <div class="snapshots">
+          <div class="snapshot">审批前快照 · 今天 19:42 · 4 维完成</div>
+          <div class="snapshot">手动诊断 · 昨天 23:10 · 第 11 章</div>
+          <div class="snapshot">旧章重跑 · 第 9 章 · BeatAnalyzer 当前规则</div>
+        </div>
+      </div>
+
+      <div class="diag-card inconclusive" style="margin-top:10px; min-height:auto">
+        <div class="diag-card-head"><span class="diag-name">人工判断态</span><span class="badge badge-neutral">inconclusive</span></div>
+        <p>因果链依赖未展示的旧章信息,系统不自动生成修改任务。作者可以接受当前留白,或记录为待改问题后再进入修改。</p>
+        <div class="diag-actions" style="justify-content:flex-start">
+          <button class="btn btn-sm">标记为接受当前节奏</button>
+          <button class="btn btn-sm">记录为待改问题</button>
+          <button class="btn btn-ghost btn-sm">只重跑因果</button>
+        </div>
+      </div>
+    </div>
+
     <div class="fold" id="fold">
       <div class="fold-head" onclick="document.getElementById('fold').classList.toggle('open')">
-        展开 5 个读者反馈 <span class="mini">追更:想看下章 · 逻辑:缺铺垫 · 情感:有共鸣 · 毒舌:AI 味 · 潜水:伏笔有效</span><span class="chev">▾</span>
+        展开 5 个读者反馈 <span class="mini"><span class="pdot p-zhui">追</span>想看下章 · <span class="pdot p-luo">逻</span>缺铺垫 · <span class="pdot p-qing">情</span>有共鸣 · <span class="pdot p-du">毒</span>AI 味 · <span class="pdot p-qian">潜</span>伏笔有效</span><span class="chev">▾</span>
       </div>
       <div class="fold-body">
-        <div class="pcard">
-          <div class="pc-head"><span class="pc-name">追更党</span><span class="pc-tag">节奏 · 爽点 · 钩子</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿高</span><span>弃书风险低</span></span></div>
+        <div class="pcard p-zhui">
+          <div class="pc-head"><span class="pc-initial">追</span><span class="pc-name">追更党</span><span class="pc-tag">节奏 · 爽点 · 钩子</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿高</span><span>弃书风险低</span></span></div>
           <div class="pc-quote">结尾陆沉把罗盘推过来那下我是真想点下一章。但中间报价单那三段,差点让我划走——商战细节留一半就够了。</div>
           <div class="chips"><span class="badge badge-success where">爽点 · 章末</span><span class="badge badge-danger where">节奏拖 · 第 5-7 段</span></div>
         </div>
-        <div class="pcard">
-          <div class="pc-head"><span class="pc-name">逻辑控</span><span class="pc-tag">一致性 · 伏笔 · 推理链</span><span class="pc-metrics"><span>情绪中性</span><span>追更意愿中</span><span>弃书风险中</span></span></div>
+        <div class="pcard p-luo">
+          <div class="pc-head"><span class="pc-initial">逻</span><span class="pc-name">逻辑控</span><span class="pc-tag">一致性 · 伏笔 · 推理链</span><span class="pc-metrics"><span>情绪中性</span><span>追更意愿中</span><span>弃书风险中</span></span></div>
           <div class="pc-quote">守夜人会上一章还只是酒桌传闻,这章直接登门递话,中间缺一环。罗盘的来历倒是和第 9 章对得上,加分。</div>
           <div class="chips"><span class="badge badge-danger where">突兀 · 第 4 段</span><span class="badge badge-success where">伏笔回收 · 罗盘</span></div>
         </div>
-        <div class="pcard">
-          <div class="pc-head"><span class="pc-name">情感党</span><span class="pc-tag">关系 · 张力 · 共鸣</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿中</span><span>弃书风险低</span></span></div>
+        <div class="pcard p-qing">
+          <div class="pc-head"><span class="pc-initial">情</span><span class="pc-name">情感党</span><span class="pc-tag">关系 · 张力 · 共鸣</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿中</span><span>弃书风险低</span></span></div>
           <div class="pc-quote">林溪敲桌沿那个旧习惯写得好——重生七年都戒不掉的小动作,比一万字心理描写都戳。和陆沉的对峙再多两句潜台词就更妙了。</div>
           <div class="chips"><span class="badge badge-success where">亮点 · 第 4 段</span></div>
         </div>
-        <div class="pcard">
-          <div class="pc-head"><span class="pc-name">毒舌读者</span><span class="pc-tag">AI 味 · 老套 · 文字硬伤</span><span class="pc-metrics"><span>情绪偏负</span><span>追更意愿低</span><span>弃书风险高</span></span></div>
+        <div class="pcard p-du">
+          <div class="pc-head"><span class="pc-initial">毒</span><span class="pc-name">毒舌读者</span><span class="pc-tag">AI 味 · 老套 · 文字硬伤</span><span class="pc-metrics"><span>情绪偏负</span><span>追更意愿低</span><span>弃书风险高</span></span></div>
           <div class="pc-quote">"西装笔挺得不像一个深夜造访的人"——这句可以。但第 3 段一口气七十多字不带喘,"在某种程度上"还来了两次,AI 味没洗干净。</div>
           <div class="chips"><span class="badge badge-danger where">AI 味 · 第 3 段</span><span class="badge badge-warning where">长句过密</span></div>
         </div>
-        <div class="pcard">
-          <div class="pc-head"><span class="pc-name">潜水大佬</span><span class="pc-tag">长线 · 世界观 · 层次</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿高</span><span>弃书风险低</span></span></div>
+        <div class="pcard p-qian">
+          <div class="pc-head"><span class="pc-initial">潜</span><span class="pc-name">潜水大佬</span><span class="pc-tag">长线 · 世界观 · 层次</span><span class="pc-metrics"><span>情绪偏正</span><span>追更意愿高</span><span>弃书风险低</span></span></div>
           <div class="pc-quote">罗盘纹路发青如果是伏笔,这一手布得不错。世界观从纯商战往异闻斜了一度,是惊喜也是风险,看后面三章怎么圆。</div>
           <div class="chips"><span class="badge badge-success where">设定彩蛋 · 罗盘</span></div>
         </div>
@@ -158,11 +307,11 @@
       <div class="prog-row"><span>ReaderPanel · 3/5 · 毒舌读者正在读…</span><span style="margin-left:auto;font-family:var(--font-mono)">4.5s</span><button class="btn btn-sm">取消</button></div>
       <div class="progress-track"><div class="progress-fill"></div></div>
       <div class="pdots">
-        <span class="pdot" title="追更党 ✓"></span>
-        <span class="pdot" title="逻辑控 ✓"></span>
-        <span class="pdot" title="情感党 ✓"></span>
-        <span class="pdot todo" title="毒舌读者 · 进行中"></span>
-        <span class="pdot todo" title="潜水大佬 · 排队中"></span>
+        <span class="pdot p-zhui" title="追更党 ✓">追</span>
+        <span class="pdot p-luo" title="逻辑控 ✓">逻</span>
+        <span class="pdot p-qing" title="情感党 ✓">情</span>
+        <span class="pdot p-du todo" title="毒舌读者 · 进行中">毒</span>
+        <span class="pdot p-qian todo" title="潜水大佬 · 排队中">潜</span>
       </div>
       <div class="prog-row" style="font-size:11.5px;color:var(--text-tertiary)">取消会保留已完成的反应;不足 3 个成功时只显示证据不足,不出分类建议。</div>
     </div>

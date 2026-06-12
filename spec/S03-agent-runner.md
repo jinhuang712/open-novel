@@ -57,6 +57,20 @@ Runner 在桌面壳的常驻执行宿主/sidecar 中运行,不绑定 renderer、
 
 Runner 还必须把每个 run 的持久身份交给执行宿主。stream 连接只是观察窗口;执行宿主负责让取消信号、step 写入、恢复读取和最终结果不随 UI 断线丢失。每条 stream step 必须有 turn id、attempt id、step id 和递增序号,使 UI 可以去重和重排,但不能把事件流当事实源。
 
+## Run 内工具结果缓存
+
+Runner 可以在同一 run 内复用工具结果,但缓存只是执行优化,不是新的事实来源。缓存命中必须仍然产生可追踪 step,让 Trace 能解释“这次没有重新调用工具,而是复用了哪一次结果”。
+
+| 边界 | 契约 |
+|---|---|
+| scope | 缓存只在同一 run envelope、同一 attempt lineage 内有效;跨 turn、跨 run、跨项目和恢复后的新 attempt 不能默认复用。 |
+| key | 至少绑定 tool name/version、规范化参数、permission class、context package id、source_refs/fingerprint、model/tool policy id 和 freshness marker。 |
+| eligible | 只读、查询、纯格式化或可证明幂等的 internal tool 可缓存;proposal tool、platform side effect、non-cancellable 未知状态和任何写入前置检查不得用旧结果替代新检查。 |
+| invalidation | source fingerprint、context package、tool policy、provider/model profile、freshness marker、pending approval 状态或用户输入发生变化时失效。 |
+| trace | 命中缓存时记录原 tool_call_id、cache key 摘要、命中原因、失效条件和用户可见摘要;不能把缓存命中伪装成新工具成功。 |
+
+缓存失败或失效不能改变业务结论。Runner 最多重新调用工具或返回需要新鲜证据的 failure;不得用过期结果生成审批、落盘前置或风险解除。
+
 ## 宿主重启与 interrupted run
 
 常驻执行宿主崩溃、重启、升级或开发热重载时,Runner 不能让 UI 猜 run 是否完成。每个 accepted run 必须有 durable run envelope 和 heartbeat:

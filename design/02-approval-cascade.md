@@ -10,9 +10,9 @@
 flowchart TB
   H["卡头: ✱ 写手想要 writeSetting: characters/lin.md<br/>+8 项 cascade · 3 轮分析 · 原因一句话"]
   G["影响图谱 (节点按 cascadeLevel 着色, 可点选高亮对应行)"]
-  M["主修改行: 勾选 + diff + 编辑"]
-  C1["一级 cascade 组 (5) 默认展开"]
-  C2["二级 cascade 组 (3) 默认折叠"]
+  M["Dependency group: 主修改 + 必需一致性项<br/>组级裁决 + 行级 diff + 编辑"]
+  C1["独立低置信项: 可搁置并生成 obligation"]
+  C2["二级 cascade group: 默认折叠,同组同生效"]
   R["五大守则风险报告 (有则显示)"]
   A["行动栏: 全选 / 全不选 / 拒绝全部(N) / 同意勾选项 K/N (Y)"]
   H --> G --> M --> C1 --> C2 --> R --> A
@@ -31,20 +31,29 @@ flowchart TB
 
 | 元素 | 规则 |
 |---|---|
-| 勾选框 | high/medium 置信默认勾,low 默认不勾;主修改默认勾 |
+| 勾选框 | 只出现在可独立裁决的 item 或 dependency group 头部;atomic group 内的必需项显示锁定勾选,不能单行取消 |
 | 标题 | `outline.md § a3f2c8d1`(文件 + anchor 短 id,等宽) |
 | 置信徽标 | 高=success / 中=warning / 低=neutral,**文字 + 色**双信号 |
 | 原因 | 一行次要文字,溢出省略,hover 全文 |
-| diff | 行级:删除行 `--diff-del-*`、新增行 `--diff-add-*`,等宽 12.5px;默认显示 ±3 行上下文,可展开 |
+| diff | 行级 + 词级:删除行 `--diff-del-*`、新增行 `--diff-add-*`,行内替换词用弱下划线/浅底标注;等宽 12.5px;默认显示 ±3 行上下文,可展开 |
 | 编辑 | 「编辑」进入 inline textarea(预填 proposedText),保存即把该条标记为 `edited`(徽标提示),纳入 approve payload 的 `edits{}` |
 
-不勾选 = **搁置**:不落盘,后续一致性守护者 会再发现([plan/08 §勾选语义](../plan/08-approval-and-cascade.md#勾选语义))。原型中未勾行整体降透明度 0.55,使"将落盘集合"一眼可辨。
+不勾选只有两种语义:
+
+- dependency group 头部不勾 = 整组不落盘,进入拒绝/重做/取消路径;atomic group 内不允许单行不勾。
+- 独立低置信项不勾 = **搁置**:不落盘,生成 residual obligation,后续一致性守护者 会再发现([plan/08 §勾选语义](../plan/08-approval-and-cascade.md#勾选语义))。
+
+原型中被搁置的独立项整体降透明度 0.55,并显示 obligation chip;被整组拒绝的必需项显示为 group rejected,不伪装成单条 obligation。
+
+同模式聚合用于降低长篇 cascade 的扫读成本:当同一 dependency group 内出现大量同构替换(如 50+ 处称谓/代词/组织名替换)时,组头下方先显示 pattern summary:替换模式、命中数量、抽样范围、最高风险样例和「展开全部」。聚合只影响展示,不改变审批边界;atomic group 仍按组裁决,独立低置信项仍逐项形成 obligation。
 
 ## Cascade 分组
 
-- 按 cascadeLevel 1/2/3 分组折叠;组头:`一级 cascade(5)` + 组内已勾计数 + 展开箭头
-- 一级默认展开;二三级默认折叠(组头露出已勾计数即可)
-- 影响图谱与行联动:hover 图谱节点 → 对应行高亮;反之亦然
+- 先按 dependency group 展示,再在组内标 cascadeLevel;组头必须说明本组是 `atomic` 还是 `independent`。
+- `atomic` 组头显示「主修改 + 必需一致性项」和组级 checkbox/decision;组内行只展示 diff、风险和编辑入口,行级 checkbox 锁定。
+- `independent` 组允许逐项搁置;每个未勾低置信项都要展示 residual obligation 的可见摘要:来源、原因、下次检查入口。
+- 一级默认展开;二三级默认折叠(组头露出已勾计数即可)。
+- 影响图谱与行联动:hover 图谱节点 → 对应行高亮;hover 行 → 对应节点高亮。若节点代表 dependency group,同时高亮组内所有行。
 - 大批量(>20 项)时组内虚拟滚动,组头加「只看未勾 / 只看低置信」过滤([spec/S04](../spec/S04-turn-orchestration.md))
 
 ## 五大守则风险报告
@@ -86,6 +95,7 @@ flowchart TB
 | 卡片待决 | 输入条锁定;状态点显示待审批;卡片可收回但 pending 不消失 |
 | 提交中(resolve 请求) | 行动栏按钮 loading,勾选框锁定;幂等 — 重复点击不重复落盘 |
 | 同意完成 | 卡片折叠为一行回执:「已落盘 7/9 项 · 可在审批历史生成修正提案」+ 240ms 渐出 |
+| ApplyFailed / 部分失败 | 卡片转为失败回执,拆开说明已生效、未生效、索引/恢复状态和下一步;已生效项不得回滚成未审批,未生效项进入重试、修正提案或人工处理 |
 | 拒绝完成 | 卡片折叠为回执「已拒绝,反馈已发给写手」,新一轮生成开始 |
 | 跨进程恢复 | 启动时 hydrate,输入条恢复 banner「有 1 条待审的修改」点击重开卡片 |
 | doom-loop 升级 | 卡头替换为 warning 块「写手与一致性守护者 连续 3 轮未收敛」+「采纳当前版 / 全部放弃」([spec/S04](../spec/S04-turn-orchestration.md)) |

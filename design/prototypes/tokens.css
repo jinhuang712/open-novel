@@ -59,6 +59,11 @@ html[data-theme="light"] {
   --agent-humanizer: #4E9B8F;
   --agent-reader-panel: #C95F8E;
   --agent-reader: var(--agent-reader-panel);
+  --persona-zhui: #C95F8E;
+  --persona-luo: #B46EA4;
+  --persona-qing: #9B78B7;
+  --persona-du: #827FBD;
+  --persona-qian: #6E87B8;
 
   /* —— 置信度 —— */
   --confidence-high: var(--success);
@@ -120,6 +125,11 @@ html[data-theme="dark"] {
   --agent-humanizer: #6FB8AC;
   --agent-reader-panel: #D9849E;
   --agent-reader: var(--agent-reader-panel);
+  --persona-zhui: #D9849E;
+  --persona-luo: #CB8CB5;
+  --persona-qing: #B99DCA;
+  --persona-du: #A3A7D3;
+  --persona-qian: #96B1D6;
 
   --diff-del-bg: #46302E;  --diff-del-text: #E5938A;
   --diff-add-bg: #2E3A2F;  --diff-add-text: #A4C9A0;

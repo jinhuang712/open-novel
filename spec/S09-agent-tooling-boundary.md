@@ -64,6 +64,19 @@ Validator 输出的阻断级结论必须带 source refs、检查范围、failure
 
 完整 schema 归 A02/A04。S09 只规定工具结果不能是裸字符串,也不能把失败藏进自然语言。
 
+## 工具幂等与缓存声明
+
+每个工具必须声明幂等性和缓存资格,供 S03 在同一 run 内决定是否复用结果。S09 只定义工具边界;缓存生命周期、step 记录和 retry 语义由 S03 执行。
+
+| 声明 | 含义 |
+|---|---|
+| `pure_read` | 只读且由 source_refs/fingerprint 完整约束;同一 run 内可缓存。 |
+| `derived_read` | 依赖索引、摘要或二次 LLM 的派生结果;只有 freshness marker、prompt/model profile 和 source_refs 未变时可缓存。 |
+| `proposal_builder` | 生成 ChangeSet、inline suggestion 或 risk report;可复用为解释证据,但进入审批前必须重新校验 precondition。 |
+| `platform_side_effect` | 触发 provider、filesystem、diagnostics、backup、restore 等外部状态;不得用缓存结果替代执行或安全检查。 |
+
+缓存命中返回的仍是工具结果信封,并且必须标明 reused source、原始 tool_call_id 和用户可见摘要。工具不能自行隐藏缓存、绕过 S10 transcript,也不能把 stale 或 partial 结果升级成 fresh success。
+
 ## 工具取消与超时
 
 每个工具必须声明 cancelability。S03 收到 stop signal 后按这里的声明等待、取消或交给 S04 manual recovery。
