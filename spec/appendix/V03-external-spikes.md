@@ -24,11 +24,11 @@ External Spikes 是外部能力原始实查证据的唯一归口:模型 provider
 | 1M context token cost | Writer/Validator/ReaderPanel 典型 context package 的真实 token 用量和超限行为 | [S07](../S07-context-management.md) · [S10](../S10-llm-quality-harness.md) |
 | AI SDK `stopWhen` / tool marker / `onStepFinish` | tool loop、step finish、取消和流式事件是否可端到端复现 | [S03](../S03-agent-runner.md) · [S10](../S10-llm-quality-harness.md) |
 | `sqlite-vec` + `better-sqlite3` + Drizzle | macOS arm64 / Linux x64 native binding、`vec0` CRUD 和普通表 JOIN | [S06](../S06-knowledge-graph.md) · [A06](./A06-migration-notes.md) |
-| `better-sqlite3` in desktop host | 同步调用、WAL 并发写、常驻执行宿主连接和 renderer 热更新期间连接是否稳定 | [S01](../S01-project-storage.md) · [A06](./A06-migration-notes.md) |
-| stream during heavy SQLite/reindex | 重 reindex、批量 embedding 写入、WAL checkpoint 和普通读写并发时,测量 stream 心跳延迟、UI 事件投递、host CPU 占用和是否需要 worker thread/独立进程隔离 | [S05](../S05-streaming-ui-protocol.md) · [S06](../S06-knowledge-graph.md) · [S01](../S01-project-storage.md) |
+| `better-sqlite3` in desktop host | Tauri sidecar 语境下的 Node sidecar 进程形态(`better-sqlite3` 是 Node native binding,宿主必须以兼容的进程形态承载)、同步调用、WAL 并发写、常驻执行宿主连接和 renderer 热更新期间连接是否稳定 | [S01](../S01-project-storage.md) · [A06](./A06-migration-notes.md) |
+| stream during heavy SQLite/reindex | Tauri sidecar(Node 进程)内重 reindex、批量 embedding 写入、WAL checkpoint 和普通读写并发时,测量 stream 心跳延迟、UI 事件投递、host CPU 占用和是否需要 worker thread/独立进程隔离;renderer 热更新期间 sidecar 不中断 | [S05](../S05-streaming-ui-protocol.md) · [S06](../S06-knowledge-graph.md) · [S01](../S01-project-storage.md) |
 | file watcher reliability | watcher cursor、漏事件、休眠恢复、reconcile scan 的平台行为 | [I03](../platform/I03-filesystem-and-watcher.md) · [R04](../platform/R04-index-health-and-repair.md) |
-| desktop host interruption/recovery | renderer 热更新不断 run、host crash/restart、sidecar restart、in-flight provider/tool call、interrupted run 恢复和 apply journal 接管 | [S03](../S03-agent-runner.md) · [S05](../S05-streaming-ui-protocol.md) · [S01](../S01-project-storage.md) |
-| desktop shell packaging / permission | 文件权限、系统菜单、窗口恢复、多实例 lease 和更新失败行为 | [I05](../platform/I05-desktop-shell-contract.md) · [R01](../platform/R01-project-lifecycle.md) |
+| desktop host interruption/recovery | Tauri sidecar 语境:sidecar 与 Tauri 主进程生命周期绑定/解绑行为、renderer 热更新不断 sidecar 与 run、host crash/restart、sidecar restart、in-flight provider/tool call、interrupted run 恢复和 apply journal 接管 | [S03](../S03-agent-runner.md) · [S05](../S05-streaming-ui-protocol.md) · [S01](../S01-project-storage.md) |
+| desktop shell packaging / permission(Tauri) | Tauri 多端打包(macOS / Windows / Linux)、文件权限、单实例 lock 与二次启动聚焦、系统菜单/快捷键登记、安全凭据(macOS Keychain / Windows Credential Manager / Linux secret service)、窗口恢复和更新失败行为 | [I05](../platform/I05-desktop-shell-contract.md) · [R01](../platform/R01-project-lifecycle.md) |
 | Tailwind v4 / shadcn token mapping | `data-theme` dark variant、Button variants、`--primary-foreground` 深色主题可读性 | [design/00](../../design/00-design-tokens.md) |
 
 spike 通过不等于永久通过。实现前若版本、provider、系统平台或打包方式变化,必须刷新对应证据。

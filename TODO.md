@@ -6,7 +6,7 @@
 
 | ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
 |---|---|---|---|---|
-| TODO-P1-22 | 壳内执行宿主中的同步 SQLite/native binding 与 stream channel 调度隔离已补 V03 测量入口,但仍缺真实阻塞时长结果:重 reindex/向量批量写是否冻结事件投递尚未实测(P009·PL-04)。 | [V03](./spec/appendix/V03-external-spikes.md) · [S01](./spec/S01-project-storage.md) · [S06](./spec/S06-knowledge-graph.md) · [S05](./spec/S05-streaming-ui-protocol.md) | P1-42 已裁决为桌面壳常驻执行宿主,V03/V01/S05 已定义测量和降级口径;剩余是真实运行数据,不能靠文档关闭。 | 执行 V03「stream during heavy SQLite/reindex」spike,记录 stream 心跳延迟、UI 事件投递、host CPU 和隔离需求;若超阈值,回写 S06/S05 的 worker thread/独立进程/分片让步约束后关闭。 |
+| TODO-P1-22 | Tauri 壳内 sidecar 执行宿主中的同步 SQLite/native binding 与 stream channel 调度隔离已补 V03 测量入口,但仍缺真实阻塞时长结果:重 reindex/向量批量写是否冻结事件投递尚未实测(P009·PL-04)。 | [V03](./spec/appendix/V03-external-spikes.md) · [S01](./spec/S01-project-storage.md) · [S06](./spec/S06-knowledge-graph.md) · [S05](./spec/S05-streaming-ui-protocol.md) | P1-42 已裁决为桌面壳常驻执行宿主(壳=Tauri 已裁决,宿主以 Tauri 管理的 sidecar 进程承载),V03/V01/S05 已定义测量和降级口径;剩余是真实运行数据,不能靠文档关闭。 | 执行 V03「stream during heavy SQLite/reindex」spike,记录 stream 心跳延迟、UI 事件投递、host CPU 和隔离需求;若超阈值,回写 S06/S05 的 worker thread/独立进程/分片让步约束后关闭。 |
 | TODO-P1-43 | 核心能力成立性 gate 已落文档,但仍缺真实 50–100 万字语料或等价 fixture 的 spike 结果:影响分析召回率/精确率、分段 delta 稳定性、全书级 cascade 成本与延迟尚未实测(2026-06-12 架构评审)。 | [S07](./spec/S07-context-management.md) · [S06](./spec/S06-knowledge-graph.md) · [S12](./spec/S12-creative-engine.md) · [V03](./spec/appendix/V03-external-spikes.md) · [V02](./spec/appendix/V02-golden-cases.md) | V03/S07/S06/S12/V02 已把 gate、fixture 和不达标降级写清;剩余是外部事实证据,不能靠文档关闭。 | 执行 V03 的 long-form impact recall/precision、segmented delta stability、cascade cost/latency spike;将结果回写 S07/S06/S12/V02,若不达标则选择裁判链重设计、承诺收窄或分批 cascade 后关闭。 |
 
 ## 验证入口

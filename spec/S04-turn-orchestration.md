@@ -114,6 +114,8 @@ Discuss Mode 是 Router action 中最严格的只读分支,详见 [M04 · Discus
 | Planning | 设定、结构、角色、关系、伏笔、世界规则 proposal | 正文落笔和正文替换。 |
 | Writing | 正文草稿、正文改写、轻量表达修改、读者/守则报告 | 直接改设定、治理实体、改变世界规则。 |
 
+"Planning 阻断正文落笔"指 Planning 不产出正文创作;设定变更的 cascade ChangeSet 可以包含维持一致性所必需的正文替换 item,它们随整批在审批卡内由作者审定([M08](./M08-approval-cascade.md)),不构成模式越界。
+
 模式切换只能由用户显式发起。切换前 S04 必须检查 active writable turn、pending approval、applying/recovery、未关闭 atomic group 和 writing-blocked obligation。若任何条件不满足,切换进入 blocked projection,说明先处理什么;系统不能静默切换后继续执行旧队列。
 
 重启后恢复按持久模式和持久 turn 状态校正:没有 active writable turn 时恢复最近模式;存在 pending approval 时恢复到审批锁定投影;存在 interrupted/recovery 时先展示恢复入口,不接受新的可写 action。
@@ -258,7 +260,7 @@ flowchart TD
 
 pending approval 存在时,Orchestrator 必须把项目切成“写入锁定、只读放行”:会写入作品、生成新 ChangeSet、接受跨文档改写、改变模式权限或影响审批前置条件的 action 一律阻止或要求先处理审批;只读查询、搜索、打开文档、Trace 查看和 Discuss 可以继续运行。只读 action 必须读取一致快照或标注当前 pending 状态,不能修改审批卡、自动失效审批或把讨论摘要沉淀为项目事实。
 
-如果项目级 lease 发生变化,当前可写 turn 必须重新确认 owner。失去 lease 的窗口立刻降为只读,不能继续提交审批决定、应用 ChangeSet、生成 recap 或触发 reindex。
+如果窗口可写权发生切换,原可写窗口立刻降为只读视图,不能继续提交审批决定、应用 ChangeSet、生成 recap 或触发 reindex;运行中的 turn 不受影响,因为执行在常驻宿主,新可写窗口重新加载后继续跟进同一 turn。
 
 ## 取消不是 abort
 
@@ -286,7 +288,7 @@ Turn Recap 是 turn 结束后的用户级 changelog,详见 [M17 · Turn Recap An
 
 ## Recap 触发
 
-Recap 只在 terminal turn result 后生成:Completed、StoppedNoChange、Cancelled、Rejected、Applied、ApplyFailed、FailedTerminal、ManualRecoveryOpened。`AwaitingApproval` 不是终态,只能生成 pending activity item;`lease lost` 不是 recap,而是 recovery note。若用户稍后处理审批,最终 recap 必须引用同一个 turn/journal,把 pending 等待和最终裁决连起来。
+Recap 只在 terminal turn result 后生成:Completed、StoppedNoChange、Cancelled、Rejected、Applied、ApplyFailed、FailedTerminal、ManualRecoveryOpened。`AwaitingApproval` 不是终态,只能生成 pending activity item;宿主崩溃恢复不是 recap,而是 recovery note。若用户稍后处理审批,最终 recap 必须引用同一个 turn/journal,把 pending 等待和最终裁决连起来。
 
 | 状态 | 生成什么 |
 |---|---|
@@ -294,7 +296,7 @@ Recap 只在 terminal turn result 后生成:Completed、StoppedNoChange、Cancel
 | StoppedNoChange | stopped recap,说明无 durable change。 |
 | Applied / Completed | terminal recap,引用 apply journal 和 reindex 状态。 |
 | ApplyFailed / ManualRecoveryOpened | failure recap + recovery note,说明哪些事实已生效、哪些需要处理。 |
-| Lease lost | recovery note,不生成成功或停止 recap。 |
+| 宿主崩溃恢复 | recovery note,不生成成功或停止 recap。 |
 
 Recap、Trace 和 Activity 的来源是 S01 apply journal 与 S04 turn state 投影;前端事件流不能临时拼出另一份历史。
 

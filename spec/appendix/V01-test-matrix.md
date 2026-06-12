@@ -37,7 +37,9 @@
 - [S12 Creative Engine](../S12-creative-engine.md)
 - [S13 Style And Humanizer](../S13-style-and-humanizer.md)
 - [S14 Editor And Interaction](../S14-editor-and-interaction.md)
-- [S15 Settings And Onboarding](../S15-settings-and-onboarding.md)
+- [M14 Settings](../M14-settings.md)
+- [M15 Onboarding And New Book](../M15-onboarding-and-new-book.md)
+- [M18 Developer Mode](../M18-developer-mode.md)
 - [M01 Universal Search](../M01-universal-search.md)
 - [M04 Discuss Mode](../M04-discuss-mode.md)
 - [M09 Trace Observability](../M09-trace-observability.md)
@@ -78,8 +80,9 @@
 | 文件与事实账本冲突 | 作者文件优先;审批历史或 obligation 标记 lost/invalidated,不能覆盖文件来匹配旧账本。 |
 | 系统自写 watcher 回声 | write token、owner、指纹和水位匹配时只推进 ledger,不触发外部编辑失效。 |
 | 离线外部编辑 | 下次打开对账 fingerprint ledger,命中 pending approval 的审批失效,索引进入 stale/reindex。 |
-| 双窗口接管 | 新 owner 生成 fencing token;旧 owner 恢复后只读降级,队列里的写入/repair 被拒绝。 |
-| lease 假死复活 | 过期 token 不能继续应用审批或写文件;用户看到 lease lost 和重新加载入口。 |
+| 宿主崩溃后重启 | 新宿主签发新 fencing token;旧宿主残留的延迟写入/repair 被拒绝;journal 启动扫描接管未收场事务并进入恢复流程。 |
+| 单实例锁 | 应用已运行时二次启动不创建第二个宿主,聚焦既有实例窗口。 |
+| 多窗口可写权切换 | 切换后原可写窗口降为只读视图,写入/审批命令禁用;运行中 turn 不中断;新可写窗口重新加载 pending 状态。 |
 | 版本 forward-compat | 旧应用打开新 schema 显式拒开,不得忽略未知字段或创建假项目。 |
 | repair job 重入 | 相同范围/水位/index version 幂等复用;部分完成从输出水位继续;输入指纹变化时关闭旧 job 并新建。 |
 | provider credential 写入 | API key/token 只进入系统安全凭据库;项目、settings 文件、Trace、诊断包均不出现 secret。 |
@@ -110,7 +113,7 @@
 | AI SDK loop | stopWhen/tool marker/onStepFinish 或手写 loop 的等价测试,覆盖 cancel、tool result、step finish | 最小 runner spike |
 | SQLite/native binding | `sqlite-vec` CRUD/JOIN、WAL 并发、Route Handler 连接泄漏测试 | macOS arm64 / Linux x64 原始输出 |
 | watcher / repair | cursor、水位、reconcile scan、repair job lifecycle、健康级别降级测试 | 文件系统平台行为实查 |
-| desktop shell | 权限、窗口恢复、系统菜单、多实例 lease 和接管测试 | 打包/权限/系统行为实查 |
+| desktop shell | 权限、窗口恢复、系统菜单、单实例锁与多窗口可写权切换测试 | 打包/权限/系统行为实查 |
 | design token mapping | Tailwind/shadcn dark variant、Button variant、深色主题前景色测试 | 首个真实组件验证结果 |
 
 ## Approval / Knowledge 补充验证项

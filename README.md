@@ -31,6 +31,7 @@
 | 层 | 选型 | 备注 |
 |---|---|---|
 | 前后端 | Next.js 15 + React 19 + TypeScript 5.9 | 单仓单应用 |
+| 桌面壳 | Tauri(多端 macOS / Windows / Linux) | 单实例;执行宿主 sidecar 形态待 V03 实查 |
 | Agent loop | Vercel AI SDK 6 (`generateText` / `streamText` + `stopWhen`) | 单一受控 Runner 契约承载七个 canonical AI 角色,不用 Agent 框架 |
 | LLM | DeepSeek V4 Pro / Flash(直连 API) | Pro=max effort,Flash=default;ctx 1M,max output 384K,原生 JSON mode |
 | 编辑器 | TipTap 3.x + ProseMirror Decorations + Aho-Corasick | 不用 Mention 节点 |
@@ -49,9 +50,10 @@
 当前实现方向已统一为:
 
 - **Agent runner**: 单一受控 Runner 契约 + AI SDK `generateText` / `streamText`,不使用 Mastra / LangGraph 等 Agent 框架;run envelope 使用 [M13](./spec/M13-agent-team-controls.md) 的七个 canonical role id,prompt、context、tool、harness 和 golden gate 各有系统主权层
+- **桌面壳与执行宿主**: 桌面壳采用 Tauri(多端 macOS / Windows / Linux),应用单实例运行,多窗口皆为同一宿主的视图;常驻执行宿主以 Tauri 管理的 sidecar 进程承载,进程形态与 native binding 兼容性经 [V03](./spec/appendix/V03-external-spikes.md) 实查后落定,边界见 [I05](./spec/platform/I05-desktop-shell-contract.md)
 - **核心 spec 编号**: 根层 `spec/` 使用 `S/M`;`spec/platform/` 使用 `I/R`;appendix 使用 `A/V`;progress 使用 `P`
-- **系统设计**: `S00-S15` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
-- **能力闭环**: `M01-M17` 写用户可触发、可感知、可验收的完整能力
+- **系统设计**: `S00-S14` 写系统主权、跨层契约、运行时、存储、上下文、LLM 质量闭环和底层协议
+- **能力闭环**: `M01-M18` 写用户可触发、可感知、可验收的完整能力
 - **平台支撑契约**: `spec/platform/I01-I05` 写跨边界接入契约;`spec/platform/R01-R05` 写生命周期、恢复、迁移、修复和诊断
 - **实现明细后置**: 表结构、JSON schema、事件枚举、工具参数、prompt、测试矩阵、golden cases 和迁移细节归口在 [spec/appendix](./spec/appendix/README.md);历史旧 spec 原文已清理,不再保留
 - **运行时状态**: 应用层 memory 模块 + `~/.open-novel/runtime.db`,详见 [spec/S02](./spec/S02-runtime-state.md)
@@ -142,7 +144,6 @@ pnpm dev
 - [S12-creative-engine](./spec/S12-creative-engine.md) — 五大守则质检室、叙事诊断、ReaderPanel 和风险进入审批
 - [S13-style-and-humanizer](./spec/S13-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
 - [S14-editor-and-interaction](./spec/S14-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
-- [S15-settings-and-onboarding](./spec/S15-settings-and-onboarding.md) — 首启路径、控制面板分区、经验管理和危险操作工作流
 
 #### M · User-Facing Capability
 
@@ -159,10 +160,11 @@ pnpm dev
 - [M11-reader-panel](./spec/M11-reader-panel.md) — ReaderPanel 报告闭环、persona 边界和审批解释关系
 - [M12-memory-learning-management](./spec/M12-memory-learning-management.md) — 经验可见、可调、可删和 Reflector 管理
 - [M13-agent-team-controls](./spec/M13-agent-team-controls.md) — 七个 AI 角色的开关、档位和能力边界
-- [M14-settings-and-developer-mode](./spec/M14-settings-and-developer-mode.md) — Settings 与 Developer Mode 的可见性、诊断和危险操作
+- [M14-settings-and-developer-mode](./spec/M14-settings.md) — Settings 控制面板:分区、Persona 边界、凭据用户语义和危险操作
 - [M15-onboarding-and-new-book](./spec/M15-onboarding-and-new-book.md) — 首启、开书向导、样例项目和工作区初始化
 - [M16-project-library-and-navigation](./spec/M16-project-library-and-navigation.md) — 项目库、章节轨、最近打开和跨项目隔离
 - [M17-turn-recap-and-continuation](./spec/M17-turn-recap-and-continuation.md) — Turn Recap、项目活动时间线、停止回执和续接入口
+- [M18-developer-mode](./spec/M18-developer-mode.md) — Developer Mode 只读诊断:可见内容分层、不绕审批和修复入口分工
 
 #### Platform · I/R
 

@@ -119,7 +119,7 @@ flowchart TB
 
 | 决策 | 当前路线 | 根层关心的理由 |
 |---|---|---|
-| 应用形态 | 桌面壳是唯一主产品形态,开发调试也在桌面壳开发模式中进行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、lease、journal 和安全凭据,renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
+| 应用形态 | 桌面壳是唯一主产品形态,采用 Tauri(多端 macOS / Windows / Linux),应用单实例运行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、窗口写入权、journal 和安全凭据,宿主以 Tauri 管理的 sidecar 进程承载(进程形态与 native binding 兼容性经 V03 实查后落定),renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
 | Agent loop | 自定义 runner 显式控制模型调用、结构化输出、retry、tool loop 和 stream | 不把审批、memory、workflow 交给黑盒框架 |
 | LLM 质量闭环 | runtime validation / creative risk 进入用户请求;harness / golden regression 属于记录、回放和开发期合入门禁 | 运行时失败语义和开发期质量门禁不能混成同一个业务节点 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
@@ -166,7 +166,7 @@ flowchart TB
 | 五大守则和读者预演怎么进入审批 | [S12 · Creative Engine](./S12-creative-engine.md) |
 | 去 AI 味如何不改剧情 | [S13 · Style And Humanizer](./S13-style-and-humanizer.md) |
 | 编辑器、命令、焦点、查询怎么协作 | [S14 · Editor And Interaction](./S14-editor-and-interaction.md) |
-| 首启、设置、经验管理、危险操作归哪 | [S15 · Settings And Onboarding](./S15-settings-and-onboarding.md) |
+| 首启、设置、经验管理、危险操作归哪 | [M15 · Onboarding And New Book](./M15-onboarding-and-new-book.md)、[M14 · Settings](./M14-settings.md) |
 | 全局搜索如何查角色、阵营、概念、章节和来源 | [M01 · Universal Search](./M01-universal-search.md) |
 | 命令面板和快速打开如何分工 | [M02 · Command Palette / Quick Open](./M02-command-palette-and-quick-open.md) |
 | 查询浮层如何只解释事实、不写作品 | [M03 · Fact Query](./M03-fact-query.md) |
@@ -180,7 +180,7 @@ flowchart TB
 | ReaderPanel 如何生成和展示读者预演 | [M11 · ReaderPanel](./M11-reader-panel.md) |
 | 经验如何可见、可调、可删 | [M12 · Memory / Learning Management](./M12-memory-learning-management.md) |
 | 七个 AI 角色如何开关和限权 | [M13 · Agent Team Controls](./M13-agent-team-controls.md) |
-| Settings 和 Developer Mode 如何分层 | [M14 · Settings / Developer Mode](./M14-settings-and-developer-mode.md) |
+| Settings 和 Developer Mode 如何分层 | [M14 · Settings / Developer Mode](./M14-settings.md) |
 | 首启和开书向导如何落地 | [M15 · Onboarding / New Book](./M15-onboarding-and-new-book.md) |
 | 项目库和章节轨如何导航 | [M16 · Project Library / Navigation](./M16-project-library-and-navigation.md) |
 | 本轮完成、停止或修正后如何留下用户可读记录 | [M17 · Turn Recap / Continuation](./M17-turn-recap-and-continuation.md) |

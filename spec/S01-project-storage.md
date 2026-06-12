@@ -15,21 +15,22 @@ Project Storage 的核心价值不是“把数据存起来”,而是让每个事
 
 ## 项目写入权
 
-同一项目同一时刻只有一个 writable owner。写入权由项目级 lock/lease 表示,保护 active writable turn、pending approval、recap、index repair 和外部编辑冲突处理。
+应用是单实例(见 [I05](./platform/I05-desktop-shell-contract.md)):一台机器同一时刻只有一个常驻执行宿主,所有窗口都是同一宿主的 renderer 视图。因此写入权分两层:
+
+**窗口写入权**是宿主进程内的裁决。同一项目同一时刻只有一个可写窗口,保护 active writable turn、pending approval、recap、index repair 和外部编辑冲突处理。
 
 | 场景 | 存储层要求 |
 |---|---|
-| 第一个窗口打开项目 | 获取 writable lease,可进入写作和审批路径。 |
-| 第二个窗口打开同项目 | 默认只读,可查询和查看,不可提交审批或写入。 |
-| 用户显式接管 | 原 owner lease 失效,新窗口必须重新加载项目状态和 pending 事务。 |
-| lease 过期或丢失 | 当前窗口降级只读,active writable turn 停止进入危险路径。 |
-| pending approval 存在 | 接管前必须展示 pending 内容和风险,不能静默关闭。 |
+| 第一个窗口打开项目 | 成为可写窗口,可进入写作和审批路径。 |
+| 第二个窗口打开同项目 | 默认只读视图,可查询和查看,不可提交审批或写入。 |
+| 用户显式切换可写窗口 | 原可写窗口降级为只读视图,新可写窗口重新加载项目状态和 pending 事务;切换不打断运行中的 turn(执行在宿主)。 |
+| pending approval 存在 | 切换可写窗口前必须展示 pending 内容和风险,不能静默关闭。 |
 
-Storage 不用“最后写入者获胜”解决冲突。任何绕过 lease 的写入都视为外部编辑,按冲突判定让相关审批失效。
+Storage 不用“最后写入者获胜”解决冲突。任何绕过写入权的写入都视为外部编辑,按冲突判定让相关审批失效。
 
-生产和开发调试都在桌面壳边界内执行。写入权、SQLite/native binding、watcher cursor、append-only journal 和恢复流程运行在常驻执行宿主中;renderer 不能直接写项目文件或数据库,只能提交命令、展示状态和读取持久结果。桌面壳开发模式可以打开诊断和 mock provider,但不得绕过本篇的 lease、审批、journal 和冲突语义。
+生产和开发调试都在桌面壳边界内执行。写入权、SQLite/native binding、watcher cursor、append-only journal 和恢复流程运行在常驻执行宿主中;renderer 不能直接写项目文件或数据库,只能提交命令、展示状态和读取持久结果。桌面壳开发模式可以打开诊断和 mock provider,但不得绕过本篇的写入权、审批、journal 和冲突语义。
 
-Lease 不是内存布尔值。项目事实库必须持久记录 lease owner、lease token、fencing token、续约时间和过期时间;每次写作者文件、写项目事实、应用审批、运行 repair job 或执行恢复前,都要携带当前 fencing token。旧 owner 即使从假死中恢复,只要 token 已过期或不是最新 fencing token,就必须先降级只读并重新加载项目状态,不能继续写入。
+**崩溃防护 fencing**是持久化 lease/fencing token 的唯一保留用途。项目事实库持久记录当前宿主实例 id 和 fencing token;每次写作者文件、写项目事实、应用审批、运行 repair job 或执行恢复前,都要携带当前 fencing token。宿主异常退出后,新宿主启动接管时生成新 token 并执行 apply journal 启动扫描(见「Apply Journal」节);旧宿主任何残留的延迟写入因 token 不是最新而被写入路径拒绝。单实例之下不存在跨进程 lease 续约、过期和显式接管协议。
 
 ## 事实账本
 
@@ -56,7 +57,7 @@ Lease 不是内存布尔值。项目事实库必须持久记录 lease owner、le
 
 跨文件 ChangeSet 不是文件系统原子事务。它通过同一 apply id、每文件 prepared/file-applied 记录和单一 committed 水位表达原子结果:用户侧看到的是整批成功、整批失败、或需要内部恢复;系统内部可以前滚已替换文件并阻断后续写入,直到 journal 恢复到可解释状态。
 
-启动、接管、恢复和 repair 前必须扫描未完成 journal。只要存在 prepared/file-applied 未收场记录,项目进入恢复流程:先停止新的可写 turn 和审批应用,再按 journal 记录前滚、放弃或要求人工处理。恢复结果同样追加 journal,不能修改旧记录来假装事故没发生。
+宿主启动(含崩溃后重启)、恢复和 repair 前必须扫描未完成 journal。只要存在 prepared/file-applied 未收场记录,项目进入恢复流程:先停止新的可写 turn 和审批应用,再按 journal 记录前滚、放弃或要求人工处理。恢复结果同样追加 journal,不能修改旧记录来假装事故没发生。
 
 ## 轻量写入事务
 
@@ -68,7 +69,7 @@ Lease 不是内存布尔值。项目事实库必须持久记录 lease owner、le
 | inline review accept | 生成轻量 accepted edit,不进入 cascade card | 原文范围、用户接受版本、undo bridge、风险重检结果。 |
 | Humanizer 小改接受 | 生成轻量 accepted edit | diff、不可改事实校验、风格来源、reindex request。 |
 
-Light apply 与审批 apply 共用 lease、fencing token、fingerprint ledger、journal 和 reindex/degraded 收场。差别只在用户交互重量:小改就地审定,大改整批审批。任何 light apply 若触及跨文件、设定、关系、伏笔、事实库治理或阻断级风险,必须升级为 ChangeSet 或 planning prerequisite,不能继续伪装成轻量保存。
+Light apply 与审批 apply 共用窗口写入权、fencing token、fingerprint ledger、journal 和 reindex/degraded 收场。差别只在用户交互重量:小改就地审定,大改整批审批。任何 light apply 若触及跨文件、设定、关系、伏笔、事实库治理或阻断级风险,必须升级为 ChangeSet 或 planning prerequisite,不能继续伪装成轻量保存。
 
 Editor undo 不是历史回滚。用户撤销一个已 journal committed 的 light apply 时,系统生成新的反向 light apply entry,向前追加,并重新触发 reindex/obligation 投影。
 
@@ -90,7 +91,7 @@ Editor undo 不是历史回滚。用户撤销一个已 journal committed 的 lig
 
 ## facts-degraded 模式
 
-项目事实库里的审批历史、版本指纹、obligation、lease 和恢复账本不可完全从 Markdown 文件重建。只要这些真源记录损坏、丢失或校验失败,项目进入 `facts-degraded` 模式。
+项目事实库里的审批历史、版本指纹、obligation、fencing 记录和恢复账本不可完全从 Markdown 文件重建。只要这些真源记录损坏、丢失或校验失败,项目进入 `facts-degraded` 模式。
 
 `facts-degraded` 下,作者文件仍可只读打开,用户可以直接取用正文文件、查看可解析 frontmatter,并选择恢复路线;系统必须阻断新的可写 Agent turn、审批应用、自动 cascade 和会改写项目事实的 repair。派生索引可以重建,但重建结果不得伪装成丢失的审批历史或 obligation。
 
@@ -204,9 +205,9 @@ stateDiagram-v2
 | [S06](./S06-knowledge-graph.md) | 文件变更范围、版本、派生写入边界 | reindex 健康度和过期范围 |
 | [S07](./S07-context-management.md) | 可查询的项目事实入口 | 不要把查询结果反写文件 |
 | [S14](./S14-editor-and-interaction.md) | 外部编辑、保存、冲突提示 | 用户直接编辑产生的文件变更 |
-| [S15](./S15-settings-and-onboarding.md) | workspace/project 生命周期结果 | 删除等危险操作确认 |
-| [I03](./platform/I03-filesystem-and-watcher.md) | watcher cursor、外部编辑事件和 lease loss | 平台层不能绕过存储写入权 |
-| [R01](./platform/R01-project-lifecycle.md) | 打开、关闭、接管和恢复流程 | 项目 open/close 必须尊重 lease |
+| [M14](./M14-settings.md) | workspace/project 生命周期结果 | 删除等危险操作确认 |
+| [I03](./platform/I03-filesystem-and-watcher.md) | watcher cursor、外部编辑事件和崩溃防护信号 | 平台层不能绕过存储写入权 |
+| [R01](./platform/R01-project-lifecycle.md) | 打开、关闭、可写窗口切换和恢复流程 | 项目 open/close 必须尊重窗口写入权与 fencing 校验 |
 
 ## FAQ
 

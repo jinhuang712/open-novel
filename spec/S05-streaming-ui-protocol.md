@@ -69,7 +69,7 @@ stateDiagram-v2
 
 状态点不能从单个 progress event 推断最终结果。它读取 turn 状态,事件只触发刷新。
 
-`NeedsDecision` 是用户必须处理的中间投影,不是错误弹窗。它覆盖 cancel plan、manual recovery、approval invalidated、lease lost、tool 不可取消和 interrupted run。UI 必须展示可选动作和风险,不能自动选“重试”或“丢弃”。
+`NeedsDecision` 是用户必须处理的中间投影,不是错误弹窗。它覆盖 cancel plan、manual recovery、approval invalidated、宿主崩溃恢复、tool 不可取消和 interrupted run。UI 必须展示可选动作和风险,不能自动选“重试”或“丢弃”。
 
 ## 心跳与 watchdog
 
