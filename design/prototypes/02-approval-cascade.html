@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open Novel · ApprovalCard 审批与 Cascade</title>
+<title>Open Novel · 审批卡与整批审</title>
 <script>
 (function () {
   var saved = localStorage.getItem('onovel-theme');
@@ -126,7 +126,7 @@
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
-  <span class="proto-title">02 · ApprovalCard 审批与 Cascade</span>
+  <span class="proto-title">02 · 审批卡与整批审</span>
   <span>文档: design/02-approval-cascade.md</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
@@ -155,17 +155,17 @@
     <div class="ap-head">
       <span class="spark">✱</span>
       <div>
-        <div class="ap-title">写手想要 writeSetting: <code>characters/lin.md</code></div>
+        <div class="ap-title">写手想修改「林溪角色卡」</div>
         <div class="ap-reason">原因: 用户要求把主角性别改为女 — 名字 林川 → 林溪</div>
       </div>
       <div class="ap-badges">
-        <span class="badge badge-accent">+8 项 cascade · 3 轮分析</span>
+        <span class="badge badge-accent">+8 项连带修改 · 3 轮分析</span>
         <span class="badge badge-neutral">还有 1 条待审 <kbd>Cmd+]</kbd></span>
       </div>
     </div>
 
     <div class="graph-wrap">
-      <div class="graph-label">影响图谱 · HOVER 节点联动下方行</div>
+      <div class="graph-label">影响图谱 · 悬停节点联动下方行</div>
       <svg viewBox="0 0 540 110" style="width:100%; height:auto" aria-label="影响图谱">
         <g stroke="var(--border-strong)" stroke-width="1.2">
           <line x1="80" y1="55" x2="200" y2="22"/><line x1="80" y1="55" x2="200" y2="55"/><line x1="80" y1="55" x2="200" y2="88"/>
@@ -173,18 +173,18 @@
           <line x1="330" y1="55" x2="455" y2="72"/>
         </g>
         <g font-size="10.5" font-family="var(--font-mono)">
-          <g class="graph-node" data-target="core"><circle cx="80" cy="55" r="7" fill="var(--accent)"/><text x="80" y="80" text-anchor="middle" fill="var(--text-secondary)">atomic</text></g>
-          <g class="graph-node" data-target="core"><circle cx="200" cy="22" r="6" fill="var(--info)"/><text x="200" y="10" text-anchor="middle" fill="var(--text-secondary)">outline</text></g>
-          <g class="graph-node" data-target="core"><circle cx="200" cy="55" r="6" fill="var(--info)"/><text x="218" y="47" fill="var(--text-secondary)">wang.md</text></g>
-          <g class="graph-node" data-target="low"><circle cx="200" cy="88" r="6" fill="var(--info)"/><text x="200" y="105" text-anchor="middle" fill="var(--text-secondary)">ch_001</text></g>
-          <g class="graph-node" data-target="followup"><circle cx="330" cy="22" r="6" fill="var(--warning)"/><text x="330" y="10" text-anchor="middle" fill="var(--text-secondary)">ch_003</text></g>
-          <g class="graph-node" data-target="followup"><circle cx="330" cy="55" r="6" fill="var(--warning)"/><text x="348" y="47" fill="var(--text-secondary)">ch_005</text></g>
-          <g class="graph-node" data-target="low"><circle cx="455" cy="72" r="5" fill="var(--text-tertiary)"/><text x="455" y="92" text-anchor="middle" fill="var(--text-secondary)">timeline</text></g>
+          <g class="graph-node" data-target="core"><circle cx="80" cy="55" r="7" fill="var(--accent)"/><text x="80" y="80" text-anchor="middle" fill="var(--text-secondary)">同组</text></g>
+          <g class="graph-node" data-target="core"><circle cx="200" cy="22" r="6" fill="var(--info)"/><text x="200" y="10" text-anchor="middle" fill="var(--text-secondary)">大纲</text></g>
+          <g class="graph-node" data-target="core"><circle cx="200" cy="55" r="6" fill="var(--info)"/><text x="218" y="47" fill="var(--text-secondary)">王胖子角色卡</text></g>
+          <g class="graph-node" data-target="low"><circle cx="200" cy="88" r="6" fill="var(--info)"/><text x="200" y="105" text-anchor="middle" fill="var(--text-secondary)">第 1 章</text></g>
+          <g class="graph-node" data-target="followup"><circle cx="330" cy="22" r="6" fill="var(--warning)"/><text x="330" y="10" text-anchor="middle" fill="var(--text-secondary)">第 3 章</text></g>
+          <g class="graph-node" data-target="followup"><circle cx="330" cy="55" r="6" fill="var(--warning)"/><text x="348" y="47" fill="var(--text-secondary)">第 5 章</text></g>
+          <g class="graph-node" data-target="low"><circle cx="455" cy="72" r="5" fill="var(--text-tertiary)"/><text x="455" y="92" text-anchor="middle" fill="var(--text-secondary)">时间线</text></g>
         </g>
       </svg>
       <div class="legend">
         <span><i style="background:var(--accent)"></i>主修改</span>
-        <span><i style="background:var(--info)"></i>一级 cascade</span>
+        <span><i style="background:var(--info)"></i>一级连带</span>
         <span><i style="background:var(--warning)"></i>二级</span>
         <span><i style="background:var(--text-tertiary)"></i>三级</span>
       </div>
@@ -192,20 +192,20 @@
 
     <div class="rows">
       <div class="group dependency" id="g-core" data-group-id="core">
-        <div class="group-head" onclick="toggleGroup('g-core')"><span class="chev">▾</span><input type="checkbox" checked data-group-check data-group-id="core" onclick="event.stopPropagation()">主修改 + 必需一致性项<span class="badge badge-accent">atomic group</span><span class="meta"><span class="badge badge-neutral" data-gcount>5/5 同组接受</span></span></div>
+        <div class="group-head" onclick="toggleGroup('g-core')"><span class="chev">▾</span><input type="checkbox" checked data-group-check data-group-id="core" onclick="event.stopPropagation()">主修改 + 必需一致性项<span class="badge badge-accent">同组生效</span><span class="meta"><span class="badge badge-neutral" data-gcount>5/5 同组接受</span></span></div>
         <div class="pattern-row">
           <span><b>同模式聚合</b> · 37 处称谓/代词替换: <span class="word-del">他 / 林川 / 川哥</span> → <span class="word-add">她 / 林溪 / 溪姐</span> · 展示 4 个风险样例</span>
           <button class="btn btn-ghost btn-sm">展开全部</button>
         </div>
         <div class="change-row locked" data-row data-group-id="core"><input type="checkbox" checked disabled data-row-check>
           <div class="cr-main">
-            <div class="cr-title">主修改: <code>characters/lin.md</code><span class="badge badge-accent">level 0</span><span class="badge badge-neutral">锁定同组</span>
+            <div class="cr-title">主修改:林溪角色卡<span class="badge badge-accent">主项</span><span class="badge badge-neutral">锁定同组</span>
               <button class="btn btn-ghost btn-sm edit-link" onclick="toggleEdit(this)">编辑</button></div>
             <div class="cr-reason">性别与名字字段 + 人物小传相应改写;不能只接受主修改而放弃称谓一致性</div>
             <div class="diff">
-              <div class="d-ctx">  # characters/lin.md · frontmatter</div>
-              <div class="d-del">- gender: male</div>
-              <div class="d-add">+ gender: female</div>
+              <div class="d-ctx">  林溪角色卡 · 基本信息</div>
+              <div class="d-del">- 性别:男</div>
+              <div class="d-add">+ 性别:女</div>
               <div class="d-del">- 名字叫林川,北漂程序员,2024 年猝死在工位上。</div>
               <div class="d-add">+ 名字叫林溪,北漂程序员,2024 年猝死在工位上。</div>
             </div>
@@ -214,19 +214,19 @@
           </div>
         </div>
         <div class="change-row locked" data-row data-group-id="core"><input type="checkbox" checked disabled data-row-check>
-          <div class="cr-main"><div class="cr-title"><code>outline.md § …a3f2c8d1</code><span class="badge badge-success">高置信</span></div>
+          <div class="cr-main"><div class="cr-title">大纲 · 第 3 段<span class="badge badge-success">高置信</span></div>
             <div class="cr-reason">第 3 段以"他"指代主角,需改为"她"</div>
             <div class="diff"><div class="d-del">- 他在融资酒局上第一次亮出底牌</div><div class="d-add">+ 她在融资酒局上第一次亮出底牌</div></div></div></div>
         <div class="change-row locked" data-row data-group-id="core"><input type="checkbox" checked disabled data-row-check>
-          <div class="cr-main"><div class="cr-title"><code>characters/wang.md § …9b07d2aa</code><span class="badge badge-success">高置信</span></div>
+          <div class="cr-main"><div class="cr-title">王胖子角色卡 · 称谓段落<span class="badge badge-success">高置信</span></div>
             <div class="cr-reason">王胖子对主角的称谓"川哥"需调整</div>
             <div class="diff"><div class="d-del">- 嘴上喊着"<span class="word-del">川哥</span>",心里却服气</div><div class="d-add">+ 嘴上喊着"<span class="word-add">溪姐</span>",心里却服气</div></div></div></div>
         <div class="change-row locked" data-row data-group-id="core"><input type="checkbox" checked disabled data-row-check>
-          <div class="cr-main"><div class="cr-title"><code>chapters/ch_001 § 段 5</code><span class="badge badge-success">高置信</span></div>
+          <div class="cr-main"><div class="cr-title">第 1 章 · 第 5 段<span class="badge badge-success">高置信</span></div>
             <div class="cr-reason">开场自我介绍中的性别表述</div>
             <div class="diff"><div class="d-del">- 我叫林川,一个普通的北漂程序员</div><div class="d-add">+ 我叫林溪,一个普通的北漂程序员</div></div></div></div>
         <div class="change-row locked" data-row data-group-id="core"><input type="checkbox" checked disabled data-row-check>
-          <div class="cr-main"><div class="cr-title"><code>chapters/ch_001 § 段 12</code><span class="badge badge-warning">中置信</span></div>
+          <div class="cr-main"><div class="cr-title">第 1 章 · 第 12 段<span class="badge badge-warning">中置信</span></div>
             <div class="cr-reason">室友招呼用语随性别变化("哥们"→ 更自然的称呼)</div>
             <div class="diff"><div class="d-del">- "哥们,泡面还要不要了?"</div><div class="d-add">+ "林溪,泡面还要不要了?"</div></div></div></div>
       </div>
@@ -234,25 +234,25 @@
       <div class="group" id="g-low" data-group-id="low">
         <div class="group-head" onclick="toggleGroup('g-low')"><span class="chev">▾</span>独立低置信项<span class="badge badge-neutral">可搁置</span><span class="meta"><span class="badge badge-neutral" data-gcount>0/2 勾选</span></span></div>
         <div class="change-row off" data-row data-group-id="low"><input type="checkbox" data-independent-check>
-          <div class="cr-main"><div class="cr-title"><code>chapters/ch_001 § 段 18</code><span class="badge badge-neutral">低置信 · 默认不勾</span></div>
+          <div class="cr-main"><div class="cr-title">第 1 章 · 第 18 段<span class="badge badge-neutral">低置信 · 默认不勾</span></div>
             <div class="cr-reason">"程序员鼓励师"玩笑话可能不再成立 — 语境存疑,建议人工判断</div>
             <div class="diff"><div class="d-del">- 同事起哄让他当"鼓励师"</div><div class="d-add">+ (待定)删除该玩笑或改写语境</div></div>
-            <div class="obligation">未勾选将生成 residual obligation: 下次 ReaderPanel 或 Validator 命中该段时重新提示。</div></div></div>
+            <div class="obligation">未勾选会留下复核提醒:下次读者预演或一致性检查命中该段时重新提示。</div></div></div>
         <div class="change-row off" data-row data-group-id="low"><input type="checkbox" data-independent-check>
-          <div class="cr-main"><div class="cr-title"><code>timeline/2024.md § 段 2</code><span class="badge badge-neutral">低置信</span></div>
+          <div class="cr-main"><div class="cr-title">主线时间轴 · 2024 段落<span class="badge badge-neutral">低置信</span></div>
             <div class="cr-reason">时间线事件描述可能无需变动</div>
             <div class="diff"><div class="d-ctx">  (无文本变更建议,仅标记复核)</div></div>
             <div class="obligation">搁置后生成去重 obligation,同一锚点再次命中只追加证据。</div></div></div>
       </div>
 
       <div class="group closed dependency" id="g-followup" data-group-id="followup">
-        <div class="group-head" onclick="toggleGroup('g-followup')"><span class="chev">▾</span>二级 dependency group<span class="badge badge-warning">同组同生效</span><span class="meta"><input type="checkbox" checked data-group-check data-group-id="followup" onclick="event.stopPropagation()"><span class="badge badge-neutral" data-gcount>2/2 同组接受</span></span></div>
+        <div class="group-head" onclick="toggleGroup('g-followup')"><span class="chev">▾</span>二级连带组<span class="badge badge-warning">同组同生效</span><span class="meta"><input type="checkbox" checked data-group-check data-group-id="followup" onclick="event.stopPropagation()"><span class="badge badge-neutral" data-gcount>2/2 同组接受</span></span></div>
         <div class="change-row locked" data-row data-group-id="followup"><input type="checkbox" checked disabled data-row-check>
-          <div class="cr-main"><div class="cr-title"><code>chapters/ch_003 § 段 7</code><span class="badge badge-warning">中置信</span></div>
-            <div class="cr-reason">由 wang.md 称谓变化连带:对话引用"川哥"</div>
+          <div class="cr-main"><div class="cr-title">第 3 章 · 第 7 段<span class="badge badge-warning">中置信</span></div>
+            <div class="cr-reason">由王胖子称谓变化连带:对话引用"川哥"</div>
             <div class="diff"><div class="d-del">- "川哥这个人,你别看他闷"</div><div class="d-add">+ "溪姐这个人,你别看她闷"</div></div></div></div>
         <div class="change-row locked" data-row data-group-id="followup"><input type="checkbox" checked disabled data-row-check>
-          <div class="cr-main"><div class="cr-title"><code>chapters/ch_005 § 段 3</code><span class="badge badge-warning">中置信</span></div>
+          <div class="cr-main"><div class="cr-title">第 5 章 · 第 3 段<span class="badge badge-warning">中置信</span></div>
             <div class="cr-reason">媒体报道段落中的"青年才俊"表述微调</div>
             <div class="diff"><div class="d-del">- 这位 26 岁的青年才俊</div><div class="d-add">+ 这位 26 岁的创业新锐</div></div></div></div>
       </div>
@@ -261,25 +261,25 @@
     <div class="rules">
       <div class="rule-block rule-blocking">
         <div class="rt">1 项阻断级 — 承诺冲突</div>
-        <div style="margin-top:4px">ch_001 <span class="jump" onclick="enterCompare()">§ 段 5</span>:主角身份被改写后与已审定伏笔冲突;同意按钮保持禁用,只能拒绝或编辑后重新审。</div>
+        <div style="margin-top:4px">第 1 章 <span class="jump" onclick="enterCompare()">第 5 段</span>:主角身份被改写后与已审定伏笔冲突;同意按钮保持禁用,只能拒绝或编辑后重新审。</div>
       </div>
       <div class="rule-block rule-confirm">
         <div class="rt">1 项确认级 — 人设风险</div>
-        <div style="margin-top:4px">ch_003 <span class="jump" onclick="enterCompare()">§ 段 9</span>:林溪自称"做大哥的",与新性别人设冲突;cascade 未覆盖该段(语义改写超出半径),需手动处理或拒绝后让写手重做。</div>
+        <div style="margin-top:4px">第 3 章 <span class="jump" onclick="enterCompare()">第 9 段</span>:林溪自称"做大哥的",与新性别人设冲突;本次连带修改未覆盖该段,需手动处理或拒绝后让写手重做。</div>
         <label class="ack"><input type="checkbox" id="ackRisk" onchange="refresh()">我已阅读上述风险,明知风险仍通过</label>
       </div>
       <div class="rule-block rule-tip">
         <div class="rt">1 项提示级 — 节奏风险</div>
-        <div style="margin-top:4px">本批改动集中在前三章,建议改完后跑一次 ReaderPanel 验证黄金三章爽点密度(<span class="jump">查看 design/03 章节风险</span>)。</div>
+        <div style="margin-top:4px">本批改动集中在前三章,建议改完后跑一次读者预演验证黄金三章爽点密度(<span class="jump">查看 03 章节风险</span>)。</div>
       </div>
     </div>
 
     <div class="failure-panel" id="failurePanel">
-      <div class="failure-title">ApplyFailed / 部分失败</div>
-      <div>本批已保存的作者文件保持生效;未保存项不会伪装成通过,索引状态单独进入 repair。</div>
+      <div class="failure-title">部分失败</div>
+      <div>本批已保存的作品内容保持生效;未保存项不会伪装成通过,系统会给出重新分析入口。</div>
       <div class="failure-grid">
-        <div class="failure-box"><b>已生效 5 项</b>characters/lin.md 与一级原子组已进入写入记录。</div>
-        <div class="failure-box"><b>未生效 2 项</b>ch_003 / ch_005 写入前锚点失效,需重新分析。</div>
+        <div class="failure-box"><b>已生效 5 项</b>林溪角色卡与一级同组修改已保存。</div>
+        <div class="failure-box"><b>未生效 2 项</b>第 3 章 / 第 5 章保存前位置变化,需重新分析。</div>
       </div>
     </div>
 
@@ -307,7 +307,7 @@
       </div>
       <div class="compare-bar">
         <span class="badge badge-warning">对照审批</span>
-        <span>主修改: characters/lin.md · 已勾选 <span id="barCount">7/9</span> · 风险段 ch_003 §9</span>
+        <span>主修改:林溪角色卡 · 已勾选 <span id="barCount">7/9</span> · 风险段 第 3 章第 9 段</span>
         <span class="grow"></span>
         <button class="btn btn-sm" onclick="exitCompare()">返回审批卡</button>
       </div>

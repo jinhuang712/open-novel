@@ -89,7 +89,7 @@
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
   <span class="proto-title">06 · 统一搜索与快捷交互</span>
-  <span>文档: design/06-command-palette.md · 上游: spec/S14 / spec/M01</span>
+  <span>设计者说明:对应 design/06;作者包只显示中文主标签</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
@@ -119,7 +119,7 @@
           <div class="preview-title">青岚</div>
           <div class="preview-sub">角色 · 主角阵营 · 最近出现:第 37 章</div>
           <div class="pill-row"><span class="mini-pill">别名:青娘</span><span class="mini-pill">阵营:青岚宗</span><span class="mini-pill">状态:负伤</span></div>
-          <div class="preview-block"><b>来源</b>characters/qinglan.md · chapters/037.md · relation:师承</div>
+          <div class="preview-block"><b>来源</b>青岚角色卡 · 第 37 章 · 师承关系</div>
           <div class="preview-block"><b>可执行动作</b><div class="pill-row"><span class="mini-pill">打开角色卡</span><span class="mini-pill">查看引用</span><span class="mini-pill">对照打开</span></div></div>
           <div class="preview-block"><b>降级语义</b>来源缺失时只显示基础行;语义召回不能伪装成事实。</div>
         </div>
@@ -138,30 +138,30 @@
     </div>
   </div>
 
-  <div class="stage-label">快速打开文件 — CMD+P(输入 &gt; 前缀即转命令面板)</div>
+  <div class="stage-label">快速打开作品内容 — CMD+P(输入 &gt; 前缀即转命令面板)</div>
   <div class="overlay-demo" style="padding:24px">
     <div class="palette">
       <div class="pal-input"><span class="pfx">⌕</span><input value="雨夜" readonly></div>
       <div class="pal-list">
-        <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-item)"></span><span><mark>雨夜</mark>来客.md</span><span class="cat">chapters/012</span><span class="keys"><kbd>↵</kbd> 预览 · <kbd>⌘↵</kbd> 对照打开</span></div>
-        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 7 章 · <mark>雨夜</mark>伏击(旧稿).md</span><span class="cat">chapters/_archive</span></div>
-        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>雨</mark>巷 · 知微书馆.md</span><span class="cat">设定 / 地点</span></div>
+        <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 12 章 · <mark>雨夜</mark>来客</span><span class="cat">当前卷 · 章节</span><span class="keys"><kbd>↵</kbd> 预览 · <kbd>⌘↵</kbd> 对照打开</span></div>
+        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 7 章 · <mark>雨夜</mark>伏击(旧稿)</span><span class="cat">归档章节</span></div>
+        <div class="pal-row"><span class="cat-dot" style="background:var(--entity-place)"></span><span><mark>雨</mark>巷 · 知微书馆</span><span class="cat">设定 · 地点</span></div>
       </div>
     </div>
   </div>
 
-  <div class="stage-label">@文件引用 — 输入条内字面 @ 触发(IME 组词中不弹)</div>
+  <div class="stage-label">@内容引用 — 输入条内字面 @ 触发(IME 组词中不弹)</div>
   <div class="chat-mock">
     <div class="ta">帮我检查 @林<span class="caret"></span> 在前三章的称谓一致性</div>
     <div class="mention-pop">
-      <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>林</mark>溪</span><span class="cat">角色 · characters/lin.md</span><span class="keys"><kbd>↵</kbd></span></div>
-      <div class="pal-row"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>林</mark>父</span><span class="cat">角色 · characters/lin-fu.md</span></div>
-      <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 3 章 · <mark>林</mark>家旧宅.md</span><span class="cat">章节</span></div>
+      <div class="pal-row sel"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>林</mark>溪</span><span class="cat">角色卡 · 主角</span><span class="keys"><kbd>↵</kbd></span></div>
+      <div class="pal-row"><span class="cat-dot" style="background:var(--entity-character)"></span><span><mark>林</mark>父</span><span class="cat">角色卡 · 亲属</span></div>
+      <div class="pal-row"><span class="cat-dot" style="background:var(--entity-item)"></span><span>第 3 章 · <mark>林</mark>家旧宅</span><span class="cat">章节</span></div>
       <div class="pal-foot" style="border:none;background:none;padding:5px"><span><kbd>Esc</kbd> 取消保留字面 @林</span></div>
     </div>
     <div style="height:118px"></div>
     <div class="ta">帮我检查 <span class="chip">@林溪 <span class="x">×</span></span> 在前三章的称谓一致性<span class="caret"></span></div>
-    <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:8px">确认后变 mention chip;发送时展开为 [@林溪](mention://char_lin_a3f2) 契约形态(spec/S14 §@文件名引用)。</div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:8px">确认后变成引用标签;发送时系统会在后台绑定到对应角色或章节,作者只看到 @林溪。</div>
   </div>
 
   <div class="stage-label">框选 AI 改写 — CMD+K 就地输入,默认进入批阅层</div>
@@ -175,7 +175,7 @@
       <p><span class="review-source">这是她紧张时的旧习惯。</span><span class="near-note"><b>太直白</b><span class="note-actions"><button>接受</button><button class="reject">拒绝</button><button>重试</button></span></span></p>
       <p><span class="review-delete">这是她紧张时的旧习惯。</span><span class="review-insert">那枚旧习惯又从指尖漏了出来。</span></p>
       <p>如果要把「守夜人会」统一替换为「玄岚宗」<span class="cascade-anchor">C-03 查看整批</span></p>
-      <div class="scope-line">跨章节 / 设定 / 关系变更只在命中处留下锚点,完整说明与裁决进入 Approval Cascade。</div>
+      <div class="scope-line">跨章节 / 设定 / 关系变更只在命中处留下锚点,完整说明与裁决进入整批审批。</div>
     </div>
   </div>
 

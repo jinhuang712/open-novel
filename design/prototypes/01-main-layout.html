@@ -260,24 +260,20 @@
         <div class="ag">
           <div class="ag-h"><span class="ag-dot" style="background:var(--agent-writer)"></span>写手 <span class="time">12.3s</span></div>
           <div class="ag-b">
-            <div class="tool"><b>readSetting</b>('characters/lin.md') → 1,234 字</div>
-            <details class="tj"><summary class="tool"><b>生成设定提议</b>(…) → 提议 ap_3e9d ▸ 明细</summary>
-<pre>{
-  "kind": "proposal",
-  "approvalId": "ap_3e9d",
-  "path": "characters/lin.md",
-  "reason": "用户要求把主角性别改为女",
-  "cascade": { "rounds": 3, "items": 8 }
-}</pre></details>
+            <div class="tool"><b>读取角色卡</b>「林溪」→ 1,234 字</div>
+            <details class="tj"><summary class="tool"><b>生成设定提议</b> → 角色卡修改 · 8 项连带影响 ▸ 明细</summary>
+<pre>修改对象:林溪角色卡
+原因:用户要求把主角性别改为女
+影响范围:3 轮分析 · 8 项连带修改</pre></details>
             <div>生成 diff(流式 · 第 2/3 段)…</div>
           </div>
         </div>
         <div class="ag" style="border-bottom:none">
           <div class="ag-h"><span class="ag-dot" style="background:var(--agent-validator)"></span>一致性守护者 <span class="done">✓</span><span class="time">8.9s</span></div>
           <div class="ag-b">
-            <div class="tool"><b>analyzeImpact</b>(outline.md) → 3 处引用</div>
-            <div class="tool"><b>analyzeImpact</b>(chapters/*) → 5 处冲突</div>
-            <div>影响半径收敛 · 共 8 段候选进入 ChangeSet</div>
+            <div class="tool"><b>分析影响</b>「大纲」→ 3 处引用</div>
+            <div class="tool"><b>分析影响</b>「前文章节」→ 5 处冲突</div>
+            <div>影响半径收敛 · 共 8 段候选进入修改包</div>
           </div>
         </div>
       </div>
@@ -294,7 +290,7 @@
 
 <div class="composer" id="composer">
   <div class="comp-lock">完成或取消上方审批后才能继续输入</div>
-  <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用文件)"></textarea>
+  <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用角色或章节)"></textarea>
   <div class="comp-foot">
     <span class="modes" id="modes"><span class="mode" data-m="讨论">讨论</span><span class="mode on" data-m="规划">规划</span><span class="mode" data-m="写作">写作</span></span>
     <span class="hint">tab 切模式 · @ 引用 · esc 收回</span>
@@ -333,12 +329,12 @@
 <div class="ap-layer" id="apLayer">
   <div class="ap-card" id="focusApproval" tabindex="-1">
     <div class="ap-t"><span class="title">修改主角设定:林川 → 林溪(性别:女)</span><button class="close" onclick="closeApproval()" title="暂不处理 (Esc)">×</button></div>
-    <div class="ap-path">characters/lin.md · 提议 ap_3e9d · 写手</div>
+    <div class="ap-path">林溪角色卡 · 写手 · 8 项连带影响</div>
     <div class="diff">
       <div class="del">- 林川,男,29 岁,重生前是纵横资本的数据分析师</div>
       <div class="add">+ 林溪,女,29 岁,重生前是纵横资本的数据分析师</div>
     </div>
-    <div class="ap-cas">影响 8 段关联内容(outline 3 · 章节 5)<a href="02-approval-cascade.html">去整批审 →</a></div>
+    <div class="ap-cas">影响 8 段关联内容(大纲 3 · 章节 5)<a href="02-approval-cascade.html">去整批审 →</a></div>
     <div class="ap-act">
       <button class="btn btn-primary btn-sm" onclick="approve()">同意</button>
       <button class="btn btn-sm" onclick="toast('进入编辑(演示)')">编辑后同意</button>
@@ -394,7 +390,7 @@ function closeApproval(options) {
   document.getElementById('focusRestoreNote').classList.remove('show');
   if (options.restore !== false) restoreApprovalFocus();
 }
-function approve() { closeApproval({ restore: false }); setState('run'); toast('已同意 · cascade 整批审排队中'); }
+function approve() { closeApproval({ restore: false }); setState('run'); toast('已同意 · 整批审排队中'); }
 function openUSearch() {
   var u = document.getElementById('usearch');
   u.classList.add('open');
@@ -413,8 +409,8 @@ function toggleUSearch() {
 var LIB = {
   chapters: { foot: '3 个 `_` 前缀派生文件已隐藏 — 开发构建才显示', html:
     '<div class="lib-sect">最近</div>' +
-    '<div class="lib-row">林溪.md<span class="meta">角色 · 2 分钟前</span></div>' +
-    '<div class="lib-row">outline.md<span class="meta">大纲 · 昨天</span></div>' +
+    '<div class="lib-row">林溪角色卡<span class="meta">角色 · 2 分钟前</span></div>' +
+    '<div class="lib-row">主线大纲<span class="meta">大纲 · 昨天</span></div>' +
     '<div class="lib-sect">第三卷 · 重生七年</div>' +
     '<div class="lib-row"><span class="num">009</span>旧仓库的钥匙<span class="meta">4,102</span></div>' +
     '<div class="lib-row"><span class="num">010</span>第一次交锋<span class="meta">3,876</span></div>' +
@@ -427,15 +423,15 @@ var LIB = {
     '<div class="lib-row">沈柏年<span class="meta">盟友 · 12 处</span></div>' +
     '<div class="lib-row">阿芷<span class="meta">配角 · 9 处</span></div>' },
   worldview: { foot: '', html:
-    '<div class="lib-row">世界规则<span class="meta">rules</span></div>' +
-    '<div class="lib-row">城市与地理<span class="meta">geography</span></div>' +
-    '<div class="lib-row">大事记<span class="meta">history</span></div>' +
-    '<div class="lib-row">资本格局<span class="meta">politics</span></div>' },
+    '<div class="lib-row">世界规则<span class="meta">设定</span></div>' +
+    '<div class="lib-row">城市与地理<span class="meta">地点</span></div>' +
+    '<div class="lib-row">大事记<span class="meta">时间线</span></div>' +
+    '<div class="lib-row">资本格局<span class="meta">势力</span></div>' },
   outline: { foot: '', html:
-    '<div class="lib-row">outline.md<span class="meta">主线</span></div>' +
-    '<div class="lib-row">beats.md<span class="meta">节拍</span></div>' +
-    '<div class="lib-row">卷三 · 重生七年<span class="meta">chapter-arcs</span></div>' +
-    '<div class="lib-row">主线时间轴<span class="meta">timeline</span></div>' },
+    '<div class="lib-row">主线大纲<span class="meta">主线</span></div>' +
+    '<div class="lib-row">剧情节拍<span class="meta">节拍</span></div>' +
+    '<div class="lib-row">卷三 · 重生七年<span class="meta">章节弧</span></div>' +
+    '<div class="lib-row">主线时间轴<span class="meta">时间线</span></div>' },
   outline2: null
 };
 delete LIB.outline2;
@@ -462,7 +458,7 @@ renderCats('chapters');
 document.getElementById('libList').innerHTML = LIB.chapters.html;
 document.getElementById('libFoot').textContent = LIB.chapters.foot;
 
-/* ===== Universal Search ===== */
+/* ===== 统一搜索 ===== */
 var US_PREVIEW = {
   linxi: { name: '林溪', meta: '角色 · 主角 · 当前状态:掌握青铜罗盘线索', text: '阵营:知微书馆。关系:与陆沉敌对,与王胖子互信。最近出现:第 12 章雨夜来客。' },
   luchen: { name: '陆沉', meta: '角色 · 对手 · 首次正面交锋', text: '阵营:纵横资本。关系:守夜人会外围执行者,试图用罗盘交换条件。' },
@@ -490,11 +486,11 @@ renderUSPreview('linxi');
 
 /* ===== 旁注 ===== */
 var NOTES = {
-  linxi: { name: '林溪', kind: '角色 · 主角', text: '重生回 2014 年的互联网创业者,知微书馆老板。', file: 'characters/lin.md' },
-  luchen: { name: '陆沉', kind: '角色 · 对手', text: '纵横资本合伙人,林溪重生前的最大对手。表面儒雅,实则记仇。', file: 'characters/lu-chen.md' },
-  zhiwei: { name: '知微书馆', kind: '地点', text: '林溪重生后盘下的旧书馆,公司前身,主线主要场景。', file: 'locations/zhiwei.md' },
-  shouye: { name: '守夜人会', kind: '组织', text: '资本世界的影子规则制定者,暗线推手。', file: 'factions/shouye.md' },
-  luopan: { name: '青铜罗盘', kind: '物品', text: '林溪母亲遗物,第 3 章典当,本章回归——伏笔回收。', file: 'items/luopan.md' },
+  linxi: { name: '林溪', kind: '角色 · 主角', text: '重生回 2014 年的互联网创业者,知微书馆老板。', label: '林溪角色卡' },
+  luchen: { name: '陆沉', kind: '角色 · 对手', text: '纵横资本合伙人,林溪重生前的最大对手。表面儒雅,实则记仇。', label: '陆沉角色卡' },
+  zhiwei: { name: '知微书馆', kind: '地点', text: '林溪重生后盘下的旧书馆,公司前身,主线主要场景。', label: '知微书馆设定卡' },
+  shouye: { name: '守夜人会', kind: '组织', text: '资本世界的影子规则制定者,暗线推手。', label: '守夜人会设定卡' },
+  luopan: { name: '青铜罗盘', kind: '物品', text: '林溪母亲遗物,第 3 章典当,本章回归——伏笔回收。', label: '青铜罗盘设定卡' },
   lingqi: { name: '灵气', kind: 'violation', text: '此世界不存在「灵气」设定,命中表面词。建议改用「氧化纹路」或删除。', danger: true }
 };
 var noteEl = document.getElementById('note'), noteTimer = null, hideTimer = null;
@@ -504,7 +500,7 @@ function showNote(target) {
   noteEl.className = 'note' + (d.danger ? ' danger' : '');
   if (!d.danger) noteEl.style.borderLeftColor = color;
   noteEl.innerHTML = '<span class="n-name">' + d.name + '</span><span class="n-kind">' + d.kind + '</span><div>' + d.text + '</div>' +
-    (d.file ? '<span class="n-open" onclick="toast(\'打开 ' + d.file + '(演示)\')">打开 ' + d.file + ' →</span>' : '');
+    (d.label ? '<span class="n-open" onclick="toast(\'打开 ' + d.label + '(演示)\')">打开 ' + d.label + ' →</span>' : '');
   var mid = document.getElementById('mid'), paper = document.getElementById('paper');
   var pr = paper.getBoundingClientRect(), tr = target.getBoundingClientRect(), mr = mid.getBoundingClientRect();
   var left = Math.min(pr.right - 60, mr.right - 210) ;

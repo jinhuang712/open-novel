@@ -211,6 +211,8 @@ pnpm dev
 - [04-settings](./design/04-settings.md) — 设置对话框
 - [05-onboarding](./design/05-onboarding.md) — 首启引导
 - [06-command-palette](./design/06-command-palette.md) — 命令面板与快捷交互
+- [07-interaction-branch-matrix](./design/07-interaction-branch-matrix.md) — 核心交互分支覆盖矩阵
+- [ui-language-map](./design/ui-language-map.md) — 作者界面中文化映射
 
 ### 历史进度 (progress/) — 迁移与决策历史 (When)
 

@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/design · TODO-P0-01 核心交互分支原型覆盖
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 新增核心交互分支矩阵与作者界面中文化映射,把覆盖范围收敛为 16 条可验收核心分支;同步主界面、审批卡、读者预演、启动页和统一搜索原型,移除作者界面中的 `.md`、相对路径和目录结构泄漏,统一 Settings/ReaderPanel/ApprovalCard/Universal Search 等主标签为中文作品语义。 | `README.md` `TODO.md` `design/README` `design/01` `design/02` `design/03` `design/06` `design/07` `design/ui-language-map` `design/prototypes/*` | 关闭 TODO-P0-01。 |
+
 ## 2026-06-13 · docs/verification · TODO-P1-22/P1-43 迁入实施期门禁
 
 | 变更 | 影响文档 | 关联 |

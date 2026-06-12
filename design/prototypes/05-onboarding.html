@@ -132,33 +132,33 @@
       <p class="sub">每次启动先选择或创建项目。主界面左上角也可以回到这里。</p>
       <div class="project-list">
         <div class="project-row sel" onclick="openProject('重生互联网')">
-          <div><b>重生互联网</b><span>~/.open-novel/books/reborn-net · 今天 01:12 · 1 个待审批</span></div>
+          <div><b>重生互联网</b><span>今天 01:12 · 第 12 章 · 1 个待审批</span></div>
           <button class="btn btn-sm">打开</button>
         </div>
         <div class="project-row" onclick="openProject('大荒镖局')">
-          <div><b>大荒镖局</b><span>~/Documents/Open Novel/dahuang · 昨天 22:41 · 无待审批</span></div>
+          <div><b>大荒镖局</b><span>昨天 22:41 · 第 4 章 · 无待审批</span></div>
           <button class="btn btn-sm">打开</button>
         </div>
       </div>
       <div class="project-actions">
         <button class="btn btn-primary" onclick="step=3;render()">创建新作品</button>
         <button class="btn" onclick="step=2;render()">首次配置 / 选择存放位置</button>
-        <button class="btn">打开本地文件夹…</button>
+        <button class="btn">选择已有作品…</button>
       </div>
-      <div class="info-card" style="margin-top:14px">项目路径、创建、归档和删除不在设置面板里管理;启动页负责进入哪本书。</div>
+      <div class="info-card" style="margin-top:14px">作品选择、创建、归档和删除不在设置面板里管理;启动页负责进入哪本书。</div>
     </div>
 
     <div class="step" id="s2">
       <h1 class="serif">首次配置</h1>
       <p class="sub">先确认作品存放位置,再填连接凭据。已有项目时可以直接回到项目选择。</p>
       <div class="key-row">
-        <input id="workspacePath" value="~/.open-novel/workspaces/" oninput="workspaceOk=false;render()" aria-label="workspace path">
+        <input id="workspacePath" value="默认作品库" oninput="workspaceOk=false;render()" aria-label="作品存放位置">
         <button class="btn" onclick="checkWorkspace()">检查权限</button>
       </div>
       <div class="workspace-actions">
-        <div class="ws-card sel" onclick="selWorkspace(this, '~/.open-novel/workspaces/')"><b>默认路径</b><span>本机用户目录</span></div>
-        <div class="ws-card" onclick="selWorkspace(this, '~/Documents/Open Novel/')"><b>选择文件夹</b><span>浏览器原型示意</span></div>
-        <div class="ws-card" onclick="selWorkspace(this, '/Volumes/NovelSSD/Open Novel/')"><b>最近路径</b><span>外接盘项目库</span></div>
+        <div class="ws-card sel" onclick="selWorkspace(this, '默认作品库')"><b>默认位置</b><span>本机用户目录</span></div>
+        <div class="ws-card" onclick="selWorkspace(this, '自选作品位置')"><b>选择位置</b><span>本机可写位置</span></div>
+        <div class="ws-card" onclick="selWorkspace(this, '最近使用的位置')"><b>最近位置</b><span>上次使用的位置</span></div>
       </div>
       <div class="ws-state" id="workspaceState"></div>
       <h1 class="serif" style="margin-top:22px">连接创作服务</h1>

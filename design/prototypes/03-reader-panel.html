@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open Novel · ReaderPanel 章节风险报告</title>
+<title>Open Novel · 读者预演章节风险报告</title>
 <script>
 (function () {
   var saved = localStorage.getItem('onovel-theme');
@@ -133,14 +133,14 @@
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
-  <span class="proto-title">03 · ReaderPanel 章节风险报告</span>
+  <span class="proto-title">03 · 读者预演章节风险报告</span>
   <span>文档: design/03-reader-panel.md</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="stage">
-  <div class="stage-label">完成态 — 嵌在 APPROVALCARD 内或 ReaderPanel 报告面板</div>
+  <div class="stage-label">完成态 — 嵌在审批卡内或读者报告面板</div>
 
   <div class="card">
     <div class="rp-head">
@@ -333,7 +333,7 @@
 
   <div class="card prog-card">
     <div class="prog-top">
-      <div class="prog-row"><span>ReaderPanel · 3/5 · 毒舌读者正在读…</span><span style="margin-left:auto;font-family:var(--font-mono)">4.5s</span><button class="btn btn-sm">取消</button></div>
+      <div class="prog-row"><span>读者预演 · 3/5 · 毒舌读者正在读…</span><span style="margin-left:auto;font-family:var(--font-mono)">4.5s</span><button class="btn btn-sm">取消</button></div>
       <div class="progress-track"><div class="progress-fill"></div></div>
       <div class="pdots">
         <span class="pdot p-zhui" title="追更党 ✓">追</span>
@@ -359,7 +359,7 @@
   <div class="stage-label">空态 — 不伪造报告</div>
   <div class="card empty-card">
     <h3>还没有可预演的章节</h3>
-    <p>当前只打开了设定或空纸面。ReaderPanel 需要一段可读正文,不会用样例报告填补空白。</p>
+    <p>当前只打开了设定或空纸面。读者预演需要一段可读正文,不会用样例报告填补空白。</p>
     <div><button class="btn btn-primary btn-sm">打开章节</button> <button class="btn btn-sm">让 AI 起草一章</button></div>
   </div>
   <div class="card empty-card">
@@ -368,9 +368,9 @@
     <div><button class="btn btn-sm">继续写作</button></div>
   </div>
   <div class="card empty-card">
-    <h3>没有最近 ReaderPanel 报告</h3>
+    <h3>没有最近读者报告</h3>
     <p>「打开最近报告」只打开真实保存过的报告;没有报告时提供运行入口,不展示过期样例。</p>
-    <div><button class="btn btn-primary btn-sm">运行 ReaderPanel</button></div>
+    <div><button class="btn btn-primary btn-sm">运行读者预演</button></div>
   </div>
 </div>
 
@@ -398,7 +398,7 @@ function jumpParagraph(id) {
   }
   target.classList.add('active');
   target.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  status.textContent = '已定位到 ' + id.replace('p', '第 ') + ' 段;ReaderPanel 面板不关闭,勾选状态保留。';
+  status.textContent = '已定位到 ' + id.replace('p', '第 ') + ' 段;读者报告面板不关闭,勾选状态保留。';
   setTimeout(function () { target.classList.remove('active'); }, 2000);
 }
 </script>

@@ -16,8 +16,10 @@
 2. **双主题是一等公民**:所有颜色走 token,light/dark 同步设计、同步验收
 3. **纸面唯一主角(写作优先)**:默认界面只有章节轨、纸面、状态点三样;项目选择、库、对话、过程、审批全部召唤式出现,用完即走。IDE 只保留肌肉记忆(快捷键 / 多章 / 对照 / Goto Definition),不保留常驻外观(布局契约见 [design/01](./01-main-layout.md),2026-06-11 修订)
 4. **克制是审美底线**:发丝线分界、留白分层;不引入文化符号装饰;唯一循环动效是状态点运行态呼吸,其余只有 120/200ms 淡入与小位移(动效全集见 [01-main-layout §动效清单](./01-main-layout.md#动效清单全集))
-5. **审定有轻重层级**:句内小改写在正文批阅层就地接受;跨文件、连带修改和守则风险进入 ApprovalCard / Cascade,信息层级(主修改 → cascade 分级 → 守则风险 → 行动)必须一眼可读
+5. **审定有轻重层级**:句内小改写在正文批阅层就地接受;跨章节、连带修改和守则风险进入审批卡 / 整批审批,信息层级(主修改 → 连带影响 → 守则风险 → 行动)必须一眼可读
 6. **设计文档先于实现**:组件状态、键盘、空/错态在 md 里定义清楚,前端实现照此验收
+7. **作者界面中文优先**:作者包不暴露 `.md`、相对路径、目录结构、storage 实现或英文主标签;中文化映射见 [ui-language-map](./ui-language-map.md)
+8. **核心分支可验收**:原型覆盖约 16 条核心交互分支,不追求几十上百个状态枚举;分支矩阵见 [07-interaction-branch-matrix](./07-interaction-branch-matrix.md)
 
 ## 文档导航
 
@@ -25,11 +27,13 @@
 |---|---|---|
 | [00-design-tokens](./00-design-tokens.md) | 色彩 / 字体 / 圆角 / 动效 token,双主题机制 | `prototypes/tokens.css` |
 | [01-main-layout](./01-main-layout.md) | 主界面:章节轨 · 纸面 · 状态点(库 / Trace / 输入条 / 审批聚焦卡召唤式) | `prototypes/01-main-layout.html` |
-| [02-approval-cascade](./02-approval-cascade.md) | ApprovalCard 整批审:diff、cascade 分级勾选、守则风险、拒绝反馈 | `prototypes/02-approval-cascade.html` |
-| [03-reader-panel](./03-reader-panel.md) | ReaderPanel 章节风险报告:分类风险、多人共识、5 persona 反馈 | `prototypes/03-reader-panel.html` |
+| [02-approval-cascade](./02-approval-cascade.md) | 审批卡与整批审:diff、连带分级勾选、守则风险、拒绝反馈 | `prototypes/02-approval-cascade.html` |
+| [03-reader-panel](./03-reader-panel.md) | 读者预演章节风险报告:分类风险、多人共识、5 类读者反馈 | `prototypes/03-reader-panel.html` |
 | [04-settings](./04-settings.md) | 设置面板:12 个分区,覆盖凭据、外观、AI 角色、读者预演、助理语气、文风、创作守则、记忆、用量、快捷键、帮助、关于 | `prototypes/04-settings.html` |
 | [05-onboarding](./05-onboarding.md) | 每次启动先选项目 / 创建项目 + 首次配置向导 + 渐进式提示 | `prototypes/05-onboarding.html` |
-| [06-command-palette](./06-command-palette.md) | 统一搜索、命令面板、Cmd+P、@文件引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
+| [06-command-palette](./06-command-palette.md) | 统一搜索、命令面板、Cmd+P、@内容引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
+| [07-interaction-branch-matrix](./07-interaction-branch-matrix.md) | 16 条核心交互分支覆盖矩阵,用于验收原型状态覆盖 | 各原型页 |
+| [ui-language-map](./ui-language-map.md) | 作者界面中文化映射,定义哪些英文/技术词可保留或必须隐藏 | 各原型页 |
 
 ## 与 plan / spec 的关系
 
