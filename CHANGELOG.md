@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs · 存储分库 + 索引管线主线 + 实施计划 + lint 升级
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 每项目数据库物理拆分为 `project.db`(真源账本:journal/审批/obligation/turn 状态/fencing/经验,损坏触发 facts-degraded)与 `index.db`(派生索引,可整库删除经 R04 重建);A01 新增四库归属表,README 存储行改四库表述。 | `spec/S01` `S02` `S06` `R04` `A01` `README.md` | 关闭"真源与派生混在 index.db"的命名与数据事故隐患。 |
+| S06 新增主线《从一次保存到可查询》:触发源、指纹判定、锚点三段身份与邻接迁移、AC 词典层 vs LLM 候选层、图谱增量更新、embedding 批次、同步/异步事务边界、水位健康度衔接;锚点/差量 reindex 算法自历史归档抽回。 | `spec/S06-knowledge-graph.md` `A01` | 用户指出"文件如何索引"无一篇文档技术上讲明白。 |
+| 新增 `progress/P010` 实施计划:门禁优先(V03 能力 gate),阶段 0 spike → 1 存储索引地基 → 2 最小创作闭环 → 3 写作主路径 → 4 一致性 cascade → 5 完整编辑部 → 6 质量闭环与多端打包;含依赖图、每阶段验收口径与 checkbox。 | `progress/P010-implementation-plan.md` `progress/README.md` | 用户裁决补实施计划。 |
+| docs-lint 升级:CLAUDE/AGENTS 逐字一致校验、GitHub 风格锚点片段校验(`--strict-anchors`)、plan 技术词/阶段词红线扫描、原型硬编码色检测;当前仓库全部检查零命中。 | `scripts/docs-lint.js` | 章程规则机器化执行。 |
+
 ## 2026-06-13 · docs · 单实例/Tauri 裁决落地 + Settings 拆分 + 核心模式 spec 加厚
 
 | 变更 | 影响文档 | 关联 |

@@ -6,6 +6,8 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const ignoredDirs = new Set(['.git', '.next', 'node_modules', 'dist', 'build', 'coverage', 'vendor']);
 const errors = [];
+const warnings = [];
+const strictAnchors = process.argv.includes('--strict-anchors');
 
 function toPosix(value) {
   return value.split(path.sep).join('/');
@@ -64,9 +66,58 @@ function isExternalTarget(target) {
 function normalizeMarkdownTarget(rawTarget) {
   const cleaned = rawTarget.trim().replace(/^<|>$/g, '');
   const hashIndex = cleaned.indexOf('#');
+  const fragment = hashIndex >= 0 ? cleaned.slice(hashIndex + 1) : null;
   const withoutHash = hashIndex >= 0 ? cleaned.slice(0, hashIndex) : cleaned;
   const queryIndex = withoutHash.indexOf('?');
-  return queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+  const file = queryIndex >= 0 ? withoutHash.slice(0, queryIndex) : withoutHash;
+  return { file, fragment };
+}
+
+// GitHub-style heading slug: strip inline markdown formatting, lowercase,
+// remove everything except letters / numbers / spaces / hyphens, spaces -> '-'.
+// Duplicate headings get '-1', '-2', ... suffixes.
+function githubSlug(headingText) {
+  const stripped = headingText
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1') // links/images -> text
+    .replace(/`+([^`]*)`+/g, '$1') // inline code
+    .replace(/(\*\*|__)(.*?)\1/g, '$2') // bold
+    .replace(/(\*|_)(.*?)\1/g, '$2') // italic
+    .replace(/~~(.*?)~~/g, '$1'); // strikethrough
+  return stripped
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/\s+/g, '-');
+}
+
+const headingSlugCache = new Map();
+
+function headingSlugsFor(filePath) {
+  if (headingSlugCache.has(filePath)) return headingSlugCache.get(filePath);
+  const slugs = new Set();
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    const text = stripCodeBlocks(fs.readFileSync(filePath, 'utf8'));
+    const counts = new Map();
+    const headingPattern = /^#{1,6}\s+(.+?)\s*#*\s*$/gm;
+    let match;
+    while ((match = headingPattern.exec(text)) !== null) {
+      const base = githubSlug(match[1]);
+      const count = counts.get(base) || 0;
+      counts.set(base, count + 1);
+      slugs.add(count === 0 ? base : `${base}-${count}`);
+    }
+  }
+  headingSlugCache.set(filePath, slugs);
+  return slugs;
+}
+
+function checkAnchor(sourcePath, line, rawTarget, targetFile, fragment) {
+  if (!fragment) return;
+  const decoded = decodeURIComponent(fragment).toLowerCase();
+  if (!headingSlugsFor(targetFile).has(decoded)) {
+    const message = `${repoPath(sourcePath)}:${line} anchor not found in ${repoPath(targetFile)}: ${rawTarget}`;
+    (strictAnchors ? errors : warnings).push(message);
+  }
 }
 
 function checkLinks(filePath, text) {
@@ -76,11 +127,16 @@ function checkLinks(filePath, text) {
 
   while ((match = linkPattern.exec(content)) !== null) {
     const rawTarget = match[1];
-    const target = normalizeMarkdownTarget(rawTarget);
+    const { file: target, fragment } = normalizeMarkdownTarget(rawTarget);
+    const line = lineNumberAt(content, match.index);
+
+    if (!target && fragment !== null) {
+      checkAnchor(filePath, line, rawTarget, filePath, fragment);
+      continue;
+    }
     if (!target || isExternalTarget(target)) continue;
 
     const source = repoPath(filePath);
-    const line = lineNumberAt(content, match.index);
 
     if (target.toLowerCase().endsWith('.html')) {
       const resolved = path.resolve(path.dirname(filePath), target);
@@ -96,6 +152,63 @@ function checkLinks(filePath, text) {
 
     if (!fs.existsSync(resolvedTarget)) {
       errors.push(`${source}:${line} broken Markdown link: ${rawTarget}`);
+    } else if (fragment !== null && target.toLowerCase().endsWith('.md')) {
+      checkAnchor(filePath, line, rawTarget, resolvedTarget, fragment);
+    }
+  }
+}
+
+// plan/ 写作红线扫描(G1 技术词 + G2 阶段词)。命中即报错。
+// knownAllowed: 现有 plan 正文已存在、经人工甄别豁免的词;新增豁免需主会话裁决。
+const planTechPattern = /\b(?:Tauri|Next\.js|React|SQLite|sqlite|Drizzle|TipTap|ProseMirror|XState|DeepSeek|pnpm|API|JSON|SQL|Markdown|embedding|frontmatter|LLM|token)\b/g;
+const planStagePattern = /(?:\bMVP\b|一期|二期|三期|\bphase\b|\broadmap\b|\bW\d+\b|暂不|后续补|简化版)/g;
+const knownAllowed = [
+  // 暂无豁免;若 plan 正文出现需保留的产品词,经主会话裁决后加 'word' 到这里。
+];
+
+function checkPlanForbiddenWords(filePath, text) {
+  const source = repoPath(filePath);
+  if (!source.startsWith('plan/')) return;
+  const content = stripCodeBlocks(text);
+  for (const pattern of [planTechPattern, planStagePattern]) {
+    pattern.lastIndex = 0;
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      if (knownAllowed.includes(match[0])) continue;
+      errors.push(`${source}:${lineNumberAt(content, match.index)} plan forbidden word: ${match[0]}`);
+    }
+  }
+}
+
+// 章程一致性:AGENTS.md 与 CLAUDE.md 必须逐字节一致。
+function checkCharterConsistency() {
+  const agents = path.join(root, 'AGENTS.md');
+  const claude = path.join(root, 'CLAUDE.md');
+  if (!fs.existsSync(agents) || !fs.existsSync(claude)) {
+    errors.push('AGENTS.md / CLAUDE.md missing: both charter files must exist');
+    return;
+  }
+  if (!fs.readFileSync(agents).equals(fs.readFileSync(claude))) {
+    errors.push('AGENTS.md and CLAUDE.md differ: charter files must be byte-identical');
+  }
+}
+
+// 原型硬编码色:design/prototypes/*.html 中出现 6 位 hex 颜色记 warning(tokens.css 除外)。
+function checkPrototypeHardcodedColors() {
+  const dir = path.join(root, 'design', 'prototypes');
+  if (!fs.existsSync(dir)) return;
+  for (const name of fs.readdirSync(dir).sort()) {
+    if (!name.endsWith('.html')) continue;
+    const filePath = path.join(dir, name);
+    const text = fs.readFileSync(filePath, 'utf8');
+    const hexPattern = /#[0-9A-Fa-f]{6}\b/g;
+    let match;
+    const lines = [];
+    while ((match = hexPattern.exec(text)) !== null) {
+      lines.push(`${lineNumberAt(text, match.index)} (${match[0]})`);
+    }
+    if (lines.length > 0) {
+      warnings.push(`${repoPath(filePath)}: ${lines.length} hardcoded hex color(s) at line(s) ${lines.join(', ')}`);
     }
   }
 }
@@ -149,9 +262,20 @@ function main() {
   const markdownFiles = walk(root).sort();
 
   for (const filePath of markdownFiles) {
-    checkLinks(filePath, fs.readFileSync(filePath, 'utf8'));
+    const text = fs.readFileSync(filePath, 'utf8');
+    checkLinks(filePath, text);
+    checkPlanForbiddenWords(filePath, text);
   }
   checkUniqueIds(markdownFiles);
+  checkCharterConsistency();
+  checkPrototypeHardcodedColors();
+
+  if (warnings.length > 0) {
+    console.log(`docs lint warnings (${warnings.length}):`);
+    for (const warning of warnings) {
+      console.log(`- ${warning}`);
+    }
+  }
 
   if (errors.length > 0) {
     console.error('docs lint failed:');
