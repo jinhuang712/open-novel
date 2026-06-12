@@ -20,6 +20,12 @@
 | TODO-P1-59【裁决/待讨论】 | Append-only apply journal 的产品/技术语义需要解释并裁决:用户不理解它为什么存在、作者能看见什么、崩溃后如何恢复、它与普通保存/撤销/recap 的关系是什么。 | [S14](./spec/S14-project-storage.md) · [S03](./spec/S03-turn-orchestration.md) · [S04](./spec/S04-streaming-ui-protocol.md) · [M17](./spec/M17-turn-recap-and-continuation.md) · [A01](./spec/appendix/A01-schema-tables.md) · [V01](./spec/appendix/V01-test-matrix.md) | 用户已明确要求继续讨论,不能把 append-only apply journal 当作本轮可直接关闭的技术实现项;需要先把落盘、崩溃恢复、用户可见回执和历史语义讲成用户能理解的方案。 | 给出用户能理解的落盘崩溃恢复方案,说明哪些内容已写入、哪些内容可恢复、哪些内容需要人工确认、recap 如何呈现;经用户确认后再同步 S14/S03/S04/M17/A01/V01 并关闭。 |
 | TODO-P1-60【裁决/待讨论】 | `facts-degraded` 模式的产品/技术语义需要解释并裁决:它是否应该作为独立模式存在、何时进入、用户看到什么、哪些写入要阻断、与 index degraded / R04 重建 / 作者文件优先的关系是什么。 | [S14](./spec/S14-project-storage.md) · [R04](./spec/platform/R04-index-health-and-repair.md) · [R01](./spec/platform/R01-project-lifecycle.md) · [A01](./spec/appendix/A01-schema-tables.md) · [V01](./spec/appendix/V01-test-matrix.md) | 用户已明确表示“不明白在干嘛,记入 TODO 作为待讨论”。如果继续把它写成已定模式,会让实现直接固化未确认恢复体验。 | 给出更容易理解的项目事实库损坏恢复方案,说明与索引损坏的区别、作者文件如何取用、是否允许继续写、恢复后哪些历史会丢失;经用户确认后同步 S14/R04/R01/A01/V01 并关闭。 |
 
+## P0 · 设计原型覆盖
+
+| ID | 问题 | 关联文档 | 为什么不能直接关闭 | 关闭条件 |
+|---|---|---|---|---|
+| TODO-P0-01 | 界面原型需要覆盖所有关键交互分支,且作者界面不得暴露 `.md`、相对路径、文件夹结构或任何存储实现细节:当前 design/prototypes 只覆盖主路径和部分状态,不足以让用户逐页检查 pending、错误、空态、降级、确认、取消、恢复、只读锁定、焦点返回、移动端等分支;截图中的“打开 items/luopan.md”这类路径文案必须改为作品对象动作。 | [design/README](./design/README.md) · [design/01](./design/01-main-layout.md) · [design/02](./design/02-approval-cascade.md) · [design/03](./design/03-reader-panel.md) · [design/04](./design/04-settings.md) · [design/05](./design/05-onboarding.md) · [design/06](./design/06-command-palette.md) · `design/prototypes/index.html` | 这是 P0 设计可靠性问题,不能靠文字承诺关闭;需要把交互状态矩阵和真实 HTML 原型逐一补齐,否则用户无法系统性找 UI/交互问题,也会让存储实现泄漏到作者心智里。 | 先建立 design interaction branch matrix,列出每个页面/能力的主态、空态、loading、pending、error、degraded、readonly、confirm、cancel、recovery、focus/mobile 分支;再为每个分支补可打开的 HTML 原型或同页状态切换,更新原型索引;所有作者可见文案必须只显示作品对象名、章节名、设定名、动作名,不得出现 `.md`、相对路径或存储目录;最后用静态检查和浏览器抽查确认所有分支可访问、无明显重叠/英文残留/断链/存储泄漏。 |
+
 ## 验证入口
 
 需要真实代码、依赖或运行数据证明的事项不作为游离 TODO 漂浮:
