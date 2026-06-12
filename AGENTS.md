@@ -92,11 +92,11 @@ spec/ 是技术设计契约,不是实现明细堆放处。根层 `S/M` 必须先
 
 以下内容归 `spec/platform/Ixx` 或 `spec/platform/Rxx`:
 
-- 模型、编辑器、文件系统、导入导出、桌面壳等跨边界接入契约。
-- 项目生命周期、备份恢复、迁移升级、索引修复、诊断排障等可靠性/运维契约。
+- 模型、编辑器、文件系统、桌面壳等跨边界接入契约。
+- 项目生命周期、迁移升级、索引修复、诊断排障等可靠性/运维契约。
 - 会影响核心路径的外部能力审计、降级策略和恢复手册。
 
-旧 spec 原文、阶段叙事、迁移前快照和已关闭问题归 `progress/spec-archive/` 等历史档案,不得作为 active appendix 继续暴露给读者。
+旧 spec 原文、阶段叙事、迁移前快照和已关闭问题不作为 active appendix 暴露给读者;历史原文已清理,不再保留。
 
 ### S4 · 主权唯一
 
@@ -168,8 +168,8 @@ plan 禁止出现:
 - `plan/*.md`: 纯产品 PRD——产品设计、原则、红线、目标与边界、核心能力;零技术细节。
 - `spec/S*.md`: 系统主权、跨层契约、运行时、存储、上下文和底层协议。
 - `spec/M*.md`: 用户可触发、可感知、可验收的能力闭环。
-- `spec/platform/I*.md`: 模型、编辑器、文件系统、导入导出、桌面壳等跨边界集成契约。
-- `spec/platform/R*.md`: 项目生命周期、备份恢复、迁移升级、索引修复、诊断排障等可靠性/运维契约。
+- `spec/platform/I*.md`: 模型、编辑器、文件系统、桌面壳等跨边界集成契约。
+- `spec/platform/R*.md`: 项目生命周期、迁移升级、索引修复、诊断排障等可靠性/运维契约。
 - `spec/appendix/A*.md` / `spec/appendix/V*.md`: 表结构、完整 schema、代码片段、枚举、prompt、测试矩阵、golden cases 和外部 spike 明细。
 - `design/*.md` + `design/prototypes/*.html`: 界面交互设计、原型图与 UI 样例;视觉 token 与双主题规范见 `design/00-design-tokens.md`。
 - `progress/P*.md`: 历史档案,只用于追溯阶段目标、偏差和决策过程;不再承担 rolling plan。
