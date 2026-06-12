@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs · Spike TODO 可运行性澄清
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 澄清 TODO-P1-22 与 TODO-P1-43 不是已有测量入口等待执行,而是当前仓库缺应用工程、fixture、workload、harness 和指标记录格式;关闭条件改为先建立可运行 spike harness,再跑真实数据并回写 V03/V02/S05/S06/S11。 | `TODO.md` | 保留 TODO-P1-22、TODO-P1-43,避免后续 agent 误判为可直接关闭。 |
+
 ## 2026-06-13 · docs · TODO-P2-25 索引健康与 Prompt 边界映射
 
 | 变更 | 影响文档 | 关联 |
