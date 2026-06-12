@@ -24,6 +24,7 @@
 | P007 | opencode 借鉴落地 + TODO closure (T1-T9: spec/S00 audit / 混合分档 / 卷级摘要 / tool truncate / middleware / doom-loop / SQLite + 反馈表 / TODO 关闭 / 进度) | 2026-05-07 | 跨期 (W2 末尾,W3-W11 落地前) | `5da548b` (T1) → 本批末 (T9) | (W11 收尾) |
 | P008 | plan/ 重写实施计划 | 2026-06-11 | 文档重组 | (计划存档) | (已落地到 plan/spec/design/README) |
 | P009 | 落地前全量架构与设计审计 (110 原始发现 → P0×1 / P1×41 / P2×26 确认,TODO 回填 44 条) | 2026-06-12 | 实现启动前 | (本期 docs commit) | (按批次修复后追加) |
+| P010 | 实施计划: 从纯文档到可运行应用 (阶段 0-6 + V03 长篇能力门禁) | 2026-06-13 | 实现启动 | (本期 docs commit) | (各阶段收尾追加) |
 
 (后续每条 entry 自动追加到此表)
 
