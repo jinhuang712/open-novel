@@ -27,6 +27,10 @@ flowchart LR
 
 命令必须声明上下文、危险等级和是否进入 turn。Quick Open 只能打开或预览,不能偷偷触发写入。
 
+审批命令只能打开待审审批卡、跳到指定 cascade 项,或展示不可执行原因。Command Palette 不提供直接「全部同意」写入入口;任何批量接受都必须先让作者看到完整审批卡,并按 [M08 Approval Cascade](./M08-approval-cascade.md) 的风险语义完成确认。
+
+ReaderPanel 有两个全局命令:「运行 ReaderPanel」在当前章节、选区或命令参数满足时进入 turn;「打开最近 ReaderPanel 报告」只打开已有报告。运行失败、无当前章节或最近报告不存在时,命令只展示可恢复提示,不能生成空报告或静默写盘。
+
 ## 与相邻能力
 
 | 能力 | 分工 |
@@ -44,6 +48,8 @@ flowchart LR
 | 快捷键冲突 | 当前焦点优先,必要时提示冲突 | 抢 IME 或输入框 |
 | 命令执行失败 | toast + Trace step | 假装命令已生效 |
 | 危险命令 | 二次确认或进入审批 | 直接写盘 |
+| 审批命令越权 | 打开审批卡或禁用并说明 | 绕过可见审批卡批量同意 |
+| ReaderPanel 无上下文 | 空态 + 运行入口或选择章节提示 | 伪造最近报告 |
 
 ## Design
 
@@ -56,6 +62,8 @@ flowchart LR
 | 快捷键 | `Cmd+Shift+P`、`F1`、`Cmd+P`、`>` 前缀切换 |
 | 上下文 | pending approval、输入框聚焦、IME composition |
 | 命令 | 危险命令必须确认或审批 |
+| 审批 | `Cmd+Shift+A` 打开待审卡,不直接同意 |
+| ReaderPanel | 可运行当前章节,也可打开最近报告;无报告时空态 |
 | 打开 | 最近项、章节、设定、角色卡可预览和打开 |
 
 ## FAQ

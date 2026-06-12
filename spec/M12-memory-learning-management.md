@@ -36,7 +36,7 @@ flowchart LR
 
 ## Design
 
-管理入口见 [design/04](../design/04-settings.md)。底层状态见 [S02](./S02-runtime-state.md) 和 [S11](./S15-settings-and-onboarding.md)。
+管理入口见 [design/04](../design/04-settings.md)。底层状态见 [S02](./S02-runtime-state.md) 和 [S15](./S15-settings-and-onboarding.md)。
 
 ## 测试清单
 

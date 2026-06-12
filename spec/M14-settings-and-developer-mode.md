@@ -39,7 +39,7 @@ flowchart LR
 
 ## Design
 
-Settings UI 见 [design/04](../design/04-settings.md)。底层控制面见 [S11](./S15-settings-and-onboarding.md)。
+Settings UI 见 [design/04](../design/04-settings.md)。底层控制面见 [S15](./S15-settings-and-onboarding.md)。
 
 ## 测试清单
 

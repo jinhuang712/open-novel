@@ -87,7 +87,7 @@
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
   <span class="proto-title">06 · Universal Search 与快捷交互</span>
-  <span>文档: design/06-command-palette.md · 上游: spec/S10 / spec/M01</span>
+  <span>文档: design/06-command-palette.md · 上游: spec/S14 / spec/M01</span>
   <span class="spacer"></span>
   <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
@@ -155,7 +155,7 @@
     </div>
     <div style="height:118px"></div>
     <div class="ta">帮我检查 <span class="chip">@林溪 <span class="x">×</span></span> 在前三章的称谓一致性<span class="caret"></span></div>
-    <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:8px">确认后变 mention chip;发送时展开为 [@林溪](mention://char_lin_a3f2) 契约形态(spec/M01 §@文件名引用)。</div>
+    <div style="font-size:11.5px;color:var(--text-tertiary);margin-top:8px">确认后变 mention chip;发送时展开为 [@林溪](mention://char_lin_a3f2) 契约形态(spec/S14 §@文件名引用)。</div>
   </div>
 
   <div class="stage-label">框选 AI 改写 — CMD+K 就地输入,默认进入批阅层</div>
@@ -176,7 +176,7 @@
   <div class="stage-label">TOAST — 右栏左缘上方,同屏最多 3 条,4S 自动消退,HOVER 暂停</div>
   <div class="toast-row">
     <div class="toast"><span class="dot" style="background:var(--info)"></span>已切到 plan 模式</div>
-    <div class="toast"><span style="color:var(--success)">✓</span>已落盘 7/9 项<span class="act">撤销</span></div>
+    <div class="toast"><span style="color:var(--success)">✓</span>已落盘 7/9 项<span class="act">查看回执</span></div>
     <div class="toast"><span style="color:var(--warning)">⚠</span>完成审批后才能切模式</div>
     <div class="toast"><span style="color:var(--danger)">✗</span>连接失败,去 Settings 检查 API key<span class="act">打开 Settings</span></div>
   </div>
@@ -194,7 +194,9 @@ var cmds = [
   { cat: '视图', name: '切换 Console', keys: ['Cmd+`'] },
   { cat: '编辑', name: '切换段落批注', keys: ['Cmd+/'] },
   { cat: '视图', name: '切换 Developer Mode', keys: ['Cmd+Shift+D'] },
-  { cat: '审批', name: 'cascade 全部同意', keys: ['Cmd+Shift+A'], when: '有待审时可见' },
+  { cat: '审批', name: '打开待审审批卡', keys: ['Cmd+Shift+A'], when: '有待审时可见' },
+  { cat: '读者预演', name: '运行 ReaderPanel', keys: [] },
+  { cat: '读者预演', name: '打开最近 ReaderPanel 报告', keys: [] },
   { cat: '实体', name: '修复 violation(跑一次 cascade)', keys: [] },
   { cat: '项目', name: '导出当前项目', keys: [] },
   { cat: '项目', name: '删除项目', keys: [], danger: true },

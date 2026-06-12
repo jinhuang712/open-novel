@@ -16,9 +16,9 @@ stateDiagram-v2
   TakingOver --> OpenWritable
   OpenWritable --> LeaseLost
   LeaseLost --> OpenReadonly
-  Closed --> Open
+  Closed --> Opening
   Closed --> Archived
-  Archived --> Open
+  Archived --> Opening
   Closed --> Deleted
   Deleted --> [*]
 ```

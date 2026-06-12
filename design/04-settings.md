@@ -45,7 +45,7 @@ flowchart LR
 - **API Keys**:masked 输入 + 显隐 toggle +「测试连接」(loading → ✓ 已验证 success / ✗ 失败 danger + 原因);月度预算数字输入 + 当月用量进度条(超 80% warning,超 100% danger + 「已触顶,LLM 调用暂停」说明)
 - **模型分配**:每 Agent 一行,`Pro / Flash` 下拉;项目覆盖开启时该行右侧出现「覆盖中 · 还原」
 - **快捷键**:表格(命令 / 默认键 / 当前键 / 重绑按钮);重绑进入捕获态「按下新组合键…」,冲突即时红字提示并禁止保存;`Esc` 退出捕获(不可绑 Esc,[spec/S14](../spec/S14-editor-and-interaction.md))
-- **数据管理**:全局区(workspace 路径 / trace 清理 / 本月用量)+ 项目区(改名 / 归档 / 导出 zip / 删除);**危险区域**独立 danger 描边卡,删除/清空/重置走「输入指定字样」二次确认([spec/S15](../spec/S15-settings-and-onboarding.md)),确认按钮在字样完全匹配前 disabled
+- **数据管理**:全局区(workspace 路径 / trace 清理 / 本月用量)+ 项目区(改名 / 归档 / 导出 zip / 删除);归档只把项目移出日常列表并保持可恢复,不触发自动清除;**危险区域**独立 danger 描边卡,删除/清空/重置走「输入指定字样」二次确认([spec/S15](../spec/S15-settings-and-onboarding.md)),确认按钮在字样完全匹配前 disabled
 - **外部研究**:灰显说明本产品不内置联网研究、素材搜索或自动采集;作者可手动把外部材料导入工作区,导入边界见 [spec/platform/I04](../spec/platform/I04-import-export-contract.md)
 - **Developer Mode**:单 toggle + 影响清单(派生文件可见 / Debug 面板默认展开 / Trace 全文 / ChangeSet JSON 入口等);开启时 toast「Developer Mode 已开启 (Cmd+Shift+D)」
 

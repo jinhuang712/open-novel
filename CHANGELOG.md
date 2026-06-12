@@ -1,5 +1,14 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/todo · 首批 P009 确定性问题修复
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 命令面板审批命令从「cascade 全部同意」降级为「打开待审审批卡」,补齐 ReaderPanel 的「运行 / 打开最近报告」入口与空态;toast 操作从即时「撤销」改为查看回执 / 前向修正入口。 | `design/06-command-palette.md` `design/prototypes/06-command-palette.html` `spec/M02-command-palette-and-quick-open.md` `spec/M11-reader-panel.md` `design/03-reader-panel.md` | 关闭 TODO-P1-38、TODO-P1-39、TODO-P2-04。 |
+| Settings 归档语义改为可随时恢复,原型归口标签修正为 S15/M14 与 S14/M01;R01 状态图去掉未定义 `Open` 节点,M12/M14 的 S15 链接标签同步修正。 | `design/04-settings.md` `design/prototypes/04-settings.html` `spec/platform/R01-project-lifecycle.md` `spec/M12-memory-learning-management.md` `spec/M14-settings-and-developer-mode.md` | 关闭 TODO-P1-41、TODO-P2-05、TODO-P2-13。 |
+| 发布相关措辞收窄为「标记可发布 / 导出成稿 / 进入发布准备」,Trace 透明性改为全量工作日志、输入材料、动作记录、依据引用和可解释结论可回看,不承诺模型内部推理全文。 | `plan/01-overview.md` `plan/07-collaboration-and-modes.md` `plan/09-narrative-and-reader.md` | 关闭 TODO-P2-06、TODO-P2-07。 |
+| TODO 表头改为仅保留尚未关闭项,并移除本批 8 个已关闭条目。 | `TODO.md` | 后续继续按 TODO 批次收敛。 |
+
 ## 2026-06-12 · docs/audit · P009 落地前全量架构与设计审计
 
 | 变更 | 影响文档 | 关联 |
