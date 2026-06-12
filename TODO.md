@@ -1,4 +1,4 @@
-# TODO · 活跃验证、裁决与文档修复项
+# TODO · 开放项状态与新增规则
 
 截至 2026-06-13,本文件只保留仍需用户裁决、跨文档修复或设计补齐才能关闭的活跃项。P009 全量审计的完整证据与改法见 [P009](./progress/P009-pre-implementation-audit.md);已关闭条目从本表移除并记入 [CHANGELOG](./CHANGELOG.md)。真实工程验证已归入 [V01](./spec/appendix/V01-test-matrix.md) 与 [V03](./spec/appendix/V03-external-spikes.md),不再作为游离 TODO 漂浮。
 
