@@ -116,7 +116,7 @@ Activity 时间线由 Trace 顶部的「全部活动」进入,仍是召唤式面
 - 召出:`Cmd+L` / 状态点 hover ✦ / 空态按钮。底部居中 600px,距底 24px,`--bg-raised` + 1px 边 + `--shadow-md`,圆角 `--radius-lg`
 - 结构:textarea(多行,`@` 引用,`Cmd+↑/↓` 历史)→ 底行:mode 三段纯文字(活动项 `--text-primary` + 底部 2px accent 短线;`Tab` 循环,IME composition 不抢键)+ 右侧「发送 ⌘↵」
 - 发送后自动收回,进度与取消移交状态点;右上 pin 可改常驻(记忆选择)
-- `await_approval`:召出即整条灰显 + 一行说明「完成或取消上方审批后才能继续输入」
+- `await_approval`:召出时保留只读讨论入口,发送按钮旁显示「只读讨论」;会写入、切模式或生成新 ChangeSet 的输入 disabled 并提示「先处理上方审批后才能写入」
 - 恢复 banner(仅 in-flight turn):条顶一行「继续审 / 取消本次对话」
 
 ## 审批聚焦卡
@@ -133,7 +133,7 @@ Activity 时间线由 Trace 顶部的「全部活动」进入,仍是召唤式面
 | 无打开文件 | 纸面空态:衬线一句「从库里打开一章,或让 AI 开始」+「✦ 让 AI 起草」 |
 | 流式生成中 | 状态点呼吸;Trace 面板若开启则滚动;输入条未 pin 已收回 |
 | inline_review | 正文附近出现批阅层标记;状态点保持空闲或弱进度;输入条不锁定 |
-| await_approval | 审批卡浮出;状态点静止 accent;输入条锁定 |
+| await_approval | 审批卡浮出;状态点静止 accent;输入条只读讨论可用,写入动作锁定 |
 | stopped_no_change | 状态点旁一行 stopped recap;Trace 顶部列出已完成结果、未完成步骤和继续入口 |
 | 断网 / key 失效 | 状态点 danger + 旁文;输入条顶部一行「连接失败,去 Settings 检查 key」 |
 

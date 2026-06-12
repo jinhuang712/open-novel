@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · 待审期间输入策略裁决
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决待审期间交互策略为「写入锁定、只读放行」:pending approval 存在时禁止写入、生成新 ChangeSet、接受跨文档改写、切换可写模式或影响审批前置条件;查询、搜索、打开文档、Trace 和只读讨论仍可用,但必须标注当前待审状态且不能改变审批。 | `plan/08-approval-and-cascade.md` `spec/S04-turn-orchestration.md` `spec/S14-editor-and-interaction.md` `spec/M04-discuss-mode.md` `design/01-main-layout.md` | 关闭 TODO-P1-14。 |
+| 主界面 await_approval 状态从输入条全锁改为只读讨论可用、写入动作锁定,避免“审批永不过期”导致工作台长期冻结。 | `design/01-main-layout.md` | 与 S04/S14 的并发和命令路由口径一致。 |
+| TODO 移除已裁决的 TODO-P1-14,保留剩余两个【裁决】项继续逐项确认。 | `TODO.md` | 用户选择方案 A。 |
+
 ## 2026-06-12 · docs/todo · 首批 P009 确定性问题修复
 
 | 变更 | 影响文档 | 关联 |
