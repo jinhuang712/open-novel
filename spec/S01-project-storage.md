@@ -27,6 +27,8 @@ Project Storage 的核心价值不是“把数据存起来”,而是让每个事
 
 Storage 不用“最后写入者获胜”解决冲突。任何绕过 lease 的写入都视为外部编辑,按冲突判定让相关审批失效。
 
+生产和开发调试都在桌面壳边界内执行。写入权、SQLite/native binding、watcher cursor、append-only journal 和恢复流程运行在常驻执行宿主中;renderer 不能直接写项目文件或数据库,只能提交命令、展示状态和读取持久结果。桌面壳开发模式可以打开诊断和 mock provider,但不得绕过本篇的 lease、审批、journal 和冲突语义。
+
 ## 事实账本
 
 | 对象 | 例子 | 是否作品真源 | 读者需要知道什么 |

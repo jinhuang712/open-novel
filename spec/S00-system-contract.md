@@ -117,12 +117,14 @@ flowchart TB
 
 | 决策 | 当前路线 | 根层关心的理由 |
 |---|---|---|
-| 应用形态 | 本地单机工作台,一个应用承载前端、后端接口、Agent runner 和本地存储 | 用户数据在本机;路径、权限、导入导出必须可解释 |
+| 应用形态 | 桌面壳是唯一主产品形态,开发调试也在桌面壳开发模式中进行;壳内常驻执行宿主拥有 runner、本地数据库、watcher、lease、journal 和安全凭据,renderer 只发命令并订阅状态 | 用户数据在本机;路径、权限、导入导出、长任务、键位和凭据不能依赖普通浏览器标签页生命周期 |
 | Agent loop | 自定义 runner 显式控制模型调用、结构化输出、retry、tool loop 和 stream | 不把审批、memory、workflow 交给黑盒框架 |
 | LLM 质量闭环 | prompt、context、tool、harness 和 golden regression 分层拥有主权 | LLM 行为变化必须可复现、可验收、可阻断 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
 | UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、Universal Search 和查询浮层暴露 | 过程透明,但不让日志淹没写作 |
 | 明细归口 | 字段、schema、模板全文、工具参数、测试矩阵、golden 明细和 spike 证据进 appendix;接入、恢复、迁移、诊断契约进 platform | 核心 spec 读完必须懂设计,不被字段表打断 |
+
+这条路线不再保留基于浏览器的 Web 调试形态。早期实现可以使用桌面壳开发构建、renderer 热更新、DevTools 和诊断开关来提速,但进程边界、权限、凭据、长任务、stream 恢复、watcher、SQLite 写入隔离和崩溃恢复始终按桌面壳生产形态设计。具体边界由 [I05](./platform/I05-desktop-shell-contract.md) 约束。
 
 具体包版本、字段定义、JSON schema 和命令参数不是本篇职责。它们只有在会改变系统律或失败语义时才回到根层。
 

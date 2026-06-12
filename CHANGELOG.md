@@ -1,5 +1,13 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-12 · docs/decision · 桌面壳主形态裁决
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 裁决 Open Novel 的唯一主产品形态为本机桌面壳应用,开发调试也走桌面壳开发模式;不再保留基于普通浏览器的 Web 调试入口。 | `spec/S00-system-contract.md` `spec/platform/I05-desktop-shell-contract.md` | 关闭 TODO-P1-42。 |
+| 壳内常驻执行宿主/sidecar 拥有 runner、SQLite/native binding、watcher、lease、append-only journal、安全凭据和长任务生命周期;renderer 只发送命令、订阅 stream、展示持久状态。 | `spec/S03-agent-runner.md` `spec/S05-streaming-ui-protocol.md` `spec/S01-project-storage.md` | P1-07/P1-20/P1-22/P2-20 后续按此形态继续收口。 |
+| TODO 移除已裁决的 TODO-P1-42,保留其他依赖项等待逐项修复。 | `TODO.md` | 用户裁决为“纯桌面壳调试”。 |
+
 ## 2026-06-12 · docs/decision · ReaderPanel 风险信号裁决
 
 | 变更 | 影响文档 | 关联 |
