@@ -121,8 +121,7 @@
         <div class="nav-row" data-pane="p8">🧠 记忆 <span class="dirty-dot"></span><span class="scope">📂</span></div>
         <div class="nav-row" data-pane="p9">📊 用量 <span class="scope">🌐</span></div>
         <div class="nav-row" data-pane="p10">⌨️ 快捷键 <span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="p11">？ 帮助 <span class="scope">🌐</span></div>
-        <div class="nav-row" data-pane="p12">ℹ️ 关于 <span class="scope">🌐</span></div>
+        <div class="nav-row" data-pane="p11">ℹ️ 关于 <span class="scope">🌐</span></div>
       </div>
 
       <div class="pane">
@@ -136,12 +135,11 @@
               <button class="btn btn-sm">测试连接</button>
               <span class="badge badge-success">✓ 已验证</span>
             </div>
-            <div class="desc">仅存本地;Pro 用于高质量任务,Flash 用于日常响应。获取方式见服务商控制台。</div>
+            <div class="desc">仅存本地;高质量档用于高要求任务,快速档用于日常响应。获取方式见服务商控制台。</div>
           </div>
-          <div class="field" data-search="用量 缓存 上下文 指标">
-            <label>本月用量指标</label>
-            <div class="input"><span style="font-family:var(--font-mono);font-size:12.5px;color:var(--text-secondary)">24.6M token · 缓存命中 87% · 上下文峰值 92K</span></div>
-            <div class="desc">只读指标,随每轮更新;不在这里管理项目或数据。</div>
+          <div class="field" data-search="失败 重试 重新配置">
+            <label>连接状态</label>
+            <div class="desc">最近 7 天没有凭据错误。连接失败时会在这里显示原因和重新配置入口;用量指标在「用量」分区查看。</div>
           </div>
         </div>
 
@@ -175,49 +173,49 @@
           <div class="role-row" data-search="调度员 意图 路由">
             <div><span class="row-title">调度员</span><span class="row-sub">理解意图、选择协作姿态和动作入口</span></div>
             <select><option>标准</option><option>低干预</option></select>
-            <select><option>Flash</option><option>Pro</option></select>
+            <select><option>快速档</option><option>高质量档</option></select>
             <select><option>每轮必经</option></select>
             <span class="inline-note">不可关闭</span>
           </div>
           <div class="role-row" data-search="写手 草稿 扩写 提议">
             <div><span class="row-title">写手</span><span class="row-sub">章节草稿、段落扩写和修改提议</span></div>
             <select><option>高强度</option><option>标准</option></select>
-            <select><option>Pro</option><option>Flash</option></select>
+            <select><option>高质量档</option><option>快速档</option></select>
             <select><option>权重 4/5</option><option>权重 3/5</option></select>
             <span class="badge badge-accent">覆盖中</span>
           </div>
           <div class="role-row" data-search="一致性 守护者 阻断">
             <div><span class="row-title">一致性守护者</span><span class="row-sub">事实、依赖、连带影响和阻断级一致性</span></div>
             <select><option>严格</option><option>标准</option></select>
-            <select><option>Pro</option><option>Flash</option></select>
+            <select><option>高质量档</option><option>快速档</option></select>
             <select><option>每轮必检</option></select>
             <span class="inline-note">阻断级不可关</span>
           </div>
           <div class="role-row" data-search="审稿人 节奏 爽点">
             <div><span class="row-title">审稿人</span><span class="row-sub">节奏、爽点、守则和表达风险</span></div>
             <select><option>敏感</option><option>标准</option><option>安静</option></select>
-            <select><option>Flash</option><option>Pro</option></select>
+            <select><option>快速档</option><option>高质量档</option></select>
             <select><option>章末 + 按需</option><option>只按需</option></select>
             <span class="inline-note">12% 用量</span>
           </div>
           <div class="role-row" data-search="读者 预演 评审">
             <div><span class="row-title">读者评审团</span><span class="row-sub">多类读者反应和付费追更风险</span></div>
             <select><option>章末</option><option>手动</option><option>关闭自动</option></select>
-            <select><option>Flash</option><option>Pro</option></select>
+            <select><option>快速档</option><option>高质量档</option></select>
             <select><option>权重 3/5</option><option>权重 2/5</option></select>
             <span class="override" onclick="showPane('p4')">配置读者</span>
           </div>
           <div class="role-row" data-search="润色师 去 AI 味 表达">
             <div><span class="row-title">润色师</span><span class="row-sub">表达层改写和去 AI 味</span></div>
             <select><option>按需</option><option>自动建议</option></select>
-            <select><option>Pro</option><option>Flash</option></select>
+            <select><option>高质量档</option><option>快速档</option></select>
             <select><option>权重 3/5</option><option>权重 4/5</option></select>
             <span class="inline-note">下轮生效</span>
           </div>
           <div class="role-row" data-search="反思 学习 记忆">
             <div><span class="row-title">反思学习者</span><span class="row-sub">从审定和反馈中沉淀经验</span></div>
             <select><option>只学明确反馈</option><option>学审批选择</option></select>
-            <select><option>Flash</option><option>Pro</option></select>
+            <select><option>快速档</option><option>高质量档</option></select>
             <select><option>低频后台</option><option>每轮结束</option></select>
             <span class="override" onclick="showPane('p8')">管理记忆</span>
           </div>
@@ -343,14 +341,8 @@
         </div>
 
         <div id="p11" class="pane-hidden">
-          <div class="scope-banner">🌐 <b>全局</b> — 新手提示、离线说明和快捷入口</div>
-          <div class="placeholder">首次提示可回看 · 快捷键可在上一分区重绑 · 项目数据重置不在帮助里提供</div>
-          <div class="info-card" data-search="帮助 新手提示 文档 快捷入口">帮助只解释如何使用当前界面;项目创建、归档、删除回到项目选择页处理。</div>
-        </div>
-
-        <div id="p12" class="pane-hidden">
           <div class="scope-banner">🌐 <b>全局</b> — 版本、隐私和构建标记</div>
-          <div class="placeholder">Open Novel 0.3.0-poc · 数据只在本机 · 文档: design/04-settings.md</div>
+          <div class="placeholder">Open Novel 0.3.0 预览版 · 数据只在本机 · 可查看隐私边界与构建标记</div>
           <div class="info-card">真实用户包不显示开发模式开关。若是 dev build,这里仅显示「开发构建:诊断信息可见」标记,不可在普通设置里开启。</div>
         </div>
       </div>
