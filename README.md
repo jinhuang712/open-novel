@@ -148,7 +148,7 @@ pnpm dev
 - [S10-evaluation-and-golden-regression](./spec/S10-evaluation-and-golden-regression.md) — golden cases、回归门禁、质量指标和 prompt / 证据包改动验收
 - [S11-creative-engine](./spec/S11-creative-engine.md) — 五大守则质检室、叙事诊断、读者面板和风险进入审批
 - [S12-style-and-humanizer](./spec/S12-style-and-humanizer.md) — 表达层改写边界、风格来源、越权判定和差异说明
-- [S13-editor-and-interaction](./spec/S13-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、查询浮层和 undo / forward-only 修正边界
+- [S13-editor-and-interaction](./spec/S13-editor-and-interaction.md) — 编辑器命令路由、焦点顺序、统一搜索内事实详情和 undo / forward-only 修正边界
 - [S14-project-storage](./spec/S14-project-storage.md) — 项目物理存储与落盘协议、分库、fencing 和 reindex 请求
 - [S15-journal-and-ledger](./spec/S15-journal-and-ledger.md) — 决策与写入账本、恢复记录、反向修正和 Recap/Activity 投影
 - [S16-file-version-and-edit-safety](./spec/S16-file-version-and-edit-safety.md) — 文件版本、外部编辑、待审失效、重新校验和项目记录保护
@@ -156,7 +156,7 @@ pnpm dev
 #### M · User-Facing Capability
 
 - [M01-universal-search](./spec/M01-universal-search.md) — Shift+Shift 统一搜索、角色/阵营/概念/章节分组、悬停预览和降级语义
-- [M02-command-palette-and-quick-open](./spec/M02-command-palette-and-quick-open.md) — 命令面板、快速打开、模式切换和快捷命令路由
+- [M02-command-palette-and-quick-open](./spec/M02-command-palette-and-quick-open.md) — 统一搜索内命令候选、打开结果和快捷命令路由
 - [M03-fact-query](./spec/M03-fact-query.md) — 统一搜索内的事实答案、来源跳转和只读证据解释
 - [M04-discuss-mode](./spec/M04-discuss-mode.md) — 讨论模式只聊不写、只读上下文和升级到规划/写作的边界
 - [M05-planning-mode](./spec/M05-planning-mode.md) — 规划模式如何改设定、大纲和结构,但不碰正文
@@ -211,7 +211,7 @@ pnpm dev
 - [03-reader-panel](./design/03-reader-panel.md) — 读者面板章节风险报告
 - [04-settings](./design/04-settings.md) — 设置对话框
 - [05-onboarding](./design/05-onboarding.md) — 首启引导
-- [06-command-palette](./design/06-command-palette.md) — 命令面板与快捷交互
+- [06-command-palette](./design/06-command-palette.md) — 统一搜索与快捷交互
 - [07-interaction-branch-matrix](./design/07-interaction-branch-matrix.md) — 核心交互分支覆盖矩阵
 - [ui-language-map](./design/ui-language-map.md) — 作者界面中文化映射
 

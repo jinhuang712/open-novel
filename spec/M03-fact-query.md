@@ -10,7 +10,7 @@ flowchart LR
   Intent --> QueryFacts[S07 queryFacts]
   QueryFacts --> Sources[来源与候选]
   Sources --> Answer[带来源答案]
-  Answer --> UI[查询浮层]
+  Answer --> UI[统一搜索内答案详情]
 ```
 
 查询结果必须带来源或明确说明未找到。语义召回只能辅助找候选,不能单独成为项目事实。
@@ -25,7 +25,7 @@ flowchart LR
 | identity-of | “这里的青岚是不是岚儿” | entity 候选、别名状态、歧义来源 |
 | semantic-search | “类似背叛伏笔的段落” | 可能相关片段 |
 
-查询有时点语义。默认情况下,Fact Query 以当前阅读/编辑目标章节作为 `as-of chapter`:改写第 12 章时,“青岚现在在哪”应回答第 12 章可见状态,不能泄露第 40 章才发生的事实。查询浮层必须允许用户切换到“全书最新”或指定章节,并把时点显示在答案旁。
+查询有时点语义。默认情况下,Fact Query 以当前阅读/编辑目标章节作为 `as-of chapter`:改写第 12 章时,“青岚现在在哪”应回答第 12 章可见状态,不能泄露第 40 章才发生的事实。统一搜索内答案详情必须允许用户切换到“全书最新”或指定章节,并把时点显示在答案旁。
 
 ## 与 Search / Discuss 的边界
 
@@ -67,7 +67,7 @@ Fact Query 默认不进入 turn,也不生成 recap。一次事实答案只写轻
 
 ## Design
 
-查询浮层形态见 [design/01](../design/01-main-layout.md) 与 [design/06](../design/06-command-palette.md)。完整工具参数归 [A04](./appendix/A04-tool-catalog.md)。
+统一搜索内答案详情形态见 [design/01](../design/01-main-layout.md) 与 [design/06](../design/06-command-palette.md)。完整工具参数归 [A04](./appendix/A04-tool-catalog.md)。
 
 ## 测试清单
 

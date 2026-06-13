@@ -94,7 +94,6 @@
   <span class="proto-title">04 · 设置面板</span>
   <span>文档: design/04-settings.md · 字段契约: spec/M14</span>
   <span class="spacer"></span>
-  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="backdrop" onclick="backdropClose(event)">
@@ -152,7 +151,7 @@
               <button data-ap="dark">深色</button>
               <button data-ap="auto" class="on">跟随系统</button>
             </div>
-            <div class="desc">切换立即生效;命令面板亦可搜「切换深浅外观」。</div>
+            <div class="desc">切换立即生效;统一搜索可搜「打开外观设置」。</div>
           </div>
           <div class="control-grid">
             <div class="control-card" data-search="高对比 主题 token data-contrast">
@@ -367,11 +366,6 @@
 </div>
 
 <script>
-function toggleTheme() {
-  var h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('onovel-theme', h.dataset.theme);
-}
 var searchMatches = [];
 document.querySelectorAll('.nav-row[data-pane]').forEach(function (row) {
   row.addEventListener('click', function () { showPane(row.dataset.pane); });

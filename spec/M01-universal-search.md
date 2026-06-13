@@ -1,6 +1,6 @@
 # M01 · Universal Search
 
-Universal Search 是作者在任何时刻用 `Shift+Shift` 唤出的唯一顶层搜索入口。它不是命令面板,不是高级打开,也不是某个独立事实问答快捷键;它是“我记得一个名字、阵营、伏笔、章节片段,帮我把相关东西找出来并解释”的统一入口。
+Universal Search 是作者在任何时刻用 `Shift+Shift` 唤出的唯一顶层搜索入口。它同时承载对象搜索、事实答案、引用查看、章节打开、最近对象和命令候选;不再有独立命令面板、快速打开或事实问答快捷键。
 
 ## 一秒钟场景
 
@@ -17,12 +17,11 @@ Universal Search 是作者在任何时刻用 `Shift+Shift` 唤出的唯一顶层
 
 | 入口 | 快捷键 | 用户意图 | 数据范围 | 结果动作 |
 |---|---|---|---|---|
-| 统一搜索(Universal Search) | `Shift+Shift` | 搜任何项目对象、名字、阵营、概念、章节片段,并查看事实答案与来源 | 项目文件 + 图谱 + 精确/语义索引 + 最近对象 + QueryFacts | 打开、跳转、预览、对照、继续查询、查看答案 |
-| 高级打开(Quick Open) | `Cmd+P` | 已知道要打开的文件、章节、设定或最近项 | 文件、项目对象 id 和最近打开项 | 打开或预览,不做内容搜索 |
-| 命令面板(Command Palette) | `Cmd+Shift+P` / `F1` | 执行命令 | CommandRegistry | 执行动作 |
-| 选区查询 | 选区浮动条「查询」 | 用选中文字进入统一搜索 | QueryFacts + 选区上下文 | 在统一搜索内展示答案和来源 |
+| 统一搜索 | `Shift+Shift` | 搜任何项目对象、名字、阵营、概念、章节片段,并查看事实答案、引用、最近对象和命令候选 | 项目文件 + 图谱 + 精确/语义索引 + 最近对象 + QueryFacts + CommandRegistry | 打开、跳转、预览、对照、继续查询、查看答案、执行安全命令或进入确认/审批 |
+| 输入条 | `Cmd+L` / 状态点 | 用自然语言发起讨论、规划、写作或命令意图 | 当前上下文 + `@` 引用 | 进入 Discuss/Planning/Writing 或命令路由 |
+| 选区查询 | 选区浮动条「查引用 / 问事实」 | 用选中文字进入统一搜索 | QueryFacts + 选区上下文 | 在统一搜索内展示答案和来源 |
 
-事实答案和来源查看是 Universal Search 内的能力,由 [M03](./M03-fact-query.md) 定义。它没有 `Cmd+E` 独立作者入口,也不能成为第二个顶层搜索浮层。
+事实答案和来源查看是 Universal Search 内的能力,由 [M03](./M03-fact-query.md) 定义。它没有 `Cmd+E` 独立作者入口。章节/角色/设定打开和命令执行由 [M02](./M02-command-palette-and-quick-open.md) 定义路由边界,但仍通过统一搜索或输入条触发。
 
 ## 技术闭环
 
@@ -41,7 +40,7 @@ flowchart TB
   Semantic --> Ranker
   Ranker --> Groups[Grouped Results]
   Groups --> Preview[Hover Preview]
-  Groups --> Action[Open / Jump / Compare / Answer]
+  Groups --> Action[Open / Jump / Compare / Answer / Command]
 ```
 
 Universal Search 不直接写作品。它读取项目事实和派生索引,输出可点击结果和可追溯来源。任何会触发写入的后续动作必须转入对应 turn/approval 语义。
@@ -110,6 +109,7 @@ flowchart LR
 | 阵营 | 阵营/组织 | 立场、成员、敌对/盟友 |
 | 概念 | 能力、规则、禁忌、伏笔 | 规则摘要、风险、来源 |
 | 章节 | 章节和正文片段 | 标题、命中片段、位置 |
+| 命令 | 当前上下文可执行命令 | 命令名、作用、风险、可执行状态 |
 | 可能相关 | 低置信语义召回 | 原文片段、置信提示 |
 
 低置信结果必须视觉降权,不能和精确命中同等展示。
@@ -136,6 +136,7 @@ Hover preview 是 Universal Search 的关键体验,不是普通 tooltip。它帮
 | 概念 | 定义、规则、代价、违反风险、来源 | 打开设定 / 查询 mentions |
 | 章节 | 标题、摘要、命中片段、上下章 | 打开章节 / 对照打开 |
 | 正文片段 | 前后文、所属章节、段落锚点健康度 | 跳转段落 |
+| 命令 | 作用说明、风险等级、当前不可执行原因 | 执行或进入确认 / 审批 |
 
 Preview 只能展示已有事实或明确标记的低置信召回。不得把模型推测包装成对象摘要。
 
@@ -168,7 +169,7 @@ stateDiagram-v2
 design 负责视觉和精确尺寸,本 spec 只定义行为。当前设计入口:
 
 - [design/01 主界面](../design/01-main-layout.md): Search 属于召唤层,不常驻,不能遮挡正文长期存在。
-- [design/06 命令面板与快捷交互](../design/06-command-palette.md): Search 与 Command Palette / Quick Open 共用轻浮层视觉,但入口和结果源不同。
+- [design/06 统一搜索与快捷交互](../design/06-command-palette.md): Search 承载对象、事实、引用、最近对象和命令候选,不再拆出命令面板或快速打开。
 
 建议交互形态:
 
@@ -188,7 +189,7 @@ design 负责视觉和精确尺寸,本 spec 只定义行为。当前设计入口
 | 索引过期 | 结果顶部提示“索引可能不完整”,低置信结果降权 | 假装全项目已覆盖 |
 | 图谱不可用 | 文件/章节搜索可用,实体/关系组不可用 | 编造实体摘要 |
 | semantic recall 不可用 | 隐藏 Maybe Related 或提示语义召回不可用 | 用语义空结果覆盖精确结果 |
-| 查询无结果 | 空态建议:检查拼写 / 搜章节 / 打开命令面板 | 自动让 Agent 猜一个答案 |
+| 查询无结果 | 空态建议:检查拼写 / 搜章节 / 用讨论模式问问 | 自动让 Agent 猜一个答案 |
 | 权限/路径异常 | 提示项目索引不可读 | 读取当前项目目录外文件 |
 | Preview 来源缺失 | 只显示基础行,标记“来源缺失” | 展示无来源详情 |
 | 项目切换中 | 关闭 overlay 或提示正在切换项目 | 展示旧项目结果 |
@@ -207,12 +208,17 @@ design 负责视觉和精确尺寸,本 spec 只定义行为。当前设计入口
 | 隔离 | 切换项目后 Search 只读取目标 project id 的 recent、query history、preview cache 和 fact answer cache |
 | 样例 | 样例项目 Search 与真实项目 Search 结果、历史和 recent 不互读 |
 | design | 与 design/01 和 design/06 的浮层视觉/焦点一致 |
+| 入口唯一 | 真实用户包不显示独立命令面板、`Cmd+P` 快速打开或 `F1` 命令面板 |
 
 ## FAQ
 
 **Q: Universal Search 是否替代独立事实查询入口?**
 
 A: 是。作者侧只有 Universal Search 一个顶层搜索入口。事实答案、来源查看和选区查询都在 Search 内完成;M03 只定义这类答案能力,不再定义 `Cmd+E` 独立入口。
+
+**Q: Universal Search 是否替代命令面板和快速打开?**
+
+A: 是。章节、角色、设定、最近对象和命令候选都作为统一搜索结果出现;输入条也可以用自然语言触发命令路由。真实用户包不提供 `Cmd+P` / `Cmd+Shift+P` / `F1` 独立面板。
 
 **Q: 为什么快捷键是 `Shift+Shift`?**
 

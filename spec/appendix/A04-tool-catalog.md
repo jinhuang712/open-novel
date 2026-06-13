@@ -11,8 +11,8 @@
 - analyzeImpact、assembleContext、queryFacts 工具明细。
 - reindex、anchor health、knowledge graph 查询工具。
 - Validator、Checker 和 BeatAnalyzer 工具参数、风险输出和 failure envelope。
-- Universal Search source fanout、ranker 参数、fact answer/source view、preview action 和快捷键。
-- CommandRegistry、ShortcutRegistry、Quick Open、Discuss Mode 入口全表。
+- Universal Search source fanout、ranker 参数、fact answer/source view、preview action、打开结果路由、命令候选和快捷键。
+- CommandRegistry、ShortcutRegistry、Discuss Mode 入口全表。
 - Settings 只读/受限命令、dev build gated Debug 只读诊断命令。
 
 ## 对应核心文档
@@ -39,7 +39,7 @@
 | writer / humanizer tools | 输出形态、diff 约束、守则风险注入、不可越权字段 |
 | validator / checker tools | 检查范围、source refs、风险级别、阻断条件、needs-data/partial failure envelope |
 | BeatAnalyzer | 作为 checker 内部工具记录结构诊断维度、趋势窗口和证据片段,不得作为 role id |
-| search / command tools | 快捷键、命令 id、可用模式、pending approval 下的只读限制;Universal Search 是唯一作者侧顶层搜索入口,Quick Open 只做高级打开 |
+| search / command tools | 快捷键、命令 id、可用模式、pending approval 下的只读限制;Universal Search 是唯一作者侧顶层搜索入口,打开章节/设定/最近对象和命令候选都作为 Search 结果类型出现 |
 | storage / reindex / recovery tools | 原子写边界、reindex 范围、内部恢复结果、用户可见收场 |
 | platform tools | provider probe、watcher setup、diagnostic export、dev build gate 的命令与权限 |
 

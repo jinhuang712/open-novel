@@ -29,18 +29,18 @@
 | characters/lin.md | 林溪角色卡 | 不显示目录或扩展名。 |
 | outline.md | 大纲 | 不显示扩展名和锚点短码。 |
 | items/luopan.md | 青铜罗盘设定卡 | 不显示目录。 |
-| path / 路径 | 位置 / 来源 | 审批卡、快速打开、搜索结果均用作品语义。 |
-| quick open file | 快速打开作品内容 | 入口可以保留 Cmd+P 快捷键。 |
+| path / 路径 | 位置 / 来源 | 审批卡、统一搜索结果均用作品语义。 |
+| Command Palette / Quick Open | 统一搜索内命令候选 / 打开结果 | 不作为独立作者入口;不保留 Cmd+P、Cmd+Shift+P 或 F1 面板。 |
 | @file reference | @内容引用 | 结果展示角色、章节、设定,不展示文件路径。 |
 
 ## 保留英文清单
 
 | 类型 | 可保留示例 | 原因 |
 |---|---|---|
-| 快捷键 | Cmd+P, Cmd+K, Esc, Shift+Shift | 键盘固有表达。 |
+| 快捷键 | Cmd+K, Esc, Shift+Shift, Cmd+L | 键盘固有表达。 |
 | 产品名 | Open Novel | 品牌名。 |
 | 设计索引说明 | design/README、prototype 编号 | 仅设计者入口,不属于作者包。 |
-| 开发构建只读说明 | dev build, token | 只允许在开发构建或设计验收说明中出现。 |
+| 开发构建只读说明 | dev build | 只允许在技术文档或开发构建说明中出现;作者包原型、Trace/过程面板不得出现 token/cache/usage。 |
 | URL 或服务名 | platform.deepseek.com | 外部服务地址不可中文化。 |
 
 ## 原型验收清单

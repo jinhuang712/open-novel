@@ -299,7 +299,7 @@ Open Novel 是单实例单窗口应用。用户从主界面返回项目选择或
 | 已开始写入 | 进入内部恢复或人工处理 |
 | 内部恢复不安全 | 停止后续动作,展示不可自动恢复原因 |
 
-所有入口都走同一取消语义:输入条按钮、命令面板、状态点、Router action 和快捷键不允许各自发明一套取消。
+所有入口都走同一取消语义:输入条按钮、统一搜索命令候选、状态点、Router action 和快捷键不允许各自发明一套取消。
 
 所有非终态都必须能响应 stop request,但响应不等于立刻安全结束。模型调用、工具调用、reindex、Applying 和恢复流程都必须给出 `stopping` 投影,直到 S03 结合 S15/S14/S09 的持久结果返回 canonical turn terminal result:`Completed`、`StoppedNoChange`、`Cancelled`、`Rejected`、`Applied`、`ApplyFailed`、`FailedTerminal`、`Interrupted` 或 `ManualRecoveryOpened`。
 

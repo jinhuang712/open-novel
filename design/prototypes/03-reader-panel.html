@@ -136,7 +136,6 @@
   <span class="proto-title">03 · 读者预演章节风险报告</span>
   <span>文档: design/03-reader-panel.md</span>
   <span class="spacer"></span>
-  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="stage">
@@ -375,11 +374,6 @@
 </div>
 
 <script>
-function toggleTheme() {
-  var h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('onovel-theme', h.dataset.theme);
-}
 function refreshRiskAction() {
   var n = Array.prototype.filter.call(document.querySelectorAll('[data-risk]'), function (c) { return c.checked; }).length;
   var btn = document.getElementById('riskAction');

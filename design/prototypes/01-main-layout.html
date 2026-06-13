@@ -122,12 +122,9 @@
   .dot.run { background: transparent; }
   .dot.run::after { background: var(--accent); animation: breathe 2.4s ease-in-out infinite; }
   .dot.approval::after { background: var(--accent); }
-  .dot.stopped::after { background: var(--text-tertiary); }
-  .dot.error::after { background: var(--danger); }
   @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
   @media (prefers-reduced-motion: reduce) { .dot.run::after { animation: none; } }
   .dotzone .appr { color: var(--accent-text); font-weight: 500; cursor: pointer; }
-  .dotzone .err { color: var(--danger); cursor: pointer; }
 
   /* ===== Trace 面板 (召唤式 380px) ===== */
   .trace { width: 0; flex: none; overflow: hidden; border-left: 1px solid transparent; transition: width var(--dur-base) var(--ease); display: flex; flex-direction: column; }
@@ -189,23 +186,22 @@
   .reject-pane textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus-ring); }
   .reject-pane .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
-  .toast-zone { position: fixed; right: 20px; bottom: 88px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .toast-zone { position: fixed; right: 24px; top: 62px; z-index: 99; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 </style>
 </head>
 <body>
 <div class="proto-bar">
   <a href="index.html">← 原型索引</a>
   <span class="proto-title">01 · 主界面:章节轨 · 纸面 · 状态点</span>
-  <span>文档: design/01-main-layout.md</span>
+  <span>主界面原型</span>
   <span class="spacer"></span>
   <button class="btn btn-sm" title="库 Cmd+B" onclick="toggleLib()">库</button>
   <button class="btn btn-sm" title="过程 Cmd+J" onclick="toggleTrace()">过程</button>
   <button class="btn btn-sm" title="输入 Cmd+L" onclick="toggleComposer()">输入</button>
   <button class="btn btn-sm" title="搜索 Shift×2" onclick="toggleUSearch()">⌕ 搜索</button>
   <span style="display:inline-flex;gap:2px;align-items:center">状态点:
-    <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button><button class="btn btn-ghost btn-sm" onclick="setState('stopped')">已停止</button><button class="btn btn-ghost btn-sm" onclick="setState('error')">错误</button>
+    <button class="btn btn-ghost btn-sm" onclick="setState('idle')">空闲</button><button class="btn btn-ghost btn-sm" onclick="setState('run')">运行</button><button class="btn btn-ghost btn-sm" onclick="setState('approval')">待审批</button>
   </span>
-  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="app">
@@ -216,7 +212,7 @@
     <div class="rail-ch" title="009 · 旧仓库的钥匙" onclick="toast('切到 009(演示)')">009</div>
     <div class="rail-ch" title="010 · 第一次交锋" onclick="toast('切到 010(演示)')">010</div>
     <div class="rail-ch" title="011 · 融资酒局" onclick="toast('切到 011(演示)')">011</div>
-    <div class="rail-ch cur" title="012 · 雨夜来客 · 未保存"><span>012</span><span class="d" title="未保存"></span><span class="v" title="1 violation"></span></div>
+    <div class="rail-ch cur" title="012 · 雨夜来客 · 未保存"><span>012</span><span class="d" title="未保存"></span><span class="v" title="1 个规则风险"></span></div>
     <div class="rail-ch" title="013 · 概要 · 反转伏笔" onclick="toast('切到 013(演示)')">013</div>
     <div class="rail-spacer"></div>
     <button class="rail-btn" title="新手指引 → 05 号原型" onclick="location.href='05-onboarding.html'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.3a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6"/><circle cx="12" cy="17" r=".4" fill="currentColor"/></svg></button>
@@ -232,7 +228,7 @@
   </div>
 
   <div class="mid" id="mid">
-    <span class="vmark" style="top: 56%" title="violation · 第 5 段" onclick="toast('跳到第 5 段')"></span>
+    <span class="vmark" style="top: 56%" title="规则风险 · 第 5 段" onclick="toast('跳到第 5 段')"></span>
     <div class="paper" id="paper">
       <p class="vol-line">第三卷 · 重生七年</p>
       <h2>第 12 章 · 雨夜来客</h2>
@@ -249,23 +245,23 @@
 
   <div class="trace" id="trace">
     <div class="trace-inner">
-      <div class="tr-head"><span class="t">过程</span><span class="cost">本轮 24.6K tok · 缓存 87% · 已保存 01:12</span>
-        <span class="acts"><button class="btn btn-ghost btn-sm">复制过程</button><button class="btn btn-ghost btn-sm">折叠</button></span>
+      <div class="tr-head"><span class="t">过程</span><span class="cost">最近回执 · 已保存 01:12</span>
+        <span class="acts"><button class="btn btn-ghost btn-sm">折叠</button></span>
       </div>
       <div class="tr-body">
         <div class="ag">
           <div class="ag-h"><span class="ag-dot" style="background:var(--agent-router)"></span>调度员 <span class="done">✓</span><span class="time">0.8s</span></div>
-          <div class="ag-b"><div>意图: 修改主角性别 → 委派写手 + 一致性守护者(并行)· actions[2]</div></div>
+          <div class="ag-b"><div>已判断为设定改动,正在并行整理角色修改和关联影响。</div></div>
         </div>
         <div class="ag">
           <div class="ag-h"><span class="ag-dot" style="background:var(--agent-writer)"></span>写手 <span class="time">12.3s</span></div>
           <div class="ag-b">
-            <div class="tool"><b>读取角色卡</b>「林溪」→ 1,234 字</div>
-            <details class="tj"><summary class="tool"><b>生成设定提议</b> → 角色卡修改 · 8 项连带影响 ▸ 明细</summary>
+            <div class="tool"><b>读取角色卡</b>「林溪」</div>
+            <details class="tj"><summary class="tool"><b>整理设定提议</b> → 角色卡修改 · 8 项连带影响 ▸ 明细</summary>
 <pre>修改对象:林溪角色卡
 原因:用户要求把主角性别改为女
-影响范围:3 轮分析 · 8 项连带修改</pre></details>
-            <div>生成 diff(流式 · 第 2/3 段)…</div>
+影响范围:8 项连带修改</pre></details>
+            <div>正在整理修改建议…</div>
           </div>
         </div>
         <div class="ag" style="border-bottom:none">
@@ -290,7 +286,7 @@
 
 <div class="composer" id="composer">
   <div class="comp-lock">完成或取消上方审批后才能继续输入</div>
-  <textarea placeholder="把林川改成女主,名字改成林溪…(@ 引用角色或章节)"></textarea>
+  <textarea id="composerText" placeholder="规划模式只生成设定和结构方案,可 @引用角色/设定文件/章节"></textarea>
   <div class="comp-foot">
     <span class="modes" id="modes"><span class="mode" data-m="讨论">讨论</span><span class="mode on" data-m="规划">规划</span><span class="mode" data-m="写作">写作</span></span>
     <span class="hint">tab 切模式 · @ 引用 · esc 收回</span>
@@ -304,8 +300,8 @@
     <div>
       <div class="us-group">
         <div class="us-title">角色</div>
-        <div class="us-row on" data-us="linxi"><span class="us-kind">角色</span><span class="us-name">林溪</span><span class="us-meta">主角 · ch12</span></div>
-        <div class="us-row" data-us="luchen"><span class="us-kind">角色</span><span class="us-name">陆沉</span><span class="us-meta">对手 · ch12</span></div>
+        <div class="us-row on" data-us="linxi"><span class="us-kind">角色</span><span class="us-name">林溪</span><span class="us-meta">主角 · 第 12 章</span></div>
+        <div class="us-row" data-us="luchen"><span class="us-kind">角色</span><span class="us-name">陆沉</span><span class="us-meta">对手 · 第 12 章</span></div>
       </div>
       <div class="us-group">
         <div class="us-title">阵营 / 组织</div>
@@ -318,7 +314,7 @@
       <div class="us-group">
         <div class="us-title">事实答案 / 引用</div>
         <div class="us-row" data-us="fact"><span class="us-kind">事实</span><span class="us-name">林溪紧张时会敲桌沿吗?</span><span class="us-meta">2 个来源</span></div>
-        <div class="us-row" data-us="mentions"><span class="us-kind">引用</span><span class="us-name">林溪的旧习惯</span><span class="us-meta">ch3, ch12</span></div>
+        <div class="us-row" data-us="mentions"><span class="us-kind">引用</span><span class="us-name">林溪的旧习惯</span><span class="us-meta">第 3 章、第 12 章</span></div>
       </div>
     </div>
     <div class="us-preview" id="usPreview"></div>
@@ -353,11 +349,6 @@
 <div class="toast-zone" id="toastZone"></div>
 
 <script>
-function toggleTheme() {
-  var h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('onovel-theme', h.dataset.theme);
-}
 function toggleLib() { document.getElementById('lib').classList.toggle('open'); }
 function toggleTrace() { document.getElementById('trace').classList.toggle('open'); }
 function toggleComposer() {
@@ -465,7 +456,7 @@ var US_PREVIEW = {
   shouye: { name: '守夜人会', meta: '阵营 · 暗线组织 · 敌对', text: '成员:陆沉等。敌对关系:知微书馆。风险:其规则尚未完全公开。' },
   chapter: { name: '第 12 章 · 雨夜来客', meta: '章节 · 当前打开 · 3,214 字', text: '命中:林溪、陆沉、青铜罗盘。存在 1 个世界规则风险和 1 个整批审批锚点。' },
   fact: { name: '林溪紧张时会敲桌沿吗?', meta: '事实答案 · 2 个来源 · 只读', text: '是。第 3 章和第 12 章都把「敲桌沿」作为紧张时的旧习惯。点击可跳来源段,不改变正文。' },
-  mentions: { name: '林溪的旧习惯', meta: '引用 · ch3 / ch12', text: '引用查看并入统一搜索。Enter 打开当前来源,Cmd+Enter 对照打开。' }
+  mentions: { name: '林溪的旧习惯', meta: '引用 · 第 3 章 / 第 12 章', text: '引用查看并入统一搜索。Enter 打开当前来源,Cmd+Enter 对照打开。' }
 };
 function renderUSPreview(key) {
   var p = US_PREVIEW[key] || US_PREVIEW.linxi;
@@ -491,7 +482,7 @@ var NOTES = {
   zhiwei: { name: '知微书馆', kind: '地点', text: '林溪重生后盘下的旧书馆,公司前身,主线主要场景。', label: '知微书馆设定卡' },
   shouye: { name: '守夜人会', kind: '组织', text: '资本世界的影子规则制定者,暗线推手。', label: '守夜人会设定卡' },
   luopan: { name: '青铜罗盘', kind: '物品', text: '林溪母亲遗物,第 3 章典当,本章回归——伏笔回收。', label: '青铜罗盘设定卡' },
-  lingqi: { name: '灵气', kind: 'violation', text: '此世界不存在「灵气」设定,命中表面词。建议改用「氧化纹路」或删除。', danger: true }
+  lingqi: { name: '灵气', kind: '设定风险', text: '此世界不存在「灵气」设定,命中表面词。建议改用「氧化纹路」或删除。', danger: true }
 };
 var noteEl = document.getElementById('note'), noteTimer = null, hideTimer = null;
 function showNote(target) {
@@ -526,10 +517,18 @@ noteEl.addEventListener('mouseleave', function () { hideTimer = setTimeout(hideN
 var state = 'run';
 var lastShiftAt = 0;
 var approvalOpenedAt = 0;
+var modePlaceholders = {
+  '讨论': '讨论模式不会修改任何文件,可 @引用角色/设定文件/章节',
+  '规划': '规划模式只生成设定和结构方案,可 @引用角色/设定文件/章节',
+  '写作': '写作模式会生成正文修改提议,可 @引用角色/设定文件/章节'
+};
+function updateComposerPlaceholder(mode) {
+  document.getElementById('composerText').placeholder = modePlaceholders[mode] || modePlaceholders['讨论'];
+}
 function setState(s) {
   state = s;
   var dot = document.getElementById('dot'), label = document.getElementById('dotLabel');
-  dot.className = 'dot' + (s === 'run' ? ' run' : s === 'approval' ? ' approval' : s === 'stopped' ? ' stopped' : s === 'error' ? ' error' : '');
+  dot.className = 'dot' + (s === 'run' ? ' run' : s === 'approval' ? ' approval' : '');
   var comp = document.getElementById('composer');
   comp.classList.remove('locked');
   if (s === 'idle') {
@@ -538,7 +537,7 @@ function setState(s) {
     dot.onclick = function () { toggleComposer(); };
     dot.title = '对话 (Cmd+L)';
   } else if (s === 'run') {
-    label.innerHTML = '写手正在生成 diff · 12s <span class="track"><span class="fill"></span></span> 3/5 · 毒舌读者 <button class="cancel" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button>';
+    label.innerHTML = '写手正在整理修改建议 · 12s <span class="track"><span class="fill"></span></span> 3/5 · 毒舌读者 <button class="cancel" onclick="event.stopPropagation();setState(\'idle\');toast(\'已取消,完成的部分已保留\')">取消</button>';
     label.classList.add('show');
     dot.onclick = function () { toggleTrace(); };
     dot.title = '查看过程 (Cmd+J)';
@@ -549,23 +548,19 @@ function setState(s) {
     dot.title = '待审批';
     comp.classList.add('locked');
     openApproval();
-  } else if (s === 'stopped') {
-    label.innerHTML = '<span style="color:var(--text-muted)">已停止 · 没有修改 · 查看回执</span>';
-    label.classList.add('show');
-    dot.onclick = function () { toggleTrace(); };
-    dot.title = '已停止';
   } else {
-    label.innerHTML = '<span class="err" onclick="toast(\'打开设置 · 连接凭据\')">连接失败 · 去设置检查凭据</span>';
+    label.innerHTML = '<span style="color:var(--text-tertiary)">规划</span>';
     label.classList.add('show');
-    dot.onclick = function () { toast('打开设置 · 连接凭据'); };
-    dot.title = '错误';
+    dot.onclick = function () { toggleComposer(); };
+    dot.title = '对话 (Cmd+L)';
   }
 }
-function demoSend() { closeComposer(); setState('run'); toast('已发送 · 进度在右下'); }
+function demoSend() { closeComposer(); setState('run'); toast('已发送 · 进度在状态点和过程面板'); }
 document.querySelectorAll('.mode').forEach(function (m) {
   m.addEventListener('click', function () {
     document.querySelectorAll('.mode').forEach(function (x) { x.classList.remove('on'); });
     m.classList.add('on');
+    updateComposerPlaceholder(m.dataset.m);
     toast('已切到' + m.dataset.m + '模式');
   });
 });
@@ -631,6 +626,7 @@ function toast(msg) {
   setTimeout(function () { t.remove(); }, 2600);
 }
 setState('run');
+updateComposerPlaceholder('规划');
 </script>
 </body>
 </html>

@@ -129,7 +129,6 @@
   <span class="proto-title">02 · 审批卡与整批审</span>
   <span>文档: design/02-approval-cascade.md</span>
   <span class="spacer"></span>
-  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="shell">
@@ -317,11 +316,6 @@
 </div>
 
 <script>
-function toggleTheme() {
-  var h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('onovel-theme', h.dataset.theme);
-}
 function toggleGroup(id) { document.getElementById(id).classList.toggle('closed'); }
 function toggleEdit(el) { el.closest('[data-row]').classList.toggle('editing'); }
 function saveEdit(el) {

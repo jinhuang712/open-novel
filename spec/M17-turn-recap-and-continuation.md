@@ -74,8 +74,8 @@ M17 不定义 turn 终态,只消费 [S03 · Canonical turn terminal enum](./S03-
 |---|---:|---|---|---|
 | 打开 Universal Search、输入关键词、hover preview、展开本地结果 | 否 | 不写项目 Activity;只更新会话态或搜索缓存 | 否 | 搜索过程不是项目变更,也不是作者需要追溯的工作回执。 |
 | Universal Search 打开、跳转、对照打开既有对象或章节 | 否 | 不写项目 Activity;可更新最近访问 | 否 | 最近访问服务排序和导航,不进入作者 changelog。 |
-| Quick Open 预览或打开明确对象、最近项、路径、章节 | 否 | 不写项目 Activity;可更新最近访问 | 否 | 高级打开只改变当前视图。 |
-| Command Palette 执行本地 UI 命令,如打开面板、定位审批卡、打开最近报告 | 否 | 不写项目 Activity,除非对应能力另有轻量记录 | 否 | 命令事件可进 Trace/diagnostic,但不是 turn 回执。 |
+| Universal Search 内打开结果预览或打开明确对象、最近项、章节 | 否 | 不写项目 Activity;可更新最近访问 | 否 | 打开结果只改变当前视图。 |
+| Universal Search 内命令候选执行本地 UI 命令,如打开面板、定位审批卡、打开最近报告 | 否 | 不写项目 Activity,除非对应能力另有轻量记录 | 否 | 命令事件可进诊断记录,但不是 turn 回执。 |
 | Fact Query 返回有来源答案、无来源答案、stale / low-confidence 结果 | 否 | 写轻量 activity | 否 | 轻量 activity 只记录查询题目、时点、来源状态和跳转,不声称项目被修改。 |
 | Fact Query 转 Discuss、请求 Agent 解释、发起报告或提议 | 是 | 按对应 turn 记录 | 是 | 一旦进入 Agent 执行,由 turn 负责回执。 |
 | Discuss / Planning / Writing / Humanizer / Memory 等 Agent 执行 | 是 | 按 turn 记录 | 是 | 即使只输出回答或建议,用户也需要知道这轮完成了什么。 |

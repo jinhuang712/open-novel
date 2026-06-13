@@ -21,8 +21,7 @@ flowchart LR
   ProjectGate[Project Switch Preflight] --> ProjectContext[Active Project Context]
   Library[库面板] --> Open[Open Object]
   Rail[章节轨] --> Open
-  Quick[M02 Quick Open] --> Open
-  Search[M01 Search] --> Open
+  Search[M01 Universal Search<br/>打开结果路由] --> Open
   Open --> Editor[S14 Editor]
   Open --> Recent[Runtime Recent]
   ProjectContext --> Library

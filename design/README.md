@@ -7,7 +7,7 @@
 ## 怎么看原型
 
 1. 浏览器直接打开 `design/prototypes/index.html`(原型总入口),或任一单页
-2. 每页右上角可切换 **浅色 / 深色** 主题;首次进入跟随系统外观
+2. 主题由设置面板「外观」统一管理;原型首次进入跟随系统外观
 3. 原型内可点的交互(模式切换、勾选、步骤导航等)均为前端演示,不连后端
 
 ## 设计原则
@@ -31,7 +31,7 @@
 | [03-reader-panel](./03-reader-panel.md) | 读者预演章节风险报告:分类风险、多人共识、5 类读者反馈 | `prototypes/03-reader-panel.html` |
 | [04-settings](./04-settings.md) | 设置面板:11 个分区,覆盖连接凭据、外观、AI 角色、读者预演、助理语气、文风、创作守则、记忆、用量、快捷键、关于 | `prototypes/04-settings.html` |
 | [05-onboarding](./05-onboarding.md) | 每次启动先选项目 / 创建项目 + 首次配置向导 + 渐进式提示 | `prototypes/05-onboarding.html` |
-| [06-command-palette](./06-command-palette.md) | 统一搜索、命令面板、Cmd+P、@内容引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
+| [06-command-palette](./06-command-palette.md) | 统一搜索(含命令候选和打开结果)、@内容引用、框选 AI 改写、toast | `prototypes/06-command-palette.html` |
 | [07-interaction-branch-matrix](./07-interaction-branch-matrix.md) | 16 条核心交互分支覆盖矩阵,用于验收原型状态覆盖 | 各原型页 |
 | [ui-language-map](./ui-language-map.md) | 作者界面中文化映射,定义哪些英文/技术词可保留或必须隐藏 | 各原型页 |
 

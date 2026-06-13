@@ -19,7 +19,7 @@ Open Novel 的自有视觉语言,关键词是**轻盈、纸感、书卷气**,落
 
 - 所有颜色一律经 CSS 变量引用,**禁止在组件样式中硬编码 hex**
 - `html[data-theme="light" | "dark"]` 切换整套变量;首次进入跟随系统 `prefers-color-scheme`,用户手动切换后写入外观设置(原型中为 `localStorage.onovel-theme`,产品中为 `theme: 'auto' | 'light' | 'dark'`)
-- 命令面板提供「切换深浅外观」命令(见 [spec/S14 编辑器与交互契约](../spec/S13-editor-and-interaction.md))
+- 外观切换只在设置面板「外观」分区提供;统一搜索可以提供「打开外观设置」命令候选,但不直接切换主题
 - 对比度验收(两套主题同标准):**正文 7:1–9:1、次要文字 4.5:1–5.5:1、信息承载弱文字 ≥ 4.5:1、占位/disabled ≥ 3:1、accent 底上的按钮文字 ≥ 4.5:1**。区间上限是设计约束(书卷气),下限是可达性红线
 - 设置面板的「提高对比度」归入独立「外观」分区,在根节点增加 `data-contrast="more"`;它只覆盖颜色 token,不改变字号、间距和布局
 
@@ -30,7 +30,7 @@ flowchart LR
   CFG -->|light / dark| FIX[固定主题]
   SYS --> APPLY["html[data-theme=...] 应用变量"]
   FIX --> APPLY
-  TOGGLE[用户切换: 设置面板 / 命令面板] --> CFG
+  TOGGLE[用户切换: 设置面板外观分区] --> CFG
 ```
 
 ## 色彩 Token

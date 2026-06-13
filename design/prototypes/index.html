@@ -38,7 +38,6 @@
   <span class="proto-title">Open Novel · 界面原型</span>
   <span>设计者索引 · 对应 design/README 与 0X 文档</span>
   <span class="spacer"></span>
-  <button class="theme-toggle" onclick="toggleTheme()"><span class="tt-label">主题</span> ◐</button>
 </div>
 
 <div class="stage">
@@ -54,7 +53,7 @@
           <div class="col"><div class="sk-line" style="width:60%"></div><div class="sk-line" style="width:90%"></div><div class="sk-line" style="width:84%"></div><div class="sk-line" style="width:88%"></div><div class="sk-line" style="width:40%"></div></div>
           <div class="col" style="max-width:64px"><div class="sk" style="flex:1"></div><div class="sk-accent" style="height:22px"></div></div>
         </div>
-        <div class="tile-meta"><b>01 · 主界面:章节轨 · 纸面 · 状态点</b><span>左缘章节轨 / 状态点四态 / 库·过程面板 / 统一搜索 / 输入条 / 实体旁注 / 审批聚焦卡</span><code>design/01-main-layout.md</code></div>
+        <div class="tile-meta"><b>01 · 主界面:章节轨 · 纸面 · 状态点</b><span>左缘章节轨 / 状态点三态 / 库·过程面板 / 统一搜索 / 输入条 / 实体旁注 / 审批聚焦卡</span><code>design/01-main-layout.md</code></div>
       </div>
     </a>
 
@@ -118,7 +117,7 @@
             <div class="sk-line" style="width:58%"></div>
           </div>
         </div>
-        <div class="tile-meta"><b>06 · 统一搜索与快捷交互</b><span>Shift+Shift 统一搜索 / Cmd+Shift+P / Cmd+P / @引用 / Cmd+K 框选改写 / toast</span><code>design/06-command-palette.md</code></div>
+        <div class="tile-meta"><b>06 · 统一搜索与快捷交互</b><span>Shift+Shift 统一搜索(含命令候选和打开结果) / @引用 / Cmd+K 框选改写 / toast</span><code>design/06-command-palette.md</code></div>
       </div>
     </a>
   </div>
@@ -130,11 +129,6 @@
 </div>
 
 <script>
-function toggleTheme() {
-  var h = document.documentElement;
-  h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
-  localStorage.setItem('onovel-theme', h.dataset.theme);
-}
 </script>
 </body>
 </html>

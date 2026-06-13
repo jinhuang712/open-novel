@@ -1,5 +1,11 @@
 # CHANGELOG · 跨文档变更日志
 
+## 2026-06-13 · docs/design · 主界面入口与过程面板收敛
+
+| 变更 | 影响文档 | 关联 |
+|---|---|---|
+| 统一搜索成为唯一顶层搜索/打开/命令入口,独立命令面板、Cmd+P 快速打开、事实查询快捷键全部并入统一搜索结果类型;主界面原型移除顶部主题切换、已停止/错误状态按钮,Toast 固定右上方,输入条按讨论/规划/写作显示不同占位文案,过程面板不再展示 token、缓存、用量或复制过程。 | `README.md` `spec/S00` `spec/S03` `spec/S06` `spec/S13` `spec/M01` `spec/M02` `spec/M03` `spec/M08` `spec/M11` `spec/M16` `spec/M17` `A03` `A04` `design/00` `design/01` `design/03` `design/04` `design/06` `design/07` `design/README` `design/ui-language-map` `design/prototypes/*` | 用户反馈“搜索只能有一个入口”、主界面不应切主题、状态点不需要错误/已停止、过程不显示用量也不支持复制、Toast 右上、输入 stub 按模式变化。 |
+
 ## 2026-06-13 · docs/design · 启动向导强卡收敛
 
 | 变更 | 影响文档 | 关联 |

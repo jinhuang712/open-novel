@@ -124,7 +124,7 @@ flowchart TB
 | LLM 质量闭环 | runtime validation / creative risk 进入用户请求;harness / golden regression 属于记录、回放和开发期合入门禁 | 运行时失败语义和开发期质量门禁不能混成同一个业务节点 |
 | 存储 | 作者可读文件 + 本地数据库 + 派生索引 | 兼顾可迁移、可查询和可恢复 |
 | 状态机实现 | 状态机库只是实现方式;turn、mode、approval、obligation 和 recovery 的主权语义在 S03/S01/S14 | 不能让库名、前端 tab 或临时 UI 状态定义业务结果 |
-| UI | 写作纸面为主体,过程通过状态点、Trace、审批卡、Universal Search 和查询浮层暴露 | 过程透明,但不让日志淹没写作 |
+| UI | 写作纸面为主体,过程通过状态点、Trace、审批卡和 Universal Search 暴露 | 过程透明,但不让日志淹没写作 |
 | 明细归口 | 字段、schema、模板全文、工具参数、测试矩阵、golden 明细和 spike 证据进 appendix;接入、恢复、迁移、诊断契约进 platform | 核心 spec 读完必须懂设计,不被字段表打断 |
 
 这条路线不再保留基于浏览器的 Web 调试形态。早期实现可以使用桌面壳开发构建、renderer 热更新、DevTools 和诊断开关来提速,但进程边界、权限、凭据、长任务、stream 恢复、watcher、SQLite 写入隔离和崩溃恢复始终按桌面壳生产形态设计。具体边界由 [I05](./platform/I05-desktop-shell-contract.md) 约束。
@@ -164,14 +164,14 @@ flowchart TB
 | golden regression 和质量门禁如何阻断合入 | [S10 · Evaluation And Golden Regression](./S10-evaluation-and-golden-regression.md) |
 | 五大守则和读者预演怎么进入审批 | [S11 · Creative Engine](./S11-creative-engine.md) |
 | 去 AI 味如何不改剧情 | [S12 · Style And Humanizer](./S12-style-and-humanizer.md) |
-| 编辑器、命令、焦点、查询怎么协作 | [S13 · Editor And Interaction](./S13-editor-and-interaction.md) |
+| 编辑器、命令、焦点和统一搜索怎么协作 | [S13 · Editor And Interaction](./S13-editor-and-interaction.md) |
 | 作品文件和数据库怎么物理落盘 | [S14 · Project Storage](./S14-project-storage.md) |
 | 审批裁定、写入、恢复和回执怎么留痕 | [S15 · 决策与写入账本](./S15-journal-and-ledger.md) |
 | 文件被外部修改后还能不能安全应用建议 | [S16 · 文件版本与编辑安全](./S16-file-version-and-edit-safety.md) |
 | 首启、设置、经验管理、危险操作归哪 | [M15 · Onboarding And New Book](./M15-onboarding-and-new-book.md)、[M14 · Settings](./M14-settings.md) |
-| 全局搜索如何查角色、阵营、概念、章节和来源 | [M01 · Universal Search](./M01-universal-search.md) |
-| 命令面板和快速打开如何分工 | [M02 · Command Palette / Quick Open](./M02-command-palette-and-quick-open.md) |
-| 查询浮层如何只解释事实、不写作品 | [M03 · Fact Query](./M03-fact-query.md) |
+| 统一搜索如何查角色、阵营、概念、章节和来源 | [M01 · Universal Search](./M01-universal-search.md) |
+| 统一搜索内命令候选和打开结果如何路由 | [M02 · Command Routing](./M02-command-palette-and-quick-open.md) |
+| 统一搜索内事实答案如何只解释事实、不写作品 | [M03 · Fact Query](./M03-fact-query.md) |
 | 讨论模式如何保证只聊不写 | [M04 · Discuss Mode](./M04-discuss-mode.md) |
 | 规划模式如何只动设定和结构 | [M05 · Planning Mode](./M05-planning-mode.md) |
 | 写作模式如何进入审批链 | [M06 · Writing Mode](./M06-writing-mode.md) |
