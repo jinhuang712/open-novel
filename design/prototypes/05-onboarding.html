@@ -22,10 +22,7 @@
   .dot.done { background: var(--success); border-color: var(--success); }
   .dot.cur { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-subtle); }
   .step-no { font-size: 12px; color: var(--text-tertiary); margin-left: 12px; }
-  .skip-all { margin-left: auto; font-size: 12px; color: var(--text-tertiary); background: none; border: none; cursor: pointer; font-family: inherit; }
-  .skip-all:hover { color: var(--text-secondary); text-decoration: underline; }
-  .mock-badge { display: none; margin-left: 10px; }
-  .mock .mock-badge { display: inline-flex; }
+  .top-note { margin-left: auto; font-size: 12px; color: var(--text-tertiary); }
   .resume-bar { display: flex; align-items: center; gap: 8px; margin: -6px 0 18px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-sunken); font-size: 12.5px; color: var(--text-secondary); }
   .resume-bar.hide { display: none; }
   .resume-bar .grow { flex: 1; }
@@ -95,7 +92,7 @@
   .hint-enter { font-size: 11.5px; color: var(--text-tertiary); margin-right: 12px; }
 
   /* tooltip showcase */
-  .tip-grid { width: 580px; max-width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tip-grid { width: 760px; max-width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .tip { background: var(--bg-raised); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-md); box-shadow: var(--shadow-md); padding: 10px 12px; font-size: 12.5px; }
   .tip .when { font-size: 11px; color: var(--text-tertiary); display: block; margin-bottom: 4px; }
   .tip .ok { margin-top: 8px; }
@@ -116,12 +113,11 @@
     <div class="wz-top">
       <div class="dots" id="dots"></div>
       <span class="step-no" id="stepNo">项目选择</span>
-      <span class="badge badge-warning mock-badge">演示模式</span>
-      <button class="skip-all" onclick="toastStart()">主界面左上可返回项目选择</button>
+      <span class="top-note">主界面左上可返回项目选择</span>
     </div>
     <div class="resume-bar" id="resumeBar">
       <span class="badge badge-warning">可恢复</span>
-      <span>上次停在创建项目 · 存放位置已验证 · 演示模式草稿可继续</span>
+      <span>上次停在创建作品 · 存放位置已验证 · 作品名草稿可继续</span>
       <span class="grow"></span>
       <button class="btn btn-sm" onclick="resumeDraft()">继续</button>
       <button class="btn btn-ghost btn-sm" onclick="restartDraft()">重新开始</button>
@@ -129,7 +125,7 @@
 
     <div class="step on" id="s1">
       <h1 class="serif">选择作品</h1>
-      <p class="sub">每次启动先选择或创建项目。主界面左上角也可以回到这里。</p>
+      <p class="sub">每次启动先选择或创建作品。主界面左上角也可以回到这里。</p>
       <div class="project-list">
         <div class="project-row sel" onclick="openProject('重生互联网')">
           <div><b>重生互联网</b><span>今天 01:12 · 第 12 章 · 1 个待审批</span></div>
@@ -145,12 +141,12 @@
         <button class="btn" onclick="step=2;render()">首次配置 / 选择存放位置</button>
         <button class="btn">选择已有作品…</button>
       </div>
-      <div class="info-card" style="margin-top:14px">作品选择、创建、归档和删除不在设置面板里管理;启动页负责进入哪本书。</div>
+      <div class="info-card" style="margin-top:14px">作品选择、创建、归档和删除不在设置面板里管理;启动页负责进入哪本书。打开前会先确认创作服务可用。</div>
     </div>
 
     <div class="step" id="s2">
       <h1 class="serif">首次配置</h1>
-      <p class="sub">先确认作品存放位置,再填连接凭据。已有项目时可以直接回到项目选择。</p>
+      <p class="sub">先确认作品存放位置。连接创作服务会在进入正式工作台前最后确认。</p>
       <div class="key-row">
         <input id="workspacePath" value="默认作品库" oninput="workspaceOk=false;render()" aria-label="作品存放位置">
         <button class="btn" onclick="checkWorkspace()">检查权限</button>
@@ -161,18 +157,7 @@
         <div class="ws-card" onclick="selWorkspace(this, '最近使用的位置')"><b>最近位置</b><span>上次使用的位置</span></div>
       </div>
       <div class="ws-state" id="workspaceState"></div>
-      <h1 class="serif" style="margin-top:22px">连接创作服务</h1>
-      <p class="sub">凭据只存本机,用于驱动 AI 角色。</p>
-      <div class="info-card">
-        怎么拿凭据:platform.deepseek.com/api_keys<br>
-        凭据只写入系统安全凭据库;诊断包等任何持久产物都会剔除
-      </div>
-      <div class="key-row">
-        <input type="password" id="keyInput" placeholder="sk-…">
-        <button class="btn" onclick="testKey()">测试连接</button>
-      </div>
-      <div class="key-state" id="keyState"></div>
-      <span class="mock-link" onclick="useMock()">跳过 — 用演示模式先看看界面(示例文本,流程走通)</span>
+      <div class="info-card" style="margin-top:18px">作品存放位置通过后,下一步只创建或选择作品;不会在启动页询问流派、风格或故事种子。</div>
     </div>
 
     <div class="step" id="s3">
@@ -181,40 +166,31 @@
       <div class="proj-grid">
         <div class="proj-card sel" data-project="sample" onclick="selProj(this)">
           <span class="reco badge badge-accent">推荐 · 5 分钟看懂全流程</span>
-          <b>加载样例项目〈重生互联网〉</b>
+          <b>加载样例作品〈重生互联网〉</b>
           <div class="desc">已含世界观 / 大纲 / 3 个角色 · 第 1 章概要 + 3000 字正文 · 5 条审批历史 + 3 条已学偏好(展示反馈学习)</div>
         </div>
         <div class="proj-card" data-project="blank" onclick="selProj(this)">
-          <b>创建空白项目</b>
-          <div class="desc">从一个故事种子开始,设定逐项生成</div>
+          <b>创建空白作品</b>
+          <div class="desc">只创建作品壳。流派、风格和故事种子进入工作台后用讨论模式聊出来。</div>
           <div class="blank-form" onclick="event.stopPropagation()">
-            <label>项目名 *</label><input id="projectName" placeholder="例:大荒镖局" oninput="render()"><div class="field-error" id="projectNameError">先给项目起个名字</div>
-            <label>流派</label><select><option>都市重生</option><option>玄幻</option><option>悬疑异闻</option><option>科幻</option><option>历史</option></select>
-            <label>风格描述</label><input placeholder="例:冷峻克制,短句为主">
-            <label>故事种子</label><textarea placeholder="一两句话:谁,在什么世界,要做成什么事"></textarea>
+            <label>作品名 *</label><input id="projectName" placeholder="例:大荒镖局" oninput="render()"><div class="field-error" id="projectNameError">先给作品起个名字</div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="step" id="s4">
-      <h1 class="serif">三件事,先了解</h1>
-      <p class="sub">Open Novel 和 ChatGPT 不一样的地方:</p>
-      <div class="three">
-        <div class="three-card">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="8" cy="12" r="2.4" fill="currentColor" stroke="none"/></svg>
-          <div><b>三种模式,你来定边界</b><p>右下输入框顶部:Discuss 只读检索 · Plan 改设定 · Write 写章节。焦点在输入框时按 <kbd>Tab</kbd> 循环切换。</p></div>
-        </div>
-        <div class="three-card">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.2 7.6-8 9-4.8-1.4-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4.5"/></svg>
-          <div><b>AI 不会偷偷改文件</b><p>小处修改贴着正文确认;连带改动进入审批卡,看 diff、勾选、可编辑,点同意才落盘。</p></div>
-        </div>
-        <div class="three-card">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="5" cy="12" r="2.2"/><circle cx="14" cy="5.5" r="2.2"/><circle cx="14" cy="18.5" r="2.2"/><circle cx="20.5" cy="12" r="1.6"/><path d="M7 11l5-4.5M7 13l5 4.5M16 6.5l3.5 4M16 17.5l3.5-4"/></svg>
-          <div><b>改设定,系统帮你扫全书</b><p>例:主角性别男改女 — 系统列出所有需要同步改的章节段落,整批审一次,绝不留一致性暗坑。</p></div>
-        </div>
+      <h1 class="serif">连接创作服务</h1>
+      <p class="sub">这是进入正式工作台前的最后一步。凭据只存本机,用于驱动 AI 角色。</p>
+      <div class="info-card">
+        在服务商控制台创建连接凭据。凭据只写入系统安全凭据库;诊断包等任何持久产物都会剔除。
       </div>
-      <div class="cta"><button class="btn btn-primary" onclick="alert('原型演示: 进入主界面 (默认 Discuss 模式)')">明白了,开始写吧</button></div>
+      <div class="key-row">
+        <input type="password" id="keyInput" placeholder="粘贴连接凭据">
+        <button class="btn" onclick="testKey()">测试连接</button>
+      </div>
+      <div class="key-state" id="keyState"></div>
+      <div class="info-card warning-text" style="margin-top:16px">连接成功前不能进入正式工作台。可以返回上一步修改作品信息,但不能跳过此步骤。</div>
     </div>
 
     <div class="wz-foot">
@@ -225,14 +201,14 @@
     </div>
   </div>
 
-  <div class="stage-label">进入主界面后 — 渐进式一次性 TOOLTIP(写入 SEENTIPS,不重复弹,同屏最多 1 条)</div>
+  <div class="stage-label">进入主界面后 — 渐进式一次性提示(写入已读提示,不重复弹,同屏最多 1 条)</div>
   <div class="tip-grid">
-    <div class="tip"><span class="when">首次焦点输入条</span>试试按 <kbd>Tab</kbd> 切换 plan / write / discuss 模式<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次焦点输入条</span>试试按 <kbd>Tab</kbd> 切换讨论 / 规划 / 写作姿态<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
     <div class="tip"><span class="when">首次出现批阅层</span>AI 建议改正文 — 看见前后对照再决定,不同意就不会落盘<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
-    <div class="tip"><span class="when">首次出现 cascade 警告</span>一致性守护者帮你扫了相关章节,看看哪些段需要一起改<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
+    <div class="tip"><span class="when">首次出现连带修改提醒</span>一致性守护者帮你扫了相关章节,看看哪些段需要一起改<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
     <div class="tip"><span class="when">首次切到规划姿态</span>现在 AI 只会改设定和大纲,不会动正文<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
     <div class="tip"><span class="when">首次出现读者报告</span>这是 5 个模拟读者的反应,可参考可忽略<div class="ok"><button class="btn btn-sm">知道了</button></div></div>
-    <div class="tip" style="border-left-color:var(--border-strong)"><span class="when">回看提示</span>帮助说明里可回看这些提示;设置面板不提供数据管理重置<div class="ok"><button class="btn btn-sm" disabled>展示用</button></div></div>
+    <div class="tip" style="border-left-color:var(--border-strong)"><span class="when">回看提示</span>关于分区可回看这些提示;设置面板不提供数据管理重置<div class="ok"><button class="btn btn-sm" disabled>展示用</button></div></div>
   </div>
 </div>
 
@@ -246,30 +222,42 @@ var step = 1, keyOk = false, workspaceOk = false;
 function render() {
   for (var i = 1; i <= 4; i++) document.getElementById('s' + i).classList.toggle('on', i === step);
   var dots = '';
-  for (var j = 1; j <= 4; j++) dots += '<span class="dot ' + (j < step ? 'done' : j === step ? 'cur' : '') + '"></span>';
+  for (var j = 1; j <= 3; j++) {
+    var progressStep = Math.max(1, step - 1);
+    dots += '<span class="dot ' + (j < progressStep ? 'done' : j === progressStep ? 'cur' : '') + '"></span>';
+  }
   document.getElementById('dots').innerHTML = dots;
   document.getElementById('stepNo').textContent = step === 1 ? '项目选择' : 'Step ' + (step - 1) + '/3';
   document.getElementById('prevBtn').style.visibility = step === 1 ? 'hidden' : 'visible';
   var next = document.getElementById('nextBtn');
-  next.style.display = step === 4 ? 'none' : '';
+  next.style.display = '';
+  next.textContent = step === 4 ? '进入工作台' : '下一步';
   var blankSelected = step === 3 && document.querySelector('.proj-card.sel[data-project="blank"]');
   var projectName = document.getElementById('projectName');
   var missingProjectName = blankSelected && !projectName.value.trim();
   var blockedByWorkspace = step === 2 && !workspaceOk;
-  var blockedByKey = step === 2 && !keyOk;
+  var blockedByKey = step === 4 && !keyOk;
   next.disabled = blockedByWorkspace || blockedByKey || missingProjectName;
-  next.title = blockedByWorkspace ? '先检查存放位置写权限' : (blockedByKey ? '测试连接通过,或选择演示模式' : (missingProjectName ? '先给项目起个名字' : ''));
+  next.title = blockedByWorkspace ? '先检查存放位置写权限' : (blockedByKey ? '先测试连接,成功后才能进入工作台' : (missingProjectName ? '先给作品起个名字' : ''));
   projectName.classList.toggle('error', !!missingProjectName);
   document.getElementById('projectNameError').classList.toggle('show', !!missingProjectName);
 }
 function go(d) {
   render();
   if (d > 0 && document.getElementById('nextBtn').disabled) return;
+  if (d > 0 && step === 4) {
+    alert('原型演示: 进入正式工作台 (默认讨论模式)');
+    return;
+  }
   step = Math.min(4, Math.max(1, step + d));
   render();
 }
-function openProject(name) { alert('原型演示: 打开《' + name + '》'); }
-function toastStart() { alert('主界面左上角返回项目选择,不是进设置面板'); }
+function openProject(name) {
+  step = 4;
+  document.getElementById('stepNo').textContent = '连接创作服务';
+  document.getElementById('keyState').innerHTML = '<span class="warning-text">准备打开《' + name + '》,先确认创作服务可用</span>';
+  render();
+}
 function selId(el) {
   document.querySelectorAll('.id-card').forEach(function (c) { c.classList.remove('sel'); });
   el.classList.add('sel');
@@ -302,9 +290,7 @@ function checkWorkspace() {
 }
 function resumeDraft() {
   workspaceOk = true;
-  keyOk = true;
   step = 3;
-  document.getElementById('wizard').classList.add('mock');
   document.getElementById('workspaceState').innerHTML = '<span class="success-text">✓ 已恢复存放位置校验</span>';
   document.getElementById('resumeBar').classList.add('hide');
   render();
@@ -313,7 +299,6 @@ function restartDraft() {
   workspaceOk = false;
   keyOk = false;
   step = 1;
-  document.getElementById('wizard').classList.remove('mock');
   document.getElementById('workspaceState').textContent = '';
   document.getElementById('resumeBar').classList.add('hide');
   render();
@@ -321,19 +306,13 @@ function restartDraft() {
 function testKey() {
   var v = document.getElementById('keyInput').value;
   var s = document.getElementById('keyState');
-  if (!v) { s.innerHTML = '<span style="color:var(--danger)">✗ 请先输入 key</span>'; return; }
+  if (!v) { s.innerHTML = '<span style="color:var(--danger)">✗ 请先输入连接凭据</span>'; return; }
   s.innerHTML = '<span style="color:var(--text-tertiary)">连接中…</span>';
   setTimeout(function () {
     keyOk = true;
-    s.innerHTML = '<span style="color:var(--success)">✓ 连接成功 · V4 Pro / Flash 可用</span>';
+    s.innerHTML = '<span style="color:var(--success)">✓ 连接成功 · 高质量档和快速档可用</span>';
     render();
   }, 700);
-}
-function useMock() {
-  keyOk = true;
-  document.getElementById('wizard').classList.add('mock');
-  document.getElementById('keyState').innerHTML = '<span style="color:var(--warning)">已选演示模式 — 示例文本,可随时在设置面板填入真实凭据</span>';
-  render();
 }
 document.addEventListener('keydown', function (e) {
   var active = document.activeElement;
